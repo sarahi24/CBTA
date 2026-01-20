@@ -28,7 +28,7 @@ const CAREER_MAP = CAREERS.reduce((acc, curr) => {
 // Lógica de carga de datos (Lado del Servidor)
 let students = [];
 try {
-  const res = await fetch('/api/students');
+  const res = await fetch('https://nginx-production-728f.up.railway.app/api/students');
   if (res.ok) {
     const json = await res.json();
     students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
