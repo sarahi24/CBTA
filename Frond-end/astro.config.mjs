@@ -16,6 +16,6 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
-  output: 'hybrid',
+  output: 'server',
   adapter: vercel()
 });
