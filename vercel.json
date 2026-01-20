@@ -1,6 +1,5 @@
 {
-  "buildCommand": "cd Frond-end && npm install && npm run build",
-  "outputDirectory": "Frond-end/dist",
-  "installCommand": "cd Frond-end && npm install",
-  "framework": null
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": ".vercel/output",
+  "installCommand": "npm install"
 }
