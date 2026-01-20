@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
     create: `${API_BASE_URL}/students`,
     update: (id) => `${API_BASE_URL}/students/${id}`,
     delete: (id) => `${API_BASE_URL}/students/${id}`,
+    academicInfo: (id) => `${API_BASE_URL}/students/${id}/academic-info`,
   },
 
   // Payment Concepts - Conceptos de pago
