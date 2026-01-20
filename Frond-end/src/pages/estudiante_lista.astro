@@ -1,5 +1,6 @@
 ---
-import Layout from '../layouts/Layout.astro';                
+import Layout from '../layouts/Layout.astro';
+import { API_ENDPOINTS } from '../config/api.js';                
 
 // Configuraciones: Color de acento institucional (VERDE OSCURO: #2E594D)
 const ACCENT_COLOR_HEX = '#2E594D'; 
@@ -28,7 +29,7 @@ const CAREER_MAP = CAREERS.reduce((acc, curr) => {
 // Lógica de carga de datos (Lado del Servidor)
 let students = [];
 try {
-  const res = await fetch('https://nginx-production-728f.up.railway.app/api/students');
+  const res = await fetch(API_ENDPOINTS.students.list);
   if (res.ok) {
     const json = await res.json();
     students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
