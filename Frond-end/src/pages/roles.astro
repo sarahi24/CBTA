@@ -72,7 +72,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     <style is:global>
         [x-cloak] { display: none !important; }
         
-        /* Colores institucionales - v2.0 */
+        /* Colores institucionales */
         .bg-institucional { background-color: #2E594D; }
         .text-institucional { color: #2E594D; }
         .border-institucional { border-color: #2E594D; }
@@ -83,6 +83,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             outline: none;
             border-color: #2E594D;
             box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
+        }
+        
+        /* IMPORTANTE: Forzar que las stats cards estén en horizontal */
+        @media (min-width: 768px) {
+            .stats-horizontal {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 1rem !important;
+            }
         }
         
         /* Animación para dropzone */
@@ -138,7 +147,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         <!-- Stats Cards -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="stats-horizontal grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                     <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,19 +188,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead class="bg-gradient-to-r from-institucional to-teal-700 border-b-2 border-institucional">
+                    <thead class="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
                         <tr>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Usuario</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Contacto</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">CURP</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Rol</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Estado</th>
-                            <th class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Acciones</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Usuario</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Contacto</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">CURP</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rol</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <template x-for="user in filteredUsers" :key="user.id">
-                            <tr class="hover:bg-green-50 transition-colors">
+                            <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-institucional to-teal-600 flex items-center justify-center text-white font-bold">
