@@ -62,7 +62,6 @@ try {
 }
 
 const usersJSON = JSON.stringify(initialUsers);
-const API_USERS_ENDPOINT = API_ENDPOINTS.users.list;
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
@@ -85,7 +84,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
         }
         
-        /* FORZAR TABLA HORIZONTAL - Las cards DEBEN estar en 1 fila con 3 columnas */
+        /* FORZAR TABLA HORIZONTAL - 1 fila con 3 columnas */
         table.stats-table {
             table-layout: fixed !important;
             width: 100% !important;
@@ -95,16 +94,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             width: 33.333% !important;
         }
         
-        /* Animación para dropzone */
-        .dropzone-active {
-            border-color: #2E594D;
-            background-color: rgba(46, 89, 77, 0.05);
-        }
-        
         /* Estilos para tabla responsive */
         @media (max-width: 768px) {
             .table-responsive {
                 overflow-x: auto;
+            }
+            /* En móvil las stats se apilan para mejor legibilidad */
+            table.stats-table td {
+                width: 100% !important;
+                display: block;
+                border-right: none !important;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            table.stats-table tr {
+                display: block;
             }
         }
     </style>
@@ -115,40 +118,36 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             <div x-show="notification.show" x-cloak
                  x-transition:enter="transition ease-out duration-300"
                  class="fixed top-5 right-5 z-[100] p-4 rounded-xl shadow-2xl text-white font-bold"
-                 :class="notification.type === 'success' ? 'bg-institucional' : 'bg-red-600'">
+                :class="notification.type === 'success' ? 'bg-institucional' : 'bg-red-600'">
                 <span x-text="notification.message"></span>
             </div>
         </template>
 
-        <!-- Header -->
-        <div class="mb-8">
-            <div class="flex flex-col gap-4">
-                <div>
-                    <h1 class="text-3xl font-bold text-slate-800 mb-1">Gestión de Personal</h1>
-                    <p class="text-slate-500">Administración de usuarios y roles del sistema</p>
-                </div>
-                <div class="flex flex-wrap gap-3">
-                    <button @click="openImportModal()" 
-                            class="px-5 py-2.5 bg-white border-2 border-institucional text-institucional font-semibold rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                        </svg>
-                        Importar Excel
-                    </button>
-                    <button @click="openPanelForAdd()" 
-                            class="px-5 py-2.5 bg-institucional text-white font-semibold rounded-lg hover-institucional transition-all flex items-center gap-2 shadow-md">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Agregar Usuario
-                    </button>
-                </div>
+        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="text-left">
+                <h1 class="text-3xl font-bold text-slate-800 mb-1">Gestión de Personal</h1>
+                <p class="text-slate-500">Administración de usuarios y roles del sistema</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <button @click="openImportModal()" 
+                        class="px-5 py-2.5 bg-white border-2 border-institucional text-institucional font-semibold rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    Importar Excel
+                </button>
+                <button @click="openPanelForAdd()" 
+                        class="px-5 py-2.5 bg-institucional text-white font-semibold rounded-lg hover-institucional transition-all flex items-center gap-2 shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Agregar Usuario
+                </button>
             </div>
         </div>
 
-        <!-- Stats Cards - TABLA HORIZONTAL 1x3 -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
-            <table class="stats-table w-full table-fixed">
+            <table class="stats-table w-full">
                 <tbody>
                     <tr class="divide-x divide-slate-200">
                         <td class="p-4 hover:bg-slate-50 transition-colors">
@@ -195,7 +194,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </table>
         </div>
 
-        <!-- Tabla de Usuarios -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -275,7 +273,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                  x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                  x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
                  class="relative bg-white rounded-2xl p-6 sm:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <!-- Botón de cerrar -->
+                
                 <button @click="closePanel()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -319,7 +317,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             <input x-model="newUser.birthdate" type="date" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
                     </div>
-                    
+               
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Género</label>
@@ -390,7 +388,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
         </div>
 
-        <!-- Modal de Confirmación de Eliminación -->
         <template x-teleport="body">
             <div x-show="isDeleting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
                 <div @click="isDeleting = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
@@ -410,7 +407,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
         </template>
 
-        <!-- Modal de Importación Excel -->
         <template x-teleport="body">
             <div x-show="isImporting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
                 <div @click="isImporting = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
@@ -418,7 +414,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <h3 class="text-2xl font-bold text-slate-800 mb-2">Importar Usuarios desde Excel</h3>
                     <p class="text-slate-500 text-sm mb-6">Carga un archivo Excel con los datos de múltiples usuarios para registrarlos masivamente</p>
                     
-                    <!-- Dropzone -->
                     <div @dragover.prevent="isDragging = true" 
                          @dragleave.prevent="isDragging = false"
                          @drop.prevent="handleFileDrop($event)"
@@ -434,7 +429,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <p class="text-xs text-slate-400">Formatos aceptados: .xlsx, .xls</p>
                     </div>
 
-                    <!-- Archivo seleccionado -->
                     <div x-show="selectedFile" class="mt-4 p-4 bg-slate-50 rounded-lg flex items-center gap-3">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -450,14 +444,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         </button>
                     </div>
 
-                    <!-- Resumen de importación -->
                     <div x-show="importedData.length > 0" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <p class="text-sm text-blue-800">
                             <span class="font-bold" x-text="importedData.length"></span> usuario(s) detectado(s) en el archivo
                         </p>
                     </div>
 
-                    <!-- Template de ejemplo -->
                     <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <p class="text-sm font-semibold text-amber-900 mb-2">📋 Formato requerido del Excel:</p>
                         <p class="text-xs text-amber-800">El archivo debe contener las siguientes columnas:</p>
@@ -469,7 +461,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         </button>
                     </div>
 
-                    <!-- Botones -->
                     <div class="flex gap-3 mt-6">
                         <button @click="closeImportModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">Cancelar</button>
                         <button @click="processImport()" :disabled="importedData.length === 0" class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -551,7 +542,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             async saveUser() {
                 this.isSaving = true;
                 try {
-                    // Preparar datos sin incluir password (se genera en el backend)
                     const userData = {
                         name: this.newUser.name,
                         last_name: this.newUser.last_name,
@@ -563,11 +553,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         address: this.newUser.address,
                         blood_type: this.newUser.blood_type,
                         registration_date: this.newUser.registration_date,
-                        status: this.newUser.status
+                        status: this.newUser.status,
+                        role: this.newUser.role
                     };
 
                     if (this.isEditing) {
-                        // Actualizar usuario existente (PUT)
                         const response = await fetch(`${this.apiBaseUrl}/users/${this.newUser.id}`, {
                             method: 'PUT',
                             headers: { 
@@ -576,11 +566,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             },
                             body: JSON.stringify(userData)
                         });
-                        
                         const result = await response.json();
                         
                         if (response.ok && result.success) {
-                            // Extraer usuario del formato de respuesta: { success, message, data: { user } }
                             const updatedUser = result.data?.user || result.data || result;
                             const index = this.users.findIndex(u => u.id === this.newUser.id);
                             if (index !== -1) {
@@ -589,7 +577,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.showNotify(result.message || 'Usuario actualizado correctamente');
                             this.closePanel();
                         } else {
-                            // Manejar errores de validación (422)
                             if (response.status === 422 && result.errors) {
                                 const errorMessages = Object.values(result.errors).flat().join(', ');
                                 this.showNotify(errorMessages, 'error');
@@ -598,7 +585,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             }
                         }
                     } else {
-                        // Crear nuevo usuario (POST)
                         const response = await fetch(`${this.apiBaseUrl}/users`, {
                             method: 'POST',
                             headers: { 
@@ -609,15 +595,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         });
                         
                         const result = await response.json();
-                        
                         if (response.status === 201 && result.success) {
-                            // Extraer usuario del formato de respuesta: { success, message, data: { user } }
                             const newUser = result.data?.user || result.data || result;
                             this.users.push(newUser);
                             this.showNotify(result.message || `Usuario ${newUser.name} creado con éxito`);
                             this.closePanel();
                         } else {
-                            // Manejar errores de validación (422)
                             if (response.status === 422 && result.errors) {
                                 const errorMessages = Object.values(result.errors).flat().join(', ');
                                 this.showNotify(errorMessages, 'error');
@@ -644,11 +627,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     const response = await fetch(`${this.apiBaseUrl}/users/${id}`, {
                         method: 'DELETE',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
+                        headers: { 'Accept': 'application/json' }
                     });
-                    
                     const result = await response.json();
                     
                     if (response.ok && result.success) {
@@ -664,7 +644,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.isDeleting = false;
             },
 
-            // Funciones para importación Excel
             openImportModal() {
                 this.isImporting = true;
                 this.selectedFile = null;
@@ -705,8 +684,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const workbook = XLSX.read(data, { type: 'array' });
                         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                         const rows = XLSX.utils.sheet_to_json(firstSheet);
-                        
-                        // Mapear columnas del Excel a formato de API
                         this.importedData = rows.map(row => ({
                             name: row.name || row.nombre || '',
                             last_name: row.last_name || row.apellidos || '',
@@ -725,7 +702,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             status: 'activo',
                             role: row.role || row.rol || 'Maestro'
                         }));
-
                         this.showNotify(`${this.importedData.length} usuarios cargados desde Excel`);
                     } catch (error) {
                         console.error('Error al leer Excel:', error);
@@ -737,11 +713,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async processImport() {
                 if (this.importedData.length === 0) return;
-                
                 this.isSaving = true;
                 let successful = 0;
                 let failed = 0;
-
                 for (const userData of this.importedData) {
                     try {
                         const response = await fetch(`${this.apiBaseUrl}/users`, {
@@ -752,7 +726,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             },
                             body: JSON.stringify(userData)
                         });
-                        
                         const result = await response.json();
                         
                         if (response.status === 201 && result.success) {
@@ -761,17 +734,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             successful++;
                         } else {
                             failed++;
-                            console.error('Error al importar usuario:', result);
                         }
                     } catch (error) {
                         failed++;
-                        console.error('Error en importación:', error);
                     }
                 }
-
                 this.isSaving = false;
                 this.closeImportModal();
-                
                 if (failed === 0) {
                     this.showNotify(`✓ ${successful} usuario(s) importado(s) exitosamente`);
                 } else {
@@ -780,7 +749,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
 
             downloadTemplate() {
-                // Crear plantilla de Excel
                 const template = [
                     {
                         name: 'Juan',
@@ -797,12 +765,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         role: 'Maestro'
                     }
                 ];
-                
                 const ws = XLSX.utils.json_to_sheet(template);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
                 XLSX.writeFile(wb, 'plantilla_usuarios_cbta71.xlsx');
-                
                 this.showNotify('Plantilla descargada correctamente');
             },
 
