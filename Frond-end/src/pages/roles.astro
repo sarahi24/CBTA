@@ -2,25 +2,67 @@
 import Layout from '../layouts/Layout.astro';
 import { API_ENDPOINTS } from '../config/api.js';
 
+// Cargar usuarios desde la API
 let initialUsers = [];
 try {
   const res = await fetch(API_ENDPOINTS.users.list);
   if (res.ok) {
     const json = await res.json();
     initialUsers = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-  }
+  
 } catch (e) {
+  // Fallback data si falla la API
   initialUsers = [
     { 
-      id: 100, name: 'Juan', last_name: 'Pérez López', email: 'juan.perez@cbta71.edu.mx', 
-      phone_number: '5512345678', birthdate: '2000-05-12', gender: 'hombre', 
-      curp: 'PELJ000512HDFRPN09', address: ['Calle Hidalgo #123', 'Col. Centro', 'CDMX'], 
-      blood_type: 'O+', registration_date: '2025-01-01', status: 'activo', role: 'Administrador' 
+      id: 100, 
+      name: 'Juan', 
+      last_name: 'Pérez López', 
+      email: 'juan.perez@cbta71.edu.mx', 
+      phone_number: '5512345678',
+      birthdate: '2000-05-12',
+      gender: 'hombre',
+      curp: 'PELJ000512HDFRPN09',
+      address: ['Calle Hidalgo #123', 'Col. Centro', 'CDMX'],
+      blood_type: 'O+',
+      registration_date: '2025-01-01',
+      status: 'activo',
+      role: 'Administrador'
+    },
+    { 
+      id: 101, 
+      name: 'María', 
+      last_name: 'García Rodríguez', 
+      email: 'maria.garcia@cbta71.edu.mx', 
+      phone_number: '5587654321',
+      birthdate: '1995-08-20',
+      gender: 'mujer',
+      curp: 'GARM950820MDFRDRL05',
+      address: ['Av. Juárez #456', 'Col. Reforma', 'CDMX'],
+      blood_type: 'A+',
+      registration_date: '2024-06-15',
+      status: 'activo',
+      role: 'Caja'
+    },
+    { 
+      id: 102, 
+      name: 'Carlos', 
+      last_name: 'Martínez Sánchez', 
+      email: 'carlos.martinez@cbta71.edu.mx', 
+      phone_number: '5523456789',
+      birthdate: '1988-03-10',
+      gender: 'hombre',
+      curp: 'MASC880310HDFRRNR08',
+      address: ['Calle Morelos #789', 'Col. Guadalupe', 'Estado de México'],
+      blood_type: 'B+',
+      registration_date: '2023-09-01',
+      status: 'activo',
+      role: 'Maestro'
     }
   ];
 }
 
 const usersJSON = JSON.stringify(initialUsers);
+const API_USERS_ENDPOINT = API_ENDPOINTS.users.list;
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
@@ -29,331 +71,724 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     
     <style is:global>
         [x-cloak] { display: none !important; }
+        
         .bg-institucional { background-color: #2E594D; }
         .text-institucional { color: #2E594D; }
-        .input-institucional:focus { border-color: #2E594D; ring: 2px #2E594D; }
-        /* Scrollbar estética para el modal */
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #2E594D; border-radius: 10px; }
+        .border-institucional { border-color: #2E594D; }
+        .hover-institucional:hover { background-color: #234238; }
+        
+        /* Estilo para el focus de los inputs */
+        .input-institucional:focus {
+            outline: none;
+            border-color: #2E594D;
+            box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
+        }
+        
+        /* Animación para dropzone */
+        .dropzone-active {
+            border-color: #2E594D;
+            background-color: rgba(46, 89, 77, 0.05);
+        }
+        
+        /* Estilos para tabla responsive */
+        @media (max-width: 768px) {
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
     </style>
 
-    <div x-data={`userManagement(${usersJSON}, '${API_BASE_URL}')`} x-cloak class="min-h-screen bg-gray-100 pb-10">
+    <div x-data="rolesData" class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
         
-        <div class="bg-white border-b sticky top-0 z-40 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:row justify-between items-center gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="bg-institucional p-2 rounded-lg text-white">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-800 leading-none">Gestión de Personal</h1>
-                        <span class="text-xs text-gray-500 font-medium uppercase tracking-tighter">CBTA 71 - Dashboard de Administración</span>
-                    </div>
-                </div>
+        <template x-teleport="body">
+            <div x-show="notification.show" x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 class="fixed top-5 right-5 z-[100] p-4 rounded-xl shadow-2xl text-white font-bold"
+                 :class="notification.type === 'success' ? 'bg-institucional' : 'bg-red-600'">
+                <span x-text="notification.message"></span>
+            </div>
+        </template>
 
-                <div class="relative w-full md:w-96">
-                    <input type="text" x-model="searchQuery" placeholder="Buscar por nombre, CURP o correo..." 
-                           class="w-full pl-11 pr-4 py-2.5 rounded-2xl border-2 border-gray-100 bg-gray-50 focus:bg-white focus:border-institucional outline-none transition-all text-sm">
-                    <svg class="w-5 h-5 absolute left-4 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800 mb-1">Gestión de Personal</h1>
+                    <p class="text-slate-500">Administración de usuarios y roles del sistema</p>
                 </div>
-
-                <div class="flex gap-2 w-full md:w-auto">
-                    <button @click="downloadTemplate()" class="flex-1 md:flex-none px-4 py-2 bg-white border-2 border-gray-100 rounded-xl hover:bg-gray-50 font-bold text-xs flex items-center justify-center gap-2 transition-all">
-                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        PLANTILLA
+                <div class="flex flex-wrap gap-3">
+                    <button @click="openImportModal()" 
+                            class="px-5 py-2.5 bg-white border-2 border-institucional text-institucional font-semibold rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        Importar Excel
                     </button>
-                    <button @click="openPanelForAdd()" class="flex-1 md:flex-none px-6 py-2.5 bg-institucional text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transform active:scale-95 transition-all flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-                        NUEVO REGISTRO
+                    <button @click="openPanelForAdd()" 
+                            class="px-5 py-2.5 bg-institucional text-white font-semibold rounded-lg hover-institucional transition-all flex items-center gap-2 shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Agregar Usuario
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 py-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <template x-for="user in filteredUsers()" :key="user.id">
-                    <div class="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col group">
-                        <div class="px-5 pt-5 flex justify-between items-center">
-                            <span :class="user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" 
-                                  class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest" x-text="user.status"></span>
-                            <span class="text-[10px] text-gray-400 font-bold" x-text="'ID: #'+user.id"></span>
-                        </div>
-
-                        <div class="p-5 flex-1">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div class="h-14 w-14 bg-institucional rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-inner" x-text="user.name[0]"></div>
-                                <div>
-                                    <h3 class="font-bold text-gray-900 leading-tight text-lg group-hover:text-institucional transition-colors" x-text="user.name"></h3>
-                                    <p class="text-sm font-bold text-gray-400" x-text="user.last_name"></p>
-                                </div>
-                            </div>
-
-                            <div class="space-y-3 pt-4 border-t border-dashed">
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Correo</span>
-                                    <span class="text-xs font-semibold text-gray-700 truncate" x-text="user.email"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <div class="flex flex-col">
-                                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Rol</span>
-                                        <span class="text-xs font-bold text-institucional" x-text="user.role"></span>
-                                    </div>
-                                    <div class="flex flex-col text-right">
-                                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Sangre</span>
-                                        <span class="text-xs font-bold text-red-600" x-text="user.blood_type"></span>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">CURP</span>
-                                    <span class="text-xs font-mono text-gray-600" x-text="user.curp || 'NO REGISTRADO'"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-gray-50 px-5 py-4 flex gap-3">
-                            <button @click="openPanelForEdit(user)" class="flex-1 bg-white border border-gray-200 py-2 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2 text-xs font-bold">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                EDITAR
-                            </button>
-                            <button @click="confirmDeleteUser(user)" class="p-2 border border-gray-200 rounded-xl text-red-500 hover:bg-red-500 hover:text-white transition-all">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
-                        </div>
+        <!-- Stats Cards -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
                     </div>
-                </template>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Total Usuarios</p>
+                        <p class="text-2xl font-bold text-slate-800" x-text="users.length"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border-l-0 md:border-l border-slate-200">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Usuarios Activos</p>
+                        <p class="text-2xl font-bold text-green-600" x-text="users.filter(u => u.status === 'activo').length"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border-l-0 md:border-l border-slate-200">
+                    <div class="w-12 h-12 bg-institucional bg-opacity-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-institucional" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Administradores</p>
+                        <p class="text-2xl font-bold text-institucional" x-text="users.filter(u => u.role === 'Administrador').length"></p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div x-show="isPanelOpen" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div x-show="isPanelOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" 
-                     class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-50 flex flex-col md:flex-row">
-                    
-                    <div class="bg-institucional md:w-1/3 p-10 text-white flex flex-col justify-between">
+        <!-- Tabla de Usuarios -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Usuario</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Contacto</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">CURP</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rol</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-for="user in filteredUsers" :key="user.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-institucional to-teal-600 flex items-center justify-center text-white font-bold">
+                                            <span x-text="(user.name.charAt(0) + user.last_name.charAt(0)).toUpperCase()"></span>
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-slate-800" x-text="`${user.name} ${user.last_name}`"></div>
+                                            <div class="text-xs text-slate-500" x-text="user.gender === 'hombre' ? 'Masculino' : 'Femenino'"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-slate-700" x-text="user.email"></div>
+                                    <div class="text-xs text-slate-500" x-text="user.phone_number"></div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block" x-text="user.curp"></div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1"
+                                          :class="{
+                                              'bg-purple-100 text-purple-700': user.role === 'Administrador',
+                                              'bg-blue-100 text-blue-700': user.role === 'Caja',
+                                              'bg-green-100 text-green-700': user.role === 'Maestro'
+                                          }"
+                                          x-text="user.role"></span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold"
+                                          :class="user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                          x-text="user.status === 'activo' ? 'Activo' : 'Inactivo'"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button @click="openPanelForEdit(user)" 
+                                                class="p-2 text-slate-400 hover:text-institucional hover:bg-slate-100 rounded-lg transition-colors"
+                                                title="Editar">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                        </button>
+                                        <button @click="confirmDeleteUser(user)" 
+                                                class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Eliminar">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div x-show="isPanelOpen" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div x-show="isPanelOpen" x-transition.opacity @click="closePanel()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+            <div x-show="isPanelOpen" 
+                 x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white rounded-2xl p-6 sm:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <!-- Botón de cerrar -->
+                <button @click="closePanel()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+                
+                <div class="mb-6">
+                    <h2 class="text-2xl font-black text-institucional mb-2" x-text="isEditing ? 'Editar Colaborador' : 'Registrar Administrador/Personal'"></h2>
+                    <p class="text-xs text-slate-500 flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>La contraseña se genera automáticamente por el sistema y se enviará al email del usuario.</span>
+                    </p>
+                </div>
+                
+                <form @submit.prevent="saveUser()" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <div class="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            </div>
-                            <h2 class="text-3xl font-black leading-tight" x-text="isEditing ? 'Actualizar Datos' : 'Registrar Nuevo'"></h2>
-                            <p class="mt-4 text-white/60 text-sm">Asegúrate de que el CURP y el correo institucional sean correctos para evitar duplicados.</p>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nombre(s)</label>
+                            <input x-model="newUser.name" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
-                        <div class="hidden md:block">
-                            <span class="text-[10px] font-bold tracking-widest opacity-40 uppercase">CBTA 71 © 2025</span>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Apellidos</label>
+                            <input x-model="newUser.last_name" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
                     </div>
-
-                    <form @submit.prevent="saveUser()" class="flex-1 p-8 md:p-12 custom-scroll overflow-y-auto max-h-[85vh]">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="md:col-span-2 border-b pb-2 mb-2"><span class="text-xs font-black text-institucional uppercase tracking-widest">Información Personal</span></div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">Nombre(s)</label>
-                                <input type="text" x-model="newUser.name" required class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-institucional outline-none transition-all">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">Apellidos</label>
-                                <input type="text" x-model="newUser.last_name" required class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-institucional outline-none transition-all">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">CURP</label>
-                                <input type="text" x-model="newUser.curp" maxlength="18" class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-institucional outline-none transition-all font-mono uppercase">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">Fecha Nac.</label>
-                                <input type="date" x-model="newUser.birthdate" class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-institucional outline-none transition-all">
-                            </div>
-
-                            <div class="md:col-span-2 border-b pb-2 mb-2 mt-4"><span class="text-xs font-black text-institucional uppercase tracking-widest">Contacto y Sistema</span></div>
-                            <div class="md:col-span-2 space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">Email Institucional</label>
-                                <input type="email" x-model="newUser.email" required class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-institucional outline-none transition-all">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">Rol</label>
-                                <select x-model="newUser.role" class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:border-institucional outline-none transition-all font-bold">
-                                    <option value="Administrador">Administrador</option>
-                                    <option value="Maestro">Maestro</option>
-                                    <option value="Caja">Caja</option>
-                                </select>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 tracking-widest">Estatus</label>
-                                <select x-model="newUser.status" class="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:border-institucional outline-none transition-all">
-                                    <option value="activo">Activo</option>
-                                    <option value="inactivo">Inactivo</option>
-                                </select>
-                            </div>
-
-                            <div class="md:col-span-2 border-b pb-2 mb-2 mt-4"><span class="text-xs font-black text-institucional uppercase tracking-widest">Dirección</span></div>
-                            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input type="text" x-model="newUser.address[0]" placeholder="Calle y número" class="px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:border-institucional outline-none transition-all text-sm">
-                                <input type="text" x-model="newUser.address[1]" placeholder="Colonia" class="px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:border-institucional outline-none transition-all text-sm">
-                                <input type="text" x-model="newUser.address[2]" placeholder="Estado" class="px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50 focus:border-institucional outline-none transition-all text-sm">
-                            </div>
+                    
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Email</label>
+                        <input x-model="newUser.email" type="email" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Teléfono</label>
+                            <input x-model="newUser.phone_number" type="tel" pattern="[0-9]{10}" placeholder="5512345678" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
-
-                        <div class="mt-12 flex gap-4">
-                            <button type="button" @click="closePanel()" class="flex-1 px-8 py-4 rounded-2xl font-black text-gray-400 hover:bg-gray-100 transition-all uppercase tracking-widest">Cerrar</button>
-                            <button type="submit" class="flex-[2] px-8 py-4 bg-institucional text-white rounded-2xl font-black shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 uppercase tracking-widest" :disabled="isSaving">
-                                <template x-if="isSaving">
-                                    <div class="animate-spin h-5 w-5 border-3 border-white border-t-transparent rounded-full"></div>
-                                </template>
-                                <span x-text="isSaving ? 'Procesando...' : 'Guardar Cambios'"></span>
-                            </button>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Fecha Nacimiento</label>
+                            <input x-model="newUser.birthdate" type="date" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
-                    </form>
-                </div>
-                <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-md transition-opacity" @click="closePanel()"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Género</label>
+                            <select x-model="newUser.gender" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                <option value="hombre">Hombre</option>
+                                <option value="mujer">Mujer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Tipo de Sangre</label>
+                            <select x-model="newUser.blood_type" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">CURP</label>
+                        <input x-model="newUser.curp" type="text" pattern="[A-Z]{4}[0-9]{6}[A-Z]{6}[0-9]{2}" maxlength="18" placeholder="PELJ000512HDFRPN09" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional uppercase">
+                    </div>
+                    
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Calle y Número</label>
+                        <input x-model="newUser.address[0]" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Colonia</label>
+                            <input x-model="newUser.address[1]" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Ciudad/Estado</label>
+                            <input x-model="newUser.address[2]" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                        </div>
+                    </div>
+                    
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Asignar Rol</label>
+                        <select x-model="newUser.role" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional font-semibold">
+                            <option value="Administrador">Administrador</option>
+                            <option value="Caja">Personal de Caja</option>
+                            <option value="Maestro">Maestro</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 pt-6 sm:col-span-2">
+                        <button type="button" @click="closePanel()" :disabled="isSaving" class="flex-1 py-3 font-bold text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50 border-2 border-slate-200 transition-colors">Cancelar</button>
+                        <button type="submit" :disabled="isSaving" class="flex-1 py-3 bg-institucional text-white font-bold rounded-xl shadow-lg hover-institucional disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <span x-show="!isSaving" x-text="isEditing ? 'Actualizar Datos' : 'Registrar Ahora'"></span>
+                            <span x-show="isSaving" class="flex items-center justify-center gap-2">
+                                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Guardando...
+                            </span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
+
+        <!-- Modal de Confirmación de Eliminación -->
+        <template x-teleport="body">
+            <div x-show="isDeleting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                <div @click="isDeleting = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+                <div class="relative bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">¿Eliminar usuario?</h3>
+                    <p class="text-slate-500 text-sm mb-6" x-text="`Se eliminará permanentemente a ${userToDeleteName}`"></p>
+                    <div class="flex gap-3">
+                        <button @click="isDeleting = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">Cancelar</button>
+                        <button @click="deleteUser(userToDeleteId)" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Modal de Importación Excel -->
+        <template x-teleport="body">
+            <div x-show="isImporting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                <div @click="isImporting = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+                <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Importar Usuarios desde Excel</h3>
+                    <p class="text-slate-500 text-sm mb-6">Carga un archivo Excel con los datos de múltiples usuarios para registrarlos masivamente</p>
+                    
+                    <!-- Dropzone -->
+                    <div @dragover.prevent="isDragging = true" 
+                         @dragleave.prevent="isDragging = false"
+                         @drop.prevent="handleFileDrop($event)"
+                         :class="isDragging ? 'dropzone-active' : ''"
+                         class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center transition-all cursor-pointer hover:border-institucional"
+                         @click="$refs.fileInput.click()">
+                        <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept=".xlsx,.xls" class="hidden">
+                        <svg class="w-16 h-16 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="text-slate-700 font-semibold mb-2">Arrastra tu archivo Excel aquí</p>
+                        <p class="text-slate-500 text-sm mb-4">o haz clic para seleccionar</p>
+                        <p class="text-xs text-slate-400">Formatos aceptados: .xlsx, .xls</p>
+                    </div>
+
+                    <!-- Archivo seleccionado -->
+                    <div x-show="selectedFile" class="mt-4 p-4 bg-slate-50 rounded-lg flex items-center gap-3">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <p class="font-semibold text-slate-800" x-text="selectedFile?.name"></p>
+                            <p class="text-xs text-slate-500" x-text="selectedFile ? `${(selectedFile.size / 1024).toFixed(2)} KB` : ''"></p>
+                        </div>
+                        <button @click="selectedFile = null; importedData = []" class="p-2 text-slate-400 hover:text-red-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Resumen de importación -->
+                    <div x-show="importedData.length > 0" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <span class="font-bold" x-text="importedData.length"></span> usuario(s) detectado(s) en el archivo
+                        </p>
+                    </div>
+
+                    <!-- Template de ejemplo -->
+                    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p class="text-sm font-semibold text-amber-900 mb-2">📋 Formato requerido del Excel:</p>
+                        <p class="text-xs text-amber-800">El archivo debe contener las siguientes columnas:</p>
+                        <div class="mt-2 text-xs text-amber-700 font-mono bg-white p-2 rounded">
+                            name | last_name | email | phone_number | birthdate | gender | curp | address_line1 | address_line2 | address_line3 | blood_type | role
+                        </div>
+                        <button @click="downloadTemplate()" class="mt-3 text-xs text-institucional hover:underline font-semibold">
+                            ⬇️ Descargar plantilla de ejemplo
+                        </button>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex gap-3 mt-6">
+                        <button @click="closeImportModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">Cancelar</button>
+                        <button @click="processImport()" :disabled="importedData.length === 0" class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Importar <span x-text="importedData.length"></span> Usuario(s)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
+</Layout>
 
-    <script is:inline define:vars={{ usersJSON, API_BASE_URL }}>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('userManagement', (initialUsers, baseUrl) => ({
-                users: initialUsers,
-                apiBaseUrl: baseUrl,
-                isPanelOpen: false,
-                isEditing: false,
-                isSaving: false,
-                searchQuery: '',
-                newUser: { address: ['', '', ''] }, // Inicialización para evitar errores de undefined
-                notification: { show: false, message: '', type: 'success' },
+<script define:vars={{ usersJSON, API_BASE_URL }}>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('rolesData', () => ({
+            users: JSON.parse(usersJSON),
+            apiBaseUrl: API_BASE_URL,
+            isPanelOpen: false,
+            isEditing: false,
+            isDeleting: false,
+            isSaving: false,
+            isImporting: false,
+            isDragging: false,
+            selectedFile: null,
+            importedData: [],
+            userToDeleteId: null,
+            userToDeleteName: '',
+            newUser: { 
+                id: null, 
+                name: '', 
+                last_name: '', 
+                email: '', 
+                phone_number: '',
+                birthdate: '',
+                gender: 'hombre',
+                curp: '',
+                address: ['', '', ''],
+                blood_type: 'O+',
+                registration_date: new Date().toISOString().split('T')[0],
+                status: 'activo',
+                role: 'Administrador'
+            },
+            notification: { show: false, message: '', type: 'success' },
 
-                // LÓGICA DE BÚSQUEDA INTEGRAL
-                filteredUsers() {
-                    if (!this.searchQuery) return this.users;
-                    const q = this.searchQuery.toLowerCase();
-                    return this.users.filter(u => 
-                        (u.name + ' ' + u.last_name).toLowerCase().includes(q) || 
-                        u.email.toLowerCase().includes(q) || 
-                        (u.curp && u.curp.toLowerCase().includes(q)) ||
-                        u.role.toLowerCase().includes(q)
-                    );
-                },
+            get filteredUsers() {
+                return this.users;
+            },
 
-                // LÓGICA DE PANEL (Reset de todas las variables originales)
-                openPanelForAdd() {
-                    this.isEditing = false;
-                    this.newUser = { 
-                        id: null, name: '', last_name: '', email: '', phone_number: '',
-                        birthdate: '', gender: 'hombre', curp: '', 
-                        address: ['', '', ''], // Mantenemos tu lógica de array
-                        blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
-                        status: 'activo', role: 'Maestro' 
+            openPanelForAdd() {
+                this.isEditing = false;
+                this.newUser = { 
+                    id: null, 
+                    name: '', 
+                    last_name: '', 
+                    email: '', 
+                    phone_number: '',
+                    birthdate: '',
+                    gender: 'hombre',
+                    curp: '',
+                    address: ['', '', ''],
+                    blood_type: 'O+',
+                    registration_date: new Date().toISOString().split('T')[0],
+                    status: 'activo',
+                    role: 'Administrador'
+                };
+                this.isPanelOpen = true;
+            },
+
+            openPanelForEdit(user) {
+                this.isEditing = true;
+                this.newUser = { ...user };
+                this.isPanelOpen = true;
+            },
+
+            closePanel() {
+                this.isPanelOpen = false;
+            },
+
+            async saveUser() {
+                this.isSaving = true;
+                try {
+                    // Preparar datos sin incluir password (se genera en el backend)
+                    const userData = {
+                        name: this.newUser.name,
+                        last_name: this.newUser.last_name,
+                        email: this.newUser.email,
+                        phone_number: this.newUser.phone_number,
+                        birthdate: this.newUser.birthdate,
+                        gender: this.newUser.gender,
+                        curp: this.newUser.curp,
+                        address: this.newUser.address,
+                        blood_type: this.newUser.blood_type,
+                        registration_date: this.newUser.registration_date,
+                        status: this.newUser.status
                     };
-                    this.isPanelOpen = true;
-                },
 
-                openPanelForEdit(user) {
-                    this.isEditing = true;
-                    // Clon profundo para no modificar la lista si se cancela
-                    this.newUser = JSON.parse(JSON.stringify(user));
-                    // Asegurar que address exista como array
-                    if (!this.newUser.address) this.newUser.address = ['', '', ''];
-                    this.isPanelOpen = true;
-                },
-
-                closePanel() { this.isPanelOpen = false; },
-
-                // LÓGICA DE GUARDADO (Toda tu lógica de peticiones)
-                async saveUser() {
-                    // 1. Validaciones lógicas manuales (las que suelen sumar líneas)
-                    if (this.newUser.curp && this.newUser.curp.length !== 18) {
-                        this.showNotify('El CURP debe tener 18 caracteres', 'error');
-                        return;
-                    }
-
-                    this.isSaving = true;
-                    try {
-                        const method = this.isEditing ? 'PUT' : 'POST';
-                        const url = this.isEditing 
-                            ? `${this.apiBaseUrl}/users/${this.newUser.id}` 
-                            : `${this.apiBaseUrl}/users`;
-
-                        const response = await fetch(url, {
-                            method,
+                    if (this.isEditing) {
+                        // Actualizar usuario existente (PUT)
+                        const response = await fetch(`${this.apiBaseUrl}/users/${this.newUser.id}`, {
+                            method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
-                                'Accept': 'application/json' 
+                                'Accept': 'application/json'
                             },
-                            body: JSON.stringify(this.newUser)
+                            body: JSON.stringify(userData)
                         });
-
+                        
                         const result = await response.json();
-
-                        if (response.ok && (result.success || result.id)) {
-                            // Mantenemos tu lógica de actualización de lista local
-                            const savedData = result.data?.user || result.data || result;
-                            if (this.isEditing) {
-                                const idx = this.users.findIndex(u => u.id === this.newUser.id);
-                                if (idx !== -1) this.users[idx] = savedData;
-                            } else {
-                                this.users.push(savedData);
+                        
+                        if (response.ok && result.success) {
+                            // Extraer usuario del formato de respuesta: { success, message, data: { user } }
+                            const updatedUser = result.data?.user || result.data || result;
+                            const index = this.users.findIndex(u => u.id === this.newUser.id);
+                            if (index !== -1) {
+                                this.users[index] = updatedUser;
                             }
-                            this.showNotify(result.message || 'Registro procesado con éxito');
+                            this.showNotify(result.message || 'Usuario actualizado correctamente');
                             this.closePanel();
                         } else {
-                            // Manejo detallado de errores de API
-                            let msg = result.message || 'Error en la operación';
-                            if (result.errors) msg = Object.values(result.errors).flat().join(' | ');
-                            this.showNotify(msg, 'error');
+                            // Manejar errores de validación (422)
+                            if (response.status === 422 && result.errors) {
+                                const errorMessages = Object.values(result.errors).flat().join(', ');
+                                this.showNotify(errorMessages, 'error');
+                            } else {
+                                this.showNotify(result.message || 'Error al actualizar usuario', 'error');
+                            }
+                        }
+                    } else {
+                        // Crear nuevo usuario (POST)
+                        const response = await fetch(`${this.apiBaseUrl}/users`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(userData)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.status === 201 && result.success) {
+                            // Extraer usuario del formato de respuesta: { success, message, data: { user } }
+                            const newUser = result.data?.user || result.data || result;
+                            this.users.push(newUser);
+                            this.showNotify(result.message || `Usuario ${newUser.name} creado con éxito`);
+                            this.closePanel();
+                        } else {
+                            // Manejar errores de validación (422)
+                            if (response.status === 422 && result.errors) {
+                                const errorMessages = Object.values(result.errors).flat().join(', ');
+                                this.showNotify(errorMessages, 'error');
+                            } else {
+                                this.showNotify(result.message || 'Error al crear usuario', 'error');
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error en saveUser:', error);
+                    this.showNotify('Error de conexión con el servidor', 'error');
+                } finally {
+                    this.isSaving = false;
+                }
+            },
+
+            confirmDeleteUser(user) {
+                this.userToDeleteId = user.id;
+                this.userToDeleteName = `${user.name} ${user.last_name}`;
+                this.isDeleting = true;
+            },
+
+            async deleteUser(id) {
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/users/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        this.users = this.users.filter(u => u.id !== id);
+                        this.showNotify(result.message || 'Usuario eliminado correctamente');
+                    } else {
+                        this.showNotify(result.message || 'Error al eliminar usuario', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error en deleteUser:', error);
+                    this.showNotify('Error de conexión con el servidor', 'error');
+                }
+                this.isDeleting = false;
+            },
+
+            // Funciones para importación Excel
+            openImportModal() {
+                this.isImporting = true;
+                this.selectedFile = null;
+                this.importedData = [];
+            },
+
+            closeImportModal() {
+                this.isImporting = false;
+                this.selectedFile = null;
+                this.importedData = [];
+                this.isDragging = false;
+            },
+
+            handleFileDrop(event) {
+                this.isDragging = false;
+                const file = event.dataTransfer.files[0];
+                if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                    this.selectedFile = file;
+                    this.readExcelFile(file);
+                } else {
+                    this.showNotify('Por favor selecciona un archivo Excel válido (.xlsx o .xls)', 'error');
+                }
+            },
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    this.selectedFile = file;
+                    this.readExcelFile(file);
+                }
+            },
+
+            readExcelFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        // Mapear columnas del Excel a formato de API
+                        this.importedData = rows.map(row => ({
+                            name: row.name || row.nombre || '',
+                            last_name: row.last_name || row.apellidos || '',
+                            email: row.email || row.correo || '',
+                            phone_number: row.phone_number || row.telefono || '',
+                            birthdate: row.birthdate || row.fecha_nacimiento || '',
+                            gender: row.gender || row.genero || 'hombre',
+                            curp: row.curp || '',
+                            address: [
+                                row.address_line1 || row.direccion_1 || '',
+                                row.address_line2 || row.direccion_2 || '',
+                                row.address_line3 || row.direccion_3 || ''
+                            ],
+                            blood_type: row.blood_type || row.tipo_sangre || 'O+',
+                            registration_date: new Date().toISOString().split('T')[0],
+                            status: 'activo',
+                            role: row.role || row.rol || 'Maestro'
+                        }));
+
+                        this.showNotify(`${this.importedData.length} usuarios cargados desde Excel`);
+                    } catch (error) {
+                        console.error('Error al leer Excel:', error);
+                        this.showNotify('Error al procesar el archivo Excel', 'error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            },
+
+            async processImport() {
+                if (this.importedData.length === 0) return;
+                
+                this.isSaving = true;
+                let successful = 0;
+                let failed = 0;
+
+                for (const userData of this.importedData) {
+                    try {
+                        const response = await fetch(`${this.apiBaseUrl}/users`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(userData)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.status === 201 && result.success) {
+                            const newUser = result.data?.user || result.data || result;
+                            this.users.push(newUser);
+                            successful++;
+                        } else {
+                            failed++;
+                            console.error('Error al importar usuario:', result);
                         }
                     } catch (error) {
-                        this.showNotify('Fallo de conexión: ' + error.message, 'error');
-                    } finally {
-                        this.isSaving = false;
+                        failed++;
+                        console.error('Error en importación:', error);
                     }
-                },
-
-                // LÓGICA DE BORRADO
-                confirmDeleteUser(user) {
-                    if (confirm(`¿Está seguro de eliminar a ${user.name} ${user.last_name}?\nEsta acción no se puede deshacer.`)) {
-                        this.deleteUser(user.id);
-                    }
-                },
-
-                async deleteUser(id) {
-                    try {
-                        const response = await fetch(`${this.apiBaseUrl}/users/${id}`, { 
-                            method: 'DELETE',
-                            headers: { 'Accept': 'application/json' }
-                        });
-                        const result = await response.json();
-                        if (response.ok && result.success) {
-                            this.users = this.users.filter(u => u.id !== id);
-                            this.showNotify('Usuario eliminado correctamente');
-                        } else {
-                            this.showNotify(result.message || 'No se pudo eliminar', 'error');
-                        }
-                    } catch (e) {
-                        this.showNotify('Error de red al eliminar', 'error');
-                    }
-                },
-
-                // LÓGICA DE EXCEL (XLSX)
-                downloadTemplate() {
-                    const template = [
-                        { 
-                            name: 'Nombre', 
-                            last_name: 'Apellidos', 
-                            email: 'correo@cbta71.edu.mx', 
-                            curp: 'ABC123456...',
-                            role: 'Maestro',
-                            phone_number: '1234567890'
-                        }
-                    ];
-                    const ws = XLSX.utils.json_to_sheet(template);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
-                    XLSX.writeFile(wb, 'Plantilla_Personal_CBTA71.xlsx');
-                },
-
-                showNotify(msg, type = 'success') {
-                    this.notification = { show: true, message: msg, type };
-                    setTimeout(() => this.notification.show = false, 4000);
                 }
-            }));
-        });
-    </script>
+
+                this.isSaving = false;
+                this.closeImportModal();
+                
+                if (failed === 0) {
+                    this.showNotify(`✓ ${successful} usuario(s) importado(s) exitosamente`);
+                } else {
+                    this.showNotify(`${successful} exitoso(s), ${failed} fallido(s)`, 'error');
+                }
+            },
+
+            downloadTemplate() {
+                // Crear plantilla de Excel
+                const template = [
+                    {
+                        name: 'Juan',
+                        last_name: 'Pérez López',
+                        email: 'juan.perez@example.com',
+                        phone_number: '5512345678',
+                        birthdate: '2000-05-12',
+                        gender: 'hombre',
+                        curp: 'PELJ000512HDFRPN09',
+                        address_line1: 'Calle Hidalgo #123',
+                        address_line2: 'Col. Centro',
+                        address_line3: 'CDMX',
+                        blood_type: 'O+',
+                        role: 'Maestro'
+                    }
+                ];
+                
+                const ws = XLSX.utils.json_to_sheet(template);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+                XLSX.writeFile(wb, 'plantilla_usuarios_cbta71.xlsx');
+                
+                this.showNotify('Plantilla descargada correctamente');
+            },
+
+            showNotify(msg, type = 'success') {
+                this.notification = { show: true, message: msg, type };
+                setTimeout(() => this.notification.show = false, 3000);
+            }
+        }));
+    });
+</script>
