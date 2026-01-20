@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { API_ENDPOINTS } from '../config/api.js';
 
 // ================= CONFIG =================
 const MAX_SEMESTER = 10;
@@ -20,7 +21,13 @@ const CAREER_MAP = CAREERS.reduce((a, c) => {
 
 // ================= DATA =================
 let students = [];
-// Fallback data removed - API should provide students
+try {
+  const res = await fetch(API_ENDPOINTS.students.list);
+  if (res.ok) {
+    const json = await res.json();
+    students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
+  }
+} catch (e) {}
 
 students = students.map((s, i) => ({
   id: s.id ?? String(i + 1),

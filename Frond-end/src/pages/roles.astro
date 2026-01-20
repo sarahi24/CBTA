@@ -1,5 +1,30 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { API_ENDPOINTS } from '../config/api.js';
+
+// Cargar usuarios desde la API
+let initialUsers = [];
+try {
+  const res = await fetch(API_ENDPOINTS.users.list);
+  if (res.ok) {
+    const json = await res.json();
+    initialUsers = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
+  }
+} catch (e) {
+  // Fallback data si falla la API
+  initialUsers = [
+    { id: 100, username: 'admin', email: 'admin@cbta71.edu.mx', role: 'Administrador', status: 'Activo' },
+    { id: 101, username: 'director', email: 'director@cbta71.edu.mx', role: 'Director', status: 'Activo' },
+    { id: 102, username: 'finanzas', email: 'finanzas@cbta71.edu.mx', role: 'Finanzas', status: 'Activo' },
+    { id: 103, username: 'servicios', email: 'servicios@cbta71.edu.mx', role: 'Servicios Escolares', status: 'Activo' },
+    { id: 104, username: 'docente', email: 'docente@cbta71.edu.mx', role: 'Docente', status: 'Activo' },
+    { id: 105, username: 'martha_caja', email: 'martha@cbta71.edu.mx', role: 'Caja', status: 'Activo' }
+  ];
+}
+
+const usersJSON = JSON.stringify(initialUsers);
+const API_USERS_ENDPOINT = API_ENDPOINTS.users.list;
+const API_UPDATE_ENDPOINT = (id) => API_ENDPOINTS.users.update(id);
 ---
 
 <Layout title="Gestión de Personal | CBTA 71">
@@ -122,13 +147,11 @@ import Layout from '../layouts/Layout.astro';
     </div>
 </Layout>
 
-<script is:inline>
+<script define:vars={{ usersJSON, API_USERS_ENDPOINT }}>
     document.addEventListener('alpine:init', () => {
         Alpine.data('rolesData', () => ({
-            users: [
-                { id: 101, username: 'admin_sys', email: 'admin@cbta71.edu.mx', role: 'Administrador', status: 'Activo' },
-                { id: 105, username: 'martha_caja', email: 'martha@cbta71.edu.mx', role: 'Caja', status: 'Activo' }
-            ],
+            users: JSON.parse(usersJSON),
+            apiEndpoint: API_USERS_ENDPOINT,
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
@@ -143,7 +166,6 @@ import Layout from '../layouts/Layout.astro';
 
             openPanelForAdd() {
                 this.isEditing = false;
-                // Reiniciar el objeto para un nuevo registro
                 this.newUser = { id: null, username: '', email: '', role: 'Administrador', status: 'Activo' };
                 this.isPanelOpen = true;
             },
@@ -158,22 +180,41 @@ import Layout from '../layouts/Layout.astro';
                 this.isPanelOpen = false;
             },
 
-            saveUser() {
-                if (this.isEditing) {
-                    // Lógica de edición
-                    const index = this.users.findIndex(u => u.id === this.newUser.id);
-                    if (index !== -1) {
-                        this.users[index] = { ...this.newUser };
-                        this.showNotify('Datos actualizados correctamente');
+            async saveUser() {
+                try {
+                    if (this.isEditing) {
+                        // Actualizar usuario existente
+                        const response = await fetch(`${this.apiEndpoint}/${this.newUser.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newUser)
+                        });
+                        
+                        if (response.ok) {
+                            const index = this.users.findIndex(u => u.id === this.newUser.id);
+                            if (index !== -1) {
+                                this.users[index] = { ...this.newUser };
+                            }
+                            this.showNotify('Datos actualizados correctamente');
+                        }
+                    } else {
+                        // Crear nuevo usuario
+                        const response = await fetch(this.apiEndpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newUser)
+                        });
+                        
+                        if (response.ok) {
+                            const newUser = await response.json();
+                            this.users.push(newUser);
+                            this.showNotify(`Usuario ${newUser.username} agregado`);
+                        }
                     }
-                } else {
-                    // Lógica de AGREGAR (Funcional)
-                    const newId = this.users.length > 0 ? Math.max(...this.users.map(u => u.id)) + 1 : 100;
-                    const userToAdd = { ...this.newUser, id: newId };
-                    this.users.push(userToAdd);
-                    this.showNotify(`Administrador ${userToAdd.username} agregado`);
+                    this.closePanel();
+                } catch (error) {
+                    this.showNotify('Error al guardar usuario', 'error');
                 }
-                this.closePanel();
             },
 
             confirmDeleteUser(user) {
@@ -182,10 +223,20 @@ import Layout from '../layouts/Layout.astro';
                 this.isDeleting = true;
             },
 
-            deleteUser(id) {
-                this.users = this.users.filter(u => u.id !== id);
+            async deleteUser(id) {
+                try {
+                    const response = await fetch(`${this.apiEndpoint}/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        this.users = this.users.filter(u => u.id !== id);
+                        this.showNotify('Usuario eliminado', 'error');
+                    }
+                } catch (error) {
+                    this.showNotify('Error al eliminar usuario', 'error');
+                }
                 this.isDeleting = false;
-                this.showNotify('Usuario eliminado', 'error');
             },
 
             showNotify(msg, type = 'success') {

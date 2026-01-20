@@ -103,13 +103,13 @@ Salir
 		window.addEventListener('resize', handleResize);
 		window.addEventListener('load', () => { handleResize(); setActiveLink(); });
 		document.addEventListener("astro:after-swap", setActiveLink);
-	</script> </body> </html> <script>
+	</script> </body> </html> <script>(function(){const usersJSON = "[]";
+const API_USERS_ENDPOINT = "https://nginx-production-728f.up.railway.app/api/users";
+
     document.addEventListener('alpine:init', () => {
         Alpine.data('rolesData', () => ({
-            users: [
-                { id: 101, username: 'admin_sys', email: 'admin@cbta71.edu.mx', role: 'Administrador', status: 'Activo' },
-                { id: 105, username: 'martha_caja', email: 'martha@cbta71.edu.mx', role: 'Caja', status: 'Activo' }
-            ],
+            users: JSON.parse(usersJSON),
+            apiEndpoint: API_USERS_ENDPOINT,
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
@@ -124,7 +124,6 @@ Salir
 
             openPanelForAdd() {
                 this.isEditing = false;
-                // Reiniciar el objeto para un nuevo registro
                 this.newUser = { id: null, username: '', email: '', role: 'Administrador', status: 'Activo' };
                 this.isPanelOpen = true;
             },
@@ -139,22 +138,41 @@ Salir
                 this.isPanelOpen = false;
             },
 
-            saveUser() {
-                if (this.isEditing) {
-                    // Lógica de edición
-                    const index = this.users.findIndex(u => u.id === this.newUser.id);
-                    if (index !== -1) {
-                        this.users[index] = { ...this.newUser };
-                        this.showNotify('Datos actualizados correctamente');
+            async saveUser() {
+                try {
+                    if (this.isEditing) {
+                        // Actualizar usuario existente
+                        const response = await fetch(`${this.apiEndpoint}/${this.newUser.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newUser)
+                        });
+                        
+                        if (response.ok) {
+                            const index = this.users.findIndex(u => u.id === this.newUser.id);
+                            if (index !== -1) {
+                                this.users[index] = { ...this.newUser };
+                            }
+                            this.showNotify('Datos actualizados correctamente');
+                        }
+                    } else {
+                        // Crear nuevo usuario
+                        const response = await fetch(this.apiEndpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newUser)
+                        });
+                        
+                        if (response.ok) {
+                            const newUser = await response.json();
+                            this.users.push(newUser);
+                            this.showNotify(`Usuario ${newUser.username} agregado`);
+                        }
                     }
-                } else {
-                    // Lógica de AGREGAR (Funcional)
-                    const newId = this.users.length > 0 ? Math.max(...this.users.map(u => u.id)) + 1 : 100;
-                    const userToAdd = { ...this.newUser, id: newId };
-                    this.users.push(userToAdd);
-                    this.showNotify(`Administrador ${userToAdd.username} agregado`);
+                    this.closePanel();
+                } catch (error) {
+                    this.showNotify('Error al guardar usuario', 'error');
                 }
-                this.closePanel();
             },
 
             confirmDeleteUser(user) {
@@ -163,10 +181,20 @@ Salir
                 this.isDeleting = true;
             },
 
-            deleteUser(id) {
-                this.users = this.users.filter(u => u.id !== id);
+            async deleteUser(id) {
+                try {
+                    const response = await fetch(`${this.apiEndpoint}/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        this.users = this.users.filter(u => u.id !== id);
+                        this.showNotify('Usuario eliminado', 'error');
+                    }
+                } catch (error) {
+                    this.showNotify('Error al eliminar usuario', 'error');
+                }
                 this.isDeleting = false;
-                this.showNotify('Usuario eliminado', 'error');
             },
 
             showNotify(msg, type = 'success') {
@@ -175,4 +203,4 @@ Salir
             }
         }));
     });
-</script>
+})();</script>

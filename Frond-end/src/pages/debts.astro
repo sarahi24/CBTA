@@ -1,7 +1,31 @@
 ---
-import Layout from "../layouts/Layout.astro"; 
+import Layout from "../layouts/Layout.astro";
+import { API_ENDPOINTS } from "../config/api.js";
 
 const pageTitle = "Estado de Adeudos - CBTA 71";
+
+// Cargar adeudos desde la API
+let debts = [];
+let students = [];
+try {
+  const [debtsRes, studentsRes] = await Promise.all([
+    fetch(API_ENDPOINTS.debts.list),
+    fetch(API_ENDPOINTS.students.list)
+  ]);
+  
+  if (debtsRes.ok) {
+    const json = await debtsRes.json();
+    debts = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
+  }
+  
+  if (studentsRes.ok) {
+    const json = await studentsRes.json();
+    students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
+  }
+} catch (e) {}
+
+const debtsJSON = JSON.stringify(debts);
+const studentsJSON = JSON.stringify(students);
 
 const CAREER_MAP = {
   'TAG-E': 'Técnico Agropecuario',
@@ -113,16 +137,21 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 
-  <script is:inline define:vars={{ careerMapJSON }}>
+  <script is:inline define:vars={{ careerMapJSON, debtsJSON, studentsJSON }}>
     window.__CAREER_MAP = JSON.parse(careerMapJSON);
+    window.__DEBTS_DATA = JSON.parse(debtsJSON);
+    window.__STUDENTS_DATA = JSON.parse(studentsJSON);
+    window.__API_DEBTS = 'https://nginx-production-728f.up.railway.app/api/debts';
+    window.__API_PAYMENTS = 'https://nginx-production-728f.up.railway.app/api/payments';
   </script>
 
   <script type="module">
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
 
-    const getCharges = () => JSON.parse(localStorage.getItem('chargesList') || '[]');
-    const getStudents = () => JSON.parse(localStorage.getItem('studentsList') || '[]');
+    // Cargar datos de la API o fallback a localStorage
+    const getCharges = () => window.__DEBTS_DATA.length > 0 ? window.__DEBTS_DATA : JSON.parse(localStorage.getItem('chargesList') || '[]');
+    const getStudents = () => window.__STUDENTS_DATA.length > 0 ? window.__STUDENTS_DATA : JSON.parse(localStorage.getItem('studentsList') || '[]');
     const getConcepts = () => JSON.parse(localStorage.getItem('conceptsList') || '[]');
     const saveCharges = (data) => localStorage.setItem('chargesList', JSON.stringify(data));
     const fmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
