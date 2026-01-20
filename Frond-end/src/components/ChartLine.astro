@@ -1,0 +1,87 @@
+---
+// src/components/ChartLine.astro
+import { Fragment } from 'astro/jsx-runtime';
+---
+
+<Fragment>
+  <div class="relative h-96 w-full">
+    <canvas id="chartLine"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script is:inline>
+    // Función global para que pueda ser llamada desde fuera si es necesario
+    window.updateChartLine = function() {
+      const ctx = document.getElementById('chartLine');
+      if (!ctx) return;
+
+      const currentYear = 2025;
+      const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+      const recaudado = new Array(12).fill(0);
+      const pendientes = new Array(12).fill(0);
+      const estudiantes = new Array(12).fill(0);
+
+      try {
+        const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+
+        charges.forEach(c => {
+          const date = new Date(c.createdAt || c.date);
+          if (date.getFullYear() === currentYear) {
+            const m = date.getMonth();
+            const amount = parseFloat(c.amount) || 0;
+            const status = String(c.status).toLowerCase();
+
+            if (['paid', 'pagado'].includes(status)) {
+              recaudado[m] += amount;
+            } else {
+              pendientes[m] += amount;
+            }
+            estudiantes[m] += 1;
+          }
+        });
+
+        if (window.myLineChart) window.myLineChart.destroy();
+
+        window.myLineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: 'Recaudado ($)',
+                data: recaudado,
+                borderColor: '#2E584C',
+                backgroundColor: 'rgba(46, 88, 76, 0.1)',
+                tension: 0,
+                fill: true,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Pendiente ($)',
+                data: pendientes,
+                borderColor: '#dc2626',
+                borderDash: [5, 5],
+                tension: 0,
+                yAxisID: 'y'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } }
+            }
+          }
+        });
+      } catch (e) { console.error(e); }
+    };
+
+    // Ejecución inmediata y tras carga
+    document.addEventListener('DOMContentLoaded', window.updateChartLine);
+    window.addEventListener('storage', window.updateChartLine);
+    // Escuchar eventos personalizados de tus tarjetas
+    window.addEventListener('chargesUpdated', window.updateChartLine);
+  </script>
+</Fragment>

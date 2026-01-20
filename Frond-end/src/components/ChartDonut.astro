@@ -1,0 +1,114 @@
+---
+// src/components/ChartDonut.astro
+import { Fragment } from 'astro/jsx-runtime';
+---
+
+<Fragment>
+  <div id="donut-wrapper" class="w-full flex flex-col items-center">
+    <div id="donut-container" class="relative w-full max-w-xs aspect-square">
+      <canvas id="chartDonut"></canvas>
+      <div class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
+        <span id="donut-pct" class="text-4xl font-extrabold text-[#2e594d]">0%</span>
+        <span class="text-sm font-medium text-gray-500">Recaudado</span>
+      </div>
+    </div>
+
+    <div id="meta-total-container" class="mt-4 py-2 border-t border-gray-200 w-full text-center">
+      <p class="text-lg font-semibold text-gray-700">
+        Meta Total: <span id="meta-monto-dinamico" class="text-[#3b7666] font-bold">$0.00</span>
+      </p>
+    </div>
+
+    <div id="donut-empty" class="hidden text-gray-400 italic py-10">
+      Sin datos de cargos registrados
+    </div>
+  </div>
+
+  <script is:inline>
+    window.updateChartDonut = function() {
+      const ctx = document.getElementById('chartDonut');
+      const metaEl = document.getElementById('meta-monto-dinamico');
+      if (!ctx) return;
+
+      try {
+        // 1. Obtener la lista de cargos (la misma fuente que tus tarjetas)
+        const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+        
+        // 2. Calcular totales
+        // Sumamos TODO (pagado y pendiente) para la Meta Total
+        const totalMeta = charges.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+        
+        const paid = charges
+          .filter(c => ['paid', 'pagado'].includes(String(c.status).toLowerCase()))
+          .reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+        const pending = totalMeta - paid;
+
+        // 3. Actualizar el texto de Meta Total con formato de moneda
+        if (metaEl) {
+          metaEl.textContent = new Intl.NumberFormat('es-MX', { 
+            style: 'currency', 
+            currency: 'MXN' 
+          }).format(totalMeta);
+        }
+
+        // 4. Manejo de estados visuales
+        const container = document.getElementById('donut-container');
+        const empty = document.getElementById('donut-empty');
+        const metaContainer = document.getElementById('meta-total-container');
+
+        if (totalMeta === 0) {
+          container.classList.add('hidden');
+          metaContainer.classList.add('hidden');
+          empty.classList.remove('hidden');
+          return;
+        } else {
+          container.classList.remove('hidden');
+          metaContainer.classList.remove('hidden');
+          empty.classList.add('hidden');
+        }
+
+        // 5. Actualizar porcentaje central
+        const pct = ((paid / totalMeta) * 100).toFixed(1);
+        document.getElementById('donut-pct').textContent = pct + '%';
+
+        // 6. Dibujar o refrescar la gráfica
+        if (window.myDonutChart) window.myDonutChart.destroy();
+
+        window.myDonutChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Recaudado (Pagado)', 'Pendiente (Adeudo)'],
+            datasets: [{
+              data: [paid, pending],
+              backgroundColor: ['#2E584C', '#dc2626'], // Verde y Rojo
+              borderWidth: 0,
+              hoverOffset: 10
+            }]
+          },
+          options: {
+            cutout: '80%',
+            plugins: { 
+              legend: { position: 'bottom', labels: { usePointStyle: true } },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const val = context.parsed.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                    return `${context.label}: ${val}`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (e) { 
+        console.error("Error en Donut Dinámico:", e); 
+      }
+    };
+
+    // Ejecución inicial y escucha de cambios
+    document.addEventListener('DOMContentLoaded', () => setTimeout(window.updateChartDonut, 150));
+    window.addEventListener('storage', window.updateChartDonut);
+    window.addEventListener('chargesUpdated', window.updateChartDonut);
+  </script>
+</Fragment>

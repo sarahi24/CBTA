@@ -1,0 +1,355 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// ================= CONFIG =================
+const MAX_SEMESTER = 10;
+const SEMESTERS = Array.from({ length: MAX_SEMESTER }, (_, i) => i + 1);
+
+const CAREERS = [
+  { code: 'TAG-E', name: 'Técnico Agropecuario' },
+  { code: 'TOF', name: 'Técnico en Ofimática' },
+  { code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
+  { code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
+  { code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+];
+
+const CAREER_MAP = CAREERS.reduce((a, c) => {
+  a[c.code] = c.name;
+  return a;
+}, { '': 'Sin Carrera' });
+
+// ================= DATA =================
+let students = [];
+try {
+  const mod = await import('../data/students.js');
+  students = mod.default || mod.students || [];
+} catch {}
+
+students = students.map((s, i) => ({
+  id: s.id ?? String(i + 1),
+  numControl: s.numControl ?? '',
+  nombre: s.nombre ?? '',
+  apellidoP: s.apellidoP ?? '',
+  apellidoM: s.apellidoM ?? '',
+  semestre: s.semestre ? Math.min(Number(s.semestre), MAX_SEMESTER) : 1,
+  carrera: s.carrera ?? '',
+  correo: s.correo ?? '',
+}));
+
+const studentsJSON = JSON.stringify(students);
+const careerMapJSON = JSON.stringify(CAREER_MAP);
+---
+
+<style>
+:root {
+  --ui-primary: #2D584C;
+  --status-pending-bg: #FFEBE6;
+  --status-pending-text: #B35F4C;
+  --status-current-bg: #EAF4E9;
+  --status-current-text: #50784D;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F8F9FA;
+}
+
+.badge-pending { background-color: var(--status-pending-bg); color: var(--status-pending-text); }
+.badge-current { background-color: var(--status-current-bg); color: var(--status-current-text); }
+
+#filter-menu {
+  display: none;
+  animation: fadeIn 0.2s ease-out;
+}
+
+#filter-menu.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+
+<Layout title="Administración de Alumnos">
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 min-h-screen">
+
+  <header class="flex flex-wrap items-center justify-between mb-8 gap-4 border-b pb-6 border-gray-200">
+    <div class="flex items-center gap-4">
+      <div class="p-2 sm:p-3 bg-emerald-100 rounded-2xl text-emerald-800 shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <div>
+        <h1 class="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">Administración de Alumnos</h1>
+        <p class="text-gray-500 text-xs sm:text-sm italic">Control académico y financiero</p>
+      </div>
+    </div>
+    
+    <button id="export-xlsx" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-700 text-white font-bold shadow-lg hover:bg-emerald-800 transition transform active:scale-95 text-xs sm:text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        EXPORTAR REPORTE
+    </button>
+  </header>
+
+  <div class="relative flex items-center gap-2 mb-6">
+    <button id="filter-btn" class="flex items-center justify-center p-2.5 sm:px-4 sm:py-2.5 rounded-xl border-2 border-emerald-400 bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition shadow-sm shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        <span class="hidden sm:inline ml-2 text-sm">Filtros</span>
+    </button>
+
+    <div class="relative flex-1 min-w-0">
+      <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </span>
+      <input id="search" placeholder="Buscar por nombre o matrícula..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white text-sm" />
+    </div>
+
+    <div id="filter-menu" class="absolute top-full left-0 z-50 w-full sm:w-80 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 p-6">
+      <h3 class="text-gray-800 font-black mb-4 border-b pb-2">Opciones de Filtrado</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Programa Educativo:</label>
+          <select id="filter-carrera" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-emerald-500 bg-gray-50">
+            <option value="">Todos los Programas</option>
+            {CAREERS.map(c => <option value={c.code}>{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nivel Semestral:</label>
+          <select id="filter-semestre" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-emerald-500 bg-gray-50">
+            <option value="">Todos los Semestres</option>
+            {SEMESTERS.map(s => <option value={String(s)}>{s}º Semestre</option>)}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de Pago:</label>
+          <select id="filter-adeudo" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-emerald-500 bg-gray-50">
+            <option value="">Cualquier estado</option>
+            <option value="pendiente">Con Adeudo</option>
+            <option value="corriente">Al Corriente</option>
+          </select>
+        </div>
+        <button id="clear-filters" class="w-full mt-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold border border-red-100 hover:bg-red-200 transition flex items-center justify-center gap-2 text-xs">
+            Limpiar Filtros
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <section class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-[#2D584C] text-white text-left">
+          <tr>
+            <th class="px-6 py-4 font-bold uppercase tracking-wider">N. Control</th>
+            <th class="px-6 py-4 font-bold uppercase tracking-wider">Nombre Completo</th>
+            <th class="px-6 py-4 font-bold uppercase tracking-wider text-center">Sem.</th>
+            <th class="px-6 py-4 font-bold uppercase tracking-wider">Carrera</th>
+            <th class="px-6 py-4 font-bold uppercase tracking-wider text-center">Estado</th>
+            <th class="px-6 py-4 font-bold uppercase tracking-wider text-right">Adeudo</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-desktop" class="divide-y divide-gray-100 text-gray-700"></tbody>
+      </table>
+    </div>
+
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <span id="pagination-info" class="text-[11px] font-bold text-gray-400 uppercase tracking-widest italic"></span>
+        <div id="pagination-controls" class="flex items-center gap-1"></div>
+    </div>
+
+    <div id="no-results" class="hidden text-center text-gray-400 py-20 text-lg italic">No hay alumnos que coincidan.</div>
+  </section>
+</div>
+
+<div id="data-store" data-students={studentsJSON} data-career-map={careerMapJSON} is:raw></div>
+
+<script type="module">
+const STORAGE_KEY = 'studentsList';
+const ITEMS_PER_PAGE = 50;
+let currentPage = 1;
+
+const dataStore = document.getElementById('data-store');
+const initial = JSON.parse(dataStore.dataset.students);
+const CAREER_MAP = JSON.parse(dataStore.dataset.careerMap);
+
+let filters = { text:'', carrera:'', semestre:'', adeudo:'' };
+
+const filterBtn = document.getElementById('filter-btn');
+const filterMenu = document.getElementById('filter-menu');
+const searchInput = document.getElementById('search');
+const filterCarrera = document.getElementById('filter-carrera');
+const filterSemestre = document.getElementById('filter-semestre');
+const filterAdeudo = document.getElementById('filter-adeudo');
+const clearFiltersButton = document.getElementById('clear-filters');
+const tbodyDesktop = document.getElementById('tbody-desktop'); 
+const noResults = document.getElementById('no-results');
+const paginationInfo = document.getElementById('pagination-info');
+const paginationControls = document.getElementById('pagination-controls');
+
+// Interacción Menú Filtros
+filterBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  filterMenu.classList.toggle('active');
+});
+
+document.addEventListener('click', (e) => {
+    if (!filterBtn.contains(e.target) && !filterMenu.contains(e.target)) {
+        filterMenu.classList.remove('active');
+    }
+});
+
+// Funciones de Datos
+function readLocal(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || initial; } catch { return initial; }
+}
+
+function getChargesSum(id){
+  try {
+    const c = JSON.parse(localStorage.getItem('chargesList') || '[]');
+    return c.filter(x => String(x.studentId) === String(id) && (x.status === 'pending' || x.status === 'pendiente'))
+            .reduce((s,x)=>s+Number(x.amount),0);
+  } catch { return 0; }
+}
+
+function paymentStatus(id){
+  const p = getChargesSum(id);
+  return p > 0 ? { text:'Pago Pendiente', adeudo:p.toFixed(2), bad:true } : { text:'Al Corriente', adeudo:'0.00', bad:false };
+}
+
+// Lógica de Renderizado y Paginación
+function render(){
+    const allFiltered = readLocal().filter(s=>{
+      const t = filters.text.toLowerCase();
+      const st = paymentStatus(s.id);
+      const fullName = `${s.nombre} ${s.apellidoP} ${s.apellidoM}`.toLowerCase();
+      return ((!t || fullName.includes(t) || s.numControl.toLowerCase().includes(t)) &&
+        (!filters.carrera || s.carrera === filters.carrera) &&
+        (!filters.semestre || String(s.semestre) === filters.semestre) &&
+        (!filters.adeudo || (filters.adeudo==='pendiente' && st.bad) || (filters.adeudo==='corriente' && !st.bad)));
+    });
+
+    const totalItems = allFiltered.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    
+    if (currentPage > totalPages) currentPage = totalPages || 1;
+
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedList = allFiltered.slice(start, start + ITEMS_PER_PAGE);
+
+    tbodyDesktop.innerHTML = '';
+    noResults.classList.toggle('hidden', allFiltered.length > 0);
+
+    paginatedList.forEach((s)=>{
+        const st = paymentStatus(s.id);
+        const badgeClass = st.bad ? 'badge-pending' : 'badge-current';
+        tbodyDesktop.insertAdjacentHTML('beforeend', `
+          <tr class="hover:bg-emerald-50 transition border-b border-gray-50">
+            <td class="px-6 py-4 font-mono text-xs font-bold text-gray-500">${s.numControl}</td>
+            <td class="px-6 py-4 font-bold text-gray-900">${s.nombre} ${s.apellidoP} ${s.apellidoM}</td>
+            <td class="px-6 py-4 text-center font-medium">${s.semestre}º</td>
+            <td class="px-6 py-4 text-gray-600 text-xs">${CAREER_MAP[s.carrera] || s.carrera}</td>
+            <td class="px-6 py-4 text-center">
+              <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${badgeClass}">${st.text}</span>
+            </td>
+            <td class="px-6 py-4 text-right font-black text-base ${st.bad ? 'text-red-600' : 'text-emerald-700'}">$${st.adeudo}</td>
+          </tr>
+        `);
+    });
+
+    updatePaginationUI(totalItems, totalPages);
+}
+
+function updatePaginationUI(totalItems, totalPages) {
+    const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+    const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+    
+    paginationInfo.innerText = `Mostrando ${startItem}-${endItem} de ${totalItems} registros`;
+    paginationControls.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    const createBtn = (label, targetPage, disabled = false, active = false) => {
+        const btn = document.createElement('button');
+        btn.innerText = label;
+        btn.disabled = disabled;
+        btn.className = `min-w-[32px] h-8 px-2 rounded-lg text-xs font-black transition-all ${
+            active ? 'bg-[#2D584C] text-white shadow-md' : 
+            disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-200'
+        }`;
+        if (!disabled) btn.onclick = () => { currentPage = targetPage; render(); window.scrollTo({top:0, behavior:'smooth'}); };
+        return btn;
+    };
+
+    paginationControls.appendChild(createBtn('←', currentPage - 1, currentPage === 1));
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+            paginationControls.appendChild(createBtn(i, i, false, currentPage === i));
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+            const span = document.createElement('span');
+            span.innerText = '...';
+            span.className = 'text-gray-400 px-1';
+            paginationControls.appendChild(span);
+        }
+    }
+
+    paginationControls.appendChild(createBtn('→', currentPage + 1, currentPage === totalPages));
+}
+
+// Eventos de Filtro
+searchInput.addEventListener('input', (e) => { filters.text = e.target.value; currentPage = 1; render(); });
+filterCarrera.addEventListener('change', (e) => { filters.carrera = e.target.value; currentPage = 1; render(); });
+filterSemestre.addEventListener('change', (e) => { filters.semestre = e.target.value; currentPage = 1; render(); });
+filterAdeudo.addEventListener('change', (e) => { filters.adeudo = e.target.value; currentPage = 1; render(); });
+
+clearFiltersButton.addEventListener('click', () => {
+    filters = { text:'', carrera:'', semestre:'', adeudo:'' };
+    searchInput.value = ''; filterCarrera.value = ''; filterSemestre.value = ''; filterAdeudo.value = '';
+    currentPage = 1;
+    render();
+    filterMenu.classList.remove('active');
+});
+
+// Exportación XLSX
+document.getElementById('export-xlsx').addEventListener('click', () => {
+    if (typeof XLSX === 'undefined') return alert('Cargando librería...');
+    const allStudents = readLocal();
+    const wb = XLSX.utils.book_new();
+    const uniqueCareers = [...new Set(allStudents.map(s => s.carrera))];
+
+    uniqueCareers.forEach(careerCode => {
+        const studentsInCareer = allStudents
+            .filter(s => s.carrera === careerCode)
+            .sort((a, b) => a.semestre - b.semestre);
+
+        const data = studentsInCareer.map(s => {
+            const status = paymentStatus(s.id);
+            return {
+                'Semestre': s.semestre + 'º',
+                'Número de Control': s.numControl, 
+                'Nombre Completo': `${s.nombre} ${s.apellidoP} ${s.apellidoM}`,
+                'Carrera': CAREER_MAP[s.carrera] || s.carrera,
+                'Estado Financiero': status.text, 
+                'Adeudo Pendiente': parseFloat(status.adeudo)
+            };
+        });
+
+        if (data.length > 0) {
+            const ws = XLSX.utils.json_to_sheet(data);
+            let sheetName = (CAREER_MAP[careerCode] || careerCode || 'General')
+                .replace(/[\\*?:/\[\]]/g, '').substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+    });
+    XLSX.writeFile(wb, `Reporte_General_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+});
+
+window.onload = render;
+</script>
+
+</Layout>

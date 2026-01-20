@@ -1,0 +1,81 @@
+---
+// src/components/ConceptsTable.astro
+---
+
+<div class="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-100">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-[#2E594D]">
+      <tr>
+        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Concepto</th>
+        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Monto</th>
+        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Estado</th>
+        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Fecha Inicio</th>
+        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Fecha Fin</th>
+      </tr>
+    </thead>
+    <tbody id="dashboard-concepts-body" class="bg-white divide-y divide-gray-100">
+      </tbody>
+  </table>
+</div>
+
+<script is:inline>
+  function updateDashboardTable() {
+    const tbody = document.getElementById('dashboard-concepts-body');
+    if (!tbody) return;
+
+    try {
+      const concepts = JSON.parse(localStorage.getItem('conceptsList') || '[]');
+      const formatCurrency = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
+
+      const formatDate = (dateStr) => {
+        if (!dateStr || dateStr === '---') return '---';
+        return dateStr.split('T')[0];
+      };
+
+      if (concepts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">No hay conceptos registrados</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = concepts.map(concept => {
+        const isInactive = concept.status === 'inactive' || concept.status === 'Finalizado';
+        // Badge de estado dinámico
+        const badgeClass = isInactive 
+          ? 'bg-red-50 text-red-600 border border-red-100' 
+          : 'bg-green-50 text-green-600 border border-green-100';
+        
+        const rawInicio = concept.fechaInicio || concept.fecha || concept.startDate || concept.createdAt || '---';
+        const rawFin = concept.fechaFin || concept.endDate || '---';
+        
+        return `
+          <tr class="hover:bg-gray-50/50 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#2E594D] uppercase">
+              ${concept.title || concept.name || 'S/N'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">
+              ${formatCurrency(concept.amount || 0)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-3 py-1 text-[10px] font-extrabold rounded-full ${badgeClass}">
+                ${isInactive ? 'FINALIZADO' : 'ACTIVO'}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              ${formatDate(rawInicio)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              ${formatDate(rawFin)}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+    } catch (e) {
+      console.error("Error al actualizar tabla:", e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', updateDashboardTable);
+  window.addEventListener('storage', updateDashboardTable);
+  window.addEventListener('conceptsUpdated', updateDashboardTable);
+</script>
