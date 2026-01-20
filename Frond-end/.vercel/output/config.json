@@ -20,7 +20,71 @@
 			"dest": "_render"
 		},
 		{
-			"src": "^/concepts/([^/]+?)/?$",
+			"src": "^/concepts/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Dashboard/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/debts/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/Adeudos/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/components/PaymentsTable/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/components/ProgressCircle/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/components/ResumenAcademico/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/components/StatCard/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/Historial/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/PortalEstudiante/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/Estudiante/Tarjetas/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/estudiante_lista/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/new/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/payments/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/roles/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/students/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
 			"dest": "_render"
 		}
 	]

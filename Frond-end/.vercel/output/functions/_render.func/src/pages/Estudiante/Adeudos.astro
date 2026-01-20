@@ -1,0 +1,252 @@
+---
+import StudentLayout from '../../layouts/LayoutEstu.astro';
+
+const alumnoBackend = "Pedro Gonzalez Lopez";
+const title = "Finanzas Estudiantiles";
+
+// Lista de adeudos con el nuevo ejemplo incluido
+const adeudosExistentes = [
+  { id: 1, concepto: "Colegiatura Semestre I - 2024", monto: "1,218.00", fecha: "20 Dic, 2024", status: "Pendiente" },
+  { id: 2, concepto: "Inscripción Curso Inglés", monto: "450.00", fecha: "15 Ene, 2025", status: "Próximo" },
+  { id: 3, concepto: "Seguro Estudiantil Anual", monto: "285.00", fecha: "05 Feb, 2025", status: "Próximo" }
+];
+
+const tarjetasPorDefecto = [
+  { id: 1, tipo: 'Visa', terminacion: '4242', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' },
+  { id: 2, tipo: 'Mastercard', terminacion: '8812', logo: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg' }
+];
+---
+
+<StudentLayout title={title}>
+  <div 
+    class="page-wrapper"
+    x-data={`{ 
+      showModal: false,
+      step: 'select-method', 
+      loading: false,
+      selectedItem: null,
+      selectedCard: null,
+      adeudos: [],
+      tarjetas: [],
+
+      init() {
+        const guardadas = localStorage.getItem('mis_tarjetas');
+        this.tarjetas = guardadas ? JSON.parse(guardadas) : ${JSON.stringify(tarjetasPorDefecto)};
+        
+        const adeudosGuardados = localStorage.getItem('mis_adeudos');
+        this.adeudos = adeudosGuardados ? JSON.parse(adeudosGuardados) : ${JSON.stringify(adeudosExistentes)};
+        if(!adeudosGuardados) localStorage.setItem('mis_adeudos', JSON.stringify(this.adeudos));
+      },
+
+      openPayment(item) {
+        this.selectedItem = item;
+        this.step = 'select-method';
+        this.showModal = true;
+      },
+
+      processPayment(isReference = false) {
+        this.loading = true;
+        
+        const nuevoPago = {
+          id: Date.now(),
+          concepto: this.selectedItem.concepto,
+          monto: this.selectedItem.monto,
+          fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+          metodo: isReference ? 'Referencia / Efectivo' : (this.selectedCard.tipo + ' • ' + this.selectedCard.terminacion),
+          folio: 'PAY-' + Math.floor(Math.random() * 90000 + 10000),
+          categoria: isReference ? 'Trámite' : 'Académico'
+        };
+
+        setTimeout(() => {
+          // 1. Guardar en Historial
+          const historial = JSON.parse(localStorage.getItem('historial_pagos') || '[]');
+          historial.unshift(nuevoPago);
+          localStorage.setItem('historial_pagos', JSON.stringify(historial));
+
+          // 2. Borrar de Pendientes
+          this.adeudos = this.adeudos.filter(a => a.id !== this.selectedItem.id);
+          localStorage.setItem('mis_adeudos', JSON.stringify(this.adeudos));
+
+          this.loading = false;
+          // 3. Redirigir a la ruta exacta
+          window.location.href = '/Estudiante/Historial'; 
+        }, 2000);
+      }
+    }`}
+  >
+    <header class="main-header">
+      <div class="header-content">
+        <div class="user-profile">
+          <div class="avatar">PG</div>
+          <div class="welcome-text">
+            <span class="greeting">Estado de Cuenta</span>
+            <h1 x-text="'Hola, ' + '${alumnoBackend}'.split(' ')[0]"></h1>
+          </div>
+        </div>
+        <div class="balance-summary">
+          <span class="label">Total por Pagar</span>
+          <span class="amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content-grid">
+      <section class="section-container">
+        <h2 class="section-title">Pagos Pendientes</h2>
+        
+        <template x-if="adeudos.length === 0">
+          <div style="text-align: center; padding: 4rem; background: white; border-radius: 24px; border: 2px dashed #e2e8f0;">
+             <p style="color: var(--text-muted); font-weight: 600;">✨ No tienes pagos pendientes por ahora.</p>
+          </div>
+        </template>
+
+        <div class="cards-stack">
+          <template x-for="item in adeudos" :key="item.id">
+            <div class="modern-card">
+              <div class="card-left">
+                <div class="status-indicator" :class="item.status === 'Pendiente' ? 'urgent' : 'upcoming'"></div>
+                <div class="card-details-text">
+                  <h3 x-text="item.concepto"></h3>
+                  <div class="date-row">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>Vence el <strong x-text="item.fecha"></strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="card-right">
+                <span class="price" x-text="'$' + item.monto"></span>
+                <button @click="openPayment(item)" class="pay-button">Pagar</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+    </main>
+
+    <div x-show="showModal" x-cloak class="modal-overlay">
+      <div class="modal-backdrop" @click="!loading && (showModal = false)" x-show="showModal" x-transition.opacity></div>
+      <div class="modal-sheet" x-show="showModal" x-transition:enter="modal-anim-enter" x-transition:enter-start="modal-anim-start" x-transition:enter-end="modal-anim-end">
+        <div class="sheet-handle"></div>
+        <div class="sheet-body">
+          
+          <div x-show="step === 'select-method'">
+            <div class="payment-header-visual">
+              <h2 class="grand-total-display" x-text="'$' + selectedItem?.monto"></h2>
+              <span class="concept-tag" x-text="selectedItem?.concepto"></span>
+            </div>
+            <div class="modern-options-list">
+              <button @click="step = 'card-list'" class="modern-option-item">
+                <div class="m-option-icon blue-grad">💳</div>
+                <div class="m-option-info"><strong>Tarjetas Guardadas</strong><span>Usa tus tarjetas registradas</span></div>
+              </button>
+              <button @click="step = 'reference'" class="modern-option-item">
+                <div class="m-option-icon gold-grad">🏦</div>
+                <div class="m-option-info"><strong>Referencia Bancaria</strong><span>Pago en efectivo / OXXO</span></div>
+              </button>
+            </div>
+          </div>
+
+          <div x-show="step === 'card-list'">
+            <div class="modal-step-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+              <button @click="step = 'select-method'" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer;">←</button>
+              <h3 style="margin: 0;">Selecciona tarjeta</h3>
+            </div>
+            <div class="cards-scroller" style="max-height: 300px; overflow-y: auto;">
+              <template x-for="tarjeta in tarjetas" :key="tarjeta.id">
+                <div @click="selectedCard = tarjeta; step = 'confirm'" class="modern-card-pill">
+                  <img :src="tarjeta.logo" style="width: 40px;">
+                  <div style="text-align: left; margin-left: 1rem;">
+                    <strong x-text="'•••• ' + tarjeta.terminacion" style="font-size: 1.1rem; color: var(--primary);"></strong>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="step === 'confirm' || (loading && selectedCard)">
+             <template x-if="loading">
+               <div style="padding: 2rem 0;">
+                 <div class="custom-loader"></div>
+                 <p>Procesando pago seguro...</p>
+               </div>
+             </template>
+             <template x-if="!loading">
+               <div class="confirm-summary-ui">
+                 <div class="check-icon-ring">✓</div>
+                 <h3>Confirmar pago</h3>
+                 <div class="summary-box">
+                    <div class="summary-row"><span>Total:</span><strong x-text="'$' + selectedItem?.monto"></strong></div>
+                    <div class="summary-row"><span>Método:</span><span x-text="selectedCard?.tipo + ' •' + selectedCard?.terminacion"></span></div>
+                 </div>
+                 <button @click="processPayment(false)" class="btn-primary-action">CONFIRMAR</button>
+                 <button @click="step = 'card-list'" class="btn-link-action">Regresar</button>
+               </div>
+             </template>
+          </div>
+
+          <div x-show="step === 'reference' || (loading && !selectedCard)">
+             <template x-if="loading">
+                <div style="padding: 2rem 0;"><div class="custom-loader"></div><p>Generando registro...</p></div>
+             </template>
+             <template x-if="!loading">
+               <div>
+                <div class="reference-visual-card">
+                   <p class="ref-label">REFERENCIA DE PAGO</p>
+                   <div class="ref-number-box">
+                     <span>0123 4567 8910 1112</span>
+                     <div class="barcode-sim"></div>
+                   </div>
+                   <div class="ref-footer">
+                     <span>Convenio: <strong>CIE 163721</strong></span>
+                     <span>Banco: <strong>BBVA</strong></span>
+                   </div>
+                </div>
+                <button @click="processPayment(true)" class="btn-primary-action">GUARDAR Y FINALIZAR</button>
+                <button @click="step = 'select-method'" class="btn-link-action">Volver</button>
+               </div>
+             </template>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</StudentLayout>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  :root { --primary: #112d26; --accent: #c4a47c; --bg: #f9fbfb; --white: #ffffff; --text-muted: #64748b; }
+  .page-wrapper { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; font-family: 'Plus Jakarta Sans', sans-serif; }
+  .main-header { background: var(--primary); border-radius: 24px; padding: 2.5rem; color: white; margin-bottom: 2.5rem; }
+  .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
+  .avatar { width: 55px; height: 55px; background: var(--accent); border-radius: 15px; display: grid; place-items: center; color: var(--primary); font-weight: 800; }
+  .balance-summary .amount { display: block; font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .modern-card { background: white; border-radius: 20px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
+  .status-indicator { width: 5px; height: 50px; border-radius: 10px; }
+  .status-indicator.urgent { background: #eb4d4b; }
+  .status-indicator.upcoming { background: #6ab04c; }
+  .pay-button { background: var(--primary); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 700; cursor: pointer; }
+  .modal-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+  .modal-backdrop { position: absolute; inset: 0; background: rgba(17, 45, 38, 0.6); backdrop-filter: blur(8px); }
+  .modal-sheet { position: relative; background: white; width: 100%; max-width: 450px; border-radius: 30px; overflow: hidden; }
+  .sheet-body { padding: 2rem; text-align: center; }
+  .grand-total-display { font-size: 3rem; font-weight: 800; color: var(--primary); margin: 0; }
+  .modern-option-item { display: flex; align-items: center; padding: 1.2rem; border: 2px solid #f1f5f9; border-radius: 20px; background: white; cursor: pointer; text-align: left; width: 100%; margin-bottom: 1rem; }
+  .m-option-icon { width: 45px; height: 45px; border-radius: 14px; display: grid; place-items: center; margin-right: 1rem; font-size: 1.3rem; }
+  .blue-grad { background: #e0f2fe; }
+  .gold-grad { background: #fef3c7; }
+  .btn-primary-action { width: 100%; background: var(--primary); color: white; padding: 1.1rem; border-radius: 15px; border: none; font-weight: 800; cursor: pointer; }
+  .btn-link-action { width: 100%; background: transparent; color: var(--text-muted); border: none; cursor: pointer; text-decoration: underline; margin-top: 10px; }
+  .modern-card-pill { display: flex; align-items: center; padding: 1rem; border: 2px solid #f1f5f9; border-radius: 18px; margin-bottom: 0.8rem; cursor: pointer; }
+  .custom-loader { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+  .reference-visual-card { background: #112d26; color: white; padding: 1.5rem; border-radius: 20px; margin-bottom: 1.5rem; text-align: left; }
+  .ref-number-box { background: white; color: black; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center; }
+  .barcode-sim { height: 30px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px); margin-top: 5px; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  [x-cloak] { display: none !important; }
+  @media (max-width: 768px) {
+    .modal-overlay { align-items: flex-end; }
+    .modal-sheet { border-radius: 28px 28px 0 0; max-width: 100%; }
+    .modern-card { flex-direction: column; text-align: center; gap: 1rem; }
+  }
+</style>
