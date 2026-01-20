@@ -179,19 +179,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead class="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
+                    <thead class="bg-gradient-to-r from-institucional to-teal-700 border-b-2 border-institucional">
                         <tr>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Usuario</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Contacto</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">CURP</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rol</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                            <th class="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Usuario</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Contacto</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">CURP</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Rol</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <template x-for="user in filteredUsers" :key="user.id">
-                            <tr class="hover:bg-slate-50 transition-colors">
+                            <tr class="hover:bg-green-50 transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-institucional to-teal-600 flex items-center justify-center text-white font-bold">
