@@ -16,6 +16,10 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
-  output: 'server',
-  adapter: vercel()
+  output: 'static',
+  adapter: vercel({
+    webAnalytics: {
+      enabled: false
+    }
+  })
 });
