@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="es" data-astro-cid-j7pv25f6> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Acceso al Sistema - SIGE</title><link rel="icon" href="/cbta71_icon.png" type="image/png"><script type="module" src="/_astro/index.astro_astro_type_script_index_0_lang.CxO_JRN6.js"></script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"><link rel="stylesheet" href="/_astro/Dashboard.BJo2pYvK.css">
+<style>body{background-color:#17202a;background-image:radial-gradient(#2c3947 1px,transparent 0);background-size:40px 40px}.input-inset-shadow[data-astro-cid-j7pv25f6]{background-color:#f4f7fa;box-shadow:inset 2px 2px 5px #0000001a,inset -2px -2px 5px #ffffffb3}.btn-hover-green[data-astro-cid-j7pv25f6]:hover{background-color:#43a047;transform:scale(1.01);box-shadow:0 0 20px #4caf50b3}
+</style><script type="module" src="/_astro/page.CZQmTZnr.js"></script></head> <body class="min-h-screen antialiased font-inter relative" data-astro-cid-j7pv25f6> <section class="min-h-screen flex items-center justify-center p-4 relative z-20" x-data="{
+        mode: 'login',
+        email: '',
+        password: '',
+        error: '',
+        message: '',
+        isLoading: false,
+
+        handleLogin() {
+            this.error = '';
+            this.isLoading = true;
+
+            if (!this.email || !this.password) {
+                this.error = '⚠️ Por favor completa todos los campos.';
+                this.isLoading = false;
+                return;
+            }
+
+            // --- BASE DE DATOS DE USUARIOS ---
+            // Se actualizó la ruta de redirección para el rol 'student'
+            const users = [
+                { email: 'admin@uni.edu', pass: '123456', role: 'admin', redirect: '/Dashboard' },
+                { email: 'estudiante@uni.edu', pass: 'alumno123', role: 'student', redirect: '/Estudiante/PortalEstudiante' }
+            ];
+
+            const userFound = users.find(u => u.email === this.email && u.pass === this.password);
+
+            setTimeout(() => {
+                this.isLoading = false;
+
+                if (userFound) {
+                    this.error = `✅ Bienvenido (${userFound.role}). Redirigiendo...`;
+                    
+                    localStorage.setItem('userRole', userFound.role);
+                    
+                    setTimeout(() => window.location.href = userFound.redirect, 800);
+                } else {
+                    this.error = '❌ Credenciales incorrectas.';
+                }
+            }, 900);
+        },
+
+        handleRecovery() {
+            this.message = '';
+            this.isLoading = true;
+            if (!this.email) {
+                this.message = '⚠️ Ingresa un correo válido.';
+                this.isLoading = false;
+                return;
+            }
+            setTimeout(() => {
+                this.isLoading = false;
+                this.message = '📩 Se ha enviado un enlace de recuperación a tu correo.';
+            }, 900);
+        }
+    }" data-astro-cid-j7pv25f6> <div class="absolute top-8 left-1/2 transform -translate-x-1/2 translate-y-3 z-30" data-astro-cid-j7pv25f6> <img src="/Logo.png" alt="Logotipo SIGE" class="w-32 h-auto select-none pointer-events-none" data-astro-cid-j7pv25f6> </div> <div class="w-full max-w-md bg-white p-0 rounded-3xl overflow-hidden shadow-xl mt-28" data-astro-cid-j7pv25f6> <header class="space-y-4 pt-14 pb-6 border-b border-gray-100 text-center" data-astro-cid-j7pv25f6> <template x-if="mode === 'login'" data-astro-cid-j7pv25f6> <h1 class="text-3xl font-black text-gray-800 uppercase tracking-widest" data-astro-cid-j7pv25f6>SIGE</h1> </template> <template x-if="mode === 'recover'" data-astro-cid-j7pv25f6> <h1 class="text-2xl font-black text-gray-800 uppercase tracking-widest px-4" data-astro-cid-j7pv25f6>Recuperar Contraseña</h1> </template> <p class="text-sm text-gray-500 font-medium mt-1" data-astro-cid-j7pv25f6>Sistema Educativo</p> </header> <div class="p-8 space-y-7" data-astro-cid-j7pv25f6> <div x-show="error" :class="error.includes('✅') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'" class="p-3 border rounded-xl text-xs font-medium shadow-inner" x-cloak data-astro-cid-j7pv25f6> <span x-text="error" data-astro-cid-j7pv25f6></span> </div> <div x-show="message" :class="message.includes('📩') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'" class="p-3 border rounded-xl text-xs font-medium shadow-inner" x-cloak data-astro-cid-j7pv25f6> <span x-text="message" data-astro-cid-j7pv25f6></span> </div> <form class="space-y-6" x-show="mode === 'login'" @submit.prevent="handleLogin" data-astro-cid-j7pv25f6> <div class="flex items-center rounded-xl p-3 input-inset-shadow" data-astro-cid-j7pv25f6> <input type="email" x-model="email" placeholder="Correo Electrónico" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" data-astro-cid-j7pv25f6> </div> <div class="flex items-center rounded-xl p-3 input-inset-shadow" data-astro-cid-j7pv25f6> <input type="password" x-model="password" placeholder="Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" data-astro-cid-j7pv25f6> </div> <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 mt-6 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50" data-astro-cid-j7pv25f6> <span x-text="isLoading ? 'Cargando...' : 'Entrar'" data-astro-cid-j7pv25f6></span> </button> <div class="text-center mt-4 text-xs space-y-2" data-astro-cid-j7pv25f6> <button type="button" @click="mode = 'recover'; error = ''; message = '';" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors" data-astro-cid-j7pv25f6>
+¿Olvidaste tu contraseña?
+</button> <p class="text-gray-400 italic" data-astro-cid-j7pv25f6>Prueba con: estudiante@uni.edu / alumno123</p> </div> </form> <form class="space-y-6" x-show="mode === 'recover'" @submit.prevent="handleRecovery" x-cloak data-astro-cid-j7pv25f6> <div class="flex items-center rounded-xl p-3 input-inset-shadow" data-astro-cid-j7pv25f6> <input type="email" x-model="email" placeholder="Ingresa tu correo" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" data-astro-cid-j7pv25f6> </div> <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50" data-astro-cid-j7pv25f6> <span x-text="isLoading ? 'Enviando...' : 'Enviar Enlace'" data-astro-cid-j7pv25f6></span> </button> <div class="text-center mt-4" data-astro-cid-j7pv25f6> <button type="button" @click="mode = 'login'; message = '';" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors" data-astro-cid-j7pv25f6>
+← Volver al inicio de sesión
+</button> </div> </form> </div> <footer class="text-center p-3 bg-gray-100 text-xs text-gray-500 border-t border-gray-200" data-astro-cid-j7pv25f6> <p data-astro-cid-j7pv25f6>2026 © SIGE</p> </footer> </div> </section> <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script> </body> </html>
