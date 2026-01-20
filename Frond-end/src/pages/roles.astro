@@ -85,13 +85,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
         }
         
-        /* IMPORTANTE: Forzar que las stats cards estén en horizontal */
-        @media (min-width: 768px) {
-            .stats-horizontal {
-                display: grid !important;
-                grid-template-columns: repeat(3, 1fr) !important;
-                gap: 1rem !important;
-            }
+        /* FORZAR TABLA HORIZONTAL - Las cards DEBEN estar en 1 fila con 3 columnas */
+        table.stats-table {
+            table-layout: fixed !important;
+            width: 100% !important;
+        }
+        
+        table.stats-table td {
+            width: 33.333% !important;
         }
         
         /* Animación para dropzone */
@@ -145,9 +146,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
         </div>
 
-        <!-- Stats Cards -->
+        <!-- Stats Cards - TABLA HORIZONTAL 1x3 -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
-            <table class="w-full table-fixed">
+            <table class="stats-table w-full table-fixed">
                 <tbody>
                     <tr class="divide-x divide-slate-200">
                         <td class="p-4 hover:bg-slate-50 transition-colors">
