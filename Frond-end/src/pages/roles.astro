@@ -461,9 +461,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
 <script is:inline>
     document.addEventListener('alpine:init', () => {
-        window.Alpine.data('rolesData', () => ({
-            users: JSON.parse(window.__INITIAL_USERS__ || '[]'),
-            apiBaseUrl: window.__API_BASE_URL__ || '',
+        if (window.Alpine && !window.__rolesDataRegistered__) {
+            window.__rolesDataRegistered__ = true;
+            window.Alpine.data('rolesData', () => ({
+                users: JSON.parse(window.__INITIAL_USERS__ || '[]'),
+                apiBaseUrl: window.__API_BASE_URL__ || '',
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
@@ -652,5 +654,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 setTimeout(() => this.notification.show = false, 3000);
             }
         }));
+        }
     });
 </script>
