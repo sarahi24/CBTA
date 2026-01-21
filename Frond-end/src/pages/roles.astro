@@ -465,9 +465,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
 <script>
     // @ts-ignore - Alpine is globally available from @astrojs/alpinejs integration
-    document.addEventListener('alpine:init', () => {
-        // @ts-ignore
-        (window as any).Alpine.data('rolesData', () => ({
+    (window as any).Alpine.data('rolesData', () => ({
             // @ts-ignore
             users: JSON.parse((window as any).__INITIAL_USERS__ || '[]'),
             // @ts-ignore
@@ -660,5 +658,4 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 setTimeout(() => this.notification.show = false, 3000);
             }
         }));
-    });
 </script>
