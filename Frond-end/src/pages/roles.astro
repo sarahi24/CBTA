@@ -464,9 +464,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <script>
-    import Alpine from 'alpinejs';
-    
-    // @ts-ignore - window properties set by inline script
+    // @ts-ignore - Alpine is globally available from @astrojs/alpinejs integration
     document.addEventListener('alpine:init', () => {
         Alpine.data('rolesData', () => ({
             // @ts-ignore
