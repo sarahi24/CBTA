@@ -44,7 +44,7 @@ let concepts = [];
 let conceptsError = null;
 
 try {
-  const response = await fetch(API_ENDPOINTS.paymentConcepts.list);
+  const response = await fetch(API_ENDPOINTS.concepts.list);
   
   if (!response.ok) {
     throw new Error(`Error: ${response.status}`);
@@ -61,7 +61,7 @@ let dashboardStats = null;
 let dashboardError = null;
 
 try {
-  const response = await fetch(API_ENDPOINTS.dashboard.stats);
+  const response = await fetch(API_ENDPOINTS.dashboardStaff.concepts);
   
   if (!response.ok) {
     throw new Error(`Error: ${response.status}`);
@@ -177,7 +177,7 @@ const pageTitle = "Ejemplos de Consumo de API";
     <!-- EJEMPLO 3: Conceptos de Pago -->
     <section class="mb-12">
       <h2 class="text-2xl font-semibold mb-4 text-gray-700">📋 Conceptos de Pago</h2>
-      <p class="text-sm text-gray-500 mb-4">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">{API_ENDPOINTS.paymentConcepts.list}</code></p>
+      <p class="text-sm text-gray-500 mb-4">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">{API_ENDPOINTS.concepts.list}</code></p>
       
       {conceptsError ? (
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -210,7 +210,7 @@ const pageTitle = "Ejemplos de Consumo de API";
     <!-- EJEMPLO 4: Dashboard Stats -->
     <section class="mb-12">
       <h2 class="text-2xl font-semibold mb-4 text-gray-700">📊 Estadísticas del Dashboard</h2>
-      <p class="text-sm text-gray-500 mb-4">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">{API_ENDPOINTS.dashboard.stats}</code></p>
+      <p class="text-sm text-gray-500 mb-4">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">{API_ENDPOINTS.dashboardStaff.concepts}</code></p>
       
       {dashboardError ? (
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
