@@ -464,8 +464,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <script>
-    // @ts-ignore - Alpine is globally available from @astrojs/alpinejs integration
-    (window as any).Alpine.data('rolesData', () => ({
+    // @ts-ignore - Wait for Alpine to be ready before registering component
+    if (typeof (window as any).Alpine !== 'undefined') {
+        (window as any).Alpine.data('rolesData', () => ({
             // @ts-ignore
             users: JSON.parse((window as any).__INITIAL_USERS__ || '[]'),
             // @ts-ignore
@@ -658,4 +659,185 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 setTimeout(() => this.notification.show = false, 3000);
             }
         }));
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            (window as any).Alpine.data('rolesData', () => ({
+                users: JSON.parse((window as any).__INITIAL_USERS__ || '[]'),
+                apiBaseUrl: (window as any).__API_BASE_URL__ || '',
+                isPanelOpen: false,
+                isEditing: false,
+                isDeleting: false,
+                isSaving: false,
+                isImporting: false,
+                isDragging: false,
+                selectedFile: null,
+                importedData: [],
+                userToDeleteId: null,
+                userToDeleteName: '',
+                newUser: { 
+                    id: null, name: '', last_name: '', email: '', phone_number: '',
+                    birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
+                    blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
+                    status: 'activo', role: 'Administrador'
+                },
+                notification: { show: false, message: '', type: 'success' },
+                get filteredUsers() { return this.users; },
+                openPanelForAdd() {
+                    this.isEditing = false;
+                    this.newUser = { 
+                        id: null, name: '', last_name: '', email: '', phone_number: '',
+                        birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
+                        blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
+                        status: 'activo', role: 'Administrador'
+                    };
+                    this.isPanelOpen = true;
+                },
+                openPanelForEdit(user: any) {
+                    this.isEditing = true;
+                    this.newUser = { ...user };
+                    this.isPanelOpen = true;
+                },
+                closePanel() { this.isPanelOpen = false; },
+                async saveUser() {
+                    this.isSaving = true;
+                    try {
+                        const userData = { ...this.newUser };
+                        if (this.isEditing) {
+                            const response = await fetch(`${this.apiBaseUrl}/users/${this.newUser.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                body: JSON.stringify(userData)
+                            });
+                            const result: any = await response.json();
+                            if (response.ok && result.success) {
+                                const updatedUser = result.data?.user || result.data || result;
+                                const index = this.users.findIndex((u: any) => u.id === this.newUser.id);
+                                if (index !== -1) this.users[index] = updatedUser;
+                                this.showNotify(result.message || 'Usuario actualizado');
+                                this.closePanel();
+                            } else {
+                                this.showNotify(result.message || 'Error', 'error');
+                            }
+                        } else {
+                            const response = await fetch(`${this.apiBaseUrl}/users`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                body: JSON.stringify(userData)
+                            });
+                            const result: any = await response.json();
+                            if (response.status === 201 && result.success) {
+                                const newUser = result.data?.user || result.data || result;
+                                this.users.push(newUser);
+                                this.showNotify(result.message || 'Usuario creado');
+                                this.closePanel();
+                            } else {
+                                this.showNotify(result.message || 'Error', 'error');
+                            }
+                        }
+                    } catch (error) {
+                        this.showNotify('Error de conexión', 'error');
+                    } finally {
+                        this.isSaving = false;
+                    }
+                },
+                confirmDeleteUser(user: any) {
+                    this.userToDeleteId = user.id;
+                    this.userToDeleteName = `${user.name} ${user.last_name}`;
+                    this.isDeleting = true;
+                },
+                async deleteUser(id: any) {
+                    try {
+                        const response = await fetch(`${this.apiBaseUrl}/users/${id}`, {
+                            method: 'DELETE',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const result: any = await response.json();
+                        if (response.ok && result.success) {
+                            this.users = this.users.filter((u: any) => u.id !== id);
+                            this.showNotify(result.message || 'Eliminado');
+                        }
+                    } catch (error) {
+                        this.showNotify('Error de conexión', 'error');
+                    }
+                    this.isDeleting = false;
+                },
+                openImportModal() { this.isImporting = true; },
+                closeImportModal() { this.isImporting = false; },
+                handleFileDrop(event: any) {
+                    const file = event.dataTransfer?.files[0];
+                    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                        this.selectedFile = file;
+                        this.readExcelFile(file);
+                    }
+                },
+                handleFileSelect(event: any) {
+                    const file = (event.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                        this.selectedFile = file;
+                        this.readExcelFile(file);
+                    }
+                },
+                readExcelFile(file: any) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                            const workbook = (window as any).XLSX.read(data, { type: 'array' });
+                            const rows = (window as any).XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                            this.importedData = rows.map((row: any) => ({
+                                name: row.name || '',
+                                last_name: row.last_name || '',
+                                email: row.email || '',
+                                phone_number: row.phone_number || '',
+                                birthdate: row.birthdate || '',
+                                gender: row.gender || 'hombre',
+                                curp: row.curp || '',
+                                address: [row.address_line1 || '', row.address_line2 || '', row.address_line3 || ''],
+                                blood_type: row.blood_type || 'O+',
+                                registration_date: new Date().toISOString().split('T')[0],
+                                status: 'activo',
+                                role: row.role || 'Maestro'
+                            }));
+                        } catch (error) { this.showNotify('Error al leer Excel', 'error'); }
+                    };
+                    reader.readAsArrayBuffer(file);
+                },
+                async processImport() {
+                    this.isSaving = true;
+                    for (const userData of this.importedData) {
+                        try {
+                            const response = await fetch(`${this.apiBaseUrl}/users`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                body: JSON.stringify(userData)
+                            });
+                            const result: any = await response.json();
+                            if (response.status === 201 && result.success) {
+                                this.users.push(result.data?.user || result.data || result);
+                            }
+                        } catch (e) {}
+                    }
+                    this.isSaving = false;
+                    this.closeImportModal();
+                    this.showNotify('Proceso de importación finalizado');
+                },
+                downloadTemplate() {
+                    const template = [{
+                        name: 'Juan', last_name: 'Pérez López', email: 'juan.perez@example.com',
+                        phone_number: '5512345678', birthdate: '2000-05-12', gender: 'hombre',
+                        curp: 'PELJ000512HDFRPN09', address_line1: 'Calle 1', address_line2: 'Col',
+                        address_line3: 'CDMX', blood_type: 'O+', role: 'Maestro'
+                    }];
+                    const ws = (window as any).XLSX.utils.json_to_sheet(template);
+                    const wb = (window as any).XLSX.utils.book_new();
+                    (window as any).XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+                    (window as any).XLSX.writeFile(wb, 'plantilla_usuarios.xlsx');
+                },
+                showNotify(msg: any, type: any = 'success') {
+                    this.notification = { show: true, message: msg, type };
+                    setTimeout(() => this.notification.show = false, 3000);
+                }
+            }));
+        });
+    }
 </script>
