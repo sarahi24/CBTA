@@ -88,7 +88,8 @@ const pageTitle = "Acceso al Sistema - SIGE";
                         throw new Error('⏱️ La solicitud tardó demasiado (>15s). Verifica tu conexión o intenta más tarde.');
                     }
                     if (error instanceof TypeError && error.message.includes('fetch')) {
-                        throw new Error('🌐 No se pudo conectar al servidor. Posibles causas:\n• La API está apagada o no responde\n• Problemas de red/firewall\n• URL incorrecta');
+                        // Verificar si es error de CORS
+                        throw new Error('🚫 Error de CORS: El servidor no permite conexiones desde este dominio. El administrador debe configurar CORS en el backend.');
                     }
                     
                     throw error;
@@ -228,15 +229,17 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 // Mensaje de error más detallado
                 let errorMsg = error.message || 'Error desconocido';
                 
-                // Si es error 500, mostrar mensaje específico
-                if (errorMsg.includes('500')) {
+                // Si es error de CORS
+                if (errorMsg.includes('CORS') || errorMsg.includes('Access-Control')) {
+                    errorMsg = '🚫 ERROR DE CORS\n\nEl backend no permite conexiones desde este dominio.\n\n📝 Solución:\nEl administrador debe agregar tu dominio en:\nbackend/config/cors.php\n\nAgregar: https://cbta-eight.vercel.app';
+                } else if (errorMsg.includes('500')) {
                     errorMsg = '🔧 El servidor está experimentando problemas internos. Contacta al administrador.';
                 } else if (errorMsg.includes('401') || errorMsg.includes('403')) {
                     errorMsg = '🔒 Credenciales incorrectas. Verifica tu email y contraseña.';
                 } else if (errorMsg.includes('404')) {
                     errorMsg = '❓ Endpoint no encontrado. Verifica la configuración de la API.';
-                } else if (errorMsg.includes('Network') || errorMsg.includes('conectar')) {
-                    errorMsg = '🌐 Error de red. Verifica:\n• Tu conexión a internet\n• Que la API esté en línea\n• Firewall o bloqueadores';
+                } else if (errorMsg.includes('Network') || errorMsg.includes('conectar') || errorMsg.includes('fetch')) {
+                    errorMsg = '🌐 No se puede conectar al servidor.\n\nPosibles causas:\n• Error de CORS (más probable)\n• API no disponible\n• Problemas de red';
                 }
                 
                 this.error = '❌ ' + errorMsg;
@@ -454,14 +457,6 @@ const pageTitle = "Acceso al Sistema - SIGE";
         </footer>
     </div>
 </section>
-
-<script>
-  import Alpine from 'alpinejs';
-  window.Alpine = Alpine;
-  document.addEventListener('DOMContentLoaded', () => {
-    Alpine.start();
-  });
-</script>
 
 </body>
 </html>
