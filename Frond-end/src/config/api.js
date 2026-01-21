@@ -5,10 +5,10 @@ export const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 export const API_ENDPOINTS = {
   // Auth - Autenticación
   auth: {
-    login: `${API_BASE_URL}/v1/auth/login`,
-    register: `${API_BASE_URL}/v1/auth/register`,
+    login: `${API_BASE_URL}/v1/login`,
+    register: `${API_BASE_URL}/v1/register`,
     logout: `${API_BASE_URL}/v1/logout`,
-    refresh: `${API_BASE_URL}/v1/auth/refresh`,
+    refresh: `${API_BASE_URL}/v1/refresh`,
     forgotPassword: `${API_BASE_URL}/forgot-password`,
     verifyEmail: (id, hash) => `${API_BASE_URL}/verify-email/${id}/${hash}`,
     resetPassword: `${API_BASE_URL}/reset-password`,
