@@ -47,7 +47,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
         message: '',
         isLoading: false,
 
-        handleLogin() {
+        async handleLogin() {
             this.error = '';
             this.isLoading = true;
 
@@ -57,26 +57,39 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 return;
             }
 
-            const users = [
-                { email: 'admin@uni.edu', pass: '123456', role: 'admin', redirect: '/Dashboard' },
-                { email: 'estudiante@uni.edu', pass: 'alumno123', role: 'student', redirect: '/Estudiante/PortalEstudiante' }
-            ];
-
-            const userFound = users.find(u => u.email === this.email && u.pass === this.password);
-
-            setTimeout(() => {
-                this.isLoading = false;
-                if (userFound) {
-                    this.error = `✅ Bienvenido. Redirigiendo...`;
-                    localStorage.setItem('userRole', userFound.role);
-                    setTimeout(() => window.location.href = userFound.redirect, 800);
+            try {
+                // Importar AuthService dinámicamente
+                const { AuthService } = await import('/src/utils/authService.js');
+                
+                // Llamar a la API real
+                const response = await AuthService.login(this.email, this.password);
+                
+                if (response.success) {
+                    this.error = '✅ Bienvenido. Redirigiendo...';
+                    
+                    // Determinar redirect según el rol del usuario
+                    const userRole = AuthService.getUserRole();
+                    let redirectUrl = '/Dashboard'; // Default
+                    
+                    if (userRole === 'student' || userRole === 'parent') {
+                        redirectUrl = '/Estudiante/PortalEstudiante';
+                    } else if (userRole === 'admin' || userRole === 'financial-staff') {
+                        redirectUrl = '/Dashboard';
+                    }
+                    
+                    setTimeout(() => window.location.href = redirectUrl, 800);
                 } else {
-                    this.error = '❌ Credenciales incorrectas.';
+                    this.error = '❌ ' + (response.message || 'Credenciales incorrectas.');
+                    this.isLoading = false;
                 }
-            }, 900);
+            } catch (error) {
+                console.error('Login error:', error);
+                this.error = '❌ ' + (error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+                this.isLoading = false;
+            }
         },
 
-        handleRegister() {
+        async handleRegister() {
             this.error = '';
             this.message = '';
             this.isLoading = true;
@@ -93,26 +106,66 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 return;
             }
 
-            setTimeout(() => {
+            if (this.password.length < 8) {
+                this.error = '⚠️ La contraseña debe tener al menos 8 caracteres.';
                 this.isLoading = false;
-                this.message = '✅ Registro exitoso. Ya puedes iniciar sesión.';
-                this.mode = 'login';
-                this.name = ''; this.password = ''; this.confirmPassword = '';
-            }, 1200);
+                return;
+            }
+
+            try {
+                const { AuthService } = await import('/src/utils/authService.js');
+                
+                const userData = {
+                    name: this.name,
+                    email: this.email,
+                    password: this.password,
+                    password_confirmation: this.confirmPassword,
+                };
+                
+                const response = await AuthService.register(userData);
+                
+                if (response.success) {
+                    this.message = '✅ Registro exitoso. Ya puedes iniciar sesión.';
+                    this.mode = 'login';
+                    this.name = '';
+                    this.password = '';
+                    this.confirmPassword = '';
+                } else {
+                    this.error = '❌ ' + (response.message || 'Error en el registro.');
+                }
+            } catch (error) {
+                console.error('Register error:', error);
+                this.error = '❌ ' + (error.message || 'Error al registrar. Intenta con otro correo.');
+            } finally {
+                this.isLoading = false;
+            }
         },
 
-        handleRecovery() {
+        async handleRecovery() {
             this.message = '';
             this.isLoading = true;
+            
             if (!this.email) {
                 this.message = '⚠️ Ingresa un correo válido.';
                 this.isLoading = false;
                 return;
             }
-            setTimeout(() => {
+
+            try {
+                const { AuthService } = await import('/src/utils/authService.js');
+                const response = await AuthService.forgotPassword(this.email);
+                
+                if (response.success) {
+                    this.message = '📩 Se ha enviado un enlace de recuperación a tu correo.';
+                } else {
+                    this.message = '⚠️ ' + (response.message || 'No se pudo enviar el correo.');
+                }
+            } catch (error) {
+                console.error('Recovery error:', error);
+                this.message = '❌ Error al enviar el correo de recuperación.';
+            } finally {
                 this.isLoading = false;
-                this.message = '📩 Se ha enviado un enlace de recuperación a tu correo.';
-            }, 900);
+            }
         }
     }"
 >
