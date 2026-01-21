@@ -231,7 +231,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 
                 // Si es error de CORS
                 if (errorMsg.includes('CORS') || errorMsg.includes('Access-Control')) {
-                    errorMsg = '🚫 ERROR DE CORS\n\nEl backend no permite conexiones desde este dominio.\n\n📝 Solución:\nEl administrador debe agregar tu dominio en:\nbackend/config/cors.php\n\nAgregar: https://cbta-eight.vercel.app';
+                    errorMsg = '🚫 ERROR DE CORS: El backend no permite conexiones desde este dominio. El administrador debe configurar CORS en backend/config/cors.php para permitir https://cbta-eight.vercel.app';
                 } else if (errorMsg.includes('500')) {
                     errorMsg = '🔧 El servidor está experimentando problemas internos. Contacta al administrador.';
                 } else if (errorMsg.includes('401') || errorMsg.includes('403')) {
@@ -239,7 +239,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 } else if (errorMsg.includes('404')) {
                     errorMsg = '❓ Endpoint no encontrado. Verifica la configuración de la API.';
                 } else if (errorMsg.includes('Network') || errorMsg.includes('conectar') || errorMsg.includes('fetch')) {
-                    errorMsg = '🌐 No se puede conectar al servidor.\n\nPosibles causas:\n• Error de CORS (más probable)\n• API no disponible\n• Problemas de red';
+                    errorMsg = '🌐 No se puede conectar al servidor. Posibles causas: Error de CORS, API no disponible, o problemas de red.';
                 }
                 
                 this.error = '❌ ' + errorMsg;
