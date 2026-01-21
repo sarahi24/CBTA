@@ -71,6 +71,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         window.__INITIAL_USERS__ = usersJSON;
         window.__API_BASE_URL__ = API_BASE_URL;
     </script>
+    <script>
+        declare global {
+            interface Window {
+                __INITIAL_USERS__: string;
+                __API_BASE_URL__: string;
+                XLSX: any;
+            }
+        }
+    </script>
     
     <style is:global>
         [x-cloak] { display: none !important; }
@@ -468,25 +477,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     
     document.addEventListener('alpine:init', () => {
         Alpine.data('rolesData', () => ({
-            users: JSON.parse(window.__INITIAL_USERS__),
-            apiBaseUrl: window.__API_BASE_URL__,
+            users: JSON.parse(window.__INITIAL_USERS__ || '[]') as any[],
+            apiBaseUrl: window.__API_BASE_URL__ || '',
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
             isSaving: false,
             isImporting: false,
             isDragging: false,
-            selectedFile: null,
-            importedData: [],
-            userToDeleteId: null,
+            selectedFile: null as File | null,
+            importedData: [] as any[],
+            userToDeleteId: null as number | null,
             userToDeleteName: '',
             newUser: { 
                 id: null, name: '', last_name: '', email: '', phone_number: '',
                 birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
                 blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                 status: 'activo', role: 'Administrador'
-            },
-            notification: { show: false, message: '', type: 'success' },
+            } as any,
+            notification: { show: false, message: '', type: 'success' as 'success' | 'error' },
 
             get filteredUsers() { return this.users; },
 
@@ -501,7 +510,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.isPanelOpen = true;
             },
 
-            openPanelForEdit(user) {
+            openPanelForEdit(user: any) {
                 this.isEditing = true;
                 this.newUser = { ...user };
                 this.isPanelOpen = true;
@@ -519,10 +528,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify(userData)
                         });
-                        const result = await response.json();
+                        const result = await response.json() as any;
                         if (response.ok && result.success) {
                             const updatedUser = result.data?.user || result.data || result;
-                            const index = this.users.findIndex(u => u.id === this.newUser.id);
+                            const index = this.users.findIndex((u: any) => u.id === this.newUser.id);
                             if (index !== -1) this.users[index] = updatedUser;
                             this.showNotify(result.message || 'Usuario actualizado');
                             this.closePanel();
@@ -535,7 +544,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify(userData)
                         });
-                        const result = await response.json();
+                        const result = await response.json() as any;
                         if (response.status === 201 && result.success) {
                             const newUser = result.data?.user || result.data || result;
                             this.users.push(newUser);
@@ -552,21 +561,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
-            confirmDeleteUser(user) {
+            confirmDeleteUser(user: any) {
                 this.userToDeleteId = user.id;
                 this.userToDeleteName = `${user.name} ${user.last_name}`;
                 this.isDeleting = true;
             },
 
-            async deleteUser(id) {
+            async deleteUser(id: number) {
                 try {
                     const response = await fetch(`${this.apiBaseUrl}/users/${id}`, {
                         method: 'DELETE',
                         headers: { 'Accept': 'application/json' }
                     });
-                    const result = await response.json();
+                    const result = await response.json() as any;
                     if (response.ok && result.success) {
-                        this.users = this.users.filter(u => u.id !== id);
+                        this.users = this.users.filter((u: any) => u.id !== id);
                         this.showNotify(result.message || 'Eliminado');
                     }
                 } catch (error) {
@@ -578,30 +587,30 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             openImportModal() { this.isImporting = true; },
             closeImportModal() { this.isImporting = false; },
 
-            handleFileDrop(event) {
-                const file = event.dataTransfer.files[0];
+            handleFileDrop(event: DragEvent) {
+                const file = event.dataTransfer?.files[0];
                 if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
                     this.selectedFile = file;
                     this.readExcelFile(file);
                 }
             },
 
-            handleFileSelect(event) {
-                const file = event.target.files[0];
+            handleFileSelect(event: Event) {
+                const file = (event.target as HTMLInputElement).files?.[0];
                 if (file) {
                     this.selectedFile = file;
                     this.readExcelFile(file);
                 }
             },
 
-            readExcelFile(file) {
+            readExcelFile(file: File) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                        this.importedData = rows.map(row => ({
+                        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                        const workbook = (window as any).XLSX.read(data, { type: 'array' });
+                        const rows = (window as any).XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                        this.importedData = rows.map((row: any) => ({
                             name: row.name || '',
                             last_name: row.last_name || '',
                             email: row.email || '',
@@ -629,7 +638,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify(userData)
                         });
-                        const result = await response.json();
+                        const result = await response.json() as any;
                         if (response.status === 201 && result.success) {
                             this.users.push(result.data?.user || result.data || result);
                         }
@@ -647,13 +656,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     curp: 'PELJ000512HDFRPN09', address_line1: 'Calle 1', address_line2: 'Col',
                     address_line3: 'CDMX', blood_type: 'O+', role: 'Maestro'
                 }];
-                const ws = XLSX.utils.json_to_sheet(template);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
-                XLSX.writeFile(wb, 'plantilla_usuarios.xlsx');
+                const ws = (window as any).XLSX.utils.json_to_sheet(template);
+                const wb = (window as any).XLSX.utils.book_new();
+                (window as any).XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+                (window as any).XLSX.writeFile(wb, 'plantilla_usuarios.xlsx');
             },
 
-            showNotify(msg, type = 'success') {
+            showNotify(msg: string, type: 'success' | 'error' = 'success') {
                 this.notification = { show: true, message: msg, type };
                 setTimeout(() => this.notification.show = false, 3000);
             }
