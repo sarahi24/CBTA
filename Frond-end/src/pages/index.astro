@@ -24,6 +24,9 @@ const pageTitle = "Acceso al Sistema - SIGE";
             
             async login(email, password) {
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
+                    
                     const response = await fetch(`${this.API_BASE_URL}/v1/auth/login`, {
                         method: 'POST',
                         headers: {
@@ -31,11 +34,14 @@ const pageTitle = "Acceso al Sistema - SIGE";
                             'Accept': 'application/json',
                         },
                         body: JSON.stringify({ email, password }),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                     
                     if (!response.ok) {
                         const error = await response.json().catch(() => ({}));
-                        throw new Error(error.message || 'Error en el login');
+                        throw new Error(error.message || `Error ${response.status}: ${response.statusText}`);
                     }
                     
                     const data = await response.json();
@@ -53,12 +59,24 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     return data;
                 } catch (error) {
                     console.error('Login error:', error);
+                    
+                    // Mejorar mensajes de error
+                    if (error.name === 'AbortError') {
+                        throw new Error('La solicitud tardó demasiado. Por favor, verifica tu conexión.');
+                    }
+                    if (error instanceof TypeError && error.message.includes('fetch')) {
+                        throw new Error('No se pudo conectar al servidor. Verifica tu conexión a internet o que la API esté disponible.');
+                    }
+                    
                     throw error;
                 }
             },
             
             async register(userData) {
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+                    
                     const response = await fetch(`${this.API_BASE_URL}/v1/auth/register`, {
                         method: 'POST',
                         headers: {
@@ -66,16 +84,27 @@ const pageTitle = "Acceso al Sistema - SIGE";
                             'Accept': 'application/json',
                         },
                         body: JSON.stringify(userData),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                     
                     if (!response.ok) {
                         const error = await response.json().catch(() => ({}));
-                        throw new Error(error.message || 'Error en el registro');
+                        throw new Error(error.message || `Error ${response.status}: ${response.statusText}`);
                     }
                     
                     return await response.json();
                 } catch (error) {
                     console.error('Register error:', error);
+                    
+                    if (error.name === 'AbortError') {
+                        throw new Error('La solicitud tardó demasiado. Por favor, verifica tu conexión.');
+                    }
+                    if (error instanceof TypeError && error.message.includes('fetch')) {
+                        throw new Error('No se pudo conectar al servidor. Verifica tu conexión a internet.');
+                    }
+                    
                     throw error;
                 }
             },
@@ -166,7 +195,16 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                this.error = '❌ ' + (error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+                
+                // Mensaje de error más detallado
+                let errorMsg = error.message || 'Error desconocido';
+                
+                // Si es error 500, mostrar mensaje específico
+                if (errorMsg.includes('500')) {
+                    errorMsg = 'El servidor está experimentando problemas. Por favor contacta al administrador o intenta más tarde.';
+                }
+                
+                this.error = '❌ ' + errorMsg;
                 this.isLoading = false;
             }
         },
