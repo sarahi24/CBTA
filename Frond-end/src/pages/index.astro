@@ -48,13 +48,21 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
                     
+                    const requestHeaders = {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    };
+                    
+                    const requestBody = { email, password };
+                    
+                    console.log('📤 REQUEST HEADERS:', requestHeaders);
+                    console.log('📤 REQUEST BODY:', requestBody);
+                    console.log('📤 REQUEST URL:', `${this.API_BASE_URL}/v1/login`);
+                    
                     const response = await fetch(`${this.API_BASE_URL}/v1/login`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ email, password }),
+                        headers: requestHeaders,
+                        body: JSON.stringify(requestBody),
                         signal: controller.signal
                     });
                     
