@@ -13,6 +13,91 @@ const pageTitle = "Acceso al Sistema - SIGE";
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    
+    <script is:inline>
+        // AuthService inline para evitar problemas de importación dinámica
+        window.AuthService = {
+            TOKEN_KEY: 'access_token',
+            REFRESH_TOKEN_KEY: 'refresh_token',
+            USER_DATA_KEY: 'user_data',
+            API_BASE_URL: 'https://nginx-production-728f.up.railway.app/api',
+            
+            async login(email, password) {
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/v1/auth/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ email, password }),
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({}));
+                        throw new Error(error.message || 'Error en el login');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.data?.access_token) {
+                        localStorage.setItem(this.TOKEN_KEY, data.data.access_token);
+                    }
+                    if (data.data?.refresh_token) {
+                        localStorage.setItem(this.REFRESH_TOKEN_KEY, data.data.refresh_token);
+                    }
+                    if (data.data?.user_data) {
+                        localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(data.data.user_data));
+                    }
+                    
+                    return data;
+                } catch (error) {
+                    console.error('Login error:', error);
+                    throw error;
+                }
+            },
+            
+            async register(userData) {
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/v1/auth/register`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(userData),
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({}));
+                        throw new Error(error.message || 'Error en el registro');
+                    }
+                    
+                    return await response.json();
+                } catch (error) {
+                    console.error('Register error:', error);
+                    throw error;
+                }
+            },
+            
+            getUserRole() {
+                const userData = localStorage.getItem(this.USER_DATA_KEY);
+                if (!userData) return null;
+                try {
+                    const parsed = JSON.parse(userData);
+                    return parsed.role || parsed.type || null;
+                } catch {
+                    return null;
+                }
+            },
+            
+            logout() {
+                localStorage.removeItem(this.TOKEN_KEY);
+                localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+                localStorage.removeItem(this.USER_DATA_KEY);
+            }
+        };
+    </script>
 
     <style>
         /* Forzar rebuild v2 */
@@ -58,17 +143,14 @@ const pageTitle = "Acceso al Sistema - SIGE";
             }
 
             try {
-                // Importar AuthService dinámicamente
-                const { AuthService } = await import('/src/utils/authService.js');
-                
-                // Llamar a la API real
-                const response = await AuthService.login(this.email, this.password);
+                // Usar AuthService global
+                const response = await window.AuthService.login(this.email, this.password);
                 
                 if (response.success) {
                     this.error = '✅ Bienvenido. Redirigiendo...';
                     
                     // Determinar redirect según el rol del usuario
-                    const userRole = AuthService.getUserRole();
+                    const userRole = window.AuthService.getUserRole();
                     let redirectUrl = '/Dashboard'; // Default
                     
                     if (userRole === 'student' || userRole === 'parent') {
@@ -113,8 +195,6 @@ const pageTitle = "Acceso al Sistema - SIGE";
             }
 
             try {
-                const { AuthService } = await import('/src/utils/authService.js');
-                
                 const userData = {
                     name: this.name,
                     email: this.email,
@@ -122,7 +202,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     password_confirmation: this.confirmPassword,
                 };
                 
-                const response = await AuthService.register(userData);
+                const response = await window.AuthService.register(userData);
                 
                 if (response.success) {
                     this.message = '✅ Registro exitoso. Ya puedes iniciar sesión.';
