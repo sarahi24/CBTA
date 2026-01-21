@@ -71,15 +71,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         window.__INITIAL_USERS__ = usersJSON;
         window.__API_BASE_URL__ = API_BASE_URL;
     </script>
-    <script>
-        declare global {
-            interface Window {
-                __INITIAL_USERS__: string;
-                __API_BASE_URL__: string;
-                XLSX: any;
-            }
-        }
-    </script>
     
     <style is:global>
         [x-cloak] { display: none !important; }
@@ -475,27 +466,30 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 <script>
     import Alpine from 'alpinejs';
     
+    // @ts-ignore - window properties set by inline script
     document.addEventListener('alpine:init', () => {
         Alpine.data('rolesData', () => ({
-            users: JSON.parse(window.__INITIAL_USERS__ || '[]') as any[],
-            apiBaseUrl: window.__API_BASE_URL__ || '',
+            // @ts-ignore
+            users: JSON.parse((window as any).__INITIAL_USERS__ || '[]'),
+            // @ts-ignore
+            apiBaseUrl: (window as any).__API_BASE_URL__ || '',
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
             isSaving: false,
             isImporting: false,
             isDragging: false,
-            selectedFile: null as File | null,
-            importedData: [] as any[],
-            userToDeleteId: null as number | null,
+            selectedFile: null,
+            importedData: [],
+            userToDeleteId: null,
             userToDeleteName: '',
             newUser: { 
                 id: null, name: '', last_name: '', email: '', phone_number: '',
                 birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
                 blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                 status: 'activo', role: 'Administrador'
-            } as any,
-            notification: { show: false, message: '', type: 'success' as 'success' | 'error' },
+            },
+            notification: { show: false, message: '', type: 'success' },
 
             get filteredUsers() { return this.users; },
 
@@ -528,7 +522,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify(userData)
                         });
-                        const result = await response.json() as any;
+                        const result: any = await response.json();
                         if (response.ok && result.success) {
                             const updatedUser = result.data?.user || result.data || result;
                             const index = this.users.findIndex((u: any) => u.id === this.newUser.id);
@@ -544,7 +538,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify(userData)
                         });
-                        const result = await response.json() as any;
+                        const result: any = await response.json();
                         if (response.status === 201 && result.success) {
                             const newUser = result.data?.user || result.data || result;
                             this.users.push(newUser);
@@ -567,13 +561,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.isDeleting = true;
             },
 
-            async deleteUser(id: number) {
+            async deleteUser(id: any) {
                 try {
                     const response = await fetch(`${this.apiBaseUrl}/users/${id}`, {
                         method: 'DELETE',
                         headers: { 'Accept': 'application/json' }
                     });
-                    const result = await response.json() as any;
+                    const result: any = await response.json();
                     if (response.ok && result.success) {
                         this.users = this.users.filter((u: any) => u.id !== id);
                         this.showNotify(result.message || 'Eliminado');
@@ -587,7 +581,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             openImportModal() { this.isImporting = true; },
             closeImportModal() { this.isImporting = false; },
 
-            handleFileDrop(event: DragEvent) {
+            handleFileDrop(event: any) {
                 const file = event.dataTransfer?.files[0];
                 if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
                     this.selectedFile = file;
@@ -595,7 +589,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
-            handleFileSelect(event: Event) {
+            handleFileSelect(event: any) {
                 const file = (event.target as HTMLInputElement).files?.[0];
                 if (file) {
                     this.selectedFile = file;
@@ -603,7 +597,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
-            readExcelFile(file: File) {
+            readExcelFile(file: any) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
@@ -638,7 +632,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify(userData)
                         });
-                        const result = await response.json() as any;
+                        const result: any = await response.json();
                         if (response.status === 201 && result.success) {
                             this.users.push(result.data?.user || result.data || result);
                         }
@@ -662,7 +656,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 (window as any).XLSX.writeFile(wb, 'plantilla_usuarios.xlsx');
             },
 
-            showNotify(msg: string, type: 'success' | 'error' = 'success') {
+            showNotify(msg: any, type: any = 'success') {
                 this.notification = { show: true, message: msg, type };
                 setTimeout(() => this.notification.show = false, 3000);
             }
