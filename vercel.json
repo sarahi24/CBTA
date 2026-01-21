@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd Frond-end && npm install && npm run build",
+  "buildCommand": "cd Frond-end && rm -rf .vercel dist node_modules/.vite && npm install && npm run build",
   "outputDirectory": "Frond-end/dist",
   "installCommand": "cd Frond-end && npm install",
   "framework": "astro",
