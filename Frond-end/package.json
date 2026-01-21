@@ -15,7 +15,7 @@
     "@nanostores/react": "^1.0.0",
     "@tailwindcss/vite": "^4.1.13",
     "@types/alpinejs": "^3.13.11",
-    "alpinejs": "^3.15.3",
+    "alpinejs": "^3.15.4",
     "astro": "^5.16.3",
     "nanostores": "^1.0.1",
     "react": "^19.1.1",

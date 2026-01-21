@@ -11,8 +11,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{pageTitle}</title>
 
-    <link rel="icon" href="/cbta71_icon.png" type="image/png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
 
     <style>
@@ -200,7 +199,11 @@ const pageTitle = "Acceso al Sistema - SIGE";
     </div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+  import Alpine from 'alpinejs';
+  window.Alpine = Alpine;
+  Alpine.start();
+</script>
 
 </body>
 </html>
