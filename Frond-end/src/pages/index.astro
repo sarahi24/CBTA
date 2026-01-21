@@ -61,8 +61,20 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     clearTimeout(timeoutId);
                     
                     if (!response.ok) {
-                        const error = await response.json().catch(() => ({}));
-                        throw new Error(error.message || `Error ${response.status}: ${response.statusText}`);
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error('🔴 Server Error Response:', errorData);
+                        console.error('🔴 Status:', response.status, response.statusText);
+                        
+                        // Extraer mensaje de error del servidor
+                        let errorMessage = errorData.message || errorData.error || response.statusText;
+                        
+                        // Si hay errores de validación
+                        if (errorData.errors) {
+                            const validationErrors = Object.values(errorData.errors).flat().join(', ');
+                            errorMessage = `${errorMessage}: ${validationErrors}`;
+                        }
+                        
+                        throw new Error(errorMessage || `Error ${response.status}: ${response.statusText}`);
                     }
                     
                     const data = await response.json();
@@ -114,8 +126,17 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     clearTimeout(timeoutId);
                     
                     if (!response.ok) {
-                        const error = await response.json().catch(() => ({}));
-                        throw new Error(error.message || `Error ${response.status}: ${response.statusText}`);
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error('🔴 Register Error Response:', errorData);
+                        console.error('🔴 Status:', response.status, response.statusText);
+                        
+                        let errorMessage = errorData.message || errorData.error || response.statusText;
+                        if (errorData.errors) {
+                            const validationErrors = Object.values(errorData.errors).flat().join(', ');
+                            errorMessage = `${errorMessage}: ${validationErrors}`;
+                        }
+                        
+                        throw new Error(errorMessage || `Error ${response.status}: ${response.statusText}`);
                     }
                     
                     return await response.json();
@@ -232,9 +253,9 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 // Si es error de CORS
                 if (errorMsg.includes('CORS') || errorMsg.includes('Access-Control')) {
                     errorMsg = '🚫 ERROR DE CORS: El backend no permite conexiones desde este dominio. El administrador debe configurar CORS en backend/config/cors.php para permitir https://cbta-eight.vercel.app';
-                } else if (errorMsg.includes('500')) {
-                    errorMsg = '🔧 El servidor está experimentando problemas internos. Contacta al administrador.';
-                } else if (errorMsg.includes('401') || errorMsg.includes('403')) {
+                } else if (errorMsg.includes('500') || errorMsg.includes('Internal Server Error')) {
+                    errorMsg = '🔧 Error del servidor (500): ' + errorMsg + '. Revisa los logs del backend o contacta al administrador.';
+                } else if (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {
                     errorMsg = '🔒 Credenciales incorrectas. Verifica tu email y contraseña.';
                 } else if (errorMsg.includes('404')) {
                     errorMsg = '❓ Endpoint no encontrado. Verifica la configuración de la API.';
