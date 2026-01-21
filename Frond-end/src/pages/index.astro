@@ -60,9 +60,14 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     
                     clearTimeout(timeoutId);
                     
+                    console.log('📊 Response Status:', response.status);
+                    console.log('📊 Response OK:', response.ok);
+                    console.log('📊 Response Headers:', [...response.headers.entries()]);
+                    
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
                         console.error('🔴 Server Error Response:', errorData);
+                        console.error('🔴 Full Error Object:', JSON.stringify(errorData, null, 2));
                         console.error('🔴 Status:', response.status, response.statusText);
                         
                         // Extraer mensaje de error del servidor
