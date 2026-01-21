@@ -4,13 +4,26 @@ import { API_ENDPOINTS } from '../config/api.js';
 
 // Cargar usuarios desde la API
 let initialUsers = [];
+let apiError = null;
 try {
-  const res = await fetch(API_ENDPOINTS.users.list);
+  const res = await fetch(API_ENDPOINTS.users.list, {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    mode: 'cors'
+  });
   if (res.ok) {
     const json = await res.json();
     initialUsers = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
+    console.log('✅ Usuarios cargados desde API:', initialUsers.length);
+  } else {
+    console.warn('⚠️ API respondió con error:', res.status, res.statusText);
+    apiError = `Error ${res.status}: ${res.statusText}`;
   }
 } catch (e) {
+  console.error('❌ Error al conectar con la API:', e.message);
+  apiError = e.message;
   // Fallback data si falla la API
   initialUsers = [
     { 
@@ -63,13 +76,15 @@ try {
 
 const usersJSON = JSON.stringify(initialUsers);
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
+const apiErrorMsg = apiError ? JSON.stringify(apiError) : 'null';
 ---
 
 <Layout title="Gestión de Personal | CBTA 71">
     <script is:inline src="/js/xlsx.min.js"></script>
-    <script is:inline define:vars={{ usersJSON, API_BASE_URL }}>
+    <script is:inline define:vars={{ usersJSON, API_BASE_URL, apiErrorMsg }}>
         window.__INITIAL_USERS__ = usersJSON;
         window.__API_BASE_URL__ = API_BASE_URL;
+        window.__API_ERROR__ = apiErrorMsg !== 'null' ? JSON.parse(apiErrorMsg) : null;
     </script>
     
     <style is:global>
@@ -124,6 +139,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         </template>
 
         <div class="mb-8">
+            <div x-show="apiError" class="mb-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-amber-900">⚠️ API No Disponible</h3>
+                        <p class="text-sm text-amber-700">Mostrando datos de ejemplo. Las operaciones se guardarán cuando se restablezca la conexión.</p>
+                    </div>
+                </div>
+            </div>
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <h1 class="text-3xl font-bold text-slate-800 mb-1">Gestión de Personal</h1>
@@ -469,6 +495,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             Alpine.data('rolesData', () => ({
                 users: JSON.parse(window.__INITIAL_USERS__ || '[]'),
                 apiBaseUrl: window.__API_BASE_URL__ || '',
+                apiError: window.__API_ERROR__ || null,
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
@@ -486,6 +513,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 status: 'activo', role: 'Administrador'
             },
             notification: { show: false, message: '', type: 'success' },
+
+            init() {
+                if (this.apiError) {
+                    console.warn('⚠️ API Error on init:', this.apiError);
+                    this.showNotify(`API no disponible: usando datos de ejemplo`, 'error');
+                }
+            },
 
             get filteredUsers() { return this.users; },
 
@@ -513,11 +547,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     const userData = { ...this.newUser };
                     if (this.isEditing) {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000);
                         const response = await fetch(`${this.apiBaseUrl}/users/${this.newUser.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                            body: JSON.stringify(userData)
+                            body: JSON.stringify(userData),
+                            signal: controller.signal
                         });
+                        clearTimeout(timeoutId);
                         const result = await response.json();
                         if (response.ok && result.success) {
                             const updatedUser = result.data?.user || result.data || result;
@@ -529,11 +567,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.showNotify(result.message || 'Error', 'error');
                         }
                     } else {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000);
                         const response = await fetch(`${this.apiBaseUrl}/users`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                            body: JSON.stringify(userData)
+                            body: JSON.stringify(userData),
+                            signal: controller.signal
                         });
+                        clearTimeout(timeoutId);
                         const result = await response.json();
                         if (response.status === 201 && result.success) {
                             const newUser = result.data?.user || result.data || result;
@@ -545,7 +587,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
                     }
                 } catch (error) {
-                    this.showNotify('Error de conexión', 'error');
+                    console.error('Error en saveUser:', error);
+                    if (error.name === 'AbortError') {
+                        this.showNotify('La solicitud tardó demasiado', 'error');
+                    } else {
+                        this.showNotify(`Error de conexión: ${error.message}`, 'error');
+                    }
                 } finally {
                     this.isSaving = false;
                 }
@@ -559,17 +606,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async deleteUser(id) {
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
                     const response = await fetch(`${this.apiBaseUrl}/users/${id}`, {
                         method: 'DELETE',
-                        headers: { 'Accept': 'application/json' }
+                        headers: { 'Accept': 'application/json' },
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
                     const result = await response.json();
                     if (response.ok && result.success) {
                         this.users = this.users.filter(u => u.id !== id);
                         this.showNotify(result.message || 'Eliminado');
                     }
                 } catch (error) {
-                    this.showNotify('Error de conexión', 'error');
+                    console.error('Error en deleteUser:', error);
+                    if (error.name === 'AbortError') {
+                        this.showNotify('La solicitud tardó demasiado', 'error');
+                    } else {
+                        this.showNotify(`Error al eliminar: ${error.message}`, 'error');
+                    }
                 }
                 this.isDeleting = false;
             },
@@ -621,22 +677,35 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async processImport() {
                 this.isSaving = true;
+                let successCount = 0;
+                let errorCount = 0;
                 for (const userData of this.importedData) {
                     try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000);
                         const response = await fetch(`${this.apiBaseUrl}/users`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                            body: JSON.stringify(userData)
+                            body: JSON.stringify(userData),
+                            signal: controller.signal
                         });
+                        clearTimeout(timeoutId);
                         const result = await response.json();
                         if (response.status === 201 && result.success) {
                             this.users.push(result.data?.user || result.data || result);
+                            successCount++;
+                        } else {
+                            errorCount++;
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error('Error importing user:', e);
+                        errorCount++;
+                    }
                 }
                 this.isSaving = false;
                 this.closeImportModal();
-                this.showNotify('Proceso de importación finalizado');
+                const msg = `Importación finalizada: ${successCount} exitosos, ${errorCount} errores`;
+                this.showNotify(msg, errorCount > 0 ? 'error' : 'success');
             },
 
             downloadTemplate() {
