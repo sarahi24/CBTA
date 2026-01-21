@@ -73,6 +73,11 @@ class DatabaseSeeder extends Seeder
 
         $staffRole = Role::firstOrCreate(['name' => 'financial staff']);
         $staffRole->syncPermissions($staffPermissions);
+
+        // ------------------------
+        // CREAR USUARIOS DE PRUEBA
+        // ------------------------
+        $this->call(UsersSeeder::class);
     }
 
 }
