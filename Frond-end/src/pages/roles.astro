@@ -67,6 +67,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
 <Layout title="Gestión de Personal | CBTA 71">
     <script is:inline src="/js/xlsx.min.js"></script>
+    <script is:inline define:vars={{ usersJSON, API_BASE_URL }}>
+        window.__INITIAL_USERS__ = usersJSON;
+        window.__API_BASE_URL__ = API_BASE_URL;
+    </script>
     
     <style is:global>
         [x-cloak] { display: none !important; }
@@ -459,11 +463,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<script define:vars={{ usersJSON, API_BASE_URL }}>
+<script>
+    import Alpine from 'alpinejs';
+    
     document.addEventListener('alpine:init', () => {
         Alpine.data('rolesData', () => ({
-            users: JSON.parse(usersJSON),
-            apiBaseUrl: API_BASE_URL,
+            users: JSON.parse(window.__INITIAL_USERS__),
+            apiBaseUrl: window.__API_BASE_URL__,
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
