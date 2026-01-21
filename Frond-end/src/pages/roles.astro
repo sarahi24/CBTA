@@ -460,12 +460,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <script is:inline>
-    document.addEventListener('alpine:init', () => {
-        if (window.Alpine && !window.__rolesDataRegistered__) {
-            window.__rolesDataRegistered__ = true;
-            window.Alpine.data('rolesData', () => ({
-                users: JSON.parse(window.__INITIAL_USERS__ || '[]'),
-                apiBaseUrl: window.__API_BASE_URL__ || '',
+    // Esperar a que Alpine esté listo sin interferir con su inicialización
+    (function() {
+        const registerComponent = () => {
+            if (window.Alpine && !window.__rolesDataRegistered__) {
+                window.__rolesDataRegistered__ = true;
+                window.Alpine.data('rolesData', () => ({
+                    users: JSON.parse(window.__INITIAL_USERS__ || '[]'),
+                    apiBaseUrl: window.__API_BASE_URL__ || '',
             isPanelOpen: false,
             isEditing: false,
             isDeleting: false,
@@ -654,6 +656,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 setTimeout(() => this.notification.show = false, 3000);
             }
         }));
+            }
+        };
+        
+        // Intentar registrar inmediatamente si Alpine ya está disponible
+        if (window.Alpine) {
+            registerComponent();
+        } else {
+            // Si no está disponible, esperar al evento DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', registerComponent);
         }
-    });
+    })();
 </script>
