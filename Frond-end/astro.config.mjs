@@ -1,15 +1,12 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
-import react from '@astrojs/react'; // Importa la integración de React
-
-import vercel from '@astrojs/vercel';
-
+import react from '@astrojs/react';
 import alpinejs from '@astrojs/alpinejs';
+import vercel from '@astrojs/vercel/static';
 
 // https://astro.build/config
 export default defineConfig({
-  // Agrega la integración aquí
   integrations: [react(), alpinejs()],
 
   vite: {
@@ -17,9 +14,5 @@ export default defineConfig({
   },
 
   output: 'static',
-  adapter: vercel({
-    webAnalytics: {
-      enabled: false
-    }
-  })
+  adapter: vercel()
 });
