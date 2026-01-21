@@ -203,7 +203,9 @@ const pageTitle = "Acceso al Sistema - SIGE";
 <script>
   import Alpine from 'alpinejs';
   window.Alpine = Alpine;
-  Alpine.start();
+  document.addEventListener('DOMContentLoaded', () => {
+    Alpine.start();
+  });
 </script>
 
 </body>
