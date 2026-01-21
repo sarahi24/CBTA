@@ -232,16 +232,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1"
-                                          :class="{
-                                              'bg-purple-100 text-purple-700': user.role === 'Administrador',
-                                              'bg-blue-100 text-blue-700': user.role === 'Caja',
-                                              'bg-green-100 text-green-700': user.role === 'Maestro'
-                                          }"
+                                          x-bind:class="user.role === 'Administrador' ? 'bg-purple-100 text-purple-700' : user.role === 'Caja' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
                                           x-text="user.role"></span>
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-1 rounded-full text-xs font-semibold"
-                                          :class="user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                          x-bind:class="user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                                           x-text="user.status === 'activo' ? 'Activo' : 'Inactivo'"></span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
@@ -477,8 +473,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             isSaving: false,
             isImporting: false,
             isDragging: false,
-            selectedFile: null,
-            importedData: [],
+            selectedFile: null as any,
+            importedData: [] as any[],
             userToDeleteId: null,
             userToDeleteName: '',
             newUser: { 
@@ -670,8 +666,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 isSaving: false,
                 isImporting: false,
                 isDragging: false,
-                selectedFile: null,
-                importedData: [],
+                selectedFile: null as any,
+                importedData: [] as any[],
                 userToDeleteId: null,
                 userToDeleteName: '',
                 newUser: { 
