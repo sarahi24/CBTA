@@ -21,6 +21,27 @@ const pageTitle = "Acceso al Sistema - SIGE";
             REFRESH_TOKEN_KEY: 'refresh_token',
             USER_DATA_KEY: 'user_data',
             API_BASE_URL: 'https://nginx-production-728f.up.railway.app/api',
+            apiStatus: null,
+            
+            async testConnection() {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(`${this.API_BASE_URL}/v1/auth/login`, {
+                        method: 'OPTIONS',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    this.apiStatus = 'online';
+                    return true;
+                } catch (error) {
+                    console.error('API Connection Test Failed:', error);
+                    this.apiStatus = 'offline';
+                    return false;
+                }
+            },
             
             async login(email, password) {
                 try {
@@ -58,14 +79,16 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     
                     return data;
                 } catch (error) {
-                    console.error('Login error:', error);
+                    console.error('❌ Login error:', error);
+                    console.log('📍 API URL:', this.API_BASE_URL);
+                    console.log('📧 Email intentado:', email);
                     
                     // Mejorar mensajes de error
                     if (error.name === 'AbortError') {
-                        throw new Error('La solicitud tardó demasiado. Por favor, verifica tu conexión.');
+                        throw new Error('⏱️ La solicitud tardó demasiado (>15s). Verifica tu conexión o intenta más tarde.');
                     }
                     if (error instanceof TypeError && error.message.includes('fetch')) {
-                        throw new Error('No se pudo conectar al servidor. Verifica tu conexión a internet o que la API esté disponible.');
+                        throw new Error('🌐 No se pudo conectar al servidor. Posibles causas:\n• La API está apagada o no responde\n• Problemas de red/firewall\n• URL incorrecta');
                     }
                     
                     throw error;
@@ -172,8 +195,13 @@ const pageTitle = "Acceso al Sistema - SIGE";
             }
 
             try {
+                console.log('🔐 Intentando login con:', this.email);
+                console.log('🌐 API Base URL:', window.AuthService.API_BASE_URL);
+                
                 // Usar AuthService global
                 const response = await window.AuthService.login(this.email, this.password);
+                
+                console.log('📥 Respuesta del servidor:', response);
                 
                 if (response.success) {
                     this.error = '✅ Bienvenido. Redirigiendo...';
@@ -194,14 +222,21 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     this.isLoading = false;
                 }
             } catch (error) {
-                console.error('Login error:', error);
+                console.error('❌ Login error completo:', error);
+                console.error('📋 Stack trace:', error.stack);
                 
                 // Mensaje de error más detallado
                 let errorMsg = error.message || 'Error desconocido';
                 
                 // Si es error 500, mostrar mensaje específico
                 if (errorMsg.includes('500')) {
-                    errorMsg = 'El servidor está experimentando problemas. Por favor contacta al administrador o intenta más tarde.';
+                    errorMsg = '🔧 El servidor está experimentando problemas internos. Contacta al administrador.';
+                } else if (errorMsg.includes('401') || errorMsg.includes('403')) {
+                    errorMsg = '🔒 Credenciales incorrectas. Verifica tu email y contraseña.';
+                } else if (errorMsg.includes('404')) {
+                    errorMsg = '❓ Endpoint no encontrado. Verifica la configuración de la API.';
+                } else if (errorMsg.includes('Network') || errorMsg.includes('conectar')) {
+                    errorMsg = '🌐 Error de red. Verifica:\n• Tu conexión a internet\n• Que la API esté en línea\n• Firewall o bloqueadores';
                 }
                 
                 this.error = '❌ ' + errorMsg;
@@ -291,6 +326,29 @@ const pageTitle = "Acceso al Sistema - SIGE";
     <div class="absolute top-8 left-1/2 transform -translate-x-1/2 translate-y-3 z-30">
         <img src="/Logo.png" alt="Logotipo SIGE" class="w-32 h-auto select-none pointer-events-none">
     </div>
+    
+    <!-- Indicador de estado de API -->
+    <div class="absolute top-4 right-4 z-30" x-data="{ apiStatus: 'checking' }" x-init="
+        (async () => {
+            try {
+                const isOnline = await window.AuthService.testConnection();
+                apiStatus = isOnline ? 'online' : 'offline';
+            } catch (e) {
+                apiStatus = 'offline';
+            }
+        })()">
+        <div class="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
+            <div class="relative">
+                <div x-show="apiStatus === 'checking'" class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                <div x-show="apiStatus === 'online'" class="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div x-show="apiStatus === 'offline'" class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            </div>
+            <span class="text-xs font-medium" x-text="
+                apiStatus === 'checking' ? 'Verificando...' :
+                apiStatus === 'online' ? 'API Conectada' : 'API Desconectada'
+            "></span>
+        </div>
+    </div>
 
     <div class="w-full max-w-md bg-white p-0 rounded-3xl overflow-hidden shadow-xl mt-28">
 
@@ -319,6 +377,32 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 mt-6 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50">
                     <span x-text="isLoading ? 'Cargando...' : 'Entrar'"></span>
                 </button>
+                
+                <button type="button" @click="
+                    console.clear();
+                    console.log('🔍 DIAGNÓSTICO DE CONEXIÓN');
+                    console.log('================================');
+                    console.log('📍 API URL:', window.AuthService.API_BASE_URL);
+                    console.log('📧 Email:', email);
+                    console.log('🌐 Navegador:', navigator.userAgent);
+                    console.log('📶 En línea:', navigator.onLine);
+                    (async () => {
+                        try {
+                            console.log('🧪 Probando conexión...');
+                            const start = Date.now();
+                            const test = await fetch(window.AuthService.API_BASE_URL + '/v1/auth/login', { method: 'OPTIONS' });
+                            const time = Date.now() - start;
+                            console.log('✅ Respuesta recibida en', time, 'ms');
+                            console.log('📊 Status:', test.status);
+                            console.log('📋 Headers:', [...test.headers.entries()]);
+                        } catch (e) {
+                            console.error('❌ Error de conexión:', e);
+                        }
+                    })();
+                " class="w-full py-2 px-4 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+                    🔧 Diagnóstico de Conexión (ver consola F12)
+                </button>
+                
                 <div class="text-center mt-4 text-xs space-y-3">
                     <button type="button" @click="mode = 'recover'; error = ''; message = '';" class="text-sm font-medium text-blue-600 hover:text-blue-800">
                         ¿Olvidaste tu contraseña?
