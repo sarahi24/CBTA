@@ -163,38 +163,3 @@ export const buildQueryString = (params) => {
   return query.toString() ? `?${query.toString()}` : '';
 };
 
-  // Documentation
-  documentation: `${API_BASE_URL}/documentation`,
-};
-
-// Helper function para hacer fetch con la base URL
-export async function apiFetch(endpoint, options = {}) {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  
-  const defaultOptions = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  };
-
-  // Si hay token en localStorage, agregarlo
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      defaultOptions.headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
-
-  return fetch(url, { ...defaultOptions, ...options });
-}
-
-// Helper para manejar respuestas de API
-export async function apiResponse(response) {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `Error ${response.status}`);
-  }
-  return response.json();
-}
-
