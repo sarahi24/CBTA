@@ -1,19 +1,12 @@
 {
   "buildCommand": "cd Frond-end && npm install && npm run build",
-  "outputDirectory": "Frond-end/dist",
+  "outputDirectory": "Frond-end/.vercel/output/static",
   "installCommand": "cd Frond-end && npm install",
   "framework": "astro",
   "devCommand": "cd Frond-end && npm run dev",
-  "cleanUrls": true,
   "functions": {
     "**/*.func/**": {
       "maxDuration": 30
     }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  }
 }
