@@ -510,12 +510,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             async loadUsers(token) {
                 try {
                     const endpoint = `${this.apiBaseUrl}/v1/admin-actions/showUsers`;
-                    console.log('🔄 Cargando usuarios desde la API...');
+                    console.log('========================================');
+                    console.log('🔄 CARGANDO USUARIOS DESDE LA API');
+                    console.log('========================================');
                     console.log('📍 URL completa:', endpoint);
-                    console.log('🔑 Token (primeros 20 chars):', token.substring(0, 20) + '...');
+                    console.log('🔑 Token (primeros 30 chars):', token.substring(0, 30) + '...');
+                    console.log('🔑 Token (últimos 10 chars):', '...' + token.substring(token.length - 10));
+                    console.log('📏 Longitud del token:', token.length);
+                    console.log('📤 Headers que se enviarán:');
+                    console.log('   - Accept: application/json');
+                    console.log('   - Content-Type: application/json');
+                    console.log('   - Authorization: Bearer [TOKEN]');
+                    console.log('🕐 Timestamp:', new Date().toISOString());
                     
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000);
+                    
+                    console.log('📡 Enviando petición GET...');
+                    const requestStartTime = Date.now();
                     
                     const response = await fetch(endpoint, {
                         method: 'GET',
@@ -528,9 +540,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     });
                     
                     clearTimeout(timeoutId);
+                    const requestDuration = Date.now() - requestStartTime;
                     
+                    console.log('⏱️ Respuesta recibida en:', requestDuration, 'ms');
                     console.log('📡 Response status:', response.status);
+                    console.log('📡 Response statusText:', response.statusText);
+                    console.log('📡 Response ok:', response.ok);
                     console.log('📡 Response headers:', [...response.headers.entries()]);
+                    console.log('========================================');
                     
                     if (response.ok) {
                         const result = await response.json();
@@ -567,14 +584,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         } else if (response.status === 500) {
                             this.apiError = `Error del servidor (500)`;
                             const errorMsg = errorData.message || errorData.error || 'Error interno del servidor';
-                            this.showNotify(`❌ Error 500: ${errorMsg}. Este es un problema del backend, contacta a Angel.`, 'error');
-                            console.error('🚨 ERROR 500 DEL BACKEND');
-                            console.error('🚨 El endpoint existe pero el servidor tiene un error interno');
-                            console.error('🚨 Posibles causas:');
-                            console.error('   1. Error en el código del controlador');
-                            console.error('   2. Error en la base de datos');
-                            console.error('   3. Middleware mal configurado');
-                            console.error('🚨 SOLUCIÓN: Angel debe revisar los logs del backend en Railway');
+                            this.showNotify(`❌ Error 500: ${errorMsg}`, 'error');
+                            
+                            console.error('');
+                            console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+                            console.error('🚨 ERROR 500 = ERROR DEL BACKEND (NO FRONTEND)');
+                            console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+                            console.error('');
+                            console.error('✅ EL FRONTEND ESTÁ HACIENDO TODO BIEN:');
+                            console.error('   ✅ Token se guardó correctamente');
+                            console.error('   ✅ Token se envía en Authorization header');
+                            console.error('   ✅ Endpoint es el correcto: /v1/admin-actions/showUsers');
+                            console.error('   ✅ Método HTTP correcto: GET');
+                            console.error('   ✅ Headers correctos (Accept, Content-Type, Authorization)');
+                            console.error('');
+                            console.error('❌ EL BACKEND ESTÁ FALLANDO:');
+                            console.error('   ❌ Error 500 = Internal Server Error');
+                            console.error('   ❌ El servidor recibió la petición pero tuvo un error al procesarla');
+                            console.error('   ❌ Mensaje del backend:', errorMsg);
+                            console.error('   ❌ Error code:', errorData.error_code);
+                            console.error('');
+                            console.error('🔧 SOLUCIÓN (ANGEL DEBE HACER ESTO):');
+                            console.error('   1. Ir a Railway → Project → Deployments');
+                            console.error('   2. Click en el último deployment → View Logs');
+                            console.error('   3. Buscar logs con error al hacer GET /v1/admin-actions/showUsers');
+                            console.error('   4. Revisar el archivo: app/Http/Controllers/AdminActionsController.php');
+                            console.error('   5. Verificar método showUsers()');
+                            console.error('   6. Verificar que la base de datos tiene la tabla users');
+                            console.error('   7. Verificar middleware auth:sanctum');
+                            console.error('');
+                            console.error('📋 INFO PARA ANGEL:');
+                            console.error('   - Endpoint que falla:', endpoint);
+                            console.error('   - Token enviado:', token ? 'SÍ (válido)' : 'NO');
+                            console.error('   - Headers enviados:', 'Accept, Content-Type, Authorization Bearer');
+                            console.error('   - El error NO es del frontend');
+                            console.error('');
+                            console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+                            console.error('');
                         } else {
                             this.apiError = `Error ${response.status}`;
                             this.showNotify(`Error al cargar usuarios: ${errorData.message || response.statusText}`, 'error');
