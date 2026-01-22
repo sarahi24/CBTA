@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
@@ -24,7 +24,6 @@ return [
         'http://localhost:3000',
         'http://localhost:4321',
         'https://cbta-eight.vercel.app',
-        'https://*.vercel.app',
     ],
 
     'allowed_origins_patterns' => [
@@ -34,9 +33,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Authorization'],
 
-    'max_age' => 0,
+    'max_age' => 86400,
 
     'supports_credentials' => true,
 
