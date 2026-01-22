@@ -101,7 +101,11 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     // Extraer tokens de la ubicación correcta: data.data.user_tokens
                     const accessToken = data.data?.user_tokens?.access_token;
                     const refreshToken = data.data?.user_tokens?.refresh_token;
-                    const userData = data.data?.user_data;
+                    const userData = data.data?.user_tokens?.user_data; // CORRECCIÓN: user_data está dentro de user_tokens
+                    
+                    console.log('🔍 Access Token:', accessToken ? 'ENCONTRADO' : 'NO ENCONTRADO');
+                    console.log('🔍 Refresh Token:', refreshToken ? 'ENCONTRADO' : 'NO ENCONTRADO');
+                    console.log('🔍 User Data:', userData);
                     
                     if (accessToken) {
                         localStorage.setItem(this.TOKEN_KEY, accessToken);
@@ -119,6 +123,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     if (userData) {
                         localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
                         console.log('✅ User data guardado:', userData);
+                        console.log('✅ Roles:', userData.roles);
                     }
                     
                     return data;
@@ -191,6 +196,10 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 if (!userData) return null;
                 try {
                     const parsed = JSON.parse(userData);
+                    // roles es un array: ["admin"]
+                    if (parsed.roles && Array.isArray(parsed.roles) && parsed.roles.length > 0) {
+                        return parsed.roles[0]; // Devolver primer rol
+                    }
                     return parsed.role || parsed.type || null;
                 } catch {
                     return null;
