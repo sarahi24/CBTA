@@ -30,6 +30,10 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     
                     const response = await fetch(`${this.API_BASE_URL}/v1/login`, {
                         method: 'OPTIONS',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
                         signal: controller.signal
                     });
                     
