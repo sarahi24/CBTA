@@ -101,11 +101,14 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     // Extraer tokens de la ubicación correcta: data.data.user_tokens
                     const accessToken = data.data?.user_tokens?.access_token;
                     const refreshToken = data.data?.user_tokens?.refresh_token;
-                    const userData = data.data?.user_tokens?.user_data; // CORRECCIÓN: user_data está dentro de user_tokens
+                    // user_data es un ARRAY, tomar el primer elemento
+                    const userDataArray = data.data?.user_tokens?.user_data;
+                    const userData = Array.isArray(userDataArray) ? userDataArray[0] : userDataArray;
                     
                     console.log('🔍 Access Token:', accessToken ? 'ENCONTRADO' : 'NO ENCONTRADO');
                     console.log('🔍 Refresh Token:', refreshToken ? 'ENCONTRADO' : 'NO ENCONTRADO');
-                    console.log('🔍 User Data:', userData);
+                    console.log('🔍 User Data Array:', userDataArray);
+                    console.log('🔍 User Data (primer elemento):', userData);
                     
                     if (accessToken) {
                         localStorage.setItem(this.TOKEN_KEY, accessToken);
@@ -123,6 +126,8 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     if (userData) {
                         localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
                         console.log('✅ User data guardado:', userData);
+                        console.log('✅ ID:', userData.id);
+                        console.log('✅ fullName:', userData.fullName);
                         console.log('✅ Roles:', userData.roles);
                     }
                     
