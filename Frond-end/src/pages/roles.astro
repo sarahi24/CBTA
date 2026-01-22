@@ -472,6 +472,56 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
             notification: { show: false, message: '', type: 'success' },
 
+            // Función helper para hacer fetch con auto-refresh
+            async authenticatedFetch(url, options = {}, isRetry = false) {
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    throw new Error('No hay token de autenticación');
+                }
+
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        ...options.headers
+                    }
+                });
+
+                // Si el token expiró (401 o 403) y no hemos reintentado
+                if ((response.status === 401 || response.status === 403) && !isRetry) {
+                    console.log('🔄 Token expirado. Intentando refresh...');
+                    
+                    const newToken = await this.refreshAuthToken();
+                    
+                    if (newToken) {
+                        console.log('✅ Token refrescado. Reintentando petición...');
+                        // Reintentar con el nuevo token
+                        return await this.authenticatedFetch(url, options, true);
+                    } else {
+                        console.error('❌ No se pudo refrescar el token. Cerrando sesión...');
+                        this.showNotify('Tu sesión ha expirado', 'error');
+                        setTimeout(() => {
+                            localStorage.clear();
+                            window.location.href = '/';
+                        }, 2000);
+                        throw new Error('Sesión expirada');
+                    }
+                } else if ((response.status === 401 || response.status === 403) && isRetry) {
+                    // Ya reintentamos y falló
+                    this.showNotify('Tu sesión ha expirado', 'error');
+                    setTimeout(() => {
+                        localStorage.clear();
+                        window.location.href = '/';
+                    }, 2000);
+                    throw new Error('Sesión expirada');
+                }
+
+                return response;
+            },
+
             async init() {
                 // Verificar autenticación
                 console.log('========================================');
@@ -515,7 +565,50 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 await this.loadUsers(token);
             },
 
-            async loadUsers(token) {
+            async refreshAuthToken() {
+                const refreshToken = localStorage.getItem('refresh_token');
+                if (!refreshToken) {
+                    console.error('❌ No hay refresh token disponible');
+                    return null;
+                }
+
+                console.log('🔄 Intentando refrescar token...');
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/v1/refresh`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ refresh_token: refreshToken })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const newAccessToken = data.data?.access_token || data.access_token;
+                        const newRefreshToken = data.data?.refresh_token || data.refresh_token;
+
+                        if (newAccessToken) {
+                            localStorage.setItem('access_token', newAccessToken);
+                            console.log('✅ Token refrescado exitosamente');
+                            
+                            if (newRefreshToken) {
+                                localStorage.setItem('refresh_token', newRefreshToken);
+                            }
+                            
+                            return newAccessToken;
+                        }
+                    }
+
+                    console.error('❌ No se pudo refrescar el token');
+                    return null;
+                } catch (error) {
+                    console.error('❌ Error al refrescar token:', error);
+                    return null;
+                }
+            },
+
+            async loadUsers(token, isRetry = false) {
                 try {
                     const endpoint = `${this.apiBaseUrl}/v1/admin-actions/showUsers`;
                     console.log('========================================');
@@ -525,36 +618,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('🔑 Token (primeros 30 chars):', token.substring(0, 30) + '...');
                     console.log('🔑 Token (últimos 10 chars):', '...' + token.substring(token.length - 10));
                     console.log('📏 Longitud del token:', token.length);
-                    console.log('📤 Headers que se enviarán:');
-                    console.log('   - Accept: application/json');
-                    console.log('   - Content-Type: application/json');
-                    console.log('   - Authorization: Bearer [TOKEN]');
-                    console.log('🕐 Timestamp:', new Date().toISOString());
+                    console.log('🔄 Es reintento después de refresh:', isRetry ? 'SÍ' : 'NO');
+                    console.log('� Timestamp:', new Date().toISOString());
                     
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 15000);
-                    
-                    console.log('📡 Enviando petición GET...');
+                    console.log('📡 Enviando petición GET con auto-refresh...');
                     const requestStartTime = Date.now();
                     
-                    const response = await fetch(endpoint, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        signal: controller.signal
-                    });
+                    // Usar authenticatedFetch que maneja refresh automáticamente
+                    const response = await this.authenticatedFetch(endpoint, { method: 'GET' }, isRetry);
                     
-                    clearTimeout(timeoutId);
                     const requestDuration = Date.now() - requestStartTime;
                     
                     console.log('⏱️ Respuesta recibida en:', requestDuration, 'ms');
                     console.log('📡 Response status:', response.status);
-                    console.log('📡 Response statusText:', response.statusText);
                     console.log('📡 Response ok:', response.ok);
-                    console.log('📡 Response headers:', [...response.headers.entries()]);
                     console.log('========================================');
                     
                     if (response.ok) {
@@ -579,17 +656,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const errorData = await response.json().catch(() => ({}));
                         console.error('❌ Error al cargar usuarios:', response.status, errorData);
                         console.error('📋 Error completo:', JSON.stringify(errorData, null, 2));
-                        console.error('📋 Message:', errorData.message);
-                        console.error('📋 Error:', errorData.error);
                         
-                        if (response.status === 401) {
-                            this.apiError = 'Sesión expirada';
-                            this.showNotify('Tu sesión ha expirado. Redirigiendo al login...', 'error');
-                            setTimeout(() => {
-                                localStorage.removeItem('access_token');
-                                window.location.href = '/';
-                            }, 2000);
-                        } else if (response.status === 500) {
+                        if (response.status === 500) {
                             this.apiError = `Error del servidor (500)`;
                             const errorMsg = errorData.message || errorData.error || 'Error interno del servidor';
                             this.showNotify(`❌ Error 500: ${errorMsg}`, 'error');
