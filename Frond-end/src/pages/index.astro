@@ -97,6 +97,9 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     const data = await response.json();
                     
                     console.log('📦 Response data completo:', data);
+                    console.log('🔍 Explorando data.data:', data.data);
+                    console.log('🔍 Keys en data.data:', Object.keys(data.data || {}));
+                    console.log('🔍 Contenido de data.data:', JSON.stringify(data.data, null, 2));
                     
                     if (data.data?.access_token) {
                         localStorage.setItem(this.TOKEN_KEY, data.data.access_token);
