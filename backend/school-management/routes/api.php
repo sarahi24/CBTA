@@ -81,6 +81,35 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:view students')->get('/', [StudentsController::class, 'index']);
     });
 
+    // Admin Actions - User Management
+    // Allow both 'admin' and 'financial staff' roles to access
+    Route::prefix('admin-actions')->middleware('role:admin|financial staff')->group(function(){
+        Route::get('/showUsers', function (Request $request) {
+            try {
+                $users = \App\Models\User::with('roles')->get()->map(function($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name ?? '',
+                        'last_name' => $user->last_name ?? '',
+                        'email' => $user->email,
+                        'phone_number' => $user->phone_number ?? '',
+                        'curp' => $user->curp ?? '',
+                        'gender' => $user->gender ?? 'hombre',
+                        'role' => $user->roles->first()->name ?? 'Usuario',
+                        'status' => $user->status ?? 'activo'
+                    ];
+                });
+                
+                return response()->json($users);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error loading users: ' . $e->getMessage()
+                ], 500);
+            }
+        });
+    });
+
 });
 
 
