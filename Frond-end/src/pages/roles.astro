@@ -84,8 +84,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                     <div class="flex-1">
-                        <h3 class="font-bold text-red-900">❌ Error al cargar usuarios</h3>
-                        <p class="text-sm text-red-700" x-text="apiError"></p>
+                        <h3 class="font-bold text-red-900">❌ Sin Autenticación</h3>
+                        <p class="text-sm text-red-700">No has iniciado sesión. Redirigiendo al login...</p>
+                        <p class="text-xs text-red-600 mt-1">Abre la consola (F12) para ver detalles</p>
                     </div>
                 </div>
             </div>
@@ -465,22 +466,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async init() {
                 // Verificar autenticación
-                console.log('🔍 Verificando autenticación...');
+                console.log('========================================');
+                console.log('🔍 ROLES.ASTRO - Verificando autenticación');
+                console.log('========================================');
+                console.log('📋 Todas las keys en localStorage:', Object.keys(localStorage));
+                console.log('📦 Valores en localStorage:');
+                for (let key of Object.keys(localStorage)) {
+                    const value = localStorage.getItem(key);
+                    console.log(`   - ${key}: ${value ? value.substring(0, 50) + '...' : 'null'}`);
+                }
+                
                 const token = localStorage.getItem('access_token');
-                console.log('🔑 Token encontrado:', token ? `Sí (${token.substring(0, 20)}...)` : 'No');
+                console.log('🔑 Token access_token:', token ? `ENCONTRADO (${token.length} chars)` : '❌ NO ENCONTRADO');
                 
                 if (!token) {
-                    console.error('❌ No hay token de autenticación en localStorage');
-                    console.log('📋 Keys disponibles en localStorage:', Object.keys(localStorage));
-                    this.apiError = 'No autenticado - Debes iniciar sesión primero';
+                    console.error('❌ NO HAY TOKEN DE AUTENTICACIÓN');
+                    console.log('💡 Posibles causas:');
+                    console.log('   1. No has iniciado sesión');
+                    console.log('   2. El backend no devolvió el token');
+                    console.log('   3. El token no se guardó correctamente');
+                    console.log('');
+                    console.log('🔧 SOLUCIÓN: Ve a la página principal y vuelve a iniciar sesión');
+                    console.log('📧 Usa: admin@uni.edu / password123');
+                    console.log('');
+                    console.log('⏰ Redirigiendo al login en 3 segundos...');
+                    
+                    this.apiError = 'Sin autenticación';
                     this.isLoadingUsers = false;
-                    this.showNotify('Debes iniciar sesión para ver los usuarios', 'error');
+                    
                     setTimeout(() => {
                         window.location.href = '/';
-                    }, 2000);
+                    }, 3000);
                     return;
                 }
 
+                console.log('✅ Token encontrado, procediendo a cargar usuarios...');
+                console.log('========================================');
+                
                 // Cargar usuarios desde la API
                 await this.loadUsers(token);
             },

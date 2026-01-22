@@ -251,6 +251,17 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 console.log('📥 Respuesta del servidor:', response);
                 
                 if (response.success) {
+                    // VERIFICAR QUE EL TOKEN SE GUARDÓ
+                    const savedToken = localStorage.getItem('access_token');
+                    console.log('✅ Token guardado verificado:', savedToken ? 'SÍ' : 'NO');
+                    
+                    if (!savedToken) {
+                        console.error('⚠️ ADVERTENCIA: El token no se guardó correctamente');
+                        this.error = '⚠️ Error al guardar sesión. Intenta de nuevo.';
+                        this.isLoading = false;
+                        return;
+                    }
+                    
                     this.error = '✅ Bienvenido. Redirigiendo...';
                     
                     // Determinar redirect según el rol del usuario
@@ -263,6 +274,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                         redirectUrl = '/Dashboard';
                     }
                     
+                    console.log('🚀 Redirigiendo a:', redirectUrl);
                     setTimeout(() => window.location.href = redirectUrl, 800);
                 } else {
                     this.error = '❌ ' + (response.message || 'Credenciales incorrectas.');
