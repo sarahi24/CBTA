@@ -15,25 +15,17 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout', 'register'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:3000'),
-        'http://localhost:3000',
-        'http://localhost:4321',
-        'https://cbta-eight.vercel.app',
-    ],
+    'allowed_origins' => ['*'],
 
-    'allowed_origins_patterns' => [
-        '/^https:\/\/cbta-.*\.vercel\.app$/',
-        '/^https:\/\/.*\.vercel\.app$/',
-    ],
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => ['Authorization'],
+    'exposed_headers' => ['Authorization', 'Content-Length', 'Content-Range'],
 
     'max_age' => 86400,
 
