@@ -97,6 +97,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <p class="text-slate-500">Administración de usuarios y roles del sistema</p>
                 </div>
                 <div class="flex gap-3 flex-shrink-0">
+                    <button @click="testAuth()" 
+                            class="px-3 py-2.5 bg-blue-100 border border-blue-300 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+                            title="Probar autenticación">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Test Auth
+                    </button>
                     <button @click="showDebugInfo()" 
                             class="px-3 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
                             title="Ver información de debug">
@@ -883,6 +891,42 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             showNotify(msg, type = 'success') {
                 this.notification = { show: true, message: msg, type };
                 setTimeout(() => this.notification.show = false, 3000);
+            },
+
+            async testAuth() {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    alert('❌ No hay token de autenticación');
+                    return;
+                }
+
+                console.log('🧪 PROBANDO AUTENTICACIÓN...');
+                console.log('📍 Endpoint: /v1/test-auth');
+                console.log('🔑 Token:', token.substring(0, 30) + '...');
+
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/v1/test-auth`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    console.log('📡 Status:', response.status);
+                    const data = await response.json();
+                    console.log('📦 Response:', data);
+
+                    if (response.ok) {
+                        alert(`✅ Autenticación funcionando!\n\nUsuario: ${data.user.name}\nEmail: ${data.user.email}\nRoles: ${data.user.roles.join(', ')}`);
+                    } else {
+                        alert(`❌ Error ${response.status}\n\n${JSON.stringify(data, null, 2)}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Error:', error);
+                    alert(`❌ Error de red: ${error.message}`);
+                }
             },
 
             showDebugInfo() {
