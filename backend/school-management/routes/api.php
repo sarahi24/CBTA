@@ -19,6 +19,21 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Test endpoint to debug authentication
+Route::middleware(['auth:sanctum'])->get('/v1/test-auth', function (Request $request) {
+    $user = $request->user();
+    return response()->json([
+        'success' => true,
+        'message' => 'Authentication working!',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $user->roles->pluck('name')
+        ]
+    ]);
+});
+
 Route::prefix('v1')->middleware('throttle:10,1')->group(function () {
     Route::post('/login', [LoginController::class, 'login']);
 });
