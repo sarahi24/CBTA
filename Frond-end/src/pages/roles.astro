@@ -553,6 +553,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         const errorData = await response.json().catch(() => ({}));
                         console.error('❌ Error al cargar usuarios:', response.status, errorData);
+                        console.error('📋 Error completo:', JSON.stringify(errorData, null, 2));
+                        console.error('📋 Message:', errorData.message);
+                        console.error('📋 Error:', errorData.error);
                         
                         if (response.status === 401) {
                             this.apiError = 'Sesión expirada';
@@ -561,6 +564,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 localStorage.removeItem('access_token');
                                 window.location.href = '/';
                             }, 2000);
+                        } else if (response.status === 500) {
+                            this.apiError = `Error del servidor (500)`;
+                            const errorMsg = errorData.message || errorData.error || 'Error interno del servidor';
+                            this.showNotify(`❌ Error 500: ${errorMsg}. Este es un problema del backend, contacta a Angel.`, 'error');
+                            console.error('🚨 ERROR 500 DEL BACKEND');
+                            console.error('🚨 El endpoint existe pero el servidor tiene un error interno');
+                            console.error('🚨 Posibles causas:');
+                            console.error('   1. Error en el código del controlador');
+                            console.error('   2. Error en la base de datos');
+                            console.error('   3. Middleware mal configurado');
+                            console.error('🚨 SOLUCIÓN: Angel debe revisar los logs del backend en Railway');
                         } else {
                             this.apiError = `Error ${response.status}`;
                             this.showNotify(`Error al cargar usuarios: ${errorData.message || response.statusText}`, 'error');
