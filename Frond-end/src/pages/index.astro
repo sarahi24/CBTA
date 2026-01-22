@@ -97,24 +97,28 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     const data = await response.json();
                     
                     console.log('📦 Response data completo:', data);
-                    console.log('🔍 Explorando data.data:', data.data);
-                    console.log('🔍 Keys en data.data:', Object.keys(data.data || {}));
-                    console.log('🔍 Contenido de data.data:', JSON.stringify(data.data, null, 2));
                     
-                    if (data.data?.access_token) {
-                        localStorage.setItem(this.TOKEN_KEY, data.data.access_token);
-                        console.log('✅ Token guardado en localStorage con key:', this.TOKEN_KEY);
-                        console.log('🔑 Token (primeros 20 chars):', data.data.access_token.substring(0, 20) + '...');
+                    // Extraer tokens de la ubicación correcta: data.data.user_tokens
+                    const accessToken = data.data?.user_tokens?.access_token;
+                    const refreshToken = data.data?.user_tokens?.refresh_token;
+                    const userData = data.data?.user_data;
+                    
+                    if (accessToken) {
+                        localStorage.setItem(this.TOKEN_KEY, accessToken);
+                        console.log('✅ Token guardado en localStorage');
+                        console.log('🔑 Token (primeros 20 chars):', accessToken.substring(0, 20) + '...');
                     } else {
-                        console.warn('⚠️ No se encontró access_token en la respuesta');
+                        console.error('❌ NO SE ENCONTRÓ EL TOKEN en data.data.user_tokens.access_token');
                     }
-                    if (data.data?.refresh_token) {
-                        localStorage.setItem(this.REFRESH_TOKEN_KEY, data.data.refresh_token);
+                    
+                    if (refreshToken) {
+                        localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
                         console.log('✅ Refresh token guardado');
                     }
-                    if (data.data?.user_data) {
-                        localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(data.data.user_data));
-                        console.log('✅ User data guardado:', data.data.user_data);
+                    
+                    if (userData) {
+                        localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
+                        console.log('✅ User data guardado:', userData);
                     }
                     
                     return data;
