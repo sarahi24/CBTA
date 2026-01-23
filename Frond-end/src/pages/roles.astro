@@ -641,15 +641,40 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.log('📦 Is Array?:', Array.isArray(result));
                         console.log('📦 Keys:', Object.keys(result));
                         
+                        // Si result.data existe, ver qué hay dentro
+                        if (result.data) {
+                            console.log('📦 Type of result.data:', typeof result.data);
+                            console.log('📦 Is result.data Array?:', Array.isArray(result.data));
+                            console.log('📦 Keys of result.data:', Object.keys(result.data));
+                        }
+                        
                         // Extraer usuarios del response
                         if (Array.isArray(result)) {
                             this.users = result;
+                        } else if (result.success && result.data) {
+                            // Manejar estructura {success: true, data: {...}}
+                            if (Array.isArray(result.data)) {
+                                this.users = result.data;
+                            } else if (result.data.users && Array.isArray(result.data.users)) {
+                                this.users = result.data.users;
+                            } else if (typeof result.data === 'object') {
+                                // Si data es un objeto con propiedades numéricas, convertir a array
+                                const dataValues = Object.values(result.data);
+                                if (dataValues.length > 0 && typeof dataValues[0] === 'object') {
+                                    this.users = dataValues;
+                                    console.log('📦 Usuarios extraídos de Object.values(result.data)');
+                                } else {
+                                    console.warn('⚠️ result.data no contiene un array de usuarios');
+                                    this.users = [];
+                                }
+                            } else {
+                                console.warn('⚠️ No se pudo extraer usuarios de result.data');
+                                this.users = [];
+                            }
                         } else if (result.data && Array.isArray(result.data)) {
                             this.users = result.data;
                         } else if (result.users && Array.isArray(result.users)) {
                             this.users = result.users;
-                        } else if (result.success && result.data && Array.isArray(result.data.users)) {
-                            this.users = result.data.users;
                         } else if (typeof result === 'object' && !Array.isArray(result)) {
                             // Si es un objeto, intentar extraer un array de sus valores
                             const possibleArrays = Object.values(result).filter(v => Array.isArray(v));
@@ -792,7 +817,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), 10000);
-                        const response = await fetch(`${this.apiBaseUrl}/v1/users`, {
+                        const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/register`, {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json', 
