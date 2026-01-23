@@ -123,6 +123,128 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 ], 500);
             }
         });
+
+        Route::post('/register', function (Request $request) {
+            try {
+                $validated = $request->validate([
+                    'name' => 'required|string|max:255',
+                    'last_name' => 'nullable|string|max:255',
+                    'email' => 'required|email|unique:users,email',
+                    'password' => 'required|string|min:8',
+                    'phone_number' => 'nullable|string|max:20',
+                    'curp' => 'nullable|string|max:18',
+                    'gender' => 'nullable|in:hombre,mujer,otro',
+                ]);
+
+                $user = \App\Models\User::create([
+                    'name' => $validated['name'],
+                    'last_name' => $validated['last_name'] ?? null,
+                    'email' => $validated['email'],
+                    'password' => bcrypt($validated['password']),
+                    'phone_number' => $validated['phone_number'] ?? null,
+                    'curp' => $validated['curp'] ?? null,
+                    'gender' => $validated['gender'] ?? 'hombre',
+                    'status' => 'activo'
+                ]);
+
+                // Asignar rol de estudiante por defecto
+                $user->assignRole('student');
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Usuario creado correctamente',
+                    'data' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'last_name' => $user->last_name,
+                        'email' => $user->email,
+                        'phone_number' => $user->phone_number,
+                        'curp' => $user->curp,
+                        'gender' => $user->gender,
+                        'role' => 'student',
+                        'status' => $user->status
+                    ]
+                ], 201);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $e->errors()
+                ], 422);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear usuario: ' . $e->getMessage()
+                ], 500);
+            }
+        });
+
+        Route::delete('/deleteUser/{id}', function (Request $request, $id) {
+            try {
+                $user = \App\Models\User::findOrFail($id);
+                $userName = $user->name . ' ' . $user->last_name;
+                $user->delete();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => "Usuario {$userName} eliminado correctamente"
+                ]);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al eliminar usuario: ' . $e->getMessage()
+                ], 500);
+            }
+        });
+
+        Route::put('/updateUser/{id}', function (Request $request, $id) {
+            try {
+                $validated = $request->validate([
+                    'name' => 'sometimes|string|max:255',
+                    'last_name' => 'sometimes|string|max:255',
+                    'email' => 'sometimes|email|unique:users,email,' . $id,
+                    'phone_number' => 'sometimes|string|max:20',
+                    'curp' => 'sometimes|string|max:18',
+                    'gender' => 'sometimes|in:hombre,mujer,otro',
+                    'password' => 'sometimes|string|min:8',
+                ]);
+
+                $user = \App\Models\User::findOrFail($id);
+                
+                if (isset($validated['password'])) {
+                    $validated['password'] = bcrypt($validated['password']);
+                }
+                
+                $user->update($validated);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Usuario actualizado correctamente',
+                    'data' => $user
+                ]);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $e->errors()
+                ], 422);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al actualizar usuario: ' . $e->getMessage()
+                ], 500);
+            }
+        });
     });
 
 });

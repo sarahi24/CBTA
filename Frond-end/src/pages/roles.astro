@@ -610,7 +610,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async loadUsers(token, isRetry = false) {
                 try {
-                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/show-users`;
+                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/showUsers`;
                     console.log('========================================');
                     console.log('🔄 CARGANDO USUARIOS DESDE LA API');
                     console.log('========================================');
@@ -638,30 +638,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const result = await response.json();
                         console.log('📦 Response data:', result);
                         
-                        // Manejar estructura: {success: true, data: {...usuarios}, message: '...'}
-                        let usersArray = [];
-                        
-                        if (Array.isArray(result)) {
-                            usersArray = result;
-                        } else if (result.success && result.data) {
-                            // Si data es array directo
-                            if (Array.isArray(result.data)) {
-                                usersArray = result.data;
-                            } 
-                            // Si data es objeto (posiblemente indexado numéricamente)
-                            else if (typeof result.data === 'object') {
-                                usersArray = Object.values(result.data);
-                            }
-                        } else if (result.data) {
-                            if (Array.isArray(result.data)) {
-                                usersArray = result.data;
-                            } else if (typeof result.data === 'object') {
-                                usersArray = Object.values(result.data);
-                            }
-                        }
-                        
-                        this.users = usersArray;
+                        // Backend devuelve array directo de usuarios
+                        this.users = Array.isArray(result) ? result : [];
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
+                        console.log('📋 Estructura del primer usuario:');
+                        if (this.users.length > 0) {
+                            console.log(JSON.stringify(this.users[0], null, 2));
+                        }
                         this.apiError = null;
                     } else {
                         const errorData = await response.json().catch(() => ({}));
@@ -798,7 +781,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), 10000);
-                        const response = await fetch(`${this.apiBaseUrl}/v1/register`, {
+                        const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/register`, {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json', 
@@ -845,8 +828,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
 
             async deleteUser(id) {
-                const token = localStorage.getItem('access_token');
+                if (!id) {
+                    console.error('❌ ID undefined en deleteUser');
+                    this.showNotify('Error: ID de usuario no válido', 'error');
+                    this.isDeleting = false;
+                    return;
+                }
                 
+                const token = localStorage.getItem('access_token');
                 if (!token) {
                     this.showNotify('No hay token de autenticación', 'error');
                     this.isDeleting = false;
@@ -854,29 +843,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
                 
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
-                    const response = await fetch(`${this.apiBaseUrl}/v1/users/${id}`, {
-                        method: 'DELETE',
-                        headers: { 
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeoutId);
+                    console.log('🗑️ Eliminando usuario con ID:', id);
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/deleteUser/${id}`,
+                        { method: 'DELETE' }
+                    );
+                    
                     const result = await response.json();
-                    if (response.ok && result.success) {
+                    console.log('📦 Respuesta de eliminar:', result);
+                    
+                    if (response.ok) {
                         this.users = this.users.filter(u => u.id !== id);
-                        this.showNotify(result.message || 'Eliminado');
+                        this.showNotify(result.message || 'Usuario eliminado correctamente', 'success');
+                    } else {
+                        this.showNotify(result.message || 'Error al eliminar usuario', 'error');
                     }
                 } catch (error) {
-                    console.error('Error en deleteUser:', error);
-                    if (error.name === 'AbortError') {
-                        this.showNotify('La solicitud tardó demasiado', 'error');
-                    } else {
-                        this.showNotify(`Error al eliminar: ${error.message}`, 'error');
-                    }
+                    console.error('❌ Error en deleteUser:', error);
+                    this.showNotify(`Error al eliminar: ${error.message}`, 'error');
                 }
                 this.isDeleting = false;
             },

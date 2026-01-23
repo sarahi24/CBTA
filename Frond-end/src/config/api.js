@@ -16,14 +16,16 @@ export const API_ENDPOINTS = {
 
   // Admin Actions - Acciones administrativas
   adminActions: {
-    register: `${API_BASE_URL}/v1/admin-actions/register`,
+    register: `${API_BASE_URL}/v1/register`,
     promotion: `${API_BASE_URL}/v1/admin-actions/promotion`,
     attachStudent: `${API_BASE_URL}/v1/admin-actions/attach-student`,
     getStudent: (id) => `${API_BASE_URL}/v1/admin-actions/get-student/${id}`,
     updateStudent: (id) => `${API_BASE_URL}/v1/admin-actions/update-student/${id}`,
     import: `${API_BASE_URL}/v1/admin-actions/import`,
     importStudents: `${API_BASE_URL}/v1/admin-actions/import-students`,
-    showUsers: `${API_BASE_URL}/v1/admin-actions/show-users`,
+    showUsers: `${API_BASE_URL}/v1/admin-actions/showUsers`,
+    deleteUser: (id) => `${API_BASE_URL}/v1/admin-actions/deleteUser/${id}`,
+    updateUser: (id) => `${API_BASE_URL}/v1/admin-actions/updateUser/${id}`,
     deleteUsers: `${API_BASE_URL}/v1/admin-actions/delete-users`,
     disableUsers: `${API_BASE_URL}/v1/admin-actions/disable-users`,
     temporaryDisableUsers: `${API_BASE_URL}/v1/admin-actions/temporary-disable-users`,
