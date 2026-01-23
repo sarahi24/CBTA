@@ -103,13 +103,16 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
             try {
                 $users = \App\Models\User::with('roles')->get()->map(function($user) {
                     $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
+                    $firstRole = $user->roles->first();
+                    
                     return [
                         'id' => $user->id,
                         'fullName' => $fullName ?: 'Sin nombre',
                         'email' => $user->email,
-                        'curp' => $user->curp ?? '',
-                        'status' => $user->status === 'activo' ? 'active' : $user->status,
+                        'curp' => $user->curp ?? 'N/A',
+                        'role' => $firstRole ? $firstRole->name : 'Sin rol',
                         'roles_count' => $user->roles->count(),
+                        'status' => $user->status === 'activo' ? 'active' : $user->status,
                         'created_at' => $user->created_at->format('Y-m-d H:i:s'),
                         'createdAtHuman' => $user->created_at->diffForHumans(),
                     ];
