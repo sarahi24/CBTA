@@ -198,7 +198,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-institucional to-teal-600 flex items-center justify-center text-white font-bold">
-                                            <span x-text="(user.name.charAt(0) + user.last_name.charAt(0)).toUpperCase()"></span>
+                                            <span x-text="((user.name || 'N').charAt(0) + (user.last_name || 'A').charAt(0)).toUpperCase()"></span>
                                         </div>
                                         <div>
                                             <div class="font-semibold text-slate-800" x-text="`${user.name} ${user.last_name}`"></div>
@@ -788,7 +788,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), 10000);
-                        const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/register`, {
+                        const response = await fetch(`${this.apiBaseUrl}/v1/register`, {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json', 
