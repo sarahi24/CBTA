@@ -790,10 +790,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const autoPassword = 'Pass' + Math.random().toString(36).slice(-8) + '!';
                         userData.password = autoPassword;
                         
-                        console.log('📤 Enviando datos de nuevo usuario:', {
+                        console.log('📤 Enviando datos de nuevo usuario:');
+                        console.log(JSON.stringify({
                             ...userData,
                             password: '***HIDDEN***'
-                        });
+                        }, null, 2));
                         
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -810,7 +811,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         clearTimeout(timeoutId);
                         const result = await response.json();
                         
-                        console.log('📥 Respuesta del servidor:', result);
+                        console.log('📥 Respuesta del servidor:');
+                        console.log(JSON.stringify(result, null, 2));
                         
                         if (response.status === 201 && result.success) {
                             const newUser = result.data?.user || result.data || result;
@@ -820,7 +822,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         } else {
                             console.error('❌ Error de validación:', result);
                             const errorMsg = result.message || 'Error al crear usuario';
-                            this.showNotify(errorMsg, 'error');
+                            const errors = result.errors ? '\n' + Object.entries(result.errors).map(([k,v]) => `${k}: ${v.join(', ')}`).join('\n') : '';
+                            this.showNotify(errorMsg + errors, 'error');
                         }
                     }
                 } catch (error) {
