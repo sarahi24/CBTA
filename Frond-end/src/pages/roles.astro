@@ -638,8 +638,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const result = await response.json();
                         console.log('📦 Response data:', result);
                         
-                        // Backend devuelve array directo de usuarios
-                        this.users = Array.isArray(result) ? result : [];
+                        // Backend devuelve {success: true, data: {users: {items: [...]}}, message: '...'}
+                        if (result.success && result.data && result.data.users && result.data.users.items) {
+                            this.users = result.data.users.items;
+                        } else if (Array.isArray(result)) {
+                            this.users = result;
+                        } else {
+                            this.users = [];
+                        }
+                        
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
                         console.log('📋 Estructura del primer usuario:');
                         if (this.users.length > 0) {
@@ -772,6 +779,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         // Generar contraseña automática
                         const autoPassword = 'Pass' + Math.random().toString(36).slice(-8) + '!';
                         userData.password = autoPassword;
+                        
+                        // Formatear teléfono con +52 si no lo tiene
+                        if (userData.phone_number && !userData.phone_number.startsWith('+52')) {
+                            userData.phone_number = '+52' + userData.phone_number.replace(/\D/g, '');
+                        }
                         
                         console.log('📤 Enviando datos de nuevo usuario:');
                         console.log(JSON.stringify({
