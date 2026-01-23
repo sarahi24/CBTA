@@ -786,6 +786,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.showNotify(result.message || 'Error', 'error');
                         }
                     } else {
+                        // Generar contraseña automática
+                        const autoPassword = 'Pass' + Math.random().toString(36).slice(-8) + '!';
+                        userData.password = autoPassword;
+                        
+                        console.log('📤 Enviando datos de nuevo usuario:', {
+                            ...userData,
+                            password: '***HIDDEN***'
+                        });
+                        
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), 10000);
                         const response = await fetch(`${this.apiBaseUrl}/v1/register`, {
@@ -800,13 +809,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         });
                         clearTimeout(timeoutId);
                         const result = await response.json();
+                        
+                        console.log('📥 Respuesta del servidor:', result);
+                        
                         if (response.status === 201 && result.success) {
                             const newUser = result.data?.user || result.data || result;
                             this.users.push(newUser);
                             this.showNotify(result.message || 'Usuario creado');
                             this.closePanel();
                         } else {
-                            this.showNotify(result.message || 'Error', 'error');
+                            console.error('❌ Error de validación:', result);
+                            const errorMsg = result.message || 'Error al crear usuario';
+                            this.showNotify(errorMsg, 'error');
                         }
                     }
                 } catch (error) {
