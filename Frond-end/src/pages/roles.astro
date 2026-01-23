@@ -610,7 +610,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async loadUsers(token, isRetry = false) {
                 try {
-                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/showUsers`;
+                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/show-users`;
                     console.log('========================================');
                     console.log('🔄 CARGANDO USUARIOS DESDE LA API');
                     console.log('========================================');
@@ -845,7 +845,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     console.log('🗑️ Eliminando usuario con ID:', id);
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/deleteUser/${id}`,
+                        `${this.apiBaseUrl}/v1/admin-actions/delete-user/${id}`,
                         { method: 'DELETE' }
                     );
                     

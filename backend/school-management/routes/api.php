@@ -99,7 +99,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     // Admin Actions - User Management
     // Allow both 'admin' and 'financial staff' roles to access
     Route::prefix('admin-actions')->middleware('role:admin|financial staff')->group(function(){
-        Route::get('/showUsers', function (Request $request) {
+        Route::get('/show-users', function (Request $request) {
             try {
                 $users = \App\Models\User::with('roles')->get()->map(function($user) {
                     return [
@@ -179,7 +179,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
             }
         });
 
-        Route::delete('/deleteUser/{id}', function (Request $request, $id) {
+        Route::delete('/delete-user/{id}', function (Request $request, $id) {
             try {
                 $user = \App\Models\User::findOrFail($id);
                 $userName = $user->name . ' ' . $user->last_name;
@@ -202,7 +202,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
             }
         });
 
-        Route::put('/updateUser/{id}', function (Request $request, $id) {
+        Route::put('/update-user/{id}', function (Request $request, $id) {
             try {
                 $validated = $request->validate([
                     'name' => 'sometimes|string|max:255',
