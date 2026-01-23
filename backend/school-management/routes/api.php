@@ -102,20 +102,34 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::get('/show-users', function (Request $request) {
             try {
                 $users = \App\Models\User::with('roles')->get()->map(function($user) {
+                    $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                     return [
                         'id' => $user->id,
-                        'name' => $user->name ?? '',
-                        'last_name' => $user->last_name ?? '',
+                        'fullName' => $fullName ?: 'Sin nombre',
                         'email' => $user->email,
-                        'phone_number' => $user->phone_number ?? '',
                         'curp' => $user->curp ?? '',
-                        'gender' => $user->gender ?? 'hombre',
-                        'role' => $user->roles->first()->name ?? 'Usuario',
-                        'status' => $user->status ?? 'activo'
+                        'status' => $user->status === 'activo' ? 'active' : $user->status,
+                        'roles_count' => $user->roles->count(),
+                        'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+                        'createdAtHuman' => $user->created_at->diffForHumans(),
                     ];
                 });
                 
-                return response()->json($users);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Usuarios encontrados.',
+                    'data' => [
+                        'users' => [
+                            'items' => $users->values()->all(),
+                            'currentPage' => 1,
+                            'lastPage' => 1,
+                            'perPage' => $users->count(),
+                            'total' => $users->count(),
+                            'hasMorePages' => false,
+                            'nextPage' => null
+                        ]
+                    ]
+                ]);
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
