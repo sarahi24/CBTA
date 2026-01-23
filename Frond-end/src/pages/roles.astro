@@ -741,7 +741,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             openPanelForEdit(user) {
                 this.isEditing = true;
-                this.newUser = { ...user };
+                this.newUser = { 
+                    ...user,
+                    address: user.address || ['', '', ''],
+                    birthdate: user.birthdate || '',
+                    blood_type: user.blood_type || 'O+',
+                    curp: user.curp === 'N/A' ? '' : (user.curp || ''),
+                    phone_number: user.phone_number || '',
+                    registration_date: user.registration_date || new Date().toISOString().split('T')[0]
+                };
                 this.isPanelOpen = true;
             },
 
@@ -804,19 +812,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     const userData = { ...this.newUser };
                     if (this.isEditing) {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 10000);
-                        const response = await fetch(`${this.apiBaseUrl}/v1/users/${this.newUser.id}`, {
-                            method: 'PUT',
-                            headers: { 
-                                'Content-Type': 'application/json', 
-                                'Accept': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify(userData),
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeoutId);
+                        console.log('🔄 Actualizando usuario ID:', this.newUser.id);
+                        const response = await this.authenticatedFetch(
+                            `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
+                            {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(userData)
+                            }
+                        );
                         const result = await response.json();
                         if (response.ok && result.success) {
                             const updatedUser = result.data?.user || result.data || result;
