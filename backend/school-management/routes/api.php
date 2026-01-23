@@ -202,12 +202,10 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 $userName = ($user->name ?? '') . ' ' . ($user->last_name ?? '');
                 $userName = trim($userName) ?: 'Usuario';
                 
-                // Detach roles and permissions before deleting
-                $user->roles()->detach();
-                $user->permissions()->detach();
-                
-                // Delete user
-                $user->delete();
+                // Cambiar status a "eliminado" (soft delete lógico)
+                // En lugar de eliminar físicamente para evitar problemas con relaciones
+                $user->status = 'eliminado';
+                $user->save();
                 
                 return response()->json([
                     'success' => true,
@@ -219,13 +217,15 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'message' => 'Usuario no encontrado'
                 ], 404);
             } catch (\Exception $e) {
-                \Log::error('Error al eliminar usuario: ' . $e->getMessage(), [
+                \Log::error('Error al eliminar usuario', [
                     'user_id' => $id,
+                    'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al eliminar usuario: ' . $e->getMessage()
+                    'message' => 'Error al eliminar usuario: ' . $e->getMessage(),
+                    'error_detail' => config('app.debug') ? $e->getTraceAsString() : null
                 ], 500);
             }
         });
