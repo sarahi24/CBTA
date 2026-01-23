@@ -225,6 +225,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
+                                        <button @click="viewUserDetails(user.id)" 
+                                                class="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Ver detalles">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                        </button>
                                         <button @click="openPanelForEdit(user)" 
                                                 class="p-2 text-slate-400 hover:text-institucional hover:bg-slate-100 rounded-lg transition-colors"
                                                 title="Editar">
@@ -735,6 +743,50 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.isEditing = true;
                 this.newUser = { ...user };
                 this.isPanelOpen = true;
+            },
+
+            async viewUserDetails(userId) {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return;
+                }
+
+                try {
+                    console.log(`🔍 Obteniendo detalles completos del usuario ID: ${userId}`);
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/show-users/${userId}`,
+                        { method: 'GET' }
+                    );
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('📦 Detalles completos del usuario:', result);
+                        
+                        if (result.success && result.data && result.data.user) {
+                            const userDetails = result.data.user;
+                            
+                            // Mostrar detalles en consola
+                            console.log('👤 Información Básica:', userDetails.basicInfo);
+                            console.log('🎭 Roles:', userDetails.roles);
+                            console.log('🔒 Permisos:', userDetails.permissions);
+                            if (userDetails.studentDetail) {
+                                console.log('🎓 Detalles de Estudiante:', userDetails.studentDetail);
+                            }
+                            
+                            // Mostrar notificación
+                            const rolesText = userDetails.roles?.join(', ') || 'Sin roles';
+                            const permissionsCount = userDetails.permissions?.length || 0;
+                            this.showNotify(`👤 ${rolesText} | 🔒 ${permissionsCount} permisos | Ver consola para más detalles`, 'success');
+                        }
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        this.showNotify(errorData.message || 'Error al cargar detalles', 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Error al cargar detalles:', error);
+                    this.showNotify('Error de conexión', 'error');
+                }
             },
 
             closePanel() { this.isPanelOpen = false; },
