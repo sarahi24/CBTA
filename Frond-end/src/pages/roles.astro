@@ -198,30 +198,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-institucional to-teal-600 flex items-center justify-center text-white font-bold">
-                                            <span x-text="((user.name || 'N').charAt(0) + (user.last_name || 'A').charAt(0)).toUpperCase()"></span>
+                                            <span x-text="(user.fullName || user.name || 'Usuario').split(' ').map(n => n.charAt(0)).slice(0, 2).join('').toUpperCase()"></span>
                                         </div>
                                         <div>
-                                            <div class="font-semibold text-slate-800" x-text="`${user.name} ${user.last_name}`"></div>
-                                            <div class="text-xs text-slate-500" x-text="user.gender === 'hombre' ? 'Masculino' : 'Femenino'"></div>
+                                            <div class="font-semibold text-slate-800" x-text="user.fullName || `${user.name || ''} ${user.last_name || ''}`.trim() || 'Sin nombre'"></div>
+                                            <div class="text-xs text-slate-500" x-text="user.createdAtHuman || 'Reciente'"></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm text-slate-700" x-text="user.email"></div>
-                                    <div class="text-xs text-slate-500" x-text="user.phone_number"></div>
+                                    <div class="text-xs text-slate-500" x-text="user.id ? `ID: ${user.id}` : ''"></div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block" x-text="user.curp"></div>
+                                    <div class="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block" x-text="user.curp || 'N/A'"></div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1"
-                                          x-bind:class="user.role === 'Administrador' ? 'bg-purple-100 text-purple-700' : user.role === 'Caja' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
-                                          x-text="user.role"></span>
+                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1 bg-purple-100 text-purple-700">
+                                        <span x-text="user.roles_count || 0"></span>
+                                        <span x-text="(user.roles_count === 1 ? 'rol' : 'roles')"></span>
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-1 rounded-full text-xs font-semibold"
-                                          x-bind:class="user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                                          x-text="user.status === 'activo' ? 'Activo' : 'Inactivo'"></span>
+                                          x-bind:class="user.status === 'active' || user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                          x-text="user.status === 'active' || user.status === 'activo' ? 'Activo' : 'Inactivo'"></span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
