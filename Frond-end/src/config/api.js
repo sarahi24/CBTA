@@ -23,7 +23,7 @@ export const API_ENDPOINTS = {
     updateStudent: (id) => `${API_BASE_URL}/v1/admin-actions/update-student/${id}`,
     import: `${API_BASE_URL}/v1/admin-actions/import`,
     importStudents: `${API_BASE_URL}/v1/admin-actions/import-students`,
-    showUsers: `${API_BASE_URL}/v1/admin-actions/showUsers`,
+    showUsers: `${API_BASE_URL}/v1/admin-actions/show-users`,
     deleteUsers: `${API_BASE_URL}/v1/admin-actions/delete-users`,
     disableUsers: `${API_BASE_URL}/v1/admin-actions/disable-users`,
     temporaryDisableUsers: `${API_BASE_URL}/v1/admin-actions/temporary-disable-users`,
@@ -37,7 +37,7 @@ export const API_ENDPOINTS = {
     getAuthenticated: `${API_BASE_URL}/v1/users/user`,
     updatePassword: `${API_BASE_URL}/v1/users/update-password`,
     update: `${API_BASE_URL}/v1/users/update`,
-    list: `${API_BASE_URL}/v1/admin-actions/showUsers`, // Alias
+    list: `${API_BASE_URL}/v1/admin-actions/show-users`, // Alias
   },
 
   // Careers - Carreras
