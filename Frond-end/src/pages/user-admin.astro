@@ -1,0 +1,757 @@
+---
+import Layout from '../layouts/Layout.astro';
+const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
+---
+
+<Layout title="Gestión de Usuarios | CBTA 71">
+    <script is:inline src="/js/xlsx.min.js"></script>
+    <script is:inline define:vars={{ API_BASE_URL }}>
+        window.__API_BASE_URL__ = API_BASE_URL;
+    </script>
+    
+    <style is:global>
+        [x-cloak] { display: none !important; }
+        
+        .bg-institucional { background-color: #2E594D; }
+        .text-institucional { color: #2E594D; }
+        .border-institucional { border-color: #2E594D; }
+        .hover-institucional:hover { background-color: #234238; }
+        
+        .input-institucional:focus {
+            outline: none;
+            border-color: #2E594D;
+            box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
+        }
+    </style>
+
+    <div x-data="usersApp()" class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
+        
+        <!-- Notificación -->
+        <template x-teleport="body">
+            <div x-show="notification.show" x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 class="fixed top-5 right-5 z-[100] p-4 rounded-xl shadow-2xl text-white font-bold"
+                 :class="notification.type === 'success' ? 'bg-institucional' : 'bg-red-600'">
+                <span x-text="notification.message"></span>
+            </div>
+        </template>
+
+        <!-- Header -->
+        <div class="mb-8">
+            <div x-show="isLoading" class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="font-bold text-blue-900">⏳ Cargando usuarios...</h3>
+                        <p class="text-sm text-blue-700">Conectando con la API</p>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="apiError && !isLoading" class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div>
+                        <h3 class="font-bold text-red-900">❌ Error de Autenticación</h3>
+                        <p class="text-sm text-red-700" x-text="apiError"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800 mb-1">👥 Gestión de Usuarios</h1>
+                    <p class="text-slate-500">Administración completa de usuarios y roles del sistema</p>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex flex-wrap gap-3">
+                <button @click="openModal(null)" 
+                        class="px-4 py-2 bg-institucional text-white rounded-lg hover-institucional transition-colors font-medium flex items-center gap-2">
+                    ➕ Nuevo Usuario
+                </button>
+                <button @click="openImportModal('users')" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2">
+                    📥 Importar Usuarios
+                </button>
+                <button @click="openImportModal('students')" 
+                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center gap-2">
+                    📚 Importar Estudiantes
+                </button>
+                <button @click="promoteStudents()" 
+                        class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center gap-2">
+                    🎓 Promover Estudiantes
+                </button>
+                <button @click="loadUsers(true)" 
+                        class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center gap-2">
+                    🔄 Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+                <div class="p-6 hover:bg-slate-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">Total Usuarios</p>
+                            <p class="text-2xl font-bold text-slate-800" x-text="pagination.total"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 hover:bg-slate-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">En Esta Página</p>
+                            <p class="text-2xl font-bold text-green-600" x-text="users.length"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 hover:bg-slate-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">Seleccionados</p>
+                            <p class="text-2xl font-bold text-purple-600" x-text="selectedUsers.length"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros y Búsqueda -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        x-model="searchTerm"
+                        placeholder="Buscar por nombre, email o ID..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-institucional"
+                    />
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-medium">Estado:</label>
+                    <select
+                        x-model="filters.status"
+                        @change="loadUsers()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-institucional"
+                    >
+                        <option value="activo">Activo</option>
+                        <option value="baja-temporal">Baja Temporal</option>
+                        <option value="baja">Baja</option>
+                        <option value="eliminado">Eliminado</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Acciones Masivas -->
+            <div x-show="selectedUsers.length > 0" class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+                <span class="text-sm font-medium text-blue-900">
+                    <span x-text="selectedUsers.length"></span> usuario(s) seleccionado(s)
+                </span>
+                <div class="flex gap-2">
+                    <button @click="bulkDisableTemporary()" class="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700">
+                        Baja Temporal
+                    </button>
+                    <button @click="bulkDisable()" class="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700">
+                        Dar de Baja
+                    </button>
+                    <button @click="bulkDelete()" class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Usuarios -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left">
+                                <input
+                                    type="checkbox"
+                                    @change="toggleSelectAll()"
+                                    :checked="selectedUsers.length === users.length && users.length > 0"
+                                    class="rounded border-gray-300"
+                                />
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Roles</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <template x-for="user in filteredUsers" :key="user.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3">
+                                    <input
+                                        type="checkbox"
+                                        @change="toggleUserSelection(user.id)"
+                                        :checked="selectedUsers.includes(user.id)"
+                                        class="rounded border-gray-300"
+                                    />
+                                </td>
+                                <td class="px-4 py-3 text-sm" x-text="user.id"></td>
+                                <td class="px-4 py-3">
+                                    <div class="text-sm font-medium" x-text="user.fullName"></div>
+                                    <div class="text-xs text-gray-500" x-text="user.createdAtHuman"></div>
+                                </td>
+                                <td class="px-4 py-3 text-sm" x-text="user.email"></td>
+                                <td class="px-4 py-3">
+                                    <span 
+                                        class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                        :class="user.status === 'active' || user.status === 'activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                        x-text="user.status"
+                                    ></span>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <span x-text="user.roles_count || 0"></span> rol(es)
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <button @click="openModal(user)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                                            ✏️ Editar
+                                        </button>
+                                        <button @click="deleteUser(user.id)" class="text-red-600 hover:text-red-900 text-sm font-medium">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div x-show="pagination.total > pagination.perPage" class="bg-gray-50 px-4 py-3 border-t">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Mostrando <span x-text="((pagination.currentPage - 1) * pagination.perPage) + 1"></span> a 
+                        <span x-text="Math.min(pagination.currentPage * pagination.perPage, pagination.total)"></span> de 
+                        <span x-text="pagination.total"></span> usuarios
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            @click="changePage(pagination.currentPage - 1)"
+                            :disabled="pagination.currentPage === 1"
+                            class="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                        >
+                            Anterior
+                        </button>
+                        <span class="px-3 py-1 text-sm">
+                            Página <span x-text="pagination.currentPage"></span> de <span x-text="pagination.lastPage"></span>
+                        </span>
+                        <button
+                            @click="changePage(pagination.currentPage + 1)"
+                            :disabled="pagination.currentPage === pagination.lastPage"
+                            class="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Usuario (Crear/Editar) -->
+        <div x-show="showModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div @click.away="closeModal()" class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-institucional text-white px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold" x-text="editingUser ? '✏️ Editar Usuario' : '➕ Nuevo Usuario'"></h2>
+                    <button @click="closeModal()" class="text-2xl">&times;</button>
+                </div>
+
+                <form @submit.prevent="saveUser()" class="p-6 space-y-6">
+                    <!-- Datos Personales -->
+                    <div>
+                        <h3 class="text-lg font-semibold border-b pb-2 mb-4">📋 Datos Personales</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Nombre(s) <span class="text-red-500">*</span></label>
+                                <input x-model="formData.name" type="text" required class="w-full px-3 py-2 border rounded-lg"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Apellidos <span class="text-red-500">*</span></label>
+                                <input x-model="formData.last_name" type="text" required class="w-full px-3 py-2 border rounded-lg"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Email <span class="text-red-500">*</span></label>
+                                <input x-model="formData.email" type="email" required class="w-full px-3 py-2 border rounded-lg"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">CURP <span class="text-red-500">*</span></label>
+                                <input x-model="formData.curp" type="text" maxlength="18" required class="w-full px-3 py-2 border rounded-lg uppercase"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Teléfono</label>
+                                <input x-model="formData.phone_number" type="tel" class="w-full px-3 py-2 border rounded-lg"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Fecha de Nacimiento <span class="text-red-500">*</span></label>
+                                <input x-model="formData.birthdate" type="date" required class="w-full px-3 py-2 border rounded-lg"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Género</label>
+                                <select x-model="formData.gender" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="hombre">Hombre</option>
+                                    <option value="mujer">Mujer</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Tipo de Sangre</label>
+                                <select x-model="formData.blood_type" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex justify-end gap-3 pt-4 border-t">
+                        <button type="button" @click="closeModal()" class="px-6 py-2 border rounded-lg hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" :disabled="isLoading" class="px-6 py-2 bg-institucional text-white rounded-lg hover-institucional disabled:opacity-50">
+                            <span x-show="!isLoading">💾 <span x-text="editingUser ? 'Actualizar' : 'Crear'"></span></span>
+                            <span x-show="isLoading">Guardando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Importación -->
+        <div x-show="showImportModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div @click.away="closeImportModal()" class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <h2 class="text-xl font-bold mb-4" x-text="importType === 'users' ? '📥 Importar Usuarios' : '📚 Importar Estudiantes'"></h2>
+                <div class="space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+                        <p class="font-semibold text-blue-900 mb-2">Formato Excel (.xlsx)</p>
+                        <ul class="list-disc list-inside text-blue-800 space-y-1 text-xs">
+                            <template x-if="importType === 'users'">
+                                <div>
+                                    <li>name, last_name, email, curp</li>
+                                    <li>birthdate, gender, phone_number</li>
+                                </div>
+                            </template>
+                            <template x-if="importType === 'students'">
+                                <div>
+                                    <li>curp (debe existir)</li>
+                                    <li>career_id, n_control, semestre</li>
+                                </div>
+                            </template>
+                        </ul>
+                    </div>
+                    <input
+                        type="file"
+                        accept=".xlsx"
+                        @change="handleFileImport($event)"
+                        class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-institucional file:text-white"
+                    />
+                    <button @click="closeImportModal()" class="w-full px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // @ts-nocheck
+        function usersApp() {
+            return {
+                users: [],
+                pagination: {
+                    currentPage: 1,
+                    lastPage: 1,
+                    perPage: 15,
+                    total: 0
+                },
+                filters: {
+                    status: 'activo'
+                },
+                searchTerm: '',
+                selectedUsers: [],
+                isLoading: false,
+                apiError: null,
+                notification: { show: false, message: '', type: 'success' },
+                showModal: false,
+                showImportModal: false,
+                importType: 'users',
+                editingUser: null,
+                formData: {},
+
+                init() {
+                    this.formData = this.getEmptyFormData();
+                    this.loadUsers();
+                },
+
+                getEmptyFormData() {
+                    return {
+                        name: '',
+                        last_name: '',
+                        email: '',
+                        phone_number: '',
+                        birthdate: '',
+                        gender: 'hombre',
+                        curp: '',
+                        address: ['', '', ''],
+                        blood_type: '',
+                        status: 'activo'
+                    };
+                },
+
+                get filteredUsers() {
+                    if (!this.searchTerm) return this.users;
+                    const search = this.searchTerm.toLowerCase();
+                    return this.users.filter(u => 
+                        u.fullName?.toLowerCase().includes(search) ||
+                        u.email?.toLowerCase().includes(search) ||
+                        u.id?.toString().includes(search)
+                    );
+                },
+
+                async loadUsers(forceRefresh = false) {
+                    this.isLoading = true;
+                    this.apiError = null;
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        if (!token) {
+                            this.apiError = 'No hay token de autenticación';
+                            return;
+                        }
+
+                        const params = new URLSearchParams({
+                            page: this.pagination.currentPage,
+                            perPage: this.pagination.perPage,
+                            status: this.filters.status,
+                            forceRefresh: forceRefresh
+                        });
+
+                        const response = await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/show-users?${params}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json',
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'view.users'
+                            }
+                        });
+
+                        if (!response.ok) throw new Error('Error al cargar usuarios');
+
+                        const data = await response.json();
+                        if (data.success && data.data?.users) {
+                            const userData = data.data.users;
+                            this.users = userData.items || [];
+                            this.pagination = {
+                                currentPage: userData.currentPage || 1,
+                                lastPage: userData.lastPage || 1,
+                                perPage: userData.perPage || 15,
+                                total: userData.total || 0
+                            };
+                        }
+                    } catch (error) {
+                        this.apiError = error.message;
+                        console.error('Error:', error);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                changePage(page) {
+                    if (page >= 1 && page <= this.pagination.lastPage) {
+                        this.pagination.currentPage = page;
+                        this.loadUsers();
+                    }
+                },
+
+                toggleSelectAll() {
+                    if (this.selectedUsers.length === this.users.length) {
+                        this.selectedUsers = [];
+                    } else {
+                        this.selectedUsers = this.users.map(u => u.id);
+                    }
+                },
+
+                toggleUserSelection(userId) {
+                    const index = this.selectedUsers.indexOf(userId);
+                    if (index > -1) {
+                        this.selectedUsers.splice(index, 1);
+                    } else {
+                        this.selectedUsers.push(userId);
+                    }
+                },
+
+                openModal(user) {
+                    this.editingUser = user;
+                    if (user) {
+                        this.formData = {
+                            name: user.name || '',
+                            last_name: user.last_name || '',
+                            email: user.email || '',
+                            phone_number: user.phone_number || '',
+                            birthdate: user.birthdate || '',
+                            gender: user.gender || 'hombre',
+                            curp: user.curp || '',
+                            address: Array.isArray(user.address) ? user.address : ['', '', ''],
+                            blood_type: user.blood_type || '',
+                            status: user.status || 'activo'
+                        };
+                    } else {
+                        this.formData = this.getEmptyFormData();
+                    }
+                    this.showModal = true;
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                    this.editingUser = null;
+                },
+
+                async saveUser() {
+                    this.isLoading = true;
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const url = this.editingUser 
+                            ? `${window.__API_BASE_URL__}/v1/admin-actions/update-user/${this.editingUser.id}`
+                            : `${window.__API_BASE_URL__}/v1/admin-actions/register`;
+
+                        const response = await fetch(url, {
+                            method: this.editingUser ? 'PATCH' : 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'create.user'
+                            },
+                            body: JSON.stringify(this.formData)
+                        });
+
+                        if (!response.ok) throw new Error('Error al guardar usuario');
+
+                        this.showNotification(this.editingUser ? 'Usuario actualizado' : 'Usuario creado', 'success');
+                        this.closeModal();
+                        this.loadUsers(true);
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                async deleteUser(userId) {
+                    if (!confirm('¿Eliminar este usuario?')) return;
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const response = await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/delete-user/${userId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin'
+                            }
+                        });
+
+                        if (!response.ok) throw new Error('Error al eliminar');
+
+                        this.showNotification('Usuario eliminado', 'success');
+                        this.loadUsers(true);
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    }
+                },
+
+                async bulkDelete() {
+                    if (!confirm(`¿Eliminar ${this.selectedUsers.length} usuarios?`)) return;
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/delete-users`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin'
+                            },
+                            body: JSON.stringify({ user_ids: this.selectedUsers })
+                        });
+
+                        this.showNotification('Usuarios eliminados', 'success');
+                        this.selectedUsers = [];
+                        this.loadUsers(true);
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    }
+                },
+
+                async bulkDisable() {
+                    if (!confirm(`¿Dar de baja a ${this.selectedUsers.length} usuarios?`)) return;
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/disable-users`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin'
+                            },
+                            body: JSON.stringify({ user_ids: this.selectedUsers })
+                        });
+
+                        this.showNotification('Usuarios dados de baja', 'success');
+                        this.selectedUsers = [];
+                        this.loadUsers(true);
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    }
+                },
+
+                async bulkDisableTemporary() {
+                    if (!confirm(`¿Baja temporal a ${this.selectedUsers.length} usuarios?`)) return;
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/temporary-disable-users`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin'
+                            },
+                            body: JSON.stringify({ user_ids: this.selectedUsers })
+                        });
+
+                        this.showNotification('Baja temporal aplicada', 'success');
+                        this.selectedUsers = [];
+                        this.loadUsers(true);
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    }
+                },
+
+                async promoteStudents() {
+                    if (!confirm('¿Promover TODOS los estudiantes?')) return;
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const response = await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/promotion`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'promote.student'
+                            }
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            const affected = data.data?.affected;
+                            this.showNotification(`✅ ${affected?.usuarios_promovidos || 0} promovidos, ${affected?.usuarios_baja || 0} dados de baja`, 'success');
+                            this.loadUsers(true);
+                        }
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    }
+                },
+
+                openImportModal(type) {
+                    this.importType = type;
+                    this.showImportModal = true;
+                },
+
+                closeImportModal() {
+                    this.showImportModal = false;
+                },
+
+                async handleFileImport(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (!confirm(`¿Importar ${this.importType === 'users' ? 'usuarios' : 'estudiantes'}?`)) {
+                        event.target.value = '';
+                        return;
+                    }
+
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        const endpoint = this.importType === 'users' 
+                            ? '/v1/admin-actions/import'
+                            : '/v1/admin-actions/import-students';
+
+                        const response = await fetch(`${window.__API_BASE_URL__}${endpoint}`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json',
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'import.users'
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            const summary = data.data?.summary?.summary;
+                            this.showNotification(`✅ ${summary?.rows_inserted || 0} insertados, ${summary?.rows_failed || 0} fallidos`, 'success');
+                            this.loadUsers(true);
+                        }
+                    } catch (error) {
+                        this.showNotification('Error: ' + error.message, 'error');
+                    } finally {
+                        event.target.value = '';
+                        this.closeImportModal();
+                    }
+                },
+
+                showNotification(message, type = 'success') {
+                    this.notification = { show: true, message, type };
+                    setTimeout(() => {
+                        this.notification = { show: false, message: '', type: 'success' };
+                    }, 3000);
+                }
+            };
+        }
+    </script>
+</Layout>

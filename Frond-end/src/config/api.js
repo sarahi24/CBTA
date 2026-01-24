@@ -16,14 +16,16 @@ export const API_ENDPOINTS = {
 
   // Admin Actions - Acciones administrativas
   adminActions: {
-    register: `${API_BASE_URL}/v1/register`,
+    register: `${API_BASE_URL}/v1/admin-actions/register`, // Registro de usuario por admin
     promotion: `${API_BASE_URL}/v1/admin-actions/promotion`,
     attachStudent: `${API_BASE_URL}/v1/admin-actions/attach-student`,
     getStudent: (id) => `${API_BASE_URL}/v1/admin-actions/get-student/${id}`,
     updateStudent: (id) => `${API_BASE_URL}/v1/admin-actions/update-student/${id}`,
     import: `${API_BASE_URL}/v1/admin-actions/import`,
     importStudents: `${API_BASE_URL}/v1/admin-actions/import-students`,
+    updatePermissions: `${API_BASE_URL}/v1/admin-actions/update-permissions`, // Actualizar permisos
     showUsers: `${API_BASE_URL}/v1/admin-actions/show-users`,
+    showUserById: (id) => `${API_BASE_URL}/v1/admin-actions/show-users/${id}`, // Usuario por ID
     deleteUser: (id) => `${API_BASE_URL}/v1/admin-actions/delete-user/${id}`,
     updateUser: (id) => `${API_BASE_URL}/v1/admin-actions/update-user/${id}`,
     deleteUsers: `${API_BASE_URL}/v1/admin-actions/delete-users`,
