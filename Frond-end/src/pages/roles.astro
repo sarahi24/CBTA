@@ -1269,21 +1269,72 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
                 
                 try {
-                    console.log('🗑️ Eliminando usuario con ID:', id);
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/delete-user/${id}`,
-                        { method: 'DELETE' }
-                    );
+                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/delete-user/${id}`;
+                    console.log('========================================');
+                    console.log('🗑️ ELIMINANDO USUARIO');
+                    console.log('========================================');
+                    console.log('👤 Usuario ID:', id);
+                    console.log('📍 Endpoint:', endpoint);
+                    console.log('🔑 Token (primeros 30 chars):', token.substring(0, 30) + '...');
+                    console.log('📡 Método: DELETE');
+                    console.log('⏰ Timestamp:', new Date().toISOString());
+                    
+                    const response = await this.authenticatedFetch(endpoint, { method: 'DELETE' });
+                    
+                    console.log('📡 Status recibido:', response.status);
+                    console.log('📡 Status ok:', response.ok);
                     
                     const result = await response.json();
-                    console.log('📦 Respuesta de eliminar:', result);
+                    console.log('📦 Respuesta completa:', JSON.stringify(result, null, 2));
                     
                     if (response.ok) {
+                        console.log('✅ Usuario eliminado correctamente');
                         this.users = this.users.filter(u => u.id !== id);
                         this.showNotify(result.message || 'Usuario eliminado correctamente', 'success');
+                    } else if (response.status === 500) {
+                        console.error('');
+                        console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+                        console.error('🚨 ERROR 500 AL ELIMINAR USUARIO');
+                        console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+                        console.error('');
+                        console.error('✅ EL FRONTEND ESTÁ BIEN:');
+                        console.error('   ✅ Endpoint correcto:', endpoint);
+                        console.error('   ✅ Método DELETE enviado correctamente');
+                        console.error('   ✅ Token válido en Authorization header');
+                        console.error('   ✅ ID del usuario es válido:', id);
+                        console.error('');
+                        console.error('❌ EL BACKEND TIENE UN ERROR:');
+                        console.error('   ❌ Status 500 = Internal Server Error');
+                        console.error('   ❌ Mensaje backend:', result.message || 'Sin mensaje');
+                        console.error('   ❌ Error code:', result.error_code || 'Sin código');
+                        console.error('   ❌ Error completo:', JSON.stringify(result, null, 2));
+                        console.error('');
+                        console.error('🔧 ANGEL DEBE REVISAR EN BACKEND:');
+                        console.error('   1. Ir a Railway → Deployments → View Logs');
+                        console.error('   2. Buscar error en DELETE /v1/admin-actions/delete-user/6');
+                        console.error('   3. Revisar AdminActionsController.php → deleteUser()');
+                        console.error('   4. Verificar si existe el endpoint y acepta DELETE');
+                        console.error('   5. Verificar middleware auth:sanctum');
+                        console.error('   6. Verificar permisos del usuario admin');
+                        console.error('   7. Verificar foreign keys en base de datos (posible causa)');
+                        console.error('   8. El usuario puede tener relaciones que impiden eliminarlo');
+                        console.error('');
+                        console.error('💡 POSIBLES CAUSAS:');
+                        console.error('   - Foreign key constraint (usuario tiene datos relacionados)');
+                        console.error('   - Endpoint no existe o no acepta método DELETE');
+                        console.error('   - Middleware bloqueando la petición');
+                        console.error('   - Error en la consulta SQL al eliminar');
+                        console.error('   - Permisos insuficientes del usuario');
+                        console.error('');
+                        console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+                        console.error('');
+                        
+                        this.showNotify(`❌ Error 500: ${result.message || 'Error del servidor al eliminar'}`, 'error');
                     } else {
+                        console.error('❌ Error al eliminar:', response.status, result);
                         this.showNotify(result.message || 'Error al eliminar usuario', 'error');
                     }
+                    console.log('========================================');
                 } catch (error) {
                     console.error('❌ Error en deleteUser:', error);
                     this.showNotify(`Error al eliminar: ${error.message}`, 'error');
