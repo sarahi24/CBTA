@@ -2056,6 +2056,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (response.status === 201 && result.success) {
                         this.showNotify(result.message || 'Carrera creada exitosamente', 'success');
                         this.closeCareerModal();
+                    } else if (response.status === 409) {
+                        const message = result.message || 'La carrera ya existe';
+                        this.careerError = message;
+                        this.showNotify(message, 'error');
                     } else {
                         const validation = result.errors ? Object.values(result.errors).flat().join(', ') : '';
                         const message = validation || result.message || 'Error al crear la carrera';
