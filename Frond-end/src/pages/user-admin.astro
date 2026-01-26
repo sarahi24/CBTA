@@ -421,6 +421,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 importType: 'users',
                 editingUser: null,
                 formData: {},
+                careers: [
+                    { id: 'TAG-E', name: 'Técnico Agropecuario' },
+                    { id: 'TOF', name: 'Téc. en Ofimática' },
+                    { id: 'TEM', name: 'Téc. en Admón. de Emp.' },
+                    { id: 'TAG-M', name: 'Téc. Agropecuario (Mixta)' },
+                    { id: 'TRH', name: 'Téc. Admón. R. Humanos (Mixta)' },
+                ],
+                semesters: Array.from({length: 12}, (_, i) => i + 1),
 
                 init() {
                     this.formData = this.getEmptyFormData();
@@ -438,7 +446,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         curp: '',
                         address: ['', '', ''],
                         blood_type: '',
-                        status: 'activo'
+                        status: 'activo',
+                        is_student: false,
+                        student: {
+                            career_id: '',
+                            n_control: '',
+                            semestre: '',
+                            group: '',
+                            workshop: ''
+                        }
                     };
                 },
 
@@ -595,7 +611,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             curp: user.curp || '',
                             address: Array.isArray(user.address) ? user.address : ['', '', ''],
                             blood_type: user.blood_type || '',
-                            status: user.status || 'activo'
+                            status: this.normalizeStatus(user.status) || 'activo',
+                            is_student: false,
+                            student: {
+                                career_id: '',
+                                n_control: '',
+                                semestre: '',
+                                group: '',
+                                workshop: ''
+                            }
                         };
                     } else {
                         this.formData = this.getEmptyFormData();
@@ -624,12 +648,56 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             body: JSON.stringify(this.formData)
                         });
 
+                        const data = await response.json().catch(() => ({}));
                         if (!response.ok) {
-                            const data = await response.json().catch(() => ({}));
                             throw new Error(data.message || 'Error al guardar usuario');
                         }
 
-                        this.showNotification(this.editingUser ? 'Usuario actualizado' : 'Usuario creado', 'success');
+                        // Obtener ID del usuario creado/actualizado
+                        const newUserId = this.editingUser?.id 
+                            || data?.data?.user?.id 
+                            || data?.data?.id 
+                            || data?.id;
+
+                        // Si es estudiante, adjuntar detalles
+                        if (this.formData.is_student && newUserId) {
+                            const attachBody = {
+                                user_id: newUserId,
+                                career_id: this.formData.student.career_id,
+                                n_control: this.formData.student.n_control,
+                                semestre: Number(this.formData.student.semestre),
+                                group: this.formData.student.group,
+                                workshop: this.formData.student.workshop
+                            };
+                            const attachRes = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/attach-student`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-User-Role': 'admin',
+                                    'X-User-Permission': 'attach.student'
+                                },
+                                body: JSON.stringify(attachBody)
+                            });
+                            const attachData = await attachRes.json().catch(() => ({}));
+                            if (!attachRes.ok) {
+                                throw new Error(attachData.message || 'Error al asociar detalles de estudiante');
+                            }
+                        }
+
+                        // Intentar mostrar contraseña generada si viene en la respuesta
+                        const possiblePwd = (
+                            data?.data?.user?.plain_password ||
+                            data?.data?.plain_password ||
+                            data?.plain_password ||
+                            data?.data?.generated_password ||
+                            data?.generated_password
+                        );
+
+                        if (possiblePwd) {
+                            this.showNotification(`Usuario creado. Contraseña inicial: ${possiblePwd}`, 'success');
+                        } else {
+                            this.showNotification(this.editingUser ? 'Usuario actualizado' : 'Usuario creado', 'success');
+                        }
+
                         this.closeModal();
                         this.loadUsers(true);
                     } catch (error) {
