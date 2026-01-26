@@ -2402,6 +2402,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         .filter(u => this.selectedUsers.includes(u.id))
                         .map(u => u.curp);
 
+                    // Solo uno de los dos: curps o role
+                    const payload = curps.length > 0
+                        ? { curps }
+                        : this.permissionTargetRole
+                            ? { role: this.permissionTargetRole }
+                            : null;
+
+                    if (!payload) {
+                        this.showNotify('Selecciona usuarios o un rol', 'error');
+                        this.isSaving = false;
+                        return;
+                    }
+
+                    payload.permissionsToAdd = this.permissionsToAdd;
+                    payload.permissionsToRemove = this.permissionsToRemove;
+
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/update-permissions`,
                         {
@@ -2410,12 +2426,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'sync.permissions'
                             },
-                            body: JSON.stringify({
-                                curps: curps.length > 0 ? curps : undefined,
-                                role: this.permissionTargetRole || undefined,
-                                permissionsToAdd: this.permissionsToAdd,
-                                permissionsToRemove: this.permissionsToRemove
-                            })
+                            body: JSON.stringify(payload)
                         }
                     );
 
