@@ -724,9 +724,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <div x-show="isLoadingCareers" class="text-sm text-slate-600">Cargando carreras...</div>
                         <div x-show="!isLoadingCareers && careers.length" class="max-h-56 overflow-y-auto divide-y divide-slate-200 text-sm">
                             <template x-for="career in careers" :key="career.id">
-                                <div class="py-2 flex items-center justify-between">
-                                    <span class="font-mono text-slate-600" x-text="`ID ${career.id}`"></span>
-                                    <span class="font-semibold text-slate-800" x-text="career.career_name"></span>
+                                <div class="py-2 flex items-center justify-between gap-3">
+                                    <div class="flex flex-col">
+                                        <span class="font-mono text-slate-600" x-text="`ID ${career.id}`"></span>
+                                        <span class="font-semibold text-slate-800" x-text="career.career_name"></span>
+                                    </div>
+                                    <button type="button"
+                                            @click="deleteCareer(career.id)"
+                                            :disabled="careerDeletingId === career.id"
+                                            class="px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
+                                        <span x-show="careerDeletingId !== career.id">Eliminar</span>
+                                        <span x-show="careerDeletingId === career.id">Borrando...</span>
+                                    </button>
                                 </div>
                             </template>
                         </div>
@@ -914,6 +923,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 isSavingCareer: false,
                 careers: [],
                 isLoadingCareers: false,
+                careerDeletingId: null,
                 
                 // Estados para gestión de roles
                 showRolesModal: false,
@@ -2102,6 +2112,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const result = await response.json();
                     if (response.status === 201 && result.success) {
                         this.showNotify(result.message || 'Carrera creada exitosamente', 'success');
+                        const created = result.data?.career || result.data;
+                        if (created) {
+                            // Mantener la lista actualizada sin recargar
+                            this.careers = [{ id: created.id, career_name: created.career_name }, ...this.careers];
+                        }
                         this.closeCareerModal();
                     } else if (response.status === 409) {
                         const message = result.message || 'La carrera ya existe';
@@ -2151,6 +2166,44 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.showNotify('Error al cargar carreras', 'error');
                 } finally {
                     this.isLoadingCareers = false;
+                }
+            },
+
+            async deleteCareer(id) {
+                if (!id) return;
+
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return;
+                }
+
+                if (!confirm('¿Eliminar esta carrera? Esta acción es irreversible.')) {
+                    return;
+                }
+
+                this.careerDeletingId = id;
+                try {
+                    const response = await this.authenticatedFetch(`${this.apiBaseUrl}/v1/careers/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-User-Role': 'admin'
+                        }
+                    });
+
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        this.careers = this.careers.filter(c => c.id !== id);
+                        this.showNotify(result.message || 'Carrera eliminada con éxito', 'success');
+                    } else {
+                        this.showNotify(result.message || 'No se pudo eliminar la carrera', 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Error al eliminar carrera:', error);
+                    this.showNotify('Error al eliminar la carrera', 'error');
+                } finally {
+                    this.careerDeletingId = null;
                 }
             },
 
