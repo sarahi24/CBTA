@@ -360,25 +360,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Carrera <span class="text-red-500">*</span></label>
-                                        <select x-model="formData.student.career_id" required class="w-full px-3 py-2 border rounded-lg">
+                                        <select x-model="formData.student.career_id" @change="$watch('formData.is_student', () => {})" class="w-full px-3 py-2 border rounded-lg" :class="studentErrors.career_id ? 'border-red-500' : ''">
                                             <option value="">Seleccionar carrera...</option>
                                             <template x-for="career in careers" :key="career.id">
-                                                <option :value="career.id" x-text="career.name"></option>
+                                                <option :value="career.id" x-text="career.career_name"></option>
                                             </template>
                                         </select>
+                                        <template x-if="studentErrors.career_id">
+                                            <p class="text-red-500 text-xs mt-1" x-text="studentErrors.career_id"></p>
+                                        </template>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Número de Control <span class="text-red-500">*</span></label>
-                                        <input x-model="formData.student.n_control" type="text" required placeholder="ej: 2025001" class="w-full px-3 py-2 border rounded-lg"/>
+                                        <input x-model="formData.student.n_control" type="text" placeholder="ej: 2025001" class="w-full px-3 py-2 border rounded-lg" :class="studentErrors.n_control ? 'border-red-500' : ''"/>
+                                        <template x-if="studentErrors.n_control">
+                                            <p class="text-red-500 text-xs mt-1" x-text="studentErrors.n_control"></p>
+                                        </template>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Semestre <span class="text-red-500">*</span></label>
-                                        <select x-model="formData.student.semestre" required class="w-full px-3 py-2 border rounded-lg">
+                                        <select x-model="formData.student.semestre" class="w-full px-3 py-2 border rounded-lg" :class="studentErrors.semestre ? 'border-red-500' : ''">
                                             <option value="">Seleccionar semestre...</option>
                                             <template x-for="sem in semesters" :key="sem">
                                                 <option :value="sem" x-text="'Semestre ' + sem"></option>
                                             </template>
                                         </select>
+                                        <template x-if="studentErrors.semestre">
+                                            <p class="text-red-500 text-xs mt-1" x-text="studentErrors.semestre"></p>
+                                        </template>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Grupo</label>
@@ -467,17 +476,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 importType: 'users',
                 editingUser: null,
                 formData: {},
-                careers: [
-                    { id: 'TAG-E', name: 'Técnico Agropecuario' },
-                    { id: 'TOF', name: 'Téc. en Ofimática' },
-                    { id: 'TEM', name: 'Téc. en Admón. de Emp.' },
-                    { id: 'TAG-M', name: 'Téc. Agropecuario (Mixta)' },
-                    { id: 'TRH', name: 'Téc. Admón. R. Humanos (Mixta)' },
-                ],
+                careers: [],
                 semesters: Array.from({length: 12}, (_, i) => i + 1),
+                studentErrors: {},
 
                 init() {
                     this.formData = this.getEmptyFormData();
+                    this.loadCareers();
                     this.loadUsers();
                 },
 
@@ -676,11 +681,59 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 closeModal() {
                     this.showModal = false;
                     this.editingUser = null;
+                    this.studentErrors = {};
+                },
+
+                async loadCareers() {
+                    try {
+                        const response = await this.authenticatedFetch(
+                            `${window.__API_BASE_URL__}/v1/careers?forceRefresh=false`,
+                            {
+                                method: 'GET',
+                                headers: {
+                                    'X-User-Role': 'admin'
+                                }
+                            }
+                        );
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.data?.careers) {
+                                this.careers = data.data.careers;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error al cargar carreras:', error);
+                    }
+                },
+
+                validateStudentFields() {
+                    this.studentErrors = {};
+                    
+                    if (!this.formData.is_student) return true;
+
+                    if (!this.formData.student.career_id) {
+                        this.studentErrors.career_id = 'La carrera es requerida';
+                    }
+                    if (!this.formData.student.n_control || this.formData.student.n_control.trim() === '') {
+                        this.studentErrors.n_control = 'El número de control es requerido';
+                    }
+                    if (!this.formData.student.semestre) {
+                        this.studentErrors.semestre = 'El semestre es requerido';
+                    }
+
+                    return Object.keys(this.studentErrors).length === 0;
                 },
 
                 async saveUser() {
                     this.isLoading = true;
                     try {
+                        if (this.formData.is_student && !this.validateStudentFields()) {
+                            this.showNotification('⚠️ Por favor completa todos los campos requeridos de estudiante', 'error');
+                            this.isLoading = false;
+                            return;
+                        }
+
                         const url = this.editingUser 
                             ? `${window.__API_BASE_URL__}/v1/admin-actions/update-user/${this.editingUser.id}`
                             : `${window.__API_BASE_URL__}/v1/admin-actions/register`;
@@ -739,9 +792,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         );
 
                         if (possiblePwd) {
-                            this.showNotification(`Usuario creado. Contraseña inicial: ${possiblePwd}`, 'success');
+                            this.showNotification(`✅ Usuario creado. Contraseña: ${possiblePwd}`, 'success');
+                        } else if (this.formData.is_student) {
+                            this.showNotification(`✅ Usuario y detalles de estudiante guardados correctamente`, 'success');
                         } else {
-                            this.showNotification(this.editingUser ? 'Usuario actualizado' : 'Usuario creado', 'success');
+                            this.showNotification(this.editingUser ? '✅ Usuario actualizado' : '✅ Usuario creado', 'success');
                         }
 
                         this.closeModal();
