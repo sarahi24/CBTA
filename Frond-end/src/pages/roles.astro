@@ -567,6 +567,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl">
                     <h3 class="text-2xl font-bold text-slate-800 mb-2">📚 Importar Detalles de Estudiantes</h3>
                     <p class="text-slate-500 text-sm mb-6">Carga un archivo Excel con los detalles académicos de estudiantes existentes</p>
+
+                    <div x-show="importStudentsError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        <span x-text="importStudentsError"></span>
+                    </div>
+                    <div x-show="importStudentsErrorDetails.length" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 space-y-1">
+                        <template x-for="(err, idx) in importStudentsErrorDetails" :key="idx">
+                            <div class="font-mono" x-text="err"></div>
+                        </template>
+                    </div>
                     
                     <div @dragover.prevent="isDragging = true" 
                          @dragleave.prevent="isDragging = false"
@@ -853,6 +862,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 isDragging: false,
                 selectedFile: null,
                 importedData: [],
+                importStudentsError: '',
+                importStudentsErrorDetails: [],
                 userToDeleteId: null,
                 userToDeleteName: '',
                 selectedUsers: [],
@@ -1458,6 +1469,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                 try {
                     this.isSaving = true;
+                    this.importStudentsError = '';
+                    this.importStudentsErrorDetails = [];
                     const formData = new FormData();
                     formData.append('file', this.selectedFile);
 
@@ -1482,7 +1495,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.closeImportStudentsModal();
                         await this.loadUsers(token);
                     } else {
-                        this.showNotify(result.message || 'Error al importar estudiantes', 'error');
+                        const validation = result.errors ? Object.values(result.errors).flat().join(', ') : '';
+                        const message = validation || result.message || 'Error al importar estudiantes';
+                        this.importStudentsError = message;
+
+                        const validationList = result.errors
+                            ? Object.entries(result.errors).map(([k, v]) => `${k}: ${(v || []).join(', ')}`)
+                            : [];
+                        const rowErrors = Array.isArray(result.data?.summary?.errors)
+                            ? result.data.summary.errors.map((e, i) => `Fila ${i + 1}: ${JSON.stringify(e)}`)
+                            : [];
+                        this.importStudentsErrorDetails = [...validationList, ...rowErrors];
+
+                        this.showNotify(message, 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error al importar estudiantes:', error);
