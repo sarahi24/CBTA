@@ -1252,7 +1252,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         `${this.apiBaseUrl}/v1/admin-actions/disable-users`,
                         {
                             method: 'POST',
-                            body: JSON.stringify({ user_ids: this.selectedUsers })
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'disable.users'
+                            },
+                            body: JSON.stringify({ ids: this.selectedUsers })
                         }
                     );
 
@@ -1287,7 +1291,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         `${this.apiBaseUrl}/v1/admin-actions/temporary-disable-users`,
                         {
                             method: 'POST',
-                            body: JSON.stringify({ user_ids: this.selectedUsers })
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'disable.users'
+                            },
+                            body: JSON.stringify({ ids: this.selectedUsers })
                         }
                     );
 
