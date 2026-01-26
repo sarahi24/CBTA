@@ -104,25 +104,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         class="px-4 py-2 bg-institucional text-white font-semibold rounded-lg hover-institucional transition-all flex items-center gap-2 shadow-md">
                     ➕ Nuevo Usuario
                 </button>
-                <button @click="openImportModal()" 
-                        class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2">
-                    📥 Importar Usuarios
-                </button>
-                <button @click="openImportStudentsModal()" 
-                        class="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all flex items-center gap-2">
-                    📚 Importar Estudiantes
-                </button>
-                <button @click="promoteStudents()" 
-                        class="px-4 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-all flex items-center gap-2">
-                    🎓 Promover Estudiantes
-                </button>
                 <button @click="loadUsers(localStorage.getItem('access_token'))" 
                         class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2">
                     🔄 Actualizar
-                </button>
-                <button @click="testAuth()" 
-                        class="px-4 py-2 bg-blue-100 border border-blue-300 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2">
-                    🔒 Test Auth
                 </button>
             </div>
         </div>
@@ -184,7 +168,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Total Usuarios</p>
-                                    <p class="text-2xl font-bold text-slate-800" x-text="users.length"></p>
+                                    <p class="text-2xl font-bold text-slate-800" x-text="stats.total"></p>
                                 </div>
                             </div>
                         </td>
@@ -197,7 +181,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Usuarios Activos</p>
-                                    <p class="text-2xl font-bold text-green-600" x-text="users.filter(u => u.status === 'activo').length"></p>
+                                    <p class="text-2xl font-bold text-green-600" x-text="stats.active"></p>
                                 </div>
                             </div>
                         </td>
@@ -210,7 +194,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Administradores</p>
-                                    <p class="text-2xl font-bold text-institucional" x-text="users.filter(u => u.role === 'Administrador').length"></p>
+                                    <p class="text-2xl font-bold text-institucional" x-text="stats.admins"></p>
                                 </div>
                             </div>
                         </td>
@@ -271,13 +255,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1"
-                                          x-bind:class="user.role === 'admin' || user.role === 'Administrador' ? 'bg-purple-100 text-purple-700' : user.role === 'financial staff' || user.role === 'Caja' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
-                                          x-text="user.role || 'Sin rol'"></span>
+                                          x-bind:class="roleClass(user.roleKey)"
+                                          x-text="user.roleLabel"></span>
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-1 rounded-full text-xs font-semibold"
-                                          x-bind:class="user.status === 'active' || user.status === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                                          x-text="user.status === 'active' || user.status === 'activo' ? 'Activo' : 'Inactivo'"></span>
+                                          x-bind:class="user.status === 'activo' ? 'bg-green-100 text-green-700' : user.status === 'baja-temporal' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'"
+                                          x-text="statusLabel(user.status)"></span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
@@ -651,6 +635,64 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 return response;
             },
 
+            normalizeDate(value) {
+                if (!value) return '';
+                if (typeof value === 'string') {
+                    return value.split('T')[0];
+                }
+                return value;
+            },
+
+            statusLabel(status) {
+                const key = (status || '').toLowerCase();
+                if (key === 'activo' || key === 'active') return 'Activo';
+                if (key === 'baja-temporal') return 'Baja temporal';
+                return 'Inactivo';
+            },
+
+            roleClass(roleKey) {
+                const key = (roleKey || '').toLowerCase();
+                if (key === 'admin' || key === 'administrador') return 'bg-purple-100 text-purple-700';
+                if (key === 'caja' || key === 'financial-staff' || key === 'financial staff') return 'bg-blue-100 text-blue-700';
+                if (key === 'maestro' || key === 'teacher' || key === 'docente') return 'bg-emerald-100 text-emerald-700';
+                return 'bg-slate-100 text-slate-600';
+            },
+
+            mapUser(raw) {
+                if (!raw) return raw;
+                const roleValue = raw.role || raw.role_name || (Array.isArray(raw.roles) ? raw.roles[0] : (raw.roles?.[0]?.name || raw.roles?.[0])) || '';
+                const roleKey = roleValue.toString().toLowerCase();
+                let roleLabel = 'Sin rol';
+                if (roleKey === 'admin' || roleKey === 'administrador') roleLabel = 'Administrador';
+                else if (roleKey === 'caja' || roleKey === 'financial-staff' || roleKey === 'financial staff') roleLabel = 'Caja';
+                else if (roleKey === 'maestro' || roleKey === 'teacher' || roleKey === 'docente') roleLabel = 'Maestro';
+
+                const statusKey = (raw.status || '').toString().toLowerCase();
+                let status = 'inactivo';
+                if (statusKey === 'active' || statusKey === 'activo') status = 'activo';
+                else if (statusKey === 'baja-temporal' || statusKey === 'baja temporal' || statusKey === 'temporary-disable') status = 'baja-temporal';
+                else if (statusKey) status = statusKey;
+
+                return {
+                    ...raw,
+                    fullName: raw.fullName || `${raw.name || ''} ${raw.last_name || ''}`.trim(),
+                    role: roleLabel,
+                    roleLabel,
+                    roleKey,
+                    status,
+                    address: Array.isArray(raw.address) ? raw.address : ['', '', ''],
+                    birthdate: this.normalizeDate(raw.birthdate),
+                    registration_date: this.normalizeDate(raw.registration_date),
+                };
+            },
+
+            get stats() {
+                const total = this.users.length;
+                const active = this.users.filter(u => u.status === 'activo').length;
+                const admins = this.users.filter(u => u.roleKey === 'admin' || u.roleLabel === 'Administrador').length;
+                return { total, active, admins };
+            },
+
             async init() {
                 // Verificar autenticación
                 console.log('========================================');
@@ -769,9 +811,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         // Backend devuelve {success: true, data: {users: {items: [...]}}, message: '...'}
                         if (result.success && result.data && result.data.users && result.data.users.items) {
-                            this.users = result.data.users.items;
+                            this.users = result.data.users.items.map(u => this.mapUser(u));
                         } else if (Array.isArray(result)) {
-                            this.users = result;
+                            this.users = result.map(u => this.mapUser(u));
                         } else {
                             this.users = [];
                         }
@@ -1106,14 +1148,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             openPanelForEdit(user) {
                 this.isEditing = true;
+                const mapped = this.mapUser(user) || {};
                 this.newUser = { 
-                    ...user,
-                    address: user.address || ['', '', ''],
-                    birthdate: user.birthdate || '',
-                    blood_type: user.blood_type || 'O+',
-                    curp: user.curp === 'N/A' ? '' : (user.curp || ''),
-                    phone_number: user.phone_number || '',
-                    registration_date: user.registration_date || new Date().toISOString().split('T')[0]
+                    ...mapped,
+                    curp: mapped.curp === 'N/A' ? '' : (mapped.curp || ''),
+                    blood_type: mapped.blood_type || 'O+',
+                    registration_date: mapped.registration_date || new Date().toISOString().split('T')[0]
                 };
                 this.isPanelOpen = true;
             },
@@ -1175,20 +1215,30 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
                 
                 try {
-                    const userData = { ...this.newUser };
+                    const userData = {
+                        ...this.newUser,
+                        address: Array.isArray(this.newUser.address) ? this.newUser.address : ['', '', ''],
+                        birthdate: this.normalizeDate(this.newUser.birthdate),
+                        registration_date: this.normalizeDate(this.newUser.registration_date),
+                    };
+                    delete userData.password;
                     if (this.isEditing) {
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
                         const response = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
                             {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
+                                method: 'PATCH',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'X-User-Role': 'admin',
+                                    'X-User-Permission': 'update.users'
+                                },
                                 body: JSON.stringify(userData)
                             }
                         );
                         const result = await response.json();
                         if (response.ok && result.success) {
-                            const updatedUser = result.data?.user || result.data || result;
+                            const updatedUser = this.mapUser(result.data?.user || result.data || result);
                             const index = this.users.findIndex(u => u.id === this.newUser.id);
                             if (index !== -1) this.users[index] = updatedUser;
                             this.showNotify(result.message || 'Usuario actualizado');
@@ -1219,7 +1269,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             headers: { 
                                 'Content-Type': 'application/json', 
                                 'Accept': 'application/json',
-                                'Authorization': `Bearer ${token}`
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'create.user'
                             },
                             body: JSON.stringify(userData),
                             signal: controller.signal
@@ -1231,7 +1283,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.log(JSON.stringify(result, null, 2));
                         
                         if (response.status === 201 && result.success) {
-                            const newUser = result.data?.user || result.data || result;
+                            const newUser = this.mapUser(result.data?.user || result.data || result || userData);
                             this.users.push(newUser);
                             this.showNotify(result.message || 'Usuario creado');
                             this.closePanel();

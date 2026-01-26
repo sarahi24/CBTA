@@ -6,6 +6,7 @@ const pageTitle = "Conceptos de Cobro";
 const PRIMARY_ACCENT_COLOR = 'bg-[#2E584C]'; 
 const PRIMARY_HOVER = 'hover:bg-[#274D43]'; 
 const PRIMARY_TEXT_COLOR = 'text-[#2E584C]'; 
+const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
 <Layout title={pageTitle}>  
@@ -40,22 +41,8 @@ const PRIMARY_TEXT_COLOR = 'text-[#2E584C]';
   </div>
 
 <script type="module" client:load>
-const CONCEPTS_KEY = 'conceptsList';
-const STUDENTS_KEY = 'studentsList';
-const CHARGES_KEY = 'chargesList';
 const PRIMARY_TEXT_COLOR_HEX = '#2E584C';
-
-/* --- UTILIDADES --- */
-function getStudents(){ try { return JSON.parse(localStorage.getItem(STUDENTS_KEY) || '[]'); } catch(e) { return []; } }
-function getCharges(){ try { return JSON.parse(localStorage.getItem(CHARGES_KEY) || '[]'); } catch(e) { return []; } }
-function getConcepts(){ 
-    try { 
-        const data = localStorage.getItem(CONCEPTS_KEY);
-        return (data && data !== 'undefined') ? JSON.parse(data) : [];
-    } catch(e) { return []; }
-}
-function saveConcepts(x){ localStorage.setItem(CONCEPTS_KEY, JSON.stringify(x)); }
-function saveCharges(x){ localStorage.setItem(CHARGES_KEY, JSON.stringify(x)); }
+const API_BASE = API_BASE_URL;
 
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m]));
@@ -65,99 +52,81 @@ function formatCurrency(amount){
   return new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN', minimumFractionDigits:2 }).format(amount);
 }
 
-/* --- LÓGICA DE ALCANCE --- */
-function getTargetStudentsForConcept(concept){
-    const students = getStudents();
-    const activeStudents = students.filter(s => (s.status || '').toLowerCase() !== 'inactive' && (s.status || '').toLowerCase() !== 'inactivo');
-    
-    const normalizedActiveStudents = activeStudents.map(alumno => ({
-        ...alumno,
-        id: String(alumno.numControl ?? alumno.id ?? ''),
-        normalizedCareer: String(alumno.carrera ?? alumno.career ?? '').trim().toUpperCase(),
-        normalizedSemester: String(alumno.semestre ?? alumno.semester ?? '').trim()
-    }));
-
-  if (concept.scopeRules) {
-      const rules = concept.scopeRules;
-      if (rules.allStudents) return normalizedActiveStudents;
-      const specificIds = (rules.specificStudents || []).map(String);
-      if (specificIds.length > 0) return normalizedActiveStudents.filter(s => specificIds.includes(s.id));
-
-      return normalizedActiveStudents.filter(alumno => {
-          let cumpleCareers = (rules.careers || []).length === 0 || rules.careers.includes(alumno.normalizedCareer);
-          let cumpleSemesters = (rules.semesters || []).length === 0 || rules.semesters.includes(alumno.normalizedSemester);
-          return cumpleCareers && cumpleSemesters;
-      });
-  }
-  return normalizedActiveStudents;
+function getStatusBadge(status){
+  const s = (status || '').toLowerCase();
+  if (s === 'finalizado' || s === 'finalized') return '<span class="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase">Finalizado</span>';
+  if (s === 'inactivo' || s === 'inactive') return '<span class="inline-block mt-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold uppercase">Inactivo</span>';
+  return '<span class="inline-block mt-1 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase">Vigente</span>';
 }
 
-function getScopeText(concept){
-  if (concept.scopeRules) {
-      const rules = concept.scopeRules;
-      if (rules.allStudents) return 'Todos Activos';
-      if ((rules.specificStudents || []).length > 0) return `${rules.specificStudents.length} Alumnos Esp.`;
-      const cCount = (rules.careers || []).length;
-      const sCount = (rules.semesters || []).length;
-      if (cCount > 0 && sCount > 0) return `${cCount} Carr. / ${sCount} Sem.`;
-      if (cCount > 0) return `${cCount} Carrera(s)`;
-      if (sCount > 0) return `${sCount} Semestre(s)`;
+async function apiFetch(url, options={}) {
+  const token = localStorage.getItem('access_token');
+  if (!token) throw new Error('No hay token, inicia sesión');
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || 'Error de API');
   }
-  return 'No Definido';
+  return data;
 }
 
-/* --- ACCIONES CRUD --- */
-function finalizeConcept(id) {
-  const concepts = getConcepts();
-  const index = concepts.findIndex(c => c.id === id);
-  if (index === -1) return;
+let conceptsCache = [];
 
-  const confirmMsg = `¿Finalizar "${concepts[index].title}"?\n\nSe marcará como INACTIVO. ¿Deseas eliminar también los cargos PENDIENTES asociados?`;
-  const removePending = confirm(confirmMsg);
-
-  // REGISTRAMOS LA FECHA PARA LA TABLA
-  const hoy = new Date().toLocaleDateString('es-MX');
-
-  concepts[index].status = 'inactive';
-  concepts[index].fechaFin = hoy; // <--- Se guarda para la tabla
-
-  saveConcepts(concepts);
-
-  if (removePending) {
-    const charges = getCharges();
-    const filteredCharges = charges.filter(ch => !(ch.conceptId === id && ch.status === 'pending'));
-    saveCharges(filteredCharges);
+async function loadConcepts(){
+  const grid = document.getElementById('concepts-grid');
+  if(!grid) return;
+  grid.innerHTML = '<div class="col-span-full text-center py-12 bg-white rounded-xl border">Cargando...</div>';
+  try {
+    const data = await apiFetch(`${API_BASE}/v1/concepts?perPage=50`, {
+      headers: {
+        'X-User-Role': 'financial-staff',
+        'X-User-Permission': 'view.concepts'
+      }
+    });
+    conceptsCache = data?.data?.concepts?.items || [];
+    renderConcepts();
+  } catch(err){
+    console.error(err);
+    grid.innerHTML = `<div class="col-span-full text-center py-12 bg-white rounded-xl border text-red-600">${escapeHtml(err.message || 'Error al cargar')}</div>`;
   }
-  
-  renderConcepts();
-  window.dispatchEvent(new Event('storage'));
 }
 
-/* --- RENDERIZADO CON TU DISEÑO ORIGINAL --- */
 function renderConcepts(){
   const grid = document.getElementById('concepts-grid');
   if(!grid) return;
-
-  const list = getConcepts().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-
+  const list = [...conceptsCache];
   if(!list.length){
-    grid.innerHTML = `<div class="col-span-full text-center py-16 bg-white rounded-xl shadow-lg border border-gray-100">...</div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-16 bg-white rounded-xl shadow-lg border border-gray-100">Sin conceptos</div>`;
     return;
   }
 
   grid.innerHTML = list.map(c=>{
     const amount = Number(c.amount)||0;
-    const isInactive = c.status === 'inactive';
-    const targets = getTargetStudentsForConcept(c);
-    const pending = getCharges().filter(ch=>ch.conceptId===c.id && ch.status==='pending').length;
+    const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
+    const scopeText = (() => {
+      const applies = c.applies_to || c.appliesTo || '';
+      if (applies === 'todos') return 'Todos';
+      if (applies === 'students') return `${(c.userIds||c.user_ids||[]).length} alumnos`; 
+      if (applies === 'career' || applies === 'careers') return `${(c.careerIds||c.careers||[]).length} carreras`;
+      if (applies === 'semesters' || applies === 'semester') return `${(c.semesters||[]).length} semestres`;
+      return 'No definido';
+    })();
+    const pending = c.pendingCharges || 0;
 
     return `
       <div class="bg-white rounded-xl shadow-lg border ${isInactive ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'} p-5 flex flex-col justify-between transition hover:shadow-2xl">
-        
         <div class="flex justify-between items-start mb-4">
           <div class="pr-2">
-            <h3 class="font-bold text-lg text-gray-900 leading-tight line-clamp-2">${escapeHtml(c.title)}</h3>
-            ${isInactive ? '<span class="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase">Finalizado</span>' : '<span class="inline-block mt-1 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase">Vigente</span>'}
+            <h3 class="font-bold text-lg text-gray-900 leading-tight line-clamp-2">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
+            ${getStatusBadge(c.status)}
           </div>
           <div class="text-xl font-black text-[${PRIMARY_TEXT_COLOR_HEX}] flex-shrink-0">${formatCurrency(amount)}</div>
         </div>
@@ -165,11 +134,11 @@ function renderConcepts(){
         <div class="text-sm space-y-2 py-3 rounded-lg bg-white/50 border border-gray-100 px-3 mb-4">
           <div class="flex justify-between items-center">
             <span class="text-gray-500 font-medium text-xs uppercase italic">Filtro:</span>
-            <span class="font-semibold text-gray-800">${getScopeText(c)}</span>
+            <span class="font-semibold text-gray-800">${scopeText}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-gray-500 font-medium text-xs uppercase italic">Impacto:</span>
-            <span class="font-semibold text-gray-800">${targets.length} alumnos</span>
+            <span class="text-gray-500 font-medium text-xs uppercase italic">Vigencia:</span>
+            <span class="font-semibold text-gray-800">${escapeHtml(c.start_date || '')} - ${escapeHtml(c.end_date || '')}</span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-500 font-medium text-xs uppercase italic">Adeudos Activos:</span>
@@ -192,7 +161,9 @@ function renderConcepts(){
                 <i class="fas fa-check-double mr-1"></i> Finalizar
               </button>
             ` : `
-              <button class="w-1/3 py-2 text-xs font-bold text-amber-400 cursor-not-allowed italic" disabled>Cerrado</button>
+              <button onclick="window.activateConcept('${c.id}')" class="w-1/3 py-2 text-xs font-bold bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 border border-emerald-200 transition">
+                <i class="fas fa-play mr-1"></i> Activar
+              </button>
             `}
 
             <button onclick="window.deleteConcept('${c.id}')" class="w-1/3 py-2 text-xs font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-200 transition">
@@ -209,22 +180,56 @@ function renderConcepts(){
   }).join('');
 }
 
+async function mutateConcept(id, action){
+  const endpoints = {
+    finalize: `${API_BASE}/v1/concepts/${id}/finalize`,
+    activate: `${API_BASE}/v1/concepts/${id}/activate`,
+    disable: `${API_BASE}/v1/concepts/${id}/disable`,
+    delete: `${API_BASE}/v1/concepts/${id}`
+  };
+  const perms = {
+    finalize: 'finalize.concepts',
+    activate: 'activate.concepts',
+    disable: 'disable.concepts',
+    delete: 'eliminate.concepts'
+  };
+  const method = action === 'delete' ? 'DELETE' : 'POST';
+  await apiFetch(endpoints[action], {
+    method,
+    headers: {
+      'X-User-Role': 'financial-staff',
+      'X-User-Permission': perms[action]
+    }
+  });
+  await loadConcepts();
+}
+
 /* --- EXPOSICIÓN GLOBAL --- */
 window.editConcept = (id) => {
-  const c = getConcepts().find(x=>x.id===id);
-  localStorage.setItem('editingConcept', JSON.stringify(c));
+  const c = conceptsCache.find(x=>String(x.id)===String(id));
+  localStorage.setItem('editingConcept', JSON.stringify({
+    id: c.id,
+    title: c.concept_name || c.conceptName,
+    amount: c.amount,
+    description: c.description,
+    status: c.status,
+    scopeRules: {
+      allStudents: (c.applies_to || c.appliesTo) === 'todos',
+      careers: c.careerIds || c.careers || [],
+      semesters: c.semesters || [],
+      specificStudents: c.userIds || c.user_ids || []
+    }
+  }));
   window.location.href = '/new?edit='+encodeURIComponent(id);
 };
-window.finalizeConcept = finalizeConcept;
+window.finalizeConcept = (id) => mutateConcept(id, 'finalize');
+window.activateConcept = (id) => mutateConcept(id, 'activate');
 window.deleteConcept = (id) => {
-  if(!confirm('⚠️ ¿ELIMINAR concepto?')) return;
-  saveConcepts(getConcepts().filter(c=>c.id!==id));
-  renderConcepts();
-  window.dispatchEvent(new Event('storage'));
+  if(!confirm('⚠️ ¿ELIMINAR concepto definitivamente?')) return;
+  mutateConcept(id, 'delete');
 };
 
-renderConcepts();
-window.addEventListener('storage', renderConcepts);
+loadConcepts();
 </script>
 
 <style>

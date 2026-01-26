@@ -2,9 +2,13 @@
 // src/pages/new.astro
 import Layout from '../layouts/Layout.astro';
 // Asume Tailwind configurado
+const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
 <Layout title="Crear Concepto - CBTA 71">
+  <script is:inline define:vars={{ API_BASE_URL }}>
+    window.__API_BASE_URL__ = API_BASE_URL;
+  </script>
   <style>
     /* Estilos de Alpine.js: MANTENER */
     [x-cloak] { display: none !important; }
@@ -79,12 +83,15 @@ import Layout from '../layouts/Layout.astro';
 
         allStudents: [],
 
+        apiBaseUrl: window.__API_BASE_URL__ || '',
+        isSaving: false,
+
         formData: {
             id: null,
             title: '',
             amount: 0,
             description: '',
-            status: 'active',
+          status: 'activo',
             
             allStudents: true,
             selectedCareers: [],
@@ -187,6 +194,7 @@ import Layout from '../layouts/Layout.astro';
         
         submitForm() {
           this.errorMessage = '';
+          if (this.isSaving) return;
           
           // Validación básica
           if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) <= 0) {
@@ -206,50 +214,53 @@ import Layout from '../layouts/Layout.astro';
               }
           }
           
-          const newConcept = {
-            id: this.formData.id || Date.now().toString(),
-            title: this.formData.title,
-            amount: parseFloat(this.formData.amount),
+          const payload = {
+            concept_name: this.formData.title,
+            description: this.formData.description || '',
             status: this.formData.status,
-            description: this.formData.description,
-            scopeRules: {
-              allStudents: this.formData.allStudents,
-              careers: this.formData.selectedCareers,
-              semesters: this.formData.selectedSemesters,
-              specificStudents: this.formData.selectedSpecificStudents.map(s => s.id)
-            },
-            createdAt: new Date().toISOString()
+            amount: parseFloat(this.formData.amount),
+            applies_to: this.formData.allStudents ? 'todos' : ((this.formData.selectedSpecificStudents.length > 0) ? 'students' : 'career'),
+            semestres: this.formData.selectedSemesters.map(Number),
+            careers: this.formData.selectedCareers,
+            students: this.formData.selectedSpecificStudents.map(s => s.id),
+            exceptionStudents: [],
+            applicantTags: []
           };
 
-          try {
-            let stored = JSON.parse(localStorage.getItem('conceptsList') || '[]');
-            if (this.formData.id) {
-              stored = stored.map(c => c.id === this.formData.id ? newConcept : c);
-            } else {
-              stored.unshift(newConcept);
-            }
-            localStorage.setItem('conceptsList', JSON.stringify(stored));
-            
-            let assignationMessage = '';
-            if (newConcept.status === 'active') {
-                try {
-                    const assignedCount = window.assignConceptToScope ? window.assignConceptToScope(newConcept) : 0;
-                    assignationMessage = `✓ Concepto guardado y aplicado a ${assignedCount} alumnos.`;
-                } catch (assignError) {
-                    console.error('Error en cobro automático:', assignError);
-                    assignationMessage = '✓ Concepto guardado pero hubo un error al aplicar el cobro.';
-                }
-            } else {
-                assignationMessage = '✓ Concepto guardado como Inactivo.';
-            }
-            
-            localStorage.removeItem('editingConcept');
-            this.errorMessage = assignationMessage + ' Redirigiendo...';
-            
-            setTimeout(() => { window.location.href = '/concepts'; }, 2000);
-          } catch(e) {
-            this.errorMessage = '❌ Error guardando el concepto.';
+          const token = localStorage.getItem('access_token');
+          if (!token) {
+            this.errorMessage = '❌ No hay token, inicia sesión.';
+            return;
           }
+
+          this.isSaving = true;
+          const endpoint = this.formData.id
+            ? `${this.apiBaseUrl}/v1/concepts/${this.formData.id}`
+            : `${this.apiBaseUrl}/v1/concepts`;
+
+          fetch(endpoint, {
+            method: this.formData.id ? 'PUT' : 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'X-User-Role': 'financial-staff',
+              'X-User-Permission': this.formData.id ? 'update.concepts' : 'create.concepts'
+            },
+            body: JSON.stringify(payload)
+          })
+          .then(async (res) => {
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Error al guardar');
+            localStorage.removeItem('editingConcept');
+            this.errorMessage = '✓ Concepto guardado en el servidor. Redirigiendo...';
+            setTimeout(() => { window.location.href = '/concepts'; }, 1200);
+          })
+          .catch(err => {
+            console.error(err);
+            this.errorMessage = `❌ ${err.message}`;
+          })
+          .finally(() => { this.isSaving = false; });
         },
         
         cancel() {
