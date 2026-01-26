@@ -152,10 +152,20 @@ export const AuthService = {
       throw new Error('No authentication token available');
     }
 
-    const headers = {
+    const isFormData = options?.body instanceof FormData;
+    const baseHeaders = {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
+    };
+
+    // Solo establecer Content-Type si no es FormData y no viene definido por el caller
+    const contentTypeHeader = (!isFormData && !(options.headers && options.headers['Content-Type']))
+      ? { 'Content-Type': 'application/json' }
+      : {};
+
+    const headers = {
+      ...baseHeaders,
+      ...contentTypeHeader,
       ...options.headers,
     };
 
@@ -171,8 +181,11 @@ export const AuthService = {
           await this.refreshToken();
           // Reintentar con el nuevo token
           const newToken = this.getToken();
-          headers['Authorization'] = `Bearer ${newToken}`;
-          return await fetch(url, { ...options, headers });
+          const retryHeaders = {
+            ...headers,
+            Authorization: `Bearer ${newToken}`,
+          };
+          return await fetch(url, { ...options, headers: retryHeaders });
         } catch (refreshError) {
           // Si el refresh falla, limpiar y redirigir al login
           this.clearAuth();

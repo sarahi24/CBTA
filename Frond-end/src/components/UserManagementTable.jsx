@@ -18,6 +18,12 @@ export default function UserManagementTable({ onEdit, onDelete, onRefresh }) {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
 
+  const normalizeStatus = (status) => {
+    const normalized = (status || '').toLowerCase();
+    if (normalized === 'active') return 'activo';
+    return normalized;
+  };
+
   // Cargar usuarios
   const loadUsers = async (page = 1, forceRefresh = false) => {
     try {
@@ -136,13 +142,18 @@ export default function UserManagementTable({ onEdit, onDelete, onRefresh }) {
 
   // Filtrado local por término de búsqueda
   const filteredUsers = users.filter(user => {
-    if (!filters.searchTerm) return true;
-    const searchLower = filters.searchTerm.toLowerCase();
-    return (
+    const searchLower = (filters.searchTerm || '').toLowerCase();
+    const requestedStatus = normalizeStatus(filters.status);
+    const userStatus = normalizeStatus(user.status);
+
+    const matchesStatus = !requestedStatus || userStatus === requestedStatus;
+    const matchesSearch = !searchLower || (
       user.fullName?.toLowerCase().includes(searchLower) ||
       user.email?.toLowerCase().includes(searchLower) ||
       user.id?.toString().includes(searchLower)
     );
+
+    return matchesStatus && matchesSearch;
   });
 
   if (loading && users.length === 0) {
@@ -274,7 +285,11 @@ export default function UserManagementTable({ onEdit, onDelete, onRefresh }) {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user) => {
+                  const isEliminated = normalizeStatus(user.status) === 'eliminado';
+                  const statusLabel = normalizeStatus(user.status) || 'sin-estado';
+
+                  return (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <input
@@ -297,13 +312,13 @@ export default function UserManagementTable({ onEdit, onDelete, onRefresh }) {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.status === 'active' || user.status === 'activo'
+                        statusLabel === 'activo'
                           ? 'bg-green-100 text-green-800'
-                          : user.status === 'baja-temporal'
+                          : statusLabel === 'baja-temporal'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {user.status}
+                        {statusLabel}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
@@ -324,8 +339,9 @@ export default function UserManagementTable({ onEdit, onDelete, onRefresh }) {
                           ✏️ Editar
                         </button>
                         <button
-                          onClick={() => onDelete && onDelete(user.id)}
-                          className="text-red-600 hover:text-red-900 font-medium"
+                          onClick={() => !isEliminated && onDelete && onDelete(user.id)}
+                          disabled={isEliminated}
+                          className={`${isEliminated ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-900'} font-medium`}
                           title="Eliminar"
                         >
                           🗑️ Eliminar
@@ -333,7 +349,8 @@ export default function UserManagementTable({ onEdit, onDelete, onRefresh }) {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

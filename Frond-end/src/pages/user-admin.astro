@@ -239,7 +239,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                         <button @click="openModal(user)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">
                                             ✏️ Editar
                                         </button>
-                                        <button @click="deleteUser(user.id)" class="text-red-600 hover:text-red-900 text-sm font-medium">
+                                        <button
+                                            @click="deleteUser(user)"
+                                            :disabled="normalizeStatus(user.status) === 'eliminado'"
+                                            :class="normalizeStatus(user.status) === 'eliminado' ? 'text-gray-400 cursor-not-allowed text-sm font-medium' : 'text-red-600 hover:text-red-900 text-sm font-medium'"
+                                        >
                                             🗑️ Eliminar
                                         </button>
                                     </div>
@@ -438,14 +442,79 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     };
                 },
 
+                async authenticatedFetch(url, options = {}) {
+                    const accessToken = localStorage.getItem('access_token');
+                    const refreshToken = localStorage.getItem('refresh_token');
+
+                    if (!accessToken) {
+                        throw new Error('No hay token de autenticación');
+                    }
+
+                    const headers = {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Accept': 'application/json',
+                        ...options.headers,
+                    };
+
+                    if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+                        headers['Content-Type'] = 'application/json';
+                    }
+
+                    const execFetch = () => fetch(url, { ...options, headers });
+                    let response = await execFetch();
+
+                    if (response.status === 401 && refreshToken) {
+                        const refreshResponse = await fetch(`${window.__API_BASE_URL__}/v1/refresh`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ refresh_token: refreshToken })
+                        });
+
+                        if (refreshResponse.ok) {
+                            const data = await refreshResponse.json().catch(() => ({}));
+                            const newAccess = data.data?.access_token;
+                            const newRefresh = data.data?.refresh_token;
+                            if (newAccess) {
+                                localStorage.setItem('access_token', newAccess);
+                                headers['Authorization'] = `Bearer ${newAccess}`;
+                            }
+                            if (newRefresh) {
+                                localStorage.setItem('refresh_token', newRefresh);
+                            }
+                            response = await execFetch();
+                        } else {
+                            localStorage.removeItem('access_token');
+                            localStorage.removeItem('refresh_token');
+                            window.location.href = '/';
+                            throw new Error('Sesión expirada, vuelve a iniciar sesión');
+                        }
+                    }
+
+                    return response;
+                },
+
+                normalizeStatus(status) {
+                    const normalized = (status || '').toLowerCase();
+                    return normalized === 'active' ? 'activo' : normalized;
+                },
+
                 get filteredUsers() {
-                    if (!this.searchTerm) return this.users;
-                    const search = this.searchTerm.toLowerCase();
-                    return this.users.filter(u => 
-                        u.fullName?.toLowerCase().includes(search) ||
-                        u.email?.toLowerCase().includes(search) ||
-                        u.id?.toString().includes(search)
-                    );
+                    const search = (this.searchTerm || '').toLowerCase().trim();
+                    const requestedStatus = this.normalizeStatus(this.filters.status);
+
+                    return this.users.filter(u => {
+                        const normalizedStatus = this.normalizeStatus(u.status);
+                        const matchesStatus = !requestedStatus || normalizedStatus === requestedStatus;
+                        const matchesSearch = !search || (
+                            (u.fullName || '').toLowerCase().includes(search) ||
+                            (u.email || '').toLowerCase().includes(search) ||
+                            u.id?.toString().includes(search)
+                        );
+                        return matchesStatus && matchesSearch;
+                    });
                 },
 
                 async loadUsers(forceRefresh = false) {
@@ -453,12 +522,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.apiError = null;
 
                     try {
-                        const token = localStorage.getItem('access_token');
-                        if (!token) {
-                            this.apiError = 'No hay token de autenticación';
-                            return;
-                        }
-
                         const params = new URLSearchParams({
                             page: this.pagination.currentPage,
                             perPage: this.pagination.perPage,
@@ -466,10 +529,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             forceRefresh: forceRefresh
                         });
 
-                        const response = await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/show-users?${params}`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/show-users?${params}`, {
+                            method: 'GET',
                             headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Accept': 'application/json',
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.users'
                             }
@@ -549,23 +611,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 async saveUser() {
                     this.isLoading = true;
                     try {
-                        const token = localStorage.getItem('access_token');
                         const url = this.editingUser 
                             ? `${window.__API_BASE_URL__}/v1/admin-actions/update-user/${this.editingUser.id}`
                             : `${window.__API_BASE_URL__}/v1/admin-actions/register`;
 
-                        const response = await fetch(url, {
-                            method: this.editingUser ? 'PATCH' : 'POST',
+                        const response = await this.authenticatedFetch(url, {
+                            method: this.editingUser ? 'PUT' : 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`,
                                 'X-User-Role': 'admin',
-                                'X-User-Permission': 'create.user'
+                                'X-User-Permission': this.editingUser ? 'update.user' : 'create.user'
                             },
                             body: JSON.stringify(this.formData)
                         });
 
-                        if (!response.ok) throw new Error('Error al guardar usuario');
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'Error al guardar usuario');
+                        }
 
                         this.showNotification(this.editingUser ? 'Usuario actualizado' : 'Usuario creado', 'success');
                         this.closeModal();
@@ -577,20 +639,40 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     }
                 },
 
-                async deleteUser(userId) {
+                async deleteUser(userOrId) {
+                    const target = typeof userOrId === 'object' ? userOrId : this.users.find(u => u.id === userOrId);
+                    if (target && this.normalizeStatus(target.status) === 'eliminado') {
+                        this.showNotification('Este usuario ya está marcado como eliminado', 'success');
+                        return;
+                    }
+
+                    const userId = target?.id ?? userOrId;
+                    if (!userId) {
+                        this.showNotification('No se pudo identificar el usuario a eliminar', 'error');
+                        return;
+                    }
+
                     if (!confirm('¿Eliminar este usuario?')) return;
 
                     try {
-                        const token = localStorage.getItem('access_token');
-                        const response = await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/delete-user/${userId}`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/delete-user/${userId}`, {
                             method: 'DELETE',
                             headers: {
-                                'Authorization': `Bearer ${token}`,
                                 'X-User-Role': 'admin'
                             }
                         });
 
-                        if (!response.ok) throw new Error('Error al eliminar');
+                        if (response.status === 409) {
+                            const data = await response.json().catch(() => ({}));
+                            this.showNotification(data.message || 'El usuario ya estaba eliminado', 'success');
+                            this.loadUsers(true);
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'Error al eliminar');
+                        }
 
                         this.showNotification('Usuario eliminado', 'success');
                         this.loadUsers(true);
@@ -603,18 +685,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (!confirm(`¿Eliminar ${this.selectedUsers.length} usuarios?`)) return;
 
                     try {
-                        const token = localStorage.getItem('access_token');
-                        await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/delete-users`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/delete-users`, {
                             method: 'DELETE',
+                            body: JSON.stringify({ user_ids: this.selectedUsers }),
                             headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`,
                                 'X-User-Role': 'admin'
-                            },
-                            body: JSON.stringify({ user_ids: this.selectedUsers })
+                            }
                         });
 
-                        this.showNotification('Usuarios eliminados', 'success');
+                        if (response.status === 409) {
+                            const data = await response.json().catch(() => ({}));
+                            this.showNotification(data.message || 'Algunos usuarios ya estaban eliminados', 'success');
+                        } else if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'Error al eliminar usuarios');
+                        } else {
+                            this.showNotification('Usuarios eliminados', 'success');
+                        }
                         this.selectedUsers = [];
                         this.loadUsers(true);
                     } catch (error) {
@@ -626,16 +713,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (!confirm(`¿Dar de baja a ${this.selectedUsers.length} usuarios?`)) return;
 
                     try {
-                        const token = localStorage.getItem('access_token');
-                        await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/disable-users`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/disable-users`, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`,
                                 'X-User-Role': 'admin'
                             },
                             body: JSON.stringify({ user_ids: this.selectedUsers })
                         });
+
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'Error al dar de baja');
+                        }
 
                         this.showNotification('Usuarios dados de baja', 'success');
                         this.selectedUsers = [];
@@ -649,16 +738,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (!confirm(`¿Baja temporal a ${this.selectedUsers.length} usuarios?`)) return;
 
                     try {
-                        const token = localStorage.getItem('access_token');
-                        await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/temporary-disable-users`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/temporary-disable-users`, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`,
                                 'X-User-Role': 'admin'
                             },
                             body: JSON.stringify({ user_ids: this.selectedUsers })
                         });
+
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'Error al aplicar baja temporal');
+                        }
 
                         this.showNotification('Baja temporal aplicada', 'success');
                         this.selectedUsers = [];
@@ -672,11 +763,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (!confirm('¿Promover TODOS los estudiantes?')) return;
 
                     try {
-                        const token = localStorage.getItem('access_token');
-                        const response = await fetch(`${window.__API_BASE_URL__}/v1/admin-actions/promotion`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}/v1/admin-actions/promotion`, {
                             method: 'POST',
                             headers: {
-                                'Authorization': `Bearer ${token}`,
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'promote.student'
                             }
@@ -712,7 +801,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     }
 
                     try {
-                        const token = localStorage.getItem('access_token');
                         const formData = new FormData();
                         formData.append('file', file);
 
@@ -720,11 +808,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             ? '/v1/admin-actions/import'
                             : '/v1/admin-actions/import-students';
 
-                        const response = await fetch(`${window.__API_BASE_URL__}${endpoint}`, {
+                        const response = await this.authenticatedFetch(`${window.__API_BASE_URL__}${endpoint}`, {
                             method: 'POST',
                             headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Accept': 'application/json',
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'import.users'
                             },
