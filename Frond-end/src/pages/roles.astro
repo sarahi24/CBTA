@@ -975,12 +975,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     const result = await response.json();
                     if (response.ok) {
-                        this.selectedUsers.forEach(id => {
-                            const user = this.users.find(u => u.id === id);
-                            if (user) user.status = 'eliminado';
-                        });
-                        this.selectedUsers = [];
                         this.showNotify(result.message || 'Usuarios marcados como eliminados', 'success');
+                        this.selectedUsers = [];
+                        // Recargar lista para reflejar cambios
+                        await this.loadUsers(token);
                     } else {
                         this.showNotify(result.message || 'Error al eliminar usuarios', 'error');
                     }
@@ -1012,12 +1010,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     const result = await response.json();
                     if (response.ok) {
-                        this.selectedUsers.forEach(id => {
-                            const user = this.users.find(u => u.id === id);
-                            if (user) user.status = 'baja';
-                        });
-                        this.selectedUsers = [];
                         this.showNotify(result.message || 'Usuarios dados de baja', 'success');
+                        this.selectedUsers = [];
+                        // Recargar lista para reflejar cambios
+                        await this.loadUsers(token);
                     } else {
                         this.showNotify(result.message || 'Error al dar de baja', 'error');
                     }
@@ -1049,18 +1045,60 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     const result = await response.json();
                     if (response.ok) {
-                        this.selectedUsers.forEach(id => {
-                            const user = this.users.find(u => u.id === id);
-                            if (user) user.status = 'baja-temporal';
-                        });
-                        this.selectedUsers = [];
                         this.showNotify(result.message || 'Baja temporal aplicada', 'success');
+                        this.selectedUsers = [];
+                        // Recargar lista para reflejar cambios
+                        await this.loadUsers(token);
                     } else {
                         this.showNotify(result.message || 'Error al dar de baja temporal', 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error en bulkTemporaryDisable:', error);
                     this.showNotify('Error al dar de baja temporal', 'error');
+                }
+            },
+
+            async activateUsers() {
+                if (this.selectedUsers.length === 0) {
+                    this.showNotify('Selecciona al menos un usuario', 'error');
+                    return;
+                }
+                
+                if (!confirm(`¿Activar ${this.selectedUsers.length} usuario(s)?`)) {
+                    return;
+                }
+                
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/activate-users`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'activate.users'
+                            },
+                            body: JSON.stringify({ ids: this.selectedUsers })
+                        }
+                    );
+                    
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        this.showNotify(result.message || 'Usuarios activados correctamente', 'success');
+                        this.selectedUsers = [];
+                        // Recargar lista para reflejar cambios
+                        await this.loadUsers(token);
+                    } else {
+                        this.showNotify(result.message || 'Error al activar usuarios', 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Error al activar usuarios:', error);
+                    this.showNotify('Error de conexión', 'error');
                 }
             },
 
@@ -1377,9 +1415,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     if (response.ok) {
                         console.log('✅ Usuario marcado como eliminado');
-                        const user = this.users.find(u => u.id === id);
-                        if (user) user.status = 'eliminado';
                         this.showNotify(result.message || 'Usuario eliminado correctamente', 'success');
+                        // Recargar lista para reflejar cambios
+                        await this.loadUsers(token);
+                    } else if (response.status === 409) {
+                        // Usuario ya estaba eliminado, removerlo de la lista
+                        console.log('⚠️ Usuario ya estaba eliminado, removiendo de la lista');
+                        this.users = this.users.filter(u => u.id !== id);
+                        this.showNotify('Usuario ya estaba eliminado', 'success');
                     } else {
                         console.error('❌ Error al eliminar:', response.status, result);
                         this.showNotify(result.message || 'Error al eliminar usuario', 'error');
