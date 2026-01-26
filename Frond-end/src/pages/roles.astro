@@ -641,9 +641,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <form @submit.prevent="saveStudentDetails()" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ID de Carrera *</label>
-                                <input x-model="studentDetails.career_id" type="number" required min="1" 
-                                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Carrera *</label>
+                                <div class="flex items-start gap-2">
+                                    <div class="flex-1">
+                                        <select x-model="studentDetails.career_id" required
+                                                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                            <option value="">Selecciona una carrera</option>
+                                            <template x-for="career in careers" :key="career.id">
+                                                <option :value="career.id" x-text="`ID ${career.id} - ${career.career_name}`"></option>
+                                            </template>
+                                        </select>
+                                        <p x-show="isLoadingCareers" class="text-xs text-slate-500 mt-1">Cargando carreras...</p>
+                                        <p x-show="!isLoadingCareers && !careers.length" class="text-xs text-slate-500 mt-1">No hay carreras registradas.</p>
+                                    </div>
+                                    <button type="button" @click="loadCareers(true)"
+                                            class="px-3 py-2 text-xs font-semibold text-teal-700 hover:text-teal-800 hover:bg-teal-50 rounded-lg border border-teal-200">
+                                        🔄
+                                    </button>
+                                </div>
                             </div>
                             
                             <div>
@@ -717,14 +732,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <div class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                         <div class="flex items-center justify-between mb-3">
                             <h4 class="text-sm font-semibold text-slate-800">Carreras existentes (ID)</h4>
-                            <div class="flex gap-2">
-                                <button type="button" @click="loadCareers(false)" class="text-xs font-semibold text-teal-700 hover:text-teal-800">
-                                    ↻ Actualizar
-                                </button>
-                                <button type="button" @click="loadCareers(true)" class="text-xs font-semibold text-teal-700 hover:text-teal-800">
-                                    🔄 Forzar caché
-                                </button>
-                            </div>
+                            <button type="button" @click="loadCareers(false)" class="text-xs font-semibold text-teal-700 hover:text-teal-800">
+                                ↻ Actualizar
+                            </button>
                         </div>
                         <div x-show="isLoadingCareers" class="text-sm text-slate-600">Cargando carreras...</div>
                         <div x-show="!isLoadingCareers && careers.length" class="max-h-56 overflow-y-auto divide-y divide-slate-200 text-sm">
@@ -1967,6 +1977,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.showNotify('No hay token de autenticación', 'error');
                     return;
                 }
+
+                // Asegurar que las carreras estén cargadas antes de mostrar el modal
+                await this.loadCareers();
                 
                 try {
                     // Obtener detalles del estudiante si ya existen
@@ -2049,13 +2062,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         permission = 'attach.student';
                     }
 
+                    const payload = {
+                        ...this.studentDetails,
+                        career_id: Number(this.studentDetails.career_id)
+                    };
+
                     const response = await this.authenticatedFetch(endpoint, {
                         method,
                         headers: {
                             'X-User-Role': 'admin',
                             'X-User-Permission': permission
                         },
-                        body: JSON.stringify(this.studentDetails)
+                        body: JSON.stringify(payload)
                     });
 
                     const result = await response.json();
