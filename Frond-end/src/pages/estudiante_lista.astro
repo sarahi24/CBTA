@@ -303,6 +303,12 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
         carrera: ''
       };
 
+      // FUNCIÓN: Normaliza para búsqueda insensible a mayúsculas y acentos
+      function normalizeForSearch(str) {
+          if (!str) return '';
+          return String(str).toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      }
+
       // CAMBIO 1: Crear el Mapa Inverso (Nombre Completo -> Código Corto)
       const REVERSE_CAREER_MAP = Object.entries(CARRERA_MAP).reduce((acc, [code, name]) => {
           // Normalizamos para búsqueda insensible a mayúsculas y acentos
@@ -314,38 +320,27 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
 
       const readLocal = () => {
         try {
+          // Leer el localStorage (tanto del STORAGE_KEY como de roles.astro que usa la misma clave)
           const raw = localStorage.getItem(STORAGE_KEY);
-          let arr = raw ? JSON.parse(raw) : [];
-          if (!Array.isArray(arr)) arr = [];
+          let arr = [];
           
-          // También leer los estudiantes guardados desde roles.astro
-          const studentsListRaw = localStorage.getItem('studentsList');
-          if (studentsListRaw) {
+          if (raw) {
             try {
-              const studentsList = JSON.parse(studentsListRaw);
-              if (Array.isArray(studentsList)) {
-                // Fusionar listas: mantener registros únicos por ID
-                const mergedMap = new Map();
-                
-                // Primero agregar los del STORAGE_KEY
-                arr.forEach(s => {
-                  if (s.id) mergedMap.set(s.id, s);
-                });
-                
-                // Luego agregar/actualizar con los de studentsList
-                studentsList.forEach(s => {
-                  if (s.id) mergedMap.set(s.id, s);
-                });
-                
-                arr = Array.from(mergedMap.values());
-                console.log('✅ Listas fusionadas. Total estudiantes:', arr.length);
-              }
+              arr = JSON.parse(raw);
+              if (!Array.isArray(arr)) arr = [];
             } catch (e) {
-              console.warn('⚠️ Error al leer studentsList:', e);
+              console.warn('⚠️ Error al parsear localStorage:', e);
+              arr = [];
             }
           }
           
-          return Array.isArray(arr) ? arr : initial.slice();
+          // Si no hay datos en localStorage, usar los datos iniciales del servidor
+          if (arr.length === 0 && initial.length > 0) {
+            arr = initial.slice();
+            console.log('📥 Usando datos iniciales del servidor. Total:', arr.length);
+          }
+          
+          return arr.length > 0 ? arr : initial.slice();
         } catch (e) {
           console.warn('⚠️ Error al leer localStorage:', e);
           return initial.slice();
@@ -443,12 +438,6 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       }
 
       // FUNCIÓN: Normaliza para búsqueda insensible a mayúsculas y acentos
-      function normalizeForSearch(str) {
-          if (!str) return '';
-          // toLowerCase: Convierte a minúsculas y normalize("NFD").replace: elimina acentos/diacríticos
-          return String(str).toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      }
-
       // FUNCIÓN CORREGIDA: Capitaliza correctamente respetando acentos
       function capitalizeName(str) {
         if (!str) return '';
@@ -1070,89 +1059,42 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       });
 
       // ==================== LISTENER PARA SINCRONIZACIÓN CON ROLES.ASTRO ====================
-      // Escuchar el evento cuando se asocia un estudiante desde roles.astro
       window.addEventListener('student-associated', (event) => {
-        const { student, action } = event.detail;
-        console.log(`📥 Evento recibido: ${action === 'update' ? 'ACTUALIZAR' : 'CREAR'} estudiante`, student);
-        
-        if (!student || !student.id) {
-          console.warn('⚠️ Evento inválido: falta ID del estudiante');
-          return;
-        }
-        
-        let list = readLocal();
-        
-        // Buscar si ya existe el estudiante por ID
-        const existingIndex = list.findIndex(s => s.id === student.id);
-        
-        if (existingIndex !== -1) {
-          // Actualizar estudiante existente
-          list[existingIndex] = {
-            ...list[existingIndex],
-            ...student  // Reemplazar con todos los datos nuevos
-          };
-          console.log('✏️ Estudiante actualizado en la tabla:', list[existingIndex]);
-        } else {
-          // Crear nuevo registro de estudiante - asegurar que tenga todos los campos
-          const newStudent = {
-            id: student.id,
-            numControl: student.numControl || '',
-            nombre: student.nombre || '',
-            apellidoP: student.apellidoP || '',
-            apellidoM: student.apellidoM || '',
-            semestre: student.semestre || 0,
-            carrera: student.carrera || '',
-            correo: student.correo || '',
-            group: student.group || '',
-            workshop: student.workshop || ''
-          };
-          list.unshift(newStudent);
-          console.log('✅ Nuevo estudiante agregado a la tabla:', newStudent);
-        }
-        
-        // Guardar cambios en ambos localStorage
-        writeLocal(list);
-        
-        // También actualizar studentsList para mantener sincronización
         try {
-          let studentsList = [];
-          const stored = localStorage.getItem('studentsList');
-          if (stored) {
-            try {
-              studentsList = JSON.parse(stored);
-              if (!Array.isArray(studentsList)) studentsList = [];
-            } catch (e) {
-              studentsList = [];
-            }
+          const { student, action } = event.detail;
+          if (!student || !student.id) {
+            console.warn('⚠️ Evento inválido: falta ID del estudiante');
+            return;
           }
           
-          const studentsListIndex = studentsList.findIndex(s => s.id === student.id);
-          if (studentsListIndex !== -1) {
-            studentsList[studentsListIndex] = student;
+          console.log(`📥 Evento: ${action} estudiante con ID ${student.id}`);
+          
+          let list = readLocal();
+          
+          // Buscar si ya existe
+          const existingIndex = list.findIndex(s => s.id === student.id);
+          
+          if (existingIndex !== -1) {
+            // Actualizar
+            list[existingIndex] = { ...list[existingIndex], ...student };
+            console.log('✏️ Estudiante actualizado');
           } else {
-            studentsList.unshift(student);
+            // Crear nuevo
+            list.unshift(student);
+            console.log('✅ Nuevo estudiante agregado');
           }
           
-          localStorage.setItem('studentsList', JSON.stringify(studentsList));
-          console.log('💾 StudentsList sincronizado');
-        } catch (storageError) {
-          console.warn('⚠️ Error al sincronizar studentsList:', storageError);
-        }
-        
-        // Volver a la primera página y renderizar
-        paginationState.currentPage = 1;
-        render();
-        updateStats();
-        
-        // Mostrar notificación
-        try {
-          if (typeof msg !== 'undefined' && msg) {
-            showMsg(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`, false);
-          } else {
-            console.log(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`);
-          }
-        } catch (e) {
-          console.log(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`);
+          // Guardar cambios
+          writeLocal(list);
+          
+          // Renderizar cambios
+          paginationState.currentPage = 1;
+          render();
+          updateStats();
+          
+          console.log('✅ Página actualizada. Total estudiantes:', list.length);
+        } catch (error) {
+          console.error('❌ Error en listener:', error);
         }
       });
       // ========================================================================================
