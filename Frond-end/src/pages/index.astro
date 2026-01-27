@@ -131,11 +131,19 @@ const pageTitle = "Acceso al Sistema - SIGE";
                         localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
                         // Guardar también valores individuales para fácil acceso
                         localStorage.setItem('userId', userData.id);
-                        localStorage.setItem('userName', userData.fullName || userData.name || 'Usuario');
+                        
+                        // Obtener el nombre de múltiples fuentes posibles
+                        const userFullName = userData.fullName || userData.full_name || 
+                                            (userData.name && userData.last_name ? userData.name + ' ' + userData.last_name : null) ||
+                                            userData.name || 
+                                            'Usuario';
+                        
+                        localStorage.setItem('userName', userFullName);
                         localStorage.setItem('userEmail', userData.email || '');
+                        
                         console.log('✅ User data guardado:', userData);
                         console.log('✅ ID:', userData.id);
-                        console.log('✅ fullName:', userData.fullName);
+                        console.log('✅ Nombre guardado como:', userFullName);
                         console.log('✅ Roles:', userData.roles);
                     }
                     
