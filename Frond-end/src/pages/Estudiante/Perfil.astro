@@ -5,7 +5,7 @@ const title = "Mi Perfil";
 ---
 
 <StudentLayout title={title}>
-  <div class="profile-container" x-data="profileManager()" x-init="init()">
+  <div class="profile-container" x-data="profileManager()">
     <header class="profile-header">
       <div class="header-content">
         <h1>Mi Perfil</h1>
@@ -281,6 +281,7 @@ const title = "Mi Perfil";
 
 <script>
   function profileManager() {
+    console.log('🎯 profileManager() iniciado');
     return {
       activeTab: 'datos',
       loading: true,
@@ -315,7 +316,9 @@ const title = "Mi Perfil";
       },
 
       async init() {
+        console.log('🔄 init() llamado - Cargando datos del perfil...');
         const token = localStorage.getItem('token');
+        console.log('🔑 Token existe:', !!token);
         if (!token) {
           this.errorMessage = 'No estás autenticado. Por favor inicia sesión.';
           this.loading = false;
