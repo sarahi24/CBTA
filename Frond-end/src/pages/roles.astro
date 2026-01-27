@@ -2644,6 +2644,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         : `${this.apiBaseUrl}/v1/careers`;
                     const method = isEditing ? 'PUT' : 'POST';
 
+                    console.log(`📤 ${isEditing ? 'Actualizando' : 'Creando'} carrera:`, { url, method, careerName });
+
                     const response = await this.authenticatedFetch(url, {
                         method,
                         headers: {
@@ -2653,7 +2655,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         body: JSON.stringify({ career_name: careerName })
                     });
 
-                    const result = await response.json();
+                    console.log(`📥 Respuesta del servidor (status: ${response.status}):`, response);
+                    
+                    let result = {};
+                    try {
+                        result = await response.json();
+                        console.log('📦 JSON respuesta:', result);
+                    } catch (parseError) {
+                        console.error('❌ Error al parsear JSON:', parseError);
+                        result = { success: false, message: 'Error al procesar respuesta del servidor' };
+                    }
+
                     if ((response.status === 201 || response.status === 200) && result.success) {
                         const updated = result.data?.updated || result.data?.career || result.data;
                         if (isEditing) {
@@ -2674,19 +2686,32 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             }
                             this.closeCareerModal();
                         }
+                    } else if (response.status === 404) {
+                        this.careerError = 'Carrera no encontrada. ID inválido o no existe.';
+                        this.showNotify(this.careerError, 'error');
                     } else if (response.status === 409) {
                         const message = result.message || 'La carrera ya existe';
                         this.careerError = message;
                         this.showNotify(message, 'error');
+                    } else if (response.status === 422) {
+                        const validation = result.errors ? Object.entries(result.errors).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ') : '';
+                        const message = validation || result.message || 'Error de validación';
+                        this.careerError = message;
+                        this.showNotify(message, 'error');
+                    } else if (response.status === 500) {
+                        console.error('❌ Error 500 del servidor:', result);
+                        const errMsg = result.message || 'Error interno del servidor';
+                        this.careerError = errMsg;
+                        this.showNotify(errMsg + (result.error_detail ? ' - ' + result.error_detail : ''), 'error');
                     } else {
                         const validation = result.errors ? Object.values(result.errors).flat().join(', ') : '';
-                        const message = validation || result.message || 'Error al crear la carrera';
+                        const message = validation || result.message || 'Error al guardar la carrera';
                         this.careerError = message;
                         this.showNotify(message, 'error');
                     }
                 } catch (error) {
-                    console.error('❌ Error al crear carrera:', error);
-                    this.careerError = 'Error de conexión al crear la carrera';
+                    console.error('❌ Error al guardar carrera:', error);
+                    this.careerError = 'Error de conexión: ' + error.message;
                     this.showNotify(this.careerError, 'error');
                 } finally {
                     this.isSavingCareer = false;

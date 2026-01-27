@@ -97,7 +97,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     });
 
     // Careers Management
-    Route::prefix('careers')->middleware('role:admin|supervisor')->group(function(){
+    Route::prefix('careers')->middleware('role:admin|supervisor|financial staff')->group(function(){
         Route::get('/', function (Request $request) {
             try {
                 $careers = \App\Models\Career::all();
