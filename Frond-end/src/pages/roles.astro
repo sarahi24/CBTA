@@ -2077,30 +2077,35 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
                     );
 
-                    let endpoint, method, permission;
+                    let endpoint, method, permission, payload;
                     if (checkResponse.ok) {
-                        // Ya existe, actualizar
+                        // Ya existe, actualizar (PATCH no necesita user_id en body)
                         endpoint = `${this.apiBaseUrl}/v1/admin-actions/update-student/${this.studentDetails.user_id}`;
                         method = 'PATCH';
                         permission = 'update.student';
+                        payload = {
+                            career_id: Number(this.studentDetails.career_id),
+                            n_control: String(this.studentDetails.n_control).trim(),
+                            semestre: Number(this.studentDetails.semestre),
+                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : null,
+                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : null
+                        };
                     } else {
-                        // No existe, crear
+                        // No existe, crear (POST sí necesita user_id)
                         endpoint = `${this.apiBaseUrl}/v1/admin-actions/attach-student`;
                         method = 'POST';
                         permission = 'attach.student';
+                        payload = {
+                            user_id: Number(this.studentDetails.user_id),
+                            career_id: Number(this.studentDetails.career_id),
+                            n_control: String(this.studentDetails.n_control).trim(),
+                            semestre: Number(this.studentDetails.semestre),
+                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : null,
+                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : null
+                        };
                     }
 
-                    // Build clean payload with proper types
-                    const payload = {
-                        user_id: Number(this.studentDetails.user_id),
-                        career_id: Number(this.studentDetails.career_id),
-                        n_control: String(this.studentDetails.n_control).trim(),
-                        semestre: Number(this.studentDetails.semestre),
-                        group: this.studentDetails.group ? String(this.studentDetails.group).trim() : null,
-                        workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : null
-                    };
-
-                    console.log('📤 Payload a enviar:', payload);
+                    console.log(`📤 ${method} ${endpoint}`, payload);
 
                     const response = await this.authenticatedFetch(endpoint, {
                         method,
@@ -2112,6 +2117,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     });
 
                     const result = await response.json();
+                    console.log('📥 Respuesta:', response.status, result);
+
                     if (response.ok && result.success) {
                         this.showNotify(result.message || 'Detalles de estudiante guardados', 'success');
                         this.showStudentModal = false;
