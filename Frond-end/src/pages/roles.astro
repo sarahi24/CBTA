@@ -1520,6 +1520,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const formData = new FormData();
                     formData.append('file', this.selectedFile);
 
+                    console.log('📤 Enviando archivo de estudiantes:', this.selectedFile.name);
+
                     const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/import-students`, {
                         method: 'POST',
                         headers: {
@@ -1532,6 +1534,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     });
 
                     const result = await response.json();
+                    console.log('📥 Respuesta del servidor:', response.status, result);
+
                     if (response.ok && result.success) {
                         const summary = result.data?.summary?.summary;
                         this.showNotify(
@@ -1541,8 +1545,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.closeImportStudentsModal();
                         await this.loadUsers(token);
                     } else {
+                        console.error('❌ Error de validación:', result);
+                        
                         const validation = result.errors ? Object.values(result.errors).flat().join(', ') : '';
-                        const message = validation || result.message || 'Error al importar estudiantes';
+                        const message = validation || result.message || `Error ${response.status} al importar`;
                         this.importStudentsError = message;
 
                         const validationList = result.errors
