@@ -1880,7 +1880,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 body: JSON.stringify(userData)
                             }
                         );
-                        const result = await response.json();
+                        let result = {};
+                        try {
+                            result = await response.json();
+                        } catch (_) {
+                            result = {};
+                        }
                         if (response.ok && result.success) {
                             const updatedUser = this.mapUser(result.data?.user || result.data || result);
                             const index = this.users.findIndex(u => u.id === this.newUser.id);
@@ -1894,7 +1899,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.showNotify(result.message || 'Usuario actualizado');
                             this.closePanel();
                         } else {
-                            this.showNotify(result.message || 'Error', 'error');
+                            console.error('❌ Error al actualizar usuario', response.status, result);
+                            const msg = result.message || result.error || `Error ${response.status}`;
+                            this.showNotify(msg, 'error');
                         }
                     } else {
                         // Generar contraseña automática
