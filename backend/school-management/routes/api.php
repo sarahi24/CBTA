@@ -102,15 +102,10 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:view students')->get('/', [StudentsController::class, 'index']);
     });
 
-    // Careers Management
-    // List and create use 'carreras' (Spanish)
-    Route::prefix('carreras')->middleware('role:admin|supervisor')->group(function(){
+    // Careers Management - All operations use 'careers' per API documentation
+    Route::prefix('careers')->middleware('role:admin|supervisor')->group(function(){
         Route::get('/', [CareersController::class, 'index']);
         Route::post('/', [CareersController::class, 'store']);
-    });
-    
-    // Individual operations use 'careers' (English) per API documentation
-    Route::prefix('careers')->middleware('role:admin|supervisor')->group(function(){
         Route::get('/{career}', [CareersController::class, 'show']);
         Route::patch('/{career}', [CareersController::class, 'update']);
         Route::delete('/{career}', [CareersController::class, 'destroy']);

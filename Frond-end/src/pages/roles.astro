@@ -2574,7 +2574,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const isEditing = !!this.careerEditingId;
                     const url = isEditing
                         ? `${this.apiBaseUrl}/v1/careers/${this.careerEditingId}`
-                        : `${this.apiBaseUrl}/v1/carreras`;
+                        : `${this.apiBaseUrl}/v1/careers`;
                     const method = isEditing ? 'PATCH' : 'POST';
 
                     console.log(`📤 ${isEditing ? 'Actualizando' : 'Creando'} carrera:`, { url, method, careerName });
@@ -2661,8 +2661,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.isLoadingCareers = true;
                 try {
                     const url = forceRefresh
-                        ? `${this.apiBaseUrl}/v1/carreras?forceRefresh=true`
-                        : `${this.apiBaseUrl}/v1/carreras`;
+                        ? `${this.apiBaseUrl}/v1/careers?forceRefresh=true`
+                        : `${this.apiBaseUrl}/v1/careers`;
                     const response = await this.authenticatedFetch(url, {
                         method: 'GET',
                         headers: {
