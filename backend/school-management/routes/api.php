@@ -175,6 +175,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     ]
                 ]);
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                \Log::error('Career not found', ['career_id' => $id, 'error' => $e->getMessage()]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Carrera no encontrada'
@@ -187,6 +188,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'error_code' => 'VALIDATION_ERROR'
                 ], 422);
             } catch (\Illuminate\Database\QueryException $e) {
+                \Log::error('Database error updating career', ['career_id' => $id, 'error' => $e->getMessage()]);
                 if ($e->getCode() === '23000') {
                     return response()->json([
                         'success' => false,
@@ -199,9 +201,11 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'message' => 'Error en la base de datos: ' . $e->getMessage()
                 ], 500);
             } catch (\Exception $e) {
+                \Log::error('Error updating career', ['career_id' => $id, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al actualizar carrera: ' . $e->getMessage()
+                    'message' => 'Error al actualizar carrera: ' . $e->getMessage(),
+                    'error_detail' => config('app.debug') ? $e->getTraceAsString() : null
                 ], 500);
             }
         });
