@@ -2033,13 +2033,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (checkResponse.ok) {
                         // Actualizar estudiante existente
                         console.log('🔄 Actualizando detalles de estudiante...');
+                        // PATCH /update-student/{id} acepta: career_id, group, workshop (y n_control, semestre si la validación lo permite)
                         const updatePayload = {
                             career_id: studentData.career_id,
-                            n_control: studentData.n_control,
-                            semestre: studentData.semestre,
                             group: studentData.group,
                             workshop: studentData.workshop
                         };
+                        // Incluir n_control y semestre si están presentes
+                        if (studentData.n_control !== undefined) updatePayload.n_control = studentData.n_control;
+                        if (studentData.semestre !== undefined) updatePayload.semestre = studentData.semestre;
+                        
                         Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
 
                         if (Object.keys(updatePayload).length === 0) {
@@ -2047,16 +2050,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             return;
                         }
 
+                        console.log('📤 Payload para update-student:', JSON.stringify(updatePayload, null, 2));
                         const updateResponse = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-student/${studentData.user_id}`,
                             {
-                                method: 'PUT',
+                                method: 'PATCH',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'X-User-Role': 'admin',
                                     'X-User-Permission': 'update.student'
                                 },
-                                // Incluimos n_control y semestre para permitir editar también esos campos
                                 body: JSON.stringify(updatePayload)
                             }
                         );
@@ -2064,11 +2067,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (updateResponse.ok) {
                             console.log('✅ Detalles de estudiante actualizados');
                         } else {
-                            console.error('❌ Error al actualizar detalles de estudiante');
+                            const errorResult = await updateResponse.json().catch(() => ({}));
+                            console.error('❌ Error al actualizar detalles de estudiante:', updateResponse.status, errorResult);
                         }
                     } else {
                         // Crear nuevo registro de estudiante
                         console.log('➕ Creando nuevo registro de estudiante...');
+                        // POST /attach-student requiere: user_id, career_id, n_control, semestre, group, workshop
+                        const attachPayload = {
+                            user_id: studentData.user_id,
+                            career_id: studentData.career_id,
+                            n_control: studentData.n_control,
+                            semestre: studentData.semestre,
+                            group: studentData.group,
+                            workshop: studentData.workshop
+                        };
+                        Object.keys(attachPayload).forEach(k => attachPayload[k] === undefined && delete attachPayload[k]);
+                        
+                        console.log('📤 Payload para attach-student:', JSON.stringify(attachPayload, null, 2));
                         const createResponse = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/attach-student`,
                             {
@@ -2076,16 +2092,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'X-User-Role': 'admin',
-                                    'X-User-Permission': 'update.student'
+                                    'X-User-Permission': 'attach.student'
                                 },
-                                body: JSON.stringify(studentData)
+                                body: JSON.stringify(attachPayload)
                             }
                         );
 
                         if (createResponse.ok) {
                             console.log('✅ Detalles de estudiante creados');
                         } else {
-                            console.error('❌ Error al crear detalles de estudiante');
+                            const errorResult = await createResponse.json().catch(() => ({}));
+                            console.error('❌ Error al crear detalles de estudiante:', createResponse.status, errorResult);
                         }
                     }
                 } catch (error) {
