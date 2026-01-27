@@ -53,12 +53,15 @@ try {
     class="page-wrapper"
     x-data={`{ 
       showModal: false,
-      alumno: '${alumnoBackend}',
+      alumno: '',
       tarjetas: [],
       form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
 
       // 1. Cargar tarjetas al iniciar
       init() {
+        // Obtener nombre del usuario desde localStorage
+        this.alumno = localStorage.getItem('userName') || '${alumnoBackend}';
+        
         const guardadas = localStorage.getItem('mis_tarjetas');
         if (guardadas) {
           this.tarjetas = JSON.parse(guardadas);
