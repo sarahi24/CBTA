@@ -61,6 +61,45 @@ try {
       </div>
     </header>
 
+    <!-- Navigation Menu -->
+    <nav class="student-nav">
+      <a href="/Estudiante/PortalEstudiante" class="nav-link active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>Inicio</span>
+      </a>
+      <a href="/Estudiante/Adeudos" class="nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="1"></circle>
+          <path d="M12 1v6m6.16-1.16l-4.24 4.24m6 6l-4.24-4.24m-6 6l4.24-4.24M1 12.84l4.24-4.24"></path>
+        </svg>
+        <span>Adeudos</span>
+      </a>
+      <a href="/Estudiante/Historial" class="nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12"></path>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Historial</span>
+      </a>
+      <a href="/Estudiante/Tarjetas" class="nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+          <line x1="1" y1="10" x2="23" y2="10"></line>
+        </svg>
+        <span>Tarjetas</span>
+      </a>
+      <a href="/Estudiante/Perfil" class="nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Perfil</span>
+      </a>
+    </nav>
+
     <section class="stats-scroll-container">
       <StatCard 
         title="Pendientes" 
@@ -217,6 +256,49 @@ try {
   .progress-inner { display: flex; justify-content: center; align-items: center; height: 100%; }
 
   .table-header { margin-bottom: 1.5rem; }
+
+  /* --- STUDENT NAVIGATION --- */
+  .student-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: linear-gradient(to right, var(--primary), #1f7f5c);
+    padding: 1rem 0;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(46, 89, 77, 0.15);
+  }
+
+  .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .nav-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  .nav-link span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 
   /* --- MOBILE ADAPTATIONS --- */
   @media (max-width: 768px) {
