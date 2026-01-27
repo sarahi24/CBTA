@@ -1871,66 +1871,76 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     };
                     // Eliminar claves undefined para no enviar campos vacíos
                     Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
+                    const hasUserChanges = Object.keys(userData).length > 0;
                     // No enviar: password, role, address, blood_type, registration_date, status
                     // ya que update-user/{id} no los acepta según validaciones del backend
                     
                     if (this.isEditing) {
-                        console.log('🔄 Actualizando usuario ID:', this.newUser.id);
-                        console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
-                        // Backend /v1/admin-actions/update-user/{id} expects PUT, not PATCH
-                        const response = await this.authenticatedFetch(
-                            `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
-                            {
-                                method: 'PUT',
-                                headers: { 
-                                    'Content-Type': 'application/json',
-                                    'X-User-Role': 'admin',
-                                    'X-User-Permission': 'update.users'
-                                },
-                                body: JSON.stringify(userData)
+                        let userUpdateOk = true;
+
+                        if (hasUserChanges) {
+                            console.log('🔄 Actualizando usuario ID:', this.newUser.id);
+                            console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
+                            // Backend /v1/admin-actions/update-user/{id} expects PUT, not PATCH
+                            const response = await this.authenticatedFetch(
+                                `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
+                                {
+                                    method: 'PUT',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'X-User-Role': 'admin',
+                                        'X-User-Permission': 'update.users'
+                                    },
+                                    body: JSON.stringify(userData)
+                                }
+                            );
+                            let result = {};
+                            try {
+                                result = await response.json();
+                            } catch (_) {
+                                result = {};
                             }
-                        );
-                        let result = {};
-                        try {
-                            result = await response.json();
-                        } catch (_) {
-                            result = {};
+
+                            if (response.ok && result.success) {
+                                const updatedUser = this.mapUser(result.data?.user || result.data || result);
+                                const index = this.users.findIndex(u => u.id === this.newUser.id);
+                                if (index !== -1) this.users[index] = updatedUser;
+                            } else {
+                                userUpdateOk = false;
+                                console.error('❌ Error al actualizar usuario:', {
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    result: result,
+                                    errors: result.errors
+                                });
+                                console.error('📋 Response body completo:', result);
+                                
+                                // Mostrar errores de validación si existen
+                                let msg = result.message || result.error || `Error ${response.status}`;
+                                if (result.errors) {
+                                    const errorList = Object.entries(result.errors)
+                                        .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                        .join('; ');
+                                    msg = errorList || msg;
+                                }
+                                // Si es error 500 sin mensaje, sugerir contactar soporte
+                                if (response.status === 500) {
+                                    msg = (msg && msg !== 'Error 500') ? msg : 'Error interno del servidor. Contacte al soporte.';
+                                }
+                                this.showNotify(msg, 'error');
+                            }
+                        } else {
+                            console.log('ℹ️ Sin cambios en datos básicos de usuario; se omite update-user.');
                         }
 
-                        if (response.ok && result.success) {
-                            const updatedUser = this.mapUser(result.data?.user || result.data || result);
-                            const index = this.users.findIndex(u => u.id === this.newUser.id);
-                            if (index !== -1) this.users[index] = updatedUser;
-                            
-                            // Guardar datos de estudiante si existen
-                            if (this.newUser.studentDetail) {
-                                await this.saveStudentDetailsFromEditPanel();
-                            }
-                            
-                            this.showNotify(result.message || 'Usuario actualizado');
+                        // Guardar datos de estudiante si existen
+                        if (userUpdateOk && this.newUser.studentDetail) {
+                            await this.saveStudentDetailsFromEditPanel();
+                        }
+
+                        if (userUpdateOk) {
+                            this.showNotify('Usuario actualizado');
                             this.closePanel();
-                        } else {
-                            console.error('❌ Error al actualizar usuario:', {
-                                status: response.status,
-                                statusText: response.statusText,
-                                result: result,
-                                errors: result.errors
-                            });
-                            console.error('📋 Response body completo:', result);
-                            
-                            // Mostrar errores de validación si existen
-                            let msg = result.message || result.error || `Error ${response.status}`;
-                            if (result.errors) {
-                                const errorList = Object.entries(result.errors)
-                                    .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-                                    .join('; ');
-                                msg = errorList || msg;
-                            }
-                            // Si es error 500 sin mensaje, sugerir contactar soporte
-                            if (response.status === 500) {
-                                msg = (msg && msg !== 'Error 500') ? msg : 'Error interno del servidor. Contacte al soporte.';
-                            }
-                            this.showNotify(msg, 'error');
                         }
                     } else {
                         // Generar contraseña automática
@@ -2011,19 +2021,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (checkResponse.ok) {
                         // Actualizar estudiante existente
                         console.log('🔄 Actualizando detalles de estudiante...');
+                        const updatePayload = {
+                            career_id: studentData.career_id,
+                            n_control: studentData.n_control,
+                            semestre: studentData.semestre,
+                            group: studentData.group,
+                            workshop: studentData.workshop
+                        };
+                        Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
+
+                        if (Object.keys(updatePayload).length === 0) {
+                            console.log('ℹ️ Sin cambios en detalles de estudiante; se omite update-student.');
+                            return;
+                        }
+
                         const updateResponse = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-student/${studentData.user_id}`,
                             {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-User-Role': 'admin',
+                                    'X-User-Permission': 'update.student'
+                                },
                                 // Incluimos n_control y semestre para permitir editar también esos campos
-                                body: JSON.stringify({
-                                    career_id: studentData.career_id,
-                                    n_control: studentData.n_control,
-                                    semestre: studentData.semestre,
-                                    group: studentData.group,
-                                    workshop: studentData.workshop
-                                })
+                                body: JSON.stringify(updatePayload)
                             }
                         );
 
@@ -2039,7 +2061,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             `${this.apiBaseUrl}/v1/admin-actions/attach-student`,
                             {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-User-Role': 'admin',
+                                    'X-User-Permission': 'update.student'
+                                },
                                 body: JSON.stringify(studentData)
                             }
                         );
