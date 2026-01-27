@@ -182,6 +182,49 @@ try {
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   :root { --primary: #112d26; --accent: #c4a47c; --text-muted: #64748b; --bg-page: #f8fafc; --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); --danger: #e53e3e; }
   
+  /* --- STUDENT NAVIGATION --- */
+  .student-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: linear-gradient(to right, var(--primary), #1f7f5c);
+    padding: 1rem 0;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(46, 89, 77, 0.15);
+  }
+
+  .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .nav-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  .nav-link span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
   .page-wrapper { max-width: 750px; margin: 0 auto; padding: 2.5rem 1.25rem; font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-page); min-height: 100vh; }
   
   .header-main { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }

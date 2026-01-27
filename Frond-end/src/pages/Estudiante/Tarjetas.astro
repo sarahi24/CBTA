@@ -302,6 +302,50 @@ const title = "Mis Métodos de Pago";
   /* [Tus estilos CSS se mantienen iguales] */
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   :root { --primary: #112d26; --accent: #c4a47c; --bg: #f9fbfb; --white: #ffffff; --text-muted: #64748b; --shadow: 0 12px 34px -10px rgba(17, 45, 38, 0.12); }
+  
+  /* --- STUDENT NAVIGATION --- */
+  .student-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: linear-gradient(to right, var(--primary), #1f7f5c);
+    padding: 1rem 0;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(46, 89, 77, 0.15);
+  }
+
+  .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .nav-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  .nav-link span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
   .page-wrapper { max-width: 1000px; margin: 0 auto; padding: 2.5rem 1.5rem; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); min-height: 100vh; }
   .main-header { background: var(--primary); border-radius: 28px; padding: 2.5rem; color: white; margin-bottom: 2.5rem; box-shadow: 0 20px 40px -15px rgba(17, 45, 38, 0.3); }
   .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
