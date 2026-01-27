@@ -473,7 +473,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <select x-model="newUser.studentDetail.career_id" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                                     <option value="">Seleccionar carrera...</option>
                                     <template x-for="career in careers" :key="career.id">
-                                        <option :value="career.id" x-text="career.name"></option>
+                                        <option :value="career.id" x-text="career.name || career.career_name"></option>
                                     </template>
                                 </select>
                             </div>
@@ -1694,7 +1694,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             openPanelForEdit(user) {
                 this.isEditing = true;
                 const mapped = this.mapUser(user) || {};
-                console.log('🔧 Abriendo panel de edición. Usuario mapeado:', mapped);
+                console.log('🔧 Abriendo panel de edición. Usuario original:', user);
+                console.log('🔧 Usuario mapeado:', mapped);
+                console.log('🔧 birthdate:', mapped.birthdate, 'address:', mapped.address);
                 
                 // Asegurar que todos los campos tengan valores
                 const updatedUser = {
