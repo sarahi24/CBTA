@@ -1986,9 +1986,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             // ==================== GESTIÓN DE ESTUDIANTES ====================
             
             async openStudentPanel(userId) {
+                // Si no se proporciona userId, usar el primer usuario seleccionado
                 if (!userId) {
-                    this.showNotify('Selecciona un usuario primero', 'error');
-                    return;
+                    if (this.selectedUsers.length === 0) {
+                        this.showNotify('Selecciona un usuario desde la tabla', 'error');
+                        return;
+                    }
+                    userId = this.selectedUsers[0];
                 }
 
                 const token = localStorage.getItem('access_token');
