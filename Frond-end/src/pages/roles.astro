@@ -1857,14 +1857,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
                 
                 try {
+                    // Construir payload mínimo para evitar 500 del backend por campos vacíos
                     const userData = {
-                        ...this.newUser,
-                        address: Array.isArray(this.newUser.address) ? this.newUser.address : ['', '', ''],
-                        birthdate: this.normalizeDate(this.newUser.birthdate),
-                        registration_date: this.normalizeDate(this.newUser.registration_date),
+                        name: this.newUser.name || undefined,
+                        last_name: this.newUser.last_name || undefined,
+                        email: this.newUser.email || undefined,
+                        phone_number: this.newUser.phone_number || undefined,
+                        birthdate: this.normalizeDate(this.newUser.birthdate) || undefined,
+                        gender: this.newUser.gender || undefined,
+                        curp: this.newUser.curp || undefined,
+                        address: Array.isArray(this.newUser.address) ? this.newUser.address : undefined,
+                        blood_type: this.newUser.blood_type || undefined,
+                        registration_date: this.normalizeDate(this.newUser.registration_date) || undefined,
+                        status: this.newUser.status || undefined,
+                        role: this.newUser.role || undefined
                     };
+                    // Eliminar claves undefined para no enviar campos vacíos
+                    Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
                     delete userData.password;
-                    delete userData.studentDetail; // No incluir studentDetail en la petición de usuario
+                    // No incluir studentDetail en la petición de usuario
                     
                     if (this.isEditing) {
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
