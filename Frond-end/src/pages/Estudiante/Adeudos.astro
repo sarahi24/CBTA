@@ -20,12 +20,28 @@ const title = "Finanzas Estudiantiles";
       alumnoNombre: 'Usuario',
 
       async init() {
-        // Obtener datos del usuario desde localStorage
-        this.alumnoNombre = localStorage.getItem('userName') || 'Usuario';
+        // Obtener datos del usuario desde localStorage de forma más robusta
+        const userName = localStorage.getItem('userName');
+        const userDataStr = localStorage.getItem('userData');
+        
+        if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+          this.alumnoNombre = userName;
+        } else if (userDataStr) {
+          try {
+            const userData = JSON.parse(userDataStr);
+            this.alumnoNombre = userData.fullName || userData.name || 'Usuario';
+          } catch (e) {
+            this.alumnoNombre = 'Usuario';
+          }
+        } else {
+          this.alumnoNombre = 'Usuario';
+        }
+        
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         
-        console.log('🔍 Usuario en Adeudos:', this.alumnoNombre);
+        console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
+        console.log('🔍 [Adeudos] Token disponible:', !!token);
         
         // Cargar adeudos desde API
         if (token && userId) {
@@ -148,7 +164,7 @@ const title = "Finanzas Estudiantiles";
           <div class="avatar">PG</div>
           <div class="welcome-text">
             <span class="greeting">Estado de Cuenta</span>
-            <h1 x-text="alumnoNombre ? 'Hola, ' + alumnoNombre.split(' ')[0] : 'Hola'"></h1>
+            <h1 x-text="alumnoNombre && alumnoNombre !== 'Usuario' ? 'Hola, ' + alumnoNombre.split(' ')[0] : 'Hola'"></h1>
           </div>
         </div>
         <div class="balance-summary">

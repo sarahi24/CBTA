@@ -20,8 +20,17 @@ const title = "Mis Métodos de Pago";
       async init() {
         // Obtener datos del usuario desde localStorage de forma más robusta
         const userName = localStorage.getItem('userName');
+        const userDataStr = localStorage.getItem('userData');
+        
         if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
           this.alumno = userName;
+        } else if (userDataStr) {
+          try {
+            const userData = JSON.parse(userDataStr);
+            this.alumno = userData.fullName || userData.name || 'Usuario';
+          } catch (e) {
+            this.alumno = 'Usuario';
+          }
         } else {
           this.alumno = 'Usuario';
         }
@@ -29,8 +38,8 @@ const title = "Mis Métodos de Pago";
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         
-        console.log('🔍 [Tarjetas] Nombre del usuario:', this.alumno);
-        console.log('🔍 [Tarjetas] Token guardado:', !!token);
+        console.log('🔍 [Tarjetas] Nombre cargado:', this.alumno);
+        console.log('🔍 [Tarjetas] Token disponible:', !!token);
         console.log('🔍 [Tarjetas] UserId:', userId);
         
         // Cargar tarjetas desde API
@@ -172,7 +181,7 @@ const title = "Mis Métodos de Pago";
           </div>
           <div class="welcome-text">
             <span class="greeting">Métodos de Pago</span>
-            <h1 x-text="`Hola, ${(localStorage.getItem('userName') || 'Usuario').split(' ')[0]}`"></h1>
+            <h1 x-text="alumno && alumno !== 'Usuario' ? 'Hola, ' + alumno.split(' ')[0] : 'Hola'"></h1>
           </div>
         </div>
         <div class="balance-summary">
