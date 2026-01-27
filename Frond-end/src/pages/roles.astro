@@ -2135,6 +2135,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         // Obtener los datos completos del usuario para enviar con el evento
                         const studentUser = this.users.find(u => u.id === this.studentDetails.user_id);
+                        console.log('🔍 Buscando usuario con ID:', this.studentDetails.user_id);
+                        console.log('👥 Usuarios disponibles:', this.users);
+                        console.log('✓ Usuario encontrado:', studentUser);
+                        
+                        // Obtener el nombre de la carrera
+                        const careerData = this.careers.find(c => c.id === Number(this.studentDetails.career_id) || c.name === this.studentDetails.career_id);
+                        const careerName = careerData?.name || this.studentDetails.career_id;
+                        console.log('🏫 Carrera encontrada:', careerData, 'Nombre:', careerName);
+                        
                         if (studentUser) {
                             const studentData = {
                                 id: studentUser.id,
@@ -2143,11 +2152,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 apellidoP: studentUser.apellidoP || studentUser.apellidoPaterno || studentUser.apellido_paterno || '',
                                 apellidoM: studentUser.apellidoM || studentUser.apellidoMaterno || studentUser.apellido_materno || '',
                                 semestre: this.studentDetails.semestre,
-                                carrera: this.studentDetails.career_id,
+                                carrera: careerName,
                                 correo: studentUser.correo || studentUser.email || '',
                                 group: this.studentDetails.group || '',
                                 workshop: this.studentDetails.workshop || ''
                             };
+                            
+                            console.log('📦 Datos del estudiante a enviar:', studentData);
                             
                             // Enviar evento personalizado a estudiante_lista.astro
                             window.dispatchEvent(new CustomEvent('student-associated', {
@@ -2157,6 +2168,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 }
                             }));
                             console.log('📢 Evento student-associated enviado:', studentData);
+                        } else {
+                            console.warn('⚠️ No se encontró el usuario, posible sincronización lenta');
                         }
                         
                         await this.loadUsers(token);

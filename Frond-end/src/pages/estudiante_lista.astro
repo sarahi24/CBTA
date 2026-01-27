@@ -1041,8 +1041,8 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
             semestre: student.semestre,
             carrera: student.carrera,
             correo: student.correo,
-            group: student.group,
-            workshop: student.workshop
+            group: student.group || '',
+            workshop: student.workshop || ''
           });
           console.log('✅ Nuevo estudiante agregado a la tabla');
         }
@@ -1055,8 +1055,16 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
         render();
         updateStats();
         
-        // Mostrar notificación
-        showMsg(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`, false);
+        // Mostrar notificación (crear un toast si msg no existe)
+        try {
+          if (typeof msg !== 'undefined') {
+            showMsg(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`, false);
+          } else {
+            console.log(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`);
+          }
+        } catch (e) {
+          console.log(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`);
+        }
       });
       // ========================================================================================
 
