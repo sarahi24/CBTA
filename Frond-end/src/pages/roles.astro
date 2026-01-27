@@ -1120,11 +1120,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     address = [raw.address, '', ''];
                 }
 
+                // Extraer name y last_name desde fullName si no vienen separados
+                let name = raw.name || '';
+                let last_name = raw.last_name || '';
+                
+                if (!name && !last_name && raw.fullName) {
+                    // Dividir fullName en partes
+                    const parts = raw.fullName.trim().split(' ');
+                    if (parts.length > 0) {
+                        name = parts[0]; // Primera palabra = nombre
+                        last_name = parts.slice(1).join(' '); // Resto = apellidos
+                    }
+                }
+
                 const mapped = {
                     ...raw,
                     id: raw.id || null,
-                    name: raw.name || '',
-                    last_name: raw.last_name || '',
+                    name: name,
+                    last_name: last_name,
                     email: raw.email || '',
                     phone_number: raw.phone_number || '',
                     birthdate: this.normalizeDate(raw.birthdate),
@@ -1134,7 +1147,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     address: address,
                     registration_date: this.normalizeDate(raw.registration_date),
                     status: status,
-                    fullName: raw.fullName || `${raw.name || ''} ${raw.last_name || ''}`.trim(),
+                    fullName: raw.fullName || `${name} ${last_name}`.trim(),
                     role: roleLabel,
                     roleLabel,
                     roleKey,
