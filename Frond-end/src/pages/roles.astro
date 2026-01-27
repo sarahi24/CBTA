@@ -2087,8 +2087,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             career_id: Number(this.studentDetails.career_id),
                             n_control: String(this.studentDetails.n_control).trim(),
                             semestre: Number(this.studentDetails.semestre),
-                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : null,
-                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : null
+                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : '',
+                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : ''
                         };
                     } else {
                         // No existe, crear (POST sí necesita user_id)
@@ -2100,8 +2100,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             career_id: Number(this.studentDetails.career_id),
                             n_control: String(this.studentDetails.n_control).trim(),
                             semestre: Number(this.studentDetails.semestre),
-                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : null,
-                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : null
+                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : '',
+                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : ''
                         };
                     }
 
