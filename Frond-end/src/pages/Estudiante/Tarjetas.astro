@@ -18,13 +18,20 @@ const title = "Mis Métodos de Pago";
 
       // 1. Cargar tarjetas al iniciar
       async init() {
-        // Obtener datos del usuario desde localStorage
-        this.alumno = localStorage.getItem('userName') || 'Usuario';
+        // Obtener datos del usuario desde localStorage de forma más robusta
+        const userName = localStorage.getItem('userName');
+        if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+          this.alumno = userName;
+        } else {
+          this.alumno = 'Usuario';
+        }
+        
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         
-        console.log('🔍 Cargando tarjetas para:', this.alumno);
-        console.log('🔍 UserId:', userId);
+        console.log('🔍 [Tarjetas] Nombre del usuario:', this.alumno);
+        console.log('🔍 [Tarjetas] Token guardado:', !!token);
+        console.log('🔍 [Tarjetas] UserId:', userId);
         
         // Cargar tarjetas desde API
         if (token && userId) {
@@ -165,7 +172,7 @@ const title = "Mis Métodos de Pago";
           </div>
           <div class="welcome-text">
             <span class="greeting">Métodos de Pago</span>
-            <h1 x-text="alumno ? 'Hola, ' + alumno.split(' ')[0] : 'Hola'"></h1>
+            <h1 x-text="`Hola, ${(localStorage.getItem('userName') || 'Usuario').split(' ')[0]}`"></h1>
           </div>
         </div>
         <div class="balance-summary">
@@ -316,6 +323,30 @@ const title = "Mis Métodos de Pago";
 
   [x-cloak] { display: none !important; }
 </style>
+
+<script>
+  // Script para actualizar el nombre del usuario en tiempo real
+  document.addEventListener('DOMContentLoaded', () => {
+    const userNameFromStorage = localStorage.getItem('userName');
+    console.log('📝 [Tarjetas] Nombre en localStorage:', userNameFromStorage);
+    
+    // Intentar encontrar el elemento Alpine y actualizar
+    const xData = document.querySelector('[x-data]');
+    if (xData && userNameFromStorage && userNameFromStorage !== 'Estudiante' && userNameFromStorage !== 'Usuario') {
+      // El Alpine.js debería haber cargado el nombre en init()
+      console.log('✅ [Tarjetas] Alpine.js debería mostrar:', userNameFromStorage);
+    }
+  });
+  
+  // Listener para cambios en localStorage
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'userName') {
+      console.log('🔄 [Tarjetas] Nombre del usuario cambió a:', e.newValue);
+      // Recargar la página para reflejar el nuevo usuario
+      location.reload();
+    }
+  });
+</script>
 
 <script>
   // Debug script para verificar localStorage
