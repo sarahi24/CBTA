@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\CareersController;
 use App\Http\Controllers\Staff\ConceptsController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 use App\Http\Controllers\Staff\DebtsController;
@@ -36,6 +37,11 @@ Route::middleware(['auth:sanctum'])->get('/v1/test-auth', function (Request $req
 
 Route::prefix('v1')->middleware('throttle:10,1')->group(function () {
     Route::post('/login', [LoginController::class, 'login']);
+    
+    // Test endpoint para debug
+    Route::get('/test-endpoint', function () {
+        return response()->json(['success' => true, 'message' => 'Test endpoint working']);
+    });
 });
 Route::post('/stripe/webhook', [WebhookController::class, 'handle']);
 
@@ -98,140 +104,10 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
 
     // Careers Management
     Route::prefix('careers')->middleware('role:admin|supervisor|financial staff')->group(function(){
-        Route::get('/', function (Request $request) {
-            try {
-                $careers = \App\Models\Career::all();
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Carreras encontradas.',
-                    'data' => [
-                        'careers' => $careers
-                    ]
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al cargar carreras: ' . $e->getMessage()
-                ], 500);
-            }
-        });
-
-        Route::post('/', function (Request $request) {
-            try {
-                $validated = $request->validate([
-                    'career_name' => 'required|string|max:255|unique:careers,career_name'
-                ]);
-
-                $career = \App\Models\Career::create($validated);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Carrera creada exitosamente.',
-                    'data' => [
-                        'career' => $career
-                    ]
-                ], 201);
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error de validación',
-                    'errors' => $e->errors(),
-                    'error_code' => 'VALIDATION_ERROR'
-                ], 422);
-            } catch (\Illuminate\Database\QueryException $e) {
-                if ($e->getCode() === '23000') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La carrera ya existe',
-                        'error_code' => 'DUPLICATE_ENTRY'
-                    ], 409);
-                }
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error en la base de datos: ' . $e->getMessage()
-                ], 500);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al crear carrera: ' . $e->getMessage()
-                ], 500);
-            }
-        });
-
-        Route::put('/{id}', function (Request $request, $id) {
-            try {
-                $validated = $request->validate([
-                    'career_name' => 'required|string|max:255|unique:careers,career_name,' . $id
-                ]);
-
-                $career = \App\Models\Career::findOrFail($id);
-                $career->update($validated);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Carrera actualizada.',
-                    'data' => [
-                        'updated' => $career
-                    ]
-                ]);
-            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-                \Log::error('Career not found', ['career_id' => $id, 'error' => $e->getMessage()]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Carrera no encontrada'
-                ], 404);
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error de validación',
-                    'errors' => $e->errors(),
-                    'error_code' => 'VALIDATION_ERROR'
-                ], 422);
-            } catch (\Illuminate\Database\QueryException $e) {
-                \Log::error('Database error updating career', ['career_id' => $id, 'error' => $e->getMessage()]);
-                if ($e->getCode() === '23000') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'El nombre de carrera ya existe',
-                        'error_code' => 'DUPLICATE_ENTRY'
-                    ], 409);
-                }
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error en la base de datos: ' . $e->getMessage()
-                ], 500);
-            } catch (\Exception $e) {
-                \Log::error('Error updating career', ['career_id' => $id, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al actualizar carrera: ' . $e->getMessage(),
-                    'error_detail' => config('app.debug') ? $e->getTraceAsString() : null
-                ], 500);
-            }
-        });
-
-        Route::delete('/{id}', function (Request $request, $id) {
-            try {
-                $career = \App\Models\Career::findOrFail($id);
-                $careerName = $career->career_name;
-                $career->delete();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => "Carrera {$careerName} eliminada exitosamente."
-                ]);
-            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Carrera no encontrada'
-                ], 404);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al eliminar carrera: ' . $e->getMessage()
-                ], 500);
-            }
-        });
+        Route::get('/', [CareersController::class, 'index']);
+        Route::post('/', [CareersController::class, 'store']);
+        Route::patch('/{career}', [CareersController::class, 'update']);
+        Route::delete('/{career}', [CareersController::class, 'destroy']);
     });
 
     // Admin Actions - User Management

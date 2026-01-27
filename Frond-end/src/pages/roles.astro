@@ -2642,7 +2642,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const url = isEditing
                         ? `${this.apiBaseUrl}/v1/careers/${this.careerEditingId}`
                         : `${this.apiBaseUrl}/v1/careers`;
-                    const method = isEditing ? 'PUT' : 'POST';
+                    const method = isEditing ? 'PATCH' : 'POST';
 
                     console.log(`📤 ${isEditing ? 'Actualizando' : 'Creando'} carrera:`, { url, method, careerName });
 
