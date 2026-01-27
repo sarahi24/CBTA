@@ -1879,6 +1879,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     if (this.isEditing) {
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
+                        // Intento 1: endpoint admin-actions/update-user/{id}
                         const response = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
                             {
@@ -1897,7 +1898,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         } catch (_) {
                             result = {};
                         }
-                        if (response.ok && result.success) {
+
+                        // Fallback: si devuelve 500, probar /v1/users/update (sin path param)
+                        let finalResponse = response;
+                        let finalResult = result;
+                        if (!response.ok && response.status === 500) {
+                            console.warn('⚠️ update-user devolvió 500, intentando /v1/users/update');
+                            const fallbackPayload = { user_id: this.newUser.id, ...userData };
+                            const resp2 = await this.authenticatedFetch(
+                                `${this.apiBaseUrl}/v1/users/update`,
+                                {
+                                    method: 'PATCH',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'X-User-Role': 'admin',
+                                        'X-User-Permission': 'update.users'
+                                    },
+                                    body: JSON.stringify(fallbackPayload)
+                                }
+                            );
+                            finalResponse = resp2;
+                            try {
+                                finalResult = await resp2.json();
+                            } catch (_) {
+                                finalResult = {};
+                            }
+                        }
+
+                        if (finalResponse.ok && finalResult.success) {
                             const updatedUser = this.mapUser(result.data?.user || result.data || result);
                             const index = this.users.findIndex(u => u.id === this.newUser.id);
                             if (index !== -1) this.users[index] = updatedUser;
@@ -1907,11 +1935,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 await this.saveStudentDetailsFromEditPanel();
                             }
                             
-                            this.showNotify(result.message || 'Usuario actualizado');
+                            this.showNotify(finalResult.message || result.message || 'Usuario actualizado');
                             this.closePanel();
                         } else {
-                            console.error('❌ Error al actualizar usuario', response.status, result);
-                            const msg = result.message || result.error || `Error ${response.status}`;
+                            console.error('❌ Error al actualizar usuario', finalResponse.status, finalResult);
+                            const msg = finalResult.message || finalResult.error || `Error ${finalResponse.status}`;
                             this.showNotify(msg, 'error');
                         }
                     } else {
