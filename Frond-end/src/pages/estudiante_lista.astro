@@ -353,6 +353,30 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       const paginationControls = document.getElementById('pagination-controls');
       const pageButtonsContainer = document.getElementById('page-buttons-container');
       
+      // Elementos del formulario
+      const formContainer = document.querySelector('[id*="form"]') || document.getElementById('form-container');
+      const form = document.querySelector('form') || document.getElementById('student-form');
+      const idInput = form ? form.querySelector('[name="id"]') : null;
+      const numControlInput = form ? form.querySelector('[name="numControl"]') : null;
+      const nombreInput = form ? form.querySelector('[name="nombre"]') : null;
+      const apellidoPInput = form ? form.querySelector('[name="apellidoP"]') : null;
+      const apellidoMInput = form ? form.querySelector('[name="apellidoM"]') : null;
+      const semestreInput = form ? form.querySelector('[name="semestre"]') : null;
+      const carreraInput = form ? form.querySelector('[name="carrera"]') : null;
+      const correoInput = form ? form.querySelector('[name="correo"]') : null;
+      const formTitle = document.getElementById('form-title') || document.querySelector('h3[class*="form"]');
+      const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+      const showFormBtn = document.getElementById('show-form-btn');
+      const closeFormBtn = document.getElementById('close-form-btn') || form?.querySelector('button[class*="close"]');
+      const resetBtn = document.getElementById('reset-btn') || form?.querySelector('button[type="reset"]');
+      const msg = document.getElementById('form-message') || document.getElementById('msg');
+      
+      // Fallback: si no encuentra los elementos, crear referencias seguras
+      const safeForm = {
+        reset: () => form && form.reset(),
+        addEventListener: (event, handler) => form && form.addEventListener(event, handler),
+        querySelector: (sel) => form && form.querySelector(sel)
+      };
       // Actualizar estadísticas
       function updateStats() {
         const list = readLocal();
@@ -461,30 +485,36 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
 
       function setFormVisibility(isVisible) {
         if (isVisible) {
-          filtersPopover.classList.add('hidden');
-          formContainer.classList.remove('hidden');
-          tableContainer.classList.remove('lg:col-span-3');
-          tableContainer.classList.add('lg:col-span-2');
-          showFormBtn.classList.add('hidden');
-          if (window.innerWidth >= 1024) {
+          if (filtersPopover) filtersPopover.classList.add('hidden');
+          if (formContainer) {
+            formContainer.classList.remove('hidden');
+            tableContainer.classList.remove('lg:col-span-3');
+            tableContainer.classList.add('lg:col-span-2');
+          }
+          if (showFormBtn) showFormBtn.classList.add('hidden');
+          if (window.innerWidth >= 1024 && formContainer) {
               formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         } else {
-          formContainer.classList.add('hidden');
-          tableContainer.classList.remove('lg:col-span-2');
-          tableContainer.classList.add('lg:col-span-3');
-          showFormBtn.classList.remove('hidden');
+          if (formContainer) {
+            formContainer.classList.add('hidden');
+            tableContainer.classList.remove('lg:col-span-2');
+            tableContainer.classList.add('lg:col-span-3');
+          }
+          if (showFormBtn) showFormBtn.classList.remove('hidden');
           resetForm();
         }
       }
 
       function resetForm() {
-        form.reset();
-        idInput.value = '';
-        formTitle.textContent = 'Registro de Estudiante';
-        submitBtn.textContent = 'Registrar';
-        msg.classList.add('hidden');
-        msg.classList.remove('text-red-600', 'text-green-600');
+        if (form) form.reset();
+        if (idInput) idInput.value = '';
+        if (formTitle) formTitle.textContent = 'Registro de Estudiante';
+        if (submitBtn) submitBtn.textContent = 'Registrar';
+        if (msg) {
+          msg.classList.add('hidden');
+          msg.classList.remove('text-red-600', 'text-green-600');
+        }
         forceOverwrite = false;
       }
 
@@ -500,16 +530,16 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
 
         setFormVisibility(true);
 
-        idInput.value = student.id;
-        numControlInput.value = student.numControl;
-        nombreInput.value = student.nombre;
-        apellidoPInput.value = student.apellidoP;
-        apellidoMInput.value = student.apellidoM;
-        semestreInput.value = String(student.semestre || '0');
-        carreraInput.value = student.carrera;
-        correoInput.value = student.correo;
-        formTitle.textContent = `Editar Estudiante: ${student.nombre}`;
-        submitBtn.textContent = 'Actualizar Datos';
+        if (idInput) idInput.value = student.id;
+        if (numControlInput) numControlInput.value = student.numControl;
+        if (nombreInput) nombreInput.value = student.nombre;
+        if (apellidoPInput) apellidoPInput.value = student.apellidoP;
+        if (apellidoMInput) apellidoMInput.value = student.apellidoM;
+        if (semestreInput) semestreInput.value = String(student.semestre || '0');
+        if (carreraInput) carreraInput.value = student.carrera;
+        if (correoInput) correoInput.value = student.correo;
+        if (formTitle) formTitle.textContent = `Editar Estudiante: ${student.nombre}`;
+        if (submitBtn) submitBtn.textContent = 'Actualizar Datos';
       }
 
       
@@ -713,34 +743,35 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
 
       // --- MANEJADORES DE EVENTOS ---
 
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const data = new FormData(form);
-        const isEdit = !!data.get('id');
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const data = new FormData(form);
+          const isEdit = !!data.get('id');
 
-        const newS = {
-          id: data.get('id') || Date.now().toString() + Math.random().toString(36).slice(2, 7),
-          numControl: data.get('numControl').toUpperCase().trim(),
-          nombre: capitalizeName(data.get('nombre')),
-          apellidoP: capitalizeName(data.get('apellidoP')),
-          apellidoM: capitalizeName(data.get('apellidoM')),
-          semestre: parseInt(data.get('semestre') || '0', 10),
-          carrera: data.get('carrera').toUpperCase().trim(),
-          correo: data.get('correo').toLowerCase().trim(),
-        };
+          const newS = {
+            id: data.get('id') || Date.now().toString() + Math.random().toString(36).slice(2, 7),
+            numControl: data.get('numControl').toUpperCase().trim(),
+            nombre: capitalizeName(data.get('nombre')),
+            apellidoP: capitalizeName(data.get('apellidoP')),
+            apellidoM: capitalizeName(data.get('apellidoM')),
+            semestre: parseInt(data.get('semestre') || '0', 10),
+            carrera: data.get('carrera').toUpperCase().trim(),
+            correo: data.get('correo').toLowerCase().trim(),
+          };
 
-        let list = readLocal();
-        const duplicateIndex = list.findIndex(s => s.numControl === newS.numControl && s.id !== newS.id);
-        
-        if (duplicateIndex !== -1) {
-            const duplicateStudent = list[duplicateIndex];
-            if (!confirm(`⚠️ ALUMNO DUPLICADO DETECTADO: El N. Control ${newS.numControl} ya pertenece a ${duplicateStudent.nombre} ${duplicateStudent.apellidoP}. \n\n¿Desea sobreescribir (actualizar) los datos del registro existente con los datos que acaba de ingresar?`)) {
-                showMsg(`Operación cancelada. El registro para ${newS.numControl} no fue creado ni modificado.`, true);
-                return;
-            }
-            newS.id = duplicateStudent.id;
-            list[duplicateIndex] = newS;
-            showMsg('Duplicado actualizado con éxito. ✔️');
+          let list = readLocal();
+          const duplicateIndex = list.findIndex(s => s.numControl === newS.numControl && s.id !== newS.id);
+          
+          if (duplicateIndex !== -1) {
+              const duplicateStudent = list[duplicateIndex];
+              if (!confirm(`⚠️ ALUMNO DUPLICADO DETECTADO: El N. Control ${newS.numControl} ya pertenece a ${duplicateStudent.nombre} ${duplicateStudent.apellidoP}. \n\n¿Desea sobreescribir (actualizar) los datos del registro existente con los datos que acaba de ingresar?`)) {
+                  showMsg(`Operación cancelada. El registro para ${newS.numControl} no fue creado ni modificado.`, true);
+                  return;
+              }
+              newS.id = duplicateStudent.id;
+              list[duplicateIndex] = newS;
+              showMsg('Duplicado actualizado con éxito. ✔️');
         } else if (isEdit) {
             const index = list.findIndex(s => s.id === newS.id);
             if (index !== -1) {
@@ -757,11 +788,12 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
         paginationState.currentPage = 1;
         render();
         setFormVisibility(false);
-      });
+        });
+      }
 
-      showFormBtn.addEventListener('click', () => setFormVisibility(true));
-      closeFormBtn.addEventListener('click', () => setFormVisibility(false));
-      resetBtn.addEventListener('click', resetForm);
+      if (showFormBtn) showFormBtn.addEventListener('click', () => setFormVisibility(true));
+      if (closeFormBtn) closeFormBtn.addEventListener('click', () => setFormVisibility(false));
+      if (resetBtn) resetBtn.addEventListener('click', resetForm);
 
       toggleFiltersBtn.addEventListener('click', (e) => { 
           e.stopPropagation();
