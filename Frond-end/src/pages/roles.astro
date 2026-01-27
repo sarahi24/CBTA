@@ -455,7 +455,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
 
                     <!-- SECCIÓN DE DATOS DE ESTUDIANTE (si es estudiante) -->
-                    <div x-show="newUser.studentDetail && (newUser.studentDetail.n_control || newUser.studentDetail.career_id || isEditing)" class="sm:col-span-2 pt-6 border-t-2 border-slate-200">
+                    <template x-if="newUser?.studentDetail">
+                    <div class="sm:col-span-2 pt-6 border-t-2 border-slate-200">
                         <h3 class="text-lg font-bold text-institucional mb-4 flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 3 9.2 3 12s3.5 5.747 9 5.747m0-13c5.5 0 9-2.948 9-5.747m0 13c5.5 0 9-2.948 9-5.747M12 6.253v13"/>
@@ -492,6 +493,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                         </div>
                     </div>
+                    </template>
 
                     <div class="flex flex-col sm:flex-row gap-3 pt-6 sm:col-span-2">
                         <button type="button" @click="closePanel()" :disabled="isSaving" class="flex-1 py-3 font-bold text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50 border-2 border-slate-200 transition-colors">Cancelar</button>
@@ -1695,8 +1697,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     address: Array.isArray(mapped.address) ? [...mapped.address] : (Array.isArray(user?.address) ? [...user.address] : ['', '', '']),
                     registration_date: mapped.registration_date || user?.registration_date || new Date().toISOString().split('T')[0],
                     status: mapped.status || user?.status || 'activo',
-                    role: mapped.role || mapped.roleLabel || user?.role || 'Sin rol',
-                    studentDetail: null
+                    role: mapped.role || mapped.roleLabel || user?.role || 'Sin rol'
+                    // NO incluir studentDetail aquí, se maneja aparte
                 };
                 
                 // Usar Object.assign para actualizar reactivamente en Alpine.js
