@@ -1972,6 +1972,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             // ==================== GESTIÓN DE ESTUDIANTES ====================
             
             async openStudentPanel(userId) {
+                if (!userId) {
+                    this.showNotify('Selecciona un usuario primero', 'error');
+                    return;
+                }
+
                 const token = localStorage.getItem('access_token');
                 if (!token) {
                     this.showNotify('No hay token de autenticación', 'error');
@@ -2030,6 +2035,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return;
                 }
 
+                if (!this.studentDetails.user_id) {
+                    this.showNotify('Usuario no válido', 'error');
+                    return;
+                }
+
                 if (!this.studentDetails.career_id || !this.studentDetails.n_control) {
                     this.showNotify('Completa carrera y número de control', 'error');
                     return;
@@ -2062,10 +2072,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         permission = 'attach.student';
                     }
 
+                    // Build clean payload with proper types
                     const payload = {
-                        ...this.studentDetails,
-                        career_id: Number(this.studentDetails.career_id)
+                        user_id: Number(this.studentDetails.user_id),
+                        career_id: Number(this.studentDetails.career_id),
+                        n_control: String(this.studentDetails.n_control).trim(),
+                        semestre: Number(this.studentDetails.semestre),
+                        group: this.studentDetails.group ? String(this.studentDetails.group).trim() : null,
+                        workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : null
                     };
+
+                    console.log('📤 Payload a enviar:', payload);
 
                     const response = await this.authenticatedFetch(endpoint, {
                         method,
@@ -2082,7 +2099,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.showStudentModal = false;
                         await this.loadUsers(token);
                     } else {
-                        this.showNotify(result.message || 'Error al guardar detalles', 'error');
+                        console.error('❌ Error desde API:', result);
+                        this.showNotify(result.message || `Error: ${response.status}`, 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error al guardar estudiante:', error);
