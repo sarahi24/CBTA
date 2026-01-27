@@ -455,7 +455,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
 
                     <!-- SECCIÓN DE DATOS DE ESTUDIANTE (si es estudiante) -->
-                    <div x-show="newUser.studentDetail" class="sm:col-span-2 pt-6 border-t-2 border-slate-200">
+                    <div x-show="newUser.studentDetail && (newUser.studentDetail.n_control || newUser.studentDetail.career_id || isEditing)" class="sm:col-span-2 pt-6 border-t-2 border-slate-200">
                         <h3 class="text-lg font-bold text-institucional mb-4 flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 3 9.2 3 12s3.5 5.747 9 5.747m0-13c5.5 0 9-2.948 9-5.747m0 13c5.5 0 9-2.948 9-5.747M12 6.253v13"/>
@@ -972,7 +972,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                     status: 'activo', role: 'Administrador',
-                    studentDetail: null
+                    studentDetail: {
+                        user_id: null,
+                        career_id: '',
+                        n_control: '',
+                        semestre: 1,
+                        group: '',
+                        workshop: ''
+                    }
                 },
                 notification: { show: false, message: '', type: 'success' },
                 
@@ -1657,7 +1664,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                     status: 'activo', role: 'Administrador',
-                    studentDetail: null
+                    studentDetail: {
+                        user_id: null,
+                        career_id: '',
+                        n_control: '',
+                        semestre: 1,
+                        group: '',
+                        workshop: ''
+                    }
                 };
                 this.isPanelOpen = true;
             },
@@ -1687,6 +1701,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 // Usar Object.assign para actualizar reactivamente en Alpine.js
                 Object.assign(this.newUser, updatedUser);
+                
+                // Resetear studentDetail a objeto vacío antes de cargar
+                Object.assign(this.newUser.studentDetail, {
+                    user_id: mapped.id || user?.id,
+                    career_id: '',
+                    n_control: '',
+                    semestre: 1,
+                    group: '',
+                    workshop: ''
+                });
                 
                 console.log('✅ Formulario poblado. newUser:', this.newUser);
                 
@@ -1723,20 +1747,35 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             const studentDetail = result.data.user.studentDetail;
                             console.log('🎓 Detalles de estudiante encontrados:', studentDetail);
                             
-                            // Asignar datos de estudiante
-                            this.newUser.studentDetail = {
+                            // Buscar career_id por careerName si es necesario
+                            let careerIdValue = studentDetail.career_id || '';
+                            if (!careerIdValue && studentDetail.careerName) {
+                                const foundCareer = this.careers.find(c => c.name === studentDetail.careerName || c.career_name === studentDetail.careerName);
+                                careerIdValue = foundCareer ? foundCareer.id : '';
+                            }
+                            
+                            // Asignar datos de estudiante (mapear nControl → n_control)
+                            Object.assign(this.newUser.studentDetail, {
                                 user_id: studentDetail.user_id || userId,
-                                career_id: studentDetail.career_id || '',
-                                n_control: studentDetail.n_control || '',
+                                career_id: careerIdValue,
+                                n_control: studentDetail.n_control || studentDetail.nControl || '',
                                 semestre: studentDetail.semestre || 1,
                                 group: studentDetail.group || '',
                                 workshop: studentDetail.workshop || ''
-                            };
+                            });
                             
                             console.log('✅ Datos de estudiante cargados en el formulario:', this.newUser.studentDetail);
                         } else {
                             console.log('ℹ️ El usuario no es estudiante');
-                            this.newUser.studentDetail = null;
+                            // Mantener studentDetail como objeto vacío, no null
+                            Object.assign(this.newUser.studentDetail, {
+                                user_id: userId,
+                                career_id: '',
+                                n_control: '',
+                                semestre: 1,
+                                group: '',
+                                workshop: ''
+                            });
                         }
                     }
                 } catch (error) {
