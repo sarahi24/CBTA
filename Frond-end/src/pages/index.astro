@@ -129,6 +129,10 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     
                     if (userData) {
                         localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
+                        // Guardar también valores individuales para fácil acceso
+                        localStorage.setItem('userId', userData.id);
+                        localStorage.setItem('userName', userData.fullName || userData.name || 'Usuario');
+                        localStorage.setItem('userEmail', userData.email || '');
                         console.log('✅ User data guardado:', userData);
                         console.log('✅ ID:', userData.id);
                         console.log('✅ fullName:', userData.fullName);

@@ -85,8 +85,12 @@ try {
       selectedCard: null,
       adeudos: [],
       tarjetas: [],
+      alumnoNombre: '',
 
       init() {
+        // Obtener nombre del usuario desde localStorage
+        this.alumnoNombre = localStorage.getItem('userName') || '${alumnoBackend}';
+        
         const guardadas = localStorage.getItem('mis_tarjetas');
         this.tarjetas = guardadas ? JSON.parse(guardadas) : ${JSON.stringify(tarjetasPorDefecto)};
         
@@ -151,7 +155,7 @@ try {
           <div class="avatar">PG</div>
           <div class="welcome-text">
             <span class="greeting">Estado de Cuenta</span>
-            <h1 x-text="'Hola, ' + '${alumnoBackend}'.split(' ')[0]"></h1>
+            <h1 x-text="alumnoNombre ? 'Hola, ' + alumnoNombre.split(' ')[0] : 'Hola'"></h1>
           </div>
         </div>
         <div class="balance-summary">

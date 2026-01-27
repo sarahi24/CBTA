@@ -174,7 +174,7 @@ try {
           </div>
           <div class="welcome-text">
             <span class="greeting">Métodos de Pago</span>
-            <h1 x-text="'Hola, ' + alumno.split(' ')[0]"></h1>
+            <h1 x-text="alumno ? 'Hola, ' + alumno.split(' ')[0] : 'Hola'"></h1>
           </div>
         </div>
         <div class="balance-summary">
@@ -325,3 +325,12 @@ try {
 
   [x-cloak] { display: none !important; }
 </style>
+
+<script>
+  // Debug script para verificar localStorage
+  document.addEventListener('alpine:init', () => {
+    console.log('🔍 Alpine.js inicializado en Tarjetas');
+    console.log('🔍 userName en localStorage:', localStorage.getItem('userName'));
+    console.log('🔍 userId en localStorage:', localStorage.getItem('userId'));
+  });
+</script>
