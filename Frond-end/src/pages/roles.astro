@@ -2086,10 +2086,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         payload = {
                             career_id: Number(this.studentDetails.career_id),
                             n_control: String(this.studentDetails.n_control).trim(),
-                            semestre: Number(this.studentDetails.semestre),
-                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : '',
-                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : ''
+                            semestre: Number(this.studentDetails.semestre)
                         };
+                        // Solo incluir campos opcionales si tienen valor
+                        if (this.studentDetails.group && String(this.studentDetails.group).trim()) {
+                            payload.group = String(this.studentDetails.group).trim();
+                        }
+                        if (this.studentDetails.workshop && String(this.studentDetails.workshop).trim()) {
+                            payload.workshop = String(this.studentDetails.workshop).trim();
+                        }
                     } else {
                         // No existe, crear (POST sí necesita user_id)
                         endpoint = `${this.apiBaseUrl}/v1/admin-actions/attach-student`;
@@ -2099,10 +2104,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             user_id: Number(this.studentDetails.user_id),
                             career_id: Number(this.studentDetails.career_id),
                             n_control: String(this.studentDetails.n_control).trim(),
-                            semestre: Number(this.studentDetails.semestre),
-                            group: this.studentDetails.group ? String(this.studentDetails.group).trim() : '',
-                            workshop: this.studentDetails.workshop ? String(this.studentDetails.workshop).trim() : ''
+                            semestre: Number(this.studentDetails.semestre)
                         };
+                        // Solo incluir campos opcionales si tienen valor
+                        if (this.studentDetails.group && String(this.studentDetails.group).trim()) {
+                            payload.group = String(this.studentDetails.group).trim();
+                        }
+                        if (this.studentDetails.workshop && String(this.studentDetails.workshop).trim()) {
+                            payload.workshop = String(this.studentDetails.workshop).trim();
+                        }
                     }
 
                     console.log(`📤 ${method} ${endpoint}`);
