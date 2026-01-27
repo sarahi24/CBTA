@@ -17,6 +17,15 @@ class CareersController extends Controller
         ]);
     }
 
+    public function show(Career $career)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Carrera encontrada.',
+            'data' => ['career' => $career]
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([

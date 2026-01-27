@@ -762,8 +762,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             <div x-show="showCareerModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
                 <div @click="closeCareerModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
                 <div class="relative bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2" x-text="careerEditingId ? '✏️ Editar carrera' : '🧭 Crear nueva carrera'"></h3>
-                    <p class="text-slate-500 text-sm mb-6" x-text="careerEditingId ? 'Actualiza el nombre de la carrera seleccionada.' : 'Registra una carrera académica disponible para los estudiantes.'"></p>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">🧭 Crear nueva carrera</h3>
+                    <p class="text-slate-500 text-sm mb-6">Registra una carrera académica disponible para los estudiantes.</p>
 
                     <form @submit.prevent="saveCareer()" class="space-y-4">
                         <div>
@@ -772,10 +772,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional"
                                    placeholder="Ej. Ofimática">
                             <p x-show="careerError" class="text-sm text-red-600 mt-2" x-text="careerError"></p>
-                            <button type="button" x-show="careerEditingId" @click="resetCareerForm()"
-                                    class="mt-2 text-xs font-semibold text-slate-600 hover:text-slate-800">
-                                Cancelar edición
-                            </button>
                         </div>
 
                         <div class="flex gap-3 pt-2">
@@ -784,7 +780,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </button>
                             <button type="submit" :disabled="isSavingCareer"
                                     class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                <span x-show="!isSavingCareer" x-text="careerEditingId ? 'Guardar cambios' : 'Crear carrera'"></span>
+                                <span x-show="!isSavingCareer">Crear carrera</span>
                                 <span x-show="isSavingCareer">Creando...</span>
                             </button>
                         </div>
@@ -805,20 +801,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                         <span class="font-mono text-slate-600" x-text="`ID ${career.id}`"></span>
                                         <span class="font-semibold text-slate-800" x-text="career.career_name"></span>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button"
-                                                @click="startEditCareer(career)"
-                                                class="px-2 py-1 text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded">
-                                            Editar
-                                        </button>
-                                        <button type="button"
-                                                @click="deleteCareer(career.id)"
-                                                :disabled="careerDeletingId === career.id"
-                                                class="px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
-                                            <span x-show="careerDeletingId !== career.id">Eliminar</span>
-                                            <span x-show="careerDeletingId === career.id">Borrando...</span>
-                                        </button>
-                                    </div>
+                                    <button type="button"
+                                            @click="deleteCareer(career.id)"
+                                            :disabled="careerDeletingId === career.id"
+                                            class="px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
+                                        <span x-show="careerDeletingId !== career.id">Eliminar</span>
+                                        <span x-show="careerDeletingId === career.id">Borrando...</span>
+                                    </button>
                                 </div>
                             </template>
                         </div>
@@ -1016,7 +1005,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 careers: [],
                 isLoadingCareers: false,
                 careerDeletingId: null,
-                careerEditingId: null,
                 
                 // Estados para gestión de roles
                 showRolesModal: false,
@@ -1883,76 +1871,66 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     };
                     // Eliminar claves undefined para no enviar campos vacíos
                     Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
-                    const hasUserChanges = Object.keys(userData).length > 0;
                     // No enviar: password, role, address, blood_type, registration_date, status
                     // ya que update-user/{id} no los acepta según validaciones del backend
                     
                     if (this.isEditing) {
-                        let userUpdateOk = true;
-
-                        if (hasUserChanges) {
-                            console.log('🔄 Actualizando usuario ID:', this.newUser.id);
-                            console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
-                            // Backend /v1/admin-actions/update-user/{id} expects PUT, not PATCH
-                            const response = await this.authenticatedFetch(
-                                `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
-                                {
-                                    method: 'PUT',
-                                    headers: { 
-                                        'Content-Type': 'application/json',
-                                        'X-User-Role': 'admin',
-                                        'X-User-Permission': 'update.users'
-                                    },
-                                    body: JSON.stringify(userData)
-                                }
-                            );
-                            let result = {};
-                            try {
-                                result = await response.json();
-                            } catch (_) {
-                                result = {};
+                        console.log('🔄 Actualizando usuario ID:', this.newUser.id);
+                        console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
+                        // Backend /v1/admin-actions/update-user/{id} expects PUT, not PATCH
+                        const response = await this.authenticatedFetch(
+                            `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
+                            {
+                                method: 'PUT',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'X-User-Role': 'admin',
+                                    'X-User-Permission': 'update.users'
+                                },
+                                body: JSON.stringify(userData)
                             }
-
-                            if (response.ok && result.success) {
-                                const updatedUser = this.mapUser(result.data?.user || result.data || result);
-                                const index = this.users.findIndex(u => u.id === this.newUser.id);
-                                if (index !== -1) this.users[index] = updatedUser;
-                            } else {
-                                userUpdateOk = false;
-                                console.error('❌ Error al actualizar usuario:', {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    result: result,
-                                    errors: result.errors
-                                });
-                                console.error('📋 Response body completo:', result);
-                                
-                                // Mostrar errores de validación si existen
-                                let msg = result.message || result.error || `Error ${response.status}`;
-                                if (result.errors) {
-                                    const errorList = Object.entries(result.errors)
-                                        .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-                                        .join('; ');
-                                    msg = errorList || msg;
-                                }
-                                // Si es error 500 sin mensaje, sugerir contactar soporte
-                                if (response.status === 500) {
-                                    msg = (msg && msg !== 'Error 500') ? msg : 'Error interno del servidor. Contacte al soporte.';
-                                }
-                                this.showNotify(msg, 'error');
-                            }
-                        } else {
-                            console.log('ℹ️ Sin cambios en datos básicos de usuario; se omite update-user.');
+                        );
+                        let result = {};
+                        try {
+                            result = await response.json();
+                        } catch (_) {
+                            result = {};
                         }
 
-                        // Guardar datos de estudiante si existen
-                        if (userUpdateOk && this.newUser.studentDetail) {
-                            await this.saveStudentDetailsFromEditPanel();
-                        }
-
-                        if (userUpdateOk) {
-                            this.showNotify('Usuario actualizado');
+                        if (response.ok && result.success) {
+                            const updatedUser = this.mapUser(result.data?.user || result.data || result);
+                            const index = this.users.findIndex(u => u.id === this.newUser.id);
+                            if (index !== -1) this.users[index] = updatedUser;
+                            
+                            // Guardar datos de estudiante si existen
+                            if (this.newUser.studentDetail) {
+                                await this.saveStudentDetailsFromEditPanel();
+                            }
+                            
+                            this.showNotify(result.message || 'Usuario actualizado');
                             this.closePanel();
+                        } else {
+                            console.error('❌ Error al actualizar usuario:', {
+                                status: response.status,
+                                statusText: response.statusText,
+                                result: result,
+                                errors: result.errors
+                            });
+                            console.error('📋 Response body completo:', result);
+                            
+                            // Mostrar errores de validación si existen
+                            let msg = result.message || result.error || `Error ${response.status}`;
+                            if (result.errors) {
+                                const errorList = Object.entries(result.errors)
+                                    .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                    .join('; ');
+                                msg = errorList || msg;
+                            }
+                            // Si es error 500 sin mensaje, sugerir contactar soporte
+                            if (response.status === 500) {
+                                msg = (msg && msg !== 'Error 500') ? msg : 'Error interno del servidor. Contacte al soporte.';
+                            }
+                            this.showNotify(msg, 'error');
                         }
                     } else {
                         // Generar contraseña automática
@@ -2033,76 +2011,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (checkResponse.ok) {
                         // Actualizar estudiante existente
                         console.log('🔄 Actualizando detalles de estudiante...');
-                        // PATCH /update-student/{id} acepta: career_id, group, workshop (y n_control, semestre si la validación lo permite)
-                        const updatePayload = {
-                            career_id: studentData.career_id,
-                            group: studentData.group,
-                            workshop: studentData.workshop
-                        };
-                        // Incluir n_control y semestre si están presentes
-                        if (studentData.n_control !== undefined) updatePayload.n_control = studentData.n_control;
-                        if (studentData.semestre !== undefined) updatePayload.semestre = studentData.semestre;
-                        
-                        Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
-
-                        if (Object.keys(updatePayload).length === 0) {
-                            console.log('ℹ️ Sin cambios en detalles de estudiante; se omite update-student.');
-                            return;
-                        }
-
-                        console.log('📤 Payload para update-student:', JSON.stringify(updatePayload, null, 2));
                         const updateResponse = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-student/${studentData.user_id}`,
                             {
                                 method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-User-Role': 'admin',
-                                    'X-User-Permission': 'update.student'
-                                },
-                                body: JSON.stringify(updatePayload)
+                                headers: { 'Content-Type': 'application/json' },
+                                // Incluimos n_control y semestre para permitir editar también esos campos
+                                body: JSON.stringify({
+                                    career_id: studentData.career_id,
+                                    n_control: studentData.n_control,
+                                    semestre: studentData.semestre,
+                                    group: studentData.group,
+                                    workshop: studentData.workshop
+                                })
                             }
                         );
 
                         if (updateResponse.ok) {
                             console.log('✅ Detalles de estudiante actualizados');
                         } else {
-                            const errorResult = await updateResponse.json().catch(() => ({}));
-                            console.error('❌ Error al actualizar detalles de estudiante:', updateResponse.status, errorResult);
+                            console.error('❌ Error al actualizar detalles de estudiante');
                         }
                     } else {
                         // Crear nuevo registro de estudiante
                         console.log('➕ Creando nuevo registro de estudiante...');
-                        // POST /attach-student requiere: user_id, career_id, n_control, semestre, group, workshop
-                        const attachPayload = {
-                            user_id: studentData.user_id,
-                            career_id: studentData.career_id,
-                            n_control: studentData.n_control,
-                            semestre: studentData.semestre,
-                            group: studentData.group,
-                            workshop: studentData.workshop
-                        };
-                        Object.keys(attachPayload).forEach(k => attachPayload[k] === undefined && delete attachPayload[k]);
-                        
-                        console.log('📤 Payload para attach-student:', JSON.stringify(attachPayload, null, 2));
                         const createResponse = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/attach-student`,
                             {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-User-Role': 'admin',
-                                    'X-User-Permission': 'attach.student'
-                                },
-                                body: JSON.stringify(attachPayload)
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(studentData)
                             }
                         );
 
                         if (createResponse.ok) {
                             console.log('✅ Detalles de estudiante creados');
                         } else {
-                            const errorResult = await createResponse.json().catch(() => ({}));
-                            console.error('❌ Error al crear detalles de estudiante:', createResponse.status, errorResult);
+                            console.error('❌ Error al crear detalles de estudiante');
                         }
                     }
                 } catch (error) {
@@ -2597,27 +2542,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             // ==================== GESTIÓN DE CARRERAS ====================
 
-            resetCareerForm() {
+            openCareerModal() {
                 this.careerForm = { career_name: '' };
                 this.careerError = '';
-                this.careerEditingId = null;
-            },
-
-            openCareerModal() {
-                this.resetCareerForm();
                 this.loadCareers();
                 this.showCareerModal = true;
             },
 
             closeCareerModal() {
                 this.showCareerModal = false;
-                this.careerError = '';
-            },
-
-            startEditCareer(career) {
-                if (!career?.id) return;
-                this.careerEditingId = career.id;
-                this.careerForm = { career_name: (career.career_name || career.name || '').trim() };
                 this.careerError = '';
             },
 
@@ -2641,7 +2574,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const isEditing = !!this.careerEditingId;
                     const url = isEditing
                         ? `${this.apiBaseUrl}/v1/careers/${this.careerEditingId}`
-                        : `${this.apiBaseUrl}/v1/careers`;
+                        : `${this.apiBaseUrl}/v1/carreras`;
                     const method = isEditing ? 'PATCH' : 'POST';
 
                     console.log(`📤 ${isEditing ? 'Actualizando' : 'Creando'} carrera:`, { url, method, careerName });
@@ -2728,8 +2661,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.isLoadingCareers = true;
                 try {
                     const url = forceRefresh
-                        ? `${this.apiBaseUrl}/v1/careers?forceRefresh=true`
-                        : `${this.apiBaseUrl}/v1/careers`;
+                        ? `${this.apiBaseUrl}/v1/carreras?forceRefresh=true`
+                        : `${this.apiBaseUrl}/v1/carreras`;
                     const response = await this.authenticatedFetch(url, {
                         method: 'GET',
                         headers: {
@@ -2872,14 +2805,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     // Obtener CURPs de usuarios seleccionados
                     const curps = this.users
                         .filter(u => this.selectedUsers.includes(u.id))
-                        .map(u => (u.curp || '').trim())
-                        .filter(Boolean);
-
-                    if (curps.length === 0) {
-                        this.showNotify('Selecciona usuarios con CURP válido', 'error');
-                        this.isSaving = false;
-                        return;
-                    }
+                        .map(u => u.curp);
 
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/updated-roles`,
