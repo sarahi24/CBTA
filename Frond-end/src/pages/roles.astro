@@ -838,7 +838,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                             <input type="checkbox" :value="role.name" 
                                                    x-model="rolesToAdd"
                                                    class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
-                                            <span class="text-sm font-medium text-green-800" x-text="role.name"></span>
+                                            <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
                                         </label>
                                     </template>
                                 </div>
@@ -853,7 +853,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                             <input type="checkbox" :value="role.name" 
                                                    x-model="rolesToRemove"
                                                    class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
-                                            <span class="text-sm font-medium text-red-800" x-text="role.name"></span>
+                                            <span class="text-sm font-medium text-red-800" x-text="role.displayName || role.name"></span>
                                         </label>
                                     </template>
                                 </div>
@@ -897,7 +897,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                                    x-model="permissionsToAdd"
                                                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
                                             <div class="flex-1">
-                                                <span class="text-sm font-medium text-blue-800" x-text="permission.name"></span>
+                                                <span class="text-sm font-medium text-blue-800" x-text="permission.displayName || permission.name"></span>
                                                 <span class="text-xs text-blue-600" x-text="' (' + permission.type + ')'"></span>
                                             </div>
                                         </label>
@@ -915,7 +915,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                                    x-model="permissionsToRemove"
                                                    class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
                                             <div class="flex-1">
-                                                <span class="text-sm font-medium text-orange-800" x-text="permission.name"></span>
+                                                <span class="text-sm font-medium text-orange-800" x-text="permission.displayName || permission.name"></span>
                                                 <span class="text-xs text-orange-600" x-text="' (' + permission.type + ')'"></span>
                                             </div>
                                         </label>
@@ -1916,6 +1916,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 result: result,
                                 errors: result.errors
                             });
+                            console.error('📋 Response body completo:', result);
+                            
                             // Mostrar errores de validación si existen
                             let msg = result.message || result.error || `Error ${response.status}`;
                             if (result.errors) {
@@ -1923,6 +1925,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                     .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
                                     .join('; ');
                                 msg = errorList || msg;
+                            }
+                            // Si es error 500 sin mensaje, sugerir contactar soporte
+                            if (response.status === 500) {
+                                msg = (msg && msg !== 'Error 500') ? msg : 'Error interno del servidor. Contacte al soporte.';
                             }
                             this.showNotify(msg, 'error');
                         }
@@ -2705,12 +2711,32 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     const result = await response.json();
                     if (response.ok && result.success) {
-                        this.availableRoles = result.data?.roles || [];
+                        // Traducir nombres de roles al español
+                        const rolesTranslation = {
+                            'admin': 'Administrador',
+                            'student': 'Estudiante',
+                            'financial-staff': 'Personal Financiero',
+                            'financial staff': 'Personal Financiero',
+                            'parent': 'Padre/Tutor',
+                            'teacher': 'Maestro',
+                            'supervisor': 'Supervisor',
+                            'unverified': 'Sin Verificar',
+                            'applicant': 'Solicitante'
+                        };
+                        
+                        const roles = result.data?.roles || [];
+                        this.availableRoles = roles.map(role => ({
+                            id: role.id,
+                            name: role.name,
+                            displayName: rolesTranslation[role.name.toLowerCase()] || role.name
+                        }));
+                        
                         this.rolesToAdd = [];
                         this.rolesToRemove = [];
                         this.showRolesModal = true;
                     } else {
-                        this.showNotify('Error al cargar roles', 'error');
+                        console.error('Error response:', result);
+                        this.showNotify('Error al cargar roles: ' + (result.message || 'Error desconocido'), 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error al cargar roles:', error);
@@ -2812,12 +2838,39 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     const result = await response.json();
                     if (response.ok && result.success) {
-                        this.availablePermissions = result.data?.permissions?.permissions || [];
+                        const permissions = result.data?.permissions?.permissions || [];
+                        
+                        // Traducir nombres de permisos al español
+                        const permissionsTranslation = {
+                            'view.students': 'Ver Estudiantes',
+                            'create.user': 'Crear Usuario',
+                            'update.users': 'Actualizar Usuarios',
+                            'delete.users': 'Eliminar Usuarios',
+                            'view.concepts': 'Ver Conceptos',
+                            'create.concepts': 'Crear Conceptos',
+                            'update.concepts': 'Actualizar Conceptos',
+                            'view.payments': 'Ver Pagos',
+                            'view.roles': 'Ver Roles',
+                            'view.permissions': 'Ver Permisos',
+                            'attach.student': 'Asociar Estudiante',
+                            'update.student': 'Actualizar Estudiante',
+                            'view.student': 'Ver Estudiante',
+                            'import.users': 'Importar Usuarios',
+                            'promote.student': 'Promover Estudiante'
+                        };
+                        
+                        this.availablePermissions = permissions.map(perm => ({
+                            id: perm.id,
+                            name: perm.name,
+                            displayName: permissionsTranslation[perm.name] || perm.name
+                        }));
+                        
                         this.permissionsToAdd = [];
                         this.permissionsToRemove = [];
                         this.showPermissionsModal = true;
                     } else {
-                        this.showNotify('Error al cargar permisos', 'error');
+                        console.error('Error response:', result);
+                        this.showNotify('Error al cargar permisos: ' + (result.message || 'Error desconocido'), 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error al cargar permisos:', error);

@@ -293,12 +293,18 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     const userRole = window.AuthService.getUserRole();
                     let redirectUrl = '/Dashboard'; // Default
                     
-                    if (userRole === 'student' || userRole === 'parent') {
+                    // Normalizar el rol a minúsculas para comparación
+                    const roleLower = (userRole || '').toLowerCase().trim();
+                    
+                    if (roleLower === 'student' || roleLower === 'estudiante' || roleLower === 'parent' || roleLower === 'padre') {
                         redirectUrl = '/Estudiante/PortalEstudiante';
-                    } else if (userRole === 'admin' || userRole === 'financial-staff') {
+                    } else if (roleLower === 'admin' || roleLower === 'administrador' || 
+                               roleLower === 'financial-staff' || roleLower === 'financial staff' || 
+                               roleLower === 'caja') {
                         redirectUrl = '/Dashboard';
                     }
                     
+                    console.log('👤 Rol del usuario:', userRole);
                     console.log('🚀 Redirigiendo a:', redirectUrl);
                     setTimeout(() => window.location.href = redirectUrl, 800);
                 } else {
