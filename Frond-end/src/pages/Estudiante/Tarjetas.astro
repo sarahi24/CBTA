@@ -3,49 +3,8 @@ import StudentLayout from '../../layouts/LayoutEstu.astro';
 import { API_ENDPOINTS } from '../../config/api.js';
 
 let tarjetasIniciales = [];
-let alumnoBackend = "Estudiante";
 const title = "Mis Métodos de Pago";
-let error = null;
-
-try {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
-  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
-
-  if (token && userId) {
-    alumnoBackend = userName;
-
-    // Fetch saved cards from API
-    try {
-      const cardsRes = await fetch(API_ENDPOINTS.cards.list(userId), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (cardsRes.ok) {
-        const cardsData = await cardsRes.json();
-        tarjetasIniciales = Array.isArray(cardsData) ? cardsData.map(card => ({
-          id: card.id,
-          tipo: card.brand || 'Tarjeta',
-          terminacion: card.last4 || card.terminacion || '****',
-          vencimiento: card.exp_month && card.exp_year ? `${String(card.exp_month).padStart(2, '0')}/${String(card.exp_year).slice(-2)}` : card.vencimiento || 'N/A',
-          logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
-        })) : [];
-      }
-    } catch (err) {
-      console.error('Error fetching cards:', err);
-      tarjetasIniciales = [];
-    }
-  } else {
-    error = 'Usuario no autenticado';
-  }
-} catch (err) {
-  console.error('Error initializing Tarjetas:', err);
-  error = 'Error al cargar tarjetas';
-}
+// No intentar acceder a localStorage en el servidor - se hará todo en el cliente
 ---
 
 <StudentLayout title={title}>
@@ -53,21 +12,53 @@ try {
     class="page-wrapper"
     x-data={`{ 
       showModal: false,
-      alumno: '',
+      alumno: 'Usuario',
       tarjetas: [],
       form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
 
       // 1. Cargar tarjetas al iniciar
-      init() {
-        // Obtener nombre del usuario desde localStorage
-        this.alumno = localStorage.getItem('userName') || '${alumnoBackend}';
+      async init() {
+        // Obtener datos del usuario desde localStorage
+        this.alumno = localStorage.getItem('userName') || 'Usuario';
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
         
-        const guardadas = localStorage.getItem('mis_tarjetas');
-        if (guardadas) {
-          this.tarjetas = JSON.parse(guardadas);
-        } else {
-          this.tarjetas = ${JSON.stringify(tarjetasIniciales)};
-          this.actualizarStorage();
+        console.log('🔍 Cargando tarjetas para:', this.alumno);
+        console.log('🔍 UserId:', userId);
+        
+        // Cargar tarjetas desde API
+        if (token && userId) {
+          try {
+            const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + userId, {
+              headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (response.ok) {
+              const cardsData = await response.json();
+              this.tarjetas = Array.isArray(cardsData) ? cardsData.map(card => ({
+                id: card.id,
+                tipo: card.brand || 'Tarjeta',
+                terminacion: card.last4 || card.terminacion || '****',
+                vencimiento: card.exp_month && card.exp_year ? (String(card.exp_month).padStart(2, '0') + '/' + String(card.exp_year).slice(-2)) : card.vencimiento || 'N/A',
+                logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+              })) : [];
+              this.actualizarStorage();
+            }
+          } catch (err) {
+            console.error('Error al cargar tarjetas:', err);
+          }
+        }
+        
+        // Si no hay tarjetas de API, cargar desde localStorage
+        if (this.tarjetas.length === 0) {
+          const guardadas = localStorage.getItem('mis_tarjetas');
+          if (guardadas) {
+            this.tarjetas = JSON.parse(guardadas);
+          }
         }
       },
 

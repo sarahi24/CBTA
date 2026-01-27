@@ -2,76 +2,8 @@
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 import { API_ENDPOINTS, handleAPIResponse } from '../../config/api.js';
 
-let alumnoBackend = "Estudiante";
-let title = "Finanzas Estudiantiles";
-let adeudosExistentes = [];
-let tarjetasPorDefecto = [];
-let error = null;
-
-try {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
-  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
-
-  if (token && userId) {
-    alumnoBackend = userName;
-
-    // Fetch pending payments
-    try {
-      const paymentsRes = await fetch(API_ENDPOINTS.pendingPayments.getByUser(userId), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (paymentsRes.ok) {
-        const paymentsData = await paymentsRes.json();
-        // Transform API response to match UI structure
-        adeudosExistentes = Array.isArray(paymentsData) ? paymentsData.map(payment => ({
-          id: payment.id,
-          concepto: payment.concept_name || payment.concepto || 'Pago',
-          monto: payment.amount?.toString() || payment.monto || '0.00',
-          fecha: payment.due_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
-          status: payment.status || 'Pendiente'
-        })) : [];
-      }
-    } catch (err) {
-      console.error('Error fetching pending payments:', err);
-      adeudosExistentes = [];
-    }
-
-    // Fetch saved cards
-    try {
-      const cardsRes = await fetch(API_ENDPOINTS.cards.list(userId), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (cardsRes.ok) {
-        const cardsData = await cardsRes.json();
-        tarjetasPorDefecto = Array.isArray(cardsData) ? cardsData.map(card => ({
-          id: card.id,
-          tipo: card.brand || 'Tarjeta',
-          terminacion: card.last4 || card.terminacion || '****',
-          logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
-        })) : [];
-      }
-    } catch (err) {
-      console.error('Error fetching cards:', err);
-      tarjetasPorDefecto = [];
-    }
-  } else {
-    error = 'Usuario no autenticado';
-  }
-} catch (err) {
-  console.error('Error initializing Adeudos:', err);
-  error = 'Error al cargar los adeudos';
-}
+const title = "Finanzas Estudiantiles";
+// Todo el manejo de datos se hará del lado del cliente
 ---
 
 <StudentLayout title={title}>
@@ -85,18 +17,79 @@ try {
       selectedCard: null,
       adeudos: [],
       tarjetas: [],
-      alumnoNombre: '',
+      alumnoNombre: 'Usuario',
 
-      init() {
-        // Obtener nombre del usuario desde localStorage
-        this.alumnoNombre = localStorage.getItem('userName') || '${alumnoBackend}';
+      async init() {
+        // Obtener datos del usuario desde localStorage
+        this.alumnoNombre = localStorage.getItem('userName') || 'Usuario';
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
         
-        const guardadas = localStorage.getItem('mis_tarjetas');
-        this.tarjetas = guardadas ? JSON.parse(guardadas) : ${JSON.stringify(tarjetasPorDefecto)};
+        console.log('🔍 Usuario en Adeudos:', this.alumnoNombre);
         
-        const adeudosGuardados = localStorage.getItem('mis_adeudos');
-        this.adeudos = adeudosGuardados ? JSON.parse(adeudosGuardados) : ${JSON.stringify(adeudosExistentes)};
-        if(!adeudosGuardados) localStorage.setItem('mis_adeudos', JSON.stringify(this.adeudos));
+        // Cargar adeudos desde API
+        if (token && userId) {
+          try {
+            const paymentsRes = await fetch('https://nginx-production-728f.up.railway.app/api/v1/pending-payments/' + userId, {
+              headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (paymentsRes.ok) {
+              const paymentsData = await paymentsRes.json();
+              this.adeudos = Array.isArray(paymentsData) ? paymentsData.map(payment => ({
+                id: payment.id,
+                concepto: payment.concept_name || payment.concepto || 'Pago',
+                monto: payment.amount?.toString() || payment.monto || '0.00',
+                fecha: payment.due_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+                status: payment.status || 'Pendiente'
+              })) : [];
+            }
+          } catch (err) {
+            console.error('Error al cargar adeudos:', err);
+          }
+          
+          // Cargar tarjetas desde API
+          try {
+            const cardsRes = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + userId, {
+              headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (cardsRes.ok) {
+              const cardsData = await cardsRes.json();
+              this.tarjetas = Array.isArray(cardsData) ? cardsData.map(card => ({
+                id: card.id,
+                tipo: card.brand || 'Tarjeta',
+                terminacion: card.last4 || card.terminacion || '****',
+                logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+              })) : [];
+            }
+          } catch (err) {
+            console.error('Error al cargar tarjetas:', err);
+          }
+        }
+        
+        // Fallback a localStorage si no hay datos de API
+        if (this.adeudos.length === 0) {
+          const adeudosGuardados = localStorage.getItem('mis_adeudos');
+          if (adeudosGuardados) {
+            this.adeudos = JSON.parse(adeudosGuardados);
+          }
+        }
+        
+        if (this.tarjetas.length === 0) {
+          const guardadas = localStorage.getItem('mis_tarjetas');
+          if (guardadas) {
+            this.tarjetas = JSON.parse(guardadas);
+          }
+        }
       },
 
       openPayment(item) {
