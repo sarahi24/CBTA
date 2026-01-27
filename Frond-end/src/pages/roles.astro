@@ -1980,8 +1980,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             {
                                 method: 'PATCH',
                                 headers: { 'Content-Type': 'application/json' },
+                                // Incluimos n_control y semestre para permitir editar también esos campos
                                 body: JSON.stringify({
                                     career_id: studentData.career_id,
+                                    n_control: studentData.n_control,
+                                    semestre: studentData.semestre,
                                     group: studentData.group,
                                     workshop: studentData.workshop
                                 })
