@@ -757,13 +757,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
         </template>
 
-        <!-- Modal de Creación de Carrera -->
+        <!-- Modal de Creación/Edición de Carrera -->
         <template x-teleport="body">
             <div x-show="showCareerModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
                 <div @click="closeCareerModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
                 <div class="relative bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">🧭 Crear nueva carrera</h3>
-                    <p class="text-slate-500 text-sm mb-6">Registra una carrera académica disponible para los estudiantes.</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2" x-text="careerEditingId ? '✏️ Editar carrera' : '🧭 Crear nueva carrera'"></h3>
+                    <p class="text-slate-500 text-sm mb-6" x-text="careerEditingId ? 'Modifica el nombre de la carrera.' : 'Registra una carrera académica disponible para los estudiantes.'"></p>
 
                     <form @submit.prevent="saveCareer()" class="space-y-4">
                         <div>
@@ -780,8 +780,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </button>
                             <button type="submit" :disabled="isSavingCareer"
                                     class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                <span x-show="!isSavingCareer">Crear carrera</span>
-                                <span x-show="isSavingCareer">Creando...</span>
+                                <span x-show="!isSavingCareer" x-text="careerEditingId ? 'Actualizar carrera' : 'Crear carrera'"></span>
+                                <span x-show="isSavingCareer" x-text="careerEditingId ? 'Actualizando...' : 'Creando...'"></span>
                             </button>
                         </div>
                     </form>
@@ -801,13 +801,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                         <span class="font-mono text-slate-600" x-text="`ID ${career.id}`"></span>
                                         <span class="font-semibold text-slate-800" x-text="career.career_name"></span>
                                     </div>
-                                    <button type="button"
-                                            @click="deleteCareer(career.id)"
-                                            :disabled="careerDeletingId === career.id"
-                                            class="px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
-                                        <span x-show="careerDeletingId !== career.id">Eliminar</span>
-                                        <span x-show="careerDeletingId === career.id">Borrando...</span>
-                                    </button>
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                                @click="startEditCareer(career)"
+                                                class="px-2 py-1 text-xs font-semibold text-blue-700 hover:text-blue-800 hover:bg-blue-50 rounded">
+                                            Editar
+                                        </button>
+                                        <button type="button"
+                                                @click="deleteCareer(career.id)"
+                                                :disabled="careerDeletingId === career.id"
+                                                class="px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
+                                            <span x-show="careerDeletingId !== career.id">Eliminar</span>
+                                            <span x-show="careerDeletingId === career.id">Borrando...</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -1005,6 +1012,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 careers: [],
                 isLoadingCareers: false,
                 careerDeletingId: null,
+                careerEditingId: null,
                 
                 // Estados para gestión de roles
                 showRolesModal: false,
@@ -2552,6 +2560,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             closeCareerModal() {
                 this.showCareerModal = false;
                 this.careerError = '';
+                this.resetCareerForm();
+            },
+
+            startEditCareer(career) {
+                this.careerEditingId = career.id;
+                this.careerForm = { career_name: career.career_name };
+                this.careerError = '';
+                this.showCareerModal = true;
+            },
+
+            resetCareerForm() {
+                this.careerEditingId = null;
+                this.careerForm = { career_name: '' };
+                this.careerError = '';
             },
 
             async saveCareer() {
@@ -2610,7 +2632,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                         : c
                                 );
                             }
-                            this.resetCareerForm();
+                            this.closeCareerModal();
                         } else {
                             this.showNotify(result.message || 'Carrera creada exitosamente', 'success');
                             if (updated) {
