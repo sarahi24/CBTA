@@ -1858,6 +1858,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 try {
                     // Construir payload mínimo para evitar 500 del backend por campos vacíos
+                    // NOTA: update-user/{id} solo acepta: name, last_name, email, phone_number, 
+                    // birthdate, gender, curp, password (no: role, address, blood_type, registration_date, status)
                     const userData = {
                         name: this.newUser.name || undefined,
                         last_name: this.newUser.last_name || undefined,
@@ -1865,20 +1867,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         phone_number: this.newUser.phone_number || undefined,
                         birthdate: this.normalizeDate(this.newUser.birthdate) || undefined,
                         gender: this.newUser.gender || undefined,
-                        curp: this.newUser.curp || undefined,
-                        address: Array.isArray(this.newUser.address) ? this.newUser.address : undefined,
-                        blood_type: this.newUser.blood_type || undefined,
-                        registration_date: this.normalizeDate(this.newUser.registration_date) || undefined,
-                        status: this.newUser.status || undefined,
-                        role: this.newUser.role || undefined
+                        curp: this.newUser.curp || undefined
                     };
                     // Eliminar claves undefined para no enviar campos vacíos
                     Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
-                    delete userData.password;
-                    // No incluir studentDetail en la petición de usuario
+                    // No enviar: password, role, address, blood_type, registration_date, status
+                    // ya que update-user/{id} no los acepta según validaciones del backend
                     
                     if (this.isEditing) {
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
+                        console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
                         // Backend /v1/admin-actions/update-user/{id} expects PUT, not PATCH
                         const response = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
