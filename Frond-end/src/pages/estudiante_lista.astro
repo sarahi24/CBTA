@@ -1008,6 +1008,58 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
         showMsg('Datos de la matrícula borrados del almacenamiento local. 🗑️', false);
       });
 
+      // ==================== LISTENER PARA SINCRONIZACIÓN CON ROLES.ASTRO ====================
+      // Escuchar el evento cuando se asocia un estudiante desde roles.astro
+      window.addEventListener('student-associated', (event) => {
+        const { student, action } = event.detail;
+        let list = readLocal();
+        
+        console.log(`📥 Evento recibido: ${action === 'update' ? 'ACTUALIZAR' : 'CREAR'} estudiante`, student);
+        
+        // Buscar si ya existe el estudiante por ID
+        const existingIndex = list.findIndex(s => s.id === student.id);
+        
+        if (existingIndex !== -1) {
+          // Actualizar estudiante existente
+          list[existingIndex] = {
+            ...list[existingIndex],
+            numControl: student.numControl,
+            semestre: student.semestre,
+            carrera: student.carrera,
+            group: student.group,
+            workshop: student.workshop
+          };
+          console.log('✏️ Estudiante actualizado en la tabla');
+        } else {
+          // Crear nuevo registro de estudiante
+          list.unshift({
+            id: student.id,
+            numControl: student.numControl,
+            nombre: student.nombre,
+            apellidoP: student.apellidoP,
+            apellidoM: student.apellidoM,
+            semestre: student.semestre,
+            carrera: student.carrera,
+            correo: student.correo,
+            group: student.group,
+            workshop: student.workshop
+          });
+          console.log('✅ Nuevo estudiante agregado a la tabla');
+        }
+        
+        // Guardar cambios en localStorage
+        writeLocal(list);
+        
+        // Volver a la primera página y renderizar
+        paginationState.currentPage = 1;
+        render();
+        updateStats();
+        
+        // Mostrar notificación
+        showMsg(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`, false);
+      });
+      // ========================================================================================
+
       // Inicialización
       render();
       updateStats();

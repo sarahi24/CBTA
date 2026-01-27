@@ -2079,14 +2079,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     let endpoint, method, permission, payload;
                     if (checkResponse.ok) {
-                        // Ya existe, actualizar (PATCH no necesita user_id en body)
+                        // Ya existe, actualizar (PATCH - solo career_id, group, workshop)
                         endpoint = `${this.apiBaseUrl}/v1/admin-actions/update-student/${this.studentDetails.user_id}`;
                         method = 'PATCH';
                         permission = 'update.student';
                         payload = {
-                            career_id: Number(this.studentDetails.career_id),
-                            n_control: String(this.studentDetails.n_control).trim(),
-                            semestre: Number(this.studentDetails.semestre)
+                            career_id: Number(this.studentDetails.career_id)
                         };
                         // Solo incluir campos opcionales si tienen valor
                         if (this.studentDetails.group && String(this.studentDetails.group).trim()) {
@@ -2096,7 +2094,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             payload.workshop = String(this.studentDetails.workshop).trim();
                         }
                     } else {
-                        // No existe, crear (POST sí necesita user_id)
+                        // No existe, crear (POST - requiere user_id, career_id, n_control, semestre)
                         endpoint = `${this.apiBaseUrl}/v1/admin-actions/attach-student`;
                         method = 'POST';
                         permission = 'attach.student';
@@ -2134,6 +2132,33 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (response.ok && result.success) {
                         this.showNotify(result.message || 'Detalles de estudiante guardados', 'success');
                         this.showStudentModal = false;
+                        
+                        // Obtener los datos completos del usuario para enviar con el evento
+                        const studentUser = this.users.find(u => u.id === this.studentDetails.user_id);
+                        if (studentUser) {
+                            const studentData = {
+                                id: studentUser.id,
+                                numControl: this.studentDetails.n_control,
+                                nombre: studentUser.nombre || studentUser.name || '',
+                                apellidoP: studentUser.apellidoP || studentUser.apellidoPaterno || studentUser.apellido_paterno || '',
+                                apellidoM: studentUser.apellidoM || studentUser.apellidoMaterno || studentUser.apellido_materno || '',
+                                semestre: this.studentDetails.semestre,
+                                carrera: this.studentDetails.career_id,
+                                correo: studentUser.correo || studentUser.email || '',
+                                group: this.studentDetails.group || '',
+                                workshop: this.studentDetails.workshop || ''
+                            };
+                            
+                            // Enviar evento personalizado a estudiante_lista.astro
+                            window.dispatchEvent(new CustomEvent('student-associated', {
+                                detail: {
+                                    student: studentData,
+                                    action: checkResponse.ok ? 'update' : 'create'
+                                }
+                            }));
+                            console.log('📢 Evento student-associated enviado:', studentData);
+                        }
+                        
                         await this.loadUsers(token);
                     } else {
                         console.error('❌ Error desde API:', JSON.stringify(result, null, 2));
