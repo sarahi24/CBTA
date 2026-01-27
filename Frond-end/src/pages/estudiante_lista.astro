@@ -315,10 +315,39 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       const readLocal = () => {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return initial.slice();
-          const arr = JSON.parse(raw);
+          let arr = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(arr)) arr = [];
+          
+          // También leer los estudiantes guardados desde roles.astro
+          const studentsListRaw = localStorage.getItem('studentsList');
+          if (studentsListRaw) {
+            try {
+              const studentsList = JSON.parse(studentsListRaw);
+              if (Array.isArray(studentsList)) {
+                // Fusionar listas: mantener registros únicos por ID
+                const mergedMap = new Map();
+                
+                // Primero agregar los del STORAGE_KEY
+                arr.forEach(s => {
+                  if (s.id) mergedMap.set(s.id, s);
+                });
+                
+                // Luego agregar/actualizar con los de studentsList
+                studentsList.forEach(s => {
+                  if (s.id) mergedMap.set(s.id, s);
+                });
+                
+                arr = Array.from(mergedMap.values());
+                console.log('✅ Listas fusionadas. Total estudiantes:', arr.length);
+              }
+            } catch (e) {
+              console.warn('⚠️ Error al leer studentsList:', e);
+            }
+          }
+          
           return Array.isArray(arr) ? arr : initial.slice();
         } catch (e) {
+          console.warn('⚠️ Error al leer localStorage:', e);
           return initial.slice();
         }
       };
@@ -1044,9 +1073,14 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       // Escuchar el evento cuando se asocia un estudiante desde roles.astro
       window.addEventListener('student-associated', (event) => {
         const { student, action } = event.detail;
-        let list = readLocal();
-        
         console.log(`📥 Evento recibido: ${action === 'update' ? 'ACTUALIZAR' : 'CREAR'} estudiante`, student);
+        
+        if (!student || !student.id) {
+          console.warn('⚠️ Evento inválido: falta ID del estudiante');
+          return;
+        }
+        
+        let list = readLocal();
         
         // Buscar si ya existe el estudiante por ID
         const existingIndex = list.findIndex(s => s.id === student.id);
@@ -1055,41 +1089,64 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
           // Actualizar estudiante existente
           list[existingIndex] = {
             ...list[existingIndex],
-            numControl: student.numControl,
-            semestre: student.semestre,
-            carrera: student.carrera,
-            group: student.group,
-            workshop: student.workshop
+            ...student  // Reemplazar con todos los datos nuevos
           };
-          console.log('✏️ Estudiante actualizado en la tabla');
+          console.log('✏️ Estudiante actualizado en la tabla:', list[existingIndex]);
         } else {
-          // Crear nuevo registro de estudiante
-          list.unshift({
+          // Crear nuevo registro de estudiante - asegurar que tenga todos los campos
+          const newStudent = {
             id: student.id,
-            numControl: student.numControl,
-            nombre: student.nombre,
-            apellidoP: student.apellidoP,
-            apellidoM: student.apellidoM,
-            semestre: student.semestre,
-            carrera: student.carrera,
-            correo: student.correo,
+            numControl: student.numControl || '',
+            nombre: student.nombre || '',
+            apellidoP: student.apellidoP || '',
+            apellidoM: student.apellidoM || '',
+            semestre: student.semestre || 0,
+            carrera: student.carrera || '',
+            correo: student.correo || '',
             group: student.group || '',
             workshop: student.workshop || ''
-          });
-          console.log('✅ Nuevo estudiante agregado a la tabla');
+          };
+          list.unshift(newStudent);
+          console.log('✅ Nuevo estudiante agregado a la tabla:', newStudent);
         }
         
-        // Guardar cambios en localStorage
+        // Guardar cambios en ambos localStorage
         writeLocal(list);
+        
+        // También actualizar studentsList para mantener sincronización
+        try {
+          let studentsList = [];
+          const stored = localStorage.getItem('studentsList');
+          if (stored) {
+            try {
+              studentsList = JSON.parse(stored);
+              if (!Array.isArray(studentsList)) studentsList = [];
+            } catch (e) {
+              studentsList = [];
+            }
+          }
+          
+          const studentsListIndex = studentsList.findIndex(s => s.id === student.id);
+          if (studentsListIndex !== -1) {
+            studentsList[studentsListIndex] = student;
+          } else {
+            studentsList.unshift(student);
+          }
+          
+          localStorage.setItem('studentsList', JSON.stringify(studentsList));
+          console.log('💾 StudentsList sincronizado');
+        } catch (storageError) {
+          console.warn('⚠️ Error al sincronizar studentsList:', storageError);
+        }
         
         // Volver a la primera página y renderizar
         paginationState.currentPage = 1;
         render();
         updateStats();
         
-        // Mostrar notificación (crear un toast si msg no existe)
+        // Mostrar notificación
         try {
-          if (typeof msg !== 'undefined') {
+          if (typeof msg !== 'undefined' && msg) {
             showMsg(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`, false);
           } else {
             console.log(`✅ Estudiante ${action === 'update' ? 'actualizado' : 'asociado'} correctamente a la lista`);

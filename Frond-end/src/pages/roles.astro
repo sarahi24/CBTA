@@ -2166,7 +2166,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 nombre: studentUser.nombre || studentUser.name || '',
                                 apellidoP: studentUser.apellidoP || studentUser.apellidoPaterno || studentUser.apellido_paterno || '',
                                 apellidoM: studentUser.apellidoM || studentUser.apellidoMaterno || studentUser.apellido_materno || '',
-                                semestre: this.studentDetails.semestre,
+                                semestre: Number(this.studentDetails.semestre),
                                 carrera: careerName,
                                 correo: studentUser.correo || studentUser.email || '',
                                 group: this.studentDetails.group || '',
@@ -2174,6 +2174,37 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             };
                             
                             console.log('📦 Datos del estudiante a enviar:', studentData);
+                            
+                            // Guardar en localStorage también para sincronización persistente
+                            try {
+                                let studentsList = [];
+                                const stored = localStorage.getItem('studentsList');
+                                if (stored) {
+                                    try {
+                                        studentsList = JSON.parse(stored);
+                                        if (!Array.isArray(studentsList)) studentsList = [];
+                                    } catch (e) {
+                                        studentsList = [];
+                                    }
+                                }
+                                
+                                // Buscar si ya existe
+                                const existingIndex = studentsList.findIndex(s => s.id === studentData.id);
+                                if (existingIndex !== -1) {
+                                    // Actualizar
+                                    studentsList[existingIndex] = studentData;
+                                    console.log('💾 Estudiante actualizado en localStorage');
+                                } else {
+                                    // Agregar nuevo
+                                    studentsList.unshift(studentData);
+                                    console.log('💾 Nuevo estudiante guardado en localStorage');
+                                }
+                                
+                                localStorage.setItem('studentsList', JSON.stringify(studentsList));
+                                console.log('✅ StudentList actualizado en localStorage');
+                            } catch (storageError) {
+                                console.warn('⚠️ Error al guardar en localStorage:', storageError);
+                            }
                             
                             // Enviar evento personalizado a estudiante_lista.astro
                             window.dispatchEvent(new CustomEvent('student-associated', {
