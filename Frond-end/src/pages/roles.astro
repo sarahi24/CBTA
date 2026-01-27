@@ -2105,7 +2105,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         };
                     }
 
-                    console.log(`📤 ${method} ${endpoint}`, payload);
+                    console.log(`📤 ${method} ${endpoint}`);
+                    console.log('📦 Payload completo:', JSON.stringify(payload, null, 2));
 
                     const response = await this.authenticatedFetch(endpoint, {
                         method,
@@ -2117,15 +2118,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     });
 
                     const result = await response.json();
-                    console.log('📥 Respuesta:', response.status, result);
+                    console.log('📥 Status:', response.status);
+                    console.log('📥 Respuesta completa:', JSON.stringify(result, null, 2));
 
                     if (response.ok && result.success) {
                         this.showNotify(result.message || 'Detalles de estudiante guardados', 'success');
                         this.showStudentModal = false;
                         await this.loadUsers(token);
                     } else {
-                        console.error('❌ Error desde API:', result);
-                        this.showNotify(result.message || `Error: ${response.status}`, 'error');
+                        console.error('❌ Error desde API:', JSON.stringify(result, null, 2));
+                        
+                        // Mostrar errores de validación detallados
+                        if (result.errors) {
+                            const errorMessages = Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+                                .join('\n');
+                            console.error('📋 Errores de validación:\n' + errorMessages);
+                            this.showNotify(`Error de validación:\n${errorMessages}`, 'error');
+                        } else {
+                            this.showNotify(result.message || `Error: ${response.status}`, 'error');
+                        }
                     }
                 } catch (error) {
                     console.error('❌ Error al guardar estudiante:', error);
