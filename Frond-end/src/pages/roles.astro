@@ -1043,7 +1043,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
 
             mapUser(raw) {
-                if (!raw) return raw;
+                if (!raw) return null;
+                
+                // Log para debugging
+                console.log('🔍 mapUser recibió:', raw);
+                
                 const roleValue = raw.role || raw.role_name || (Array.isArray(raw.roles) ? raw.roles[0] : (raw.roles?.[0]?.name || raw.roles?.[0])) || '';
                 const roleKey = roleValue.toString().toLowerCase();
                 let roleLabel = 'Sin rol';
@@ -1057,17 +1061,37 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 else if (statusKey === 'baja-temporal' || statusKey === 'baja temporal' || statusKey === 'temporary-disable') status = 'baja-temporal';
                 else if (statusKey) status = statusKey;
 
-                return {
+                // Asegurar que address siempre sea un array
+                let address = ['', '', ''];
+                if (Array.isArray(raw.address)) {
+                    address = raw.address;
+                } else if (typeof raw.address === 'string') {
+                    // Si es un string, dividirlo
+                    address = [raw.address, '', ''];
+                }
+
+                const mapped = {
                     ...raw,
+                    id: raw.id || null,
+                    name: raw.name || '',
+                    last_name: raw.last_name || '',
+                    email: raw.email || '',
+                    phone_number: raw.phone_number || '',
+                    birthdate: this.normalizeDate(raw.birthdate),
+                    gender: raw.gender || 'hombre',
+                    curp: raw.curp || 'N/A',
+                    blood_type: raw.blood_type || 'O+',
+                    address: address,
+                    registration_date: this.normalizeDate(raw.registration_date),
+                    status: status,
                     fullName: raw.fullName || `${raw.name || ''} ${raw.last_name || ''}`.trim(),
                     role: roleLabel,
                     roleLabel,
                     roleKey,
-                    status,
-                    address: Array.isArray(raw.address) ? raw.address : ['', '', ''],
-                    birthdate: this.normalizeDate(raw.birthdate),
-                    registration_date: this.normalizeDate(raw.registration_date),
                 };
+
+                console.log('📤 mapUser retorna:', mapped);
+                return mapped;
             },
 
             get stats() {
@@ -1599,12 +1623,29 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             openPanelForEdit(user) {
                 this.isEditing = true;
                 const mapped = this.mapUser(user) || {};
-                this.newUser = { 
-                    ...mapped,
-                    curp: mapped.curp === 'N/A' ? '' : (mapped.curp || ''),
-                    blood_type: mapped.blood_type || 'O+',
-                    registration_date: mapped.registration_date || new Date().toISOString().split('T')[0]
+                console.log('🔧 Abriendo panel de edición. Usuario mapeado:', mapped);
+                
+                // Asegurar que todos los campos tengan valores
+                const updatedUser = {
+                    id: mapped.id || user?.id || null,
+                    name: mapped.name || user?.name || '',
+                    last_name: mapped.last_name || user?.last_name || '',
+                    email: mapped.email || user?.email || '',
+                    phone_number: mapped.phone_number || user?.phone_number || '',
+                    birthdate: mapped.birthdate || user?.birthdate || '',
+                    gender: mapped.gender || user?.gender || 'hombre',
+                    curp: mapped.curp === 'N/A' ? '' : (mapped.curp || user?.curp || ''),
+                    blood_type: mapped.blood_type || user?.blood_type || 'O+',
+                    address: Array.isArray(mapped.address) ? [...mapped.address] : (Array.isArray(user?.address) ? [...user.address] : ['', '', '']),
+                    registration_date: mapped.registration_date || user?.registration_date || new Date().toISOString().split('T')[0],
+                    status: mapped.status || user?.status || 'activo',
+                    role: mapped.role || mapped.roleLabel || user?.role || 'Sin rol'
                 };
+                
+                // Usar Object.assign para actualizar reactivamente en Alpine.js
+                Object.assign(this.newUser, updatedUser);
+                
+                console.log('✅ Formulario poblado. newUser:', this.newUser);
                 this.isPanelOpen = true;
             },
 
