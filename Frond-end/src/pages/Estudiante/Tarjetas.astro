@@ -1,14 +1,51 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
+import { API_ENDPOINTS } from '../../config/api.js';
 
-// Datos iniciales si no hay nada en el almacenamiento local
-const tarjetasIniciales = [
-  { id: 1, tipo: 'Mastercard', terminacion: '5080', vencimiento: '05/27', logo: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg' },
-  { id: 2, tipo: 'Visa', terminacion: '4242', vencimiento: '12/26', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' }
-];
-
-const alumnoBackend = "Pedro Gonzalez Lopez"; 
+let tarjetasIniciales = [];
+let alumnoBackend = "Estudiante";
 const title = "Mis Métodos de Pago";
+let error = null;
+
+try {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
+
+  if (token && userId) {
+    alumnoBackend = userName;
+
+    // Fetch saved cards from API
+    try {
+      const cardsRes = await fetch(API_ENDPOINTS.cards.list(userId), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (cardsRes.ok) {
+        const cardsData = await cardsRes.json();
+        tarjetasIniciales = Array.isArray(cardsData) ? cardsData.map(card => ({
+          id: card.id,
+          tipo: card.brand || 'Tarjeta',
+          terminacion: card.last4 || card.terminacion || '****',
+          vencimiento: card.exp_month && card.exp_year ? `${String(card.exp_month).padStart(2, '0')}/${String(card.exp_year).slice(-2)}` : card.vencimiento || 'N/A',
+          logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+        })) : [];
+      }
+    } catch (err) {
+      console.error('Error fetching cards:', err);
+      tarjetasIniciales = [];
+    }
+  } else {
+    error = 'Usuario no autenticado';
+  }
+} catch (err) {
+  console.error('Error initializing Tarjetas:', err);
+  error = 'Error al cargar tarjetas';
+}
 ---
 
 <StudentLayout title={title}>
@@ -50,25 +87,76 @@ const title = "Mis Métodos de Pago";
         const numLimpio = this.form.numero.replace(/\\s/g, '');
         if (numLimpio.length < 15) return alert('Número de tarjeta no válido');
         
-        const nueva = {
-          id: Date.now(),
-          tipo: this.cardType || 'Tarjeta',
-          terminacion: numLimpio.slice(-4),
-          vencimiento: this.form.mes + '/' + this.form.anio,
-          logo: this.cardType === 'Visa' 
-            ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' 
-            : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+        const token = localStorage.getItem('token');
+        const cardPayload = {
+          number: numLimpio,
+          holder_name: this.form.titular,
+          exp_month: parseInt(this.form.mes),
+          exp_year: parseInt('20' + this.form.anio),
+          cvv: this.form.cvv
         };
-        
-        this.tarjetas.push(nueva);
-        this.actualizarStorage(); // 2. Guardar permanentemente
-        this.showModal = false;
-        this.form = { numero: '', titular: '', mes: '', anio: '', cvv: '' };
+
+        fetch('https://nginx-production-728f.up.railway.app/api/v1/cards', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(cardPayload)
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            // Card saved successfully, add to local list
+            const nueva = {
+              id: data.id,
+              tipo: this.cardType || 'Tarjeta',
+              terminacion: numLimpio.slice(-4),
+              vencimiento: this.form.mes + '/' + this.form.anio,
+              logo: this.cardType === 'Visa' 
+                ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' 
+                : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+            };
+            
+            this.tarjetas.push(nueva);
+            this.actualizarStorage();
+            this.showModal = false;
+            this.form = { numero: '', titular: '', mes: '', anio: '', cvv: '' };
+          } else {
+            alert('Error al guardar la tarjeta. Intenta de nuevo.');
+          }
+        })
+        .catch(err => {
+          console.error('Error saving card:', err);
+          alert('Error al conectar con el servidor');
+        });
       },
 
       eliminarTarjeta(id) {
-        this.tarjetas = this.tarjetas.filter(t => t.id !== id);
-        this.actualizarStorage(); // 3. Actualizar después de eliminar
+        const token = localStorage.getItem('token');
+        if (!confirm('¿Estás seguro de que deseas eliminar esta tarjeta?')) return;
+
+        fetch(`https://nginx-production-728f.up.railway.app/api/v1/cards/\${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        })
+        .then(res => {
+          if (res.ok) {
+            this.tarjetas = this.tarjetas.filter(t => t.id !== id);
+            this.actualizarStorage();
+          } else {
+            alert('Error al eliminar la tarjeta');
+          }
+        })
+        .catch(err => {
+          console.error('Error deleting card:', err);
+          alert('Error al conectar con el servidor');
+        });
       }
     }`}
   >

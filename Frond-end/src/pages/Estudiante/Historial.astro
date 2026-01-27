@@ -1,12 +1,53 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
+import { API_ENDPOINTS } from '../../config/api.js';
 
-const alumnoBackend = "Pedro Gonzalez Lopez";
-const title = "Historial de Pagos";
+let alumnoBackend = "Estudiante";
+let title = "Historial de Pagos";
+let historialSemilla = [];
+let error = null;
 
-const historialSemilla = [
-  { id: 1, concepto: "Colegiatura Semestre II - 2024", monto: "1,218.00", fecha: "15 Nov, 2024", metodo: "Visa • 4242", folio: "PAY-99283", categoria: "Académico" }
-];
+try {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
+
+  if (token && userId) {
+    alumnoBackend = userName;
+
+    // Fetch payment history
+    try {
+      const historyRes = await fetch(API_ENDPOINTS.paymentHistory.get(userId), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (historyRes.ok) {
+        const historyData = await historyRes.json();
+        historialSemilla = Array.isArray(historyData) ? historyData.map(payment => ({
+          id: payment.id,
+          concepto: payment.concept_name || payment.concepto || 'Pago',
+          monto: payment.amount?.toString() || payment.monto || '0.00',
+          fecha: payment.payment_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+          metodo: payment.payment_method || payment.metodo || 'Método desconocido',
+          folio: payment.reference_number || payment.folio || 'PAY-' + payment.id,
+          categoria: payment.category || payment.categoria || 'Pago'
+        })) : [];
+      }
+    } catch (err) {
+      console.error('Error fetching payment history:', err);
+      historialSemilla = [];
+    }
+  } else {
+    error = 'Usuario no autenticado';
+  }
+} catch (err) {
+  console.error('Error initializing Historial:', err);
+  error = 'Error al cargar el historial';
+}
 ---
 
 <StudentLayout title={title}>

@@ -1,20 +1,77 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
+import { API_ENDPOINTS, handleAPIResponse } from '../../config/api.js';
 
-const alumnoBackend = "Pedro Gonzalez Lopez";
-const title = "Finanzas Estudiantiles";
+let alumnoBackend = "Estudiante";
+let title = "Finanzas Estudiantiles";
+let adeudosExistentes = [];
+let tarjetasPorDefecto = [];
+let error = null;
 
-// Lista de adeudos con el nuevo ejemplo incluido
-const adeudosExistentes = [
-  { id: 1, concepto: "Colegiatura Semestre I - 2024", monto: "1,218.00", fecha: "20 Dic, 2024", status: "Pendiente" },
-  { id: 2, concepto: "Inscripción Curso Inglés", monto: "450.00", fecha: "15 Ene, 2025", status: "Próximo" },
-  { id: 3, concepto: "Seguro Estudiantil Anual", monto: "285.00", fecha: "05 Feb, 2025", status: "Próximo" }
-];
+try {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
 
-const tarjetasPorDefecto = [
-  { id: 1, tipo: 'Visa', terminacion: '4242', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' },
-  { id: 2, tipo: 'Mastercard', terminacion: '8812', logo: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg' }
-];
+  if (token && userId) {
+    alumnoBackend = userName;
+
+    // Fetch pending payments
+    try {
+      const paymentsRes = await fetch(API_ENDPOINTS.pendingPayments.getByUser(userId), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json();
+        // Transform API response to match UI structure
+        adeudosExistentes = Array.isArray(paymentsData) ? paymentsData.map(payment => ({
+          id: payment.id,
+          concepto: payment.concept_name || payment.concepto || 'Pago',
+          monto: payment.amount?.toString() || payment.monto || '0.00',
+          fecha: payment.due_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+          status: payment.status || 'Pendiente'
+        })) : [];
+      }
+    } catch (err) {
+      console.error('Error fetching pending payments:', err);
+      adeudosExistentes = [];
+    }
+
+    // Fetch saved cards
+    try {
+      const cardsRes = await fetch(API_ENDPOINTS.cards.list(userId), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (cardsRes.ok) {
+        const cardsData = await cardsRes.json();
+        tarjetasPorDefecto = Array.isArray(cardsData) ? cardsData.map(card => ({
+          id: card.id,
+          tipo: card.brand || 'Tarjeta',
+          terminacion: card.last4 || card.terminacion || '****',
+          logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+        })) : [];
+      }
+    } catch (err) {
+      console.error('Error fetching cards:', err);
+      tarjetasPorDefecto = [];
+    }
+  } else {
+    error = 'Usuario no autenticado';
+  }
+} catch (err) {
+  console.error('Error initializing Adeudos:', err);
+  error = 'Error al cargar los adeudos';
+}
 ---
 
 <StudentLayout title={title}>
@@ -46,31 +103,45 @@ const tarjetasPorDefecto = [
 
       processPayment(isReference = false) {
         this.loading = true;
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
         
-        const nuevoPago = {
-          id: Date.now(),
-          concepto: this.selectedItem.concepto,
-          monto: this.selectedItem.monto,
-          fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
-          metodo: isReference ? 'Referencia / Efectivo' : (this.selectedCard.tipo + ' • ' + this.selectedCard.terminacion),
-          folio: 'PAY-' + Math.floor(Math.random() * 90000 + 10000),
-          categoria: isReference ? 'Trámite' : 'Académico'
+        // Prepare payment payload
+        const paymentPayload = {
+          pending_payment_id: this.selectedItem.id,
+          amount: parseFloat(this.selectedItem.monto.replace(',', '')),
+          payment_method: isReference ? 'bank_transfer' : 'card',
+          card_id: isReference ? null : this.selectedCard.id
         };
 
-        setTimeout(() => {
-          // 1. Guardar en Historial
-          const historial = JSON.parse(localStorage.getItem('historial_pagos') || '[]');
-          historial.unshift(nuevoPago);
-          localStorage.setItem('historial_pagos', JSON.stringify(historial));
-
-          // 2. Borrar de Pendientes
-          this.adeudos = this.adeudos.filter(a => a.id !== this.selectedItem.id);
-          localStorage.setItem('mis_adeudos', JSON.stringify(this.adeudos));
-
+        // Send payment to API
+        fetch('https://nginx-production-728f.up.railway.app/api/v1/pending-payments', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(paymentPayload)
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success || data.id) {
+            // Payment created successfully, redirect to history
+            this.loading = false;
+            setTimeout(() => {
+              window.location.href = '/Estudiante/Historial';
+            }, 1000);
+          } else {
+            alert('Error al procesar el pago. Intenta de nuevo.');
+            this.loading = false;
+          }
+        })
+        .catch(err => {
+          console.error('Error processing payment:', err);
+          alert('Error al conectar con el servidor');
           this.loading = false;
-          // 3. Redirigir a la ruta exacta
-          window.location.href = '/Estudiante/Historial'; 
-        }, 2000);
+        });
       }
     }`}
   >

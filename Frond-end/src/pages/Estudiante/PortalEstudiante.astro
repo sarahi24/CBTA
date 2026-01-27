@@ -1,11 +1,45 @@
 ---
-// Updated version - Jan 19, 2026
+// Updated version - Jan 26, 2026 - API Integration
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 import StatCard from './components/StatCard.astro';
 import ProgressCircle from './components/ProgressCircle.astro';
 import PaymentsTable from './components/PaymentsTable.astro'; 
+import { API_ENDPOINTS, handleAPIResponse } from '../../config/api.js';
 
-const dashboardData = Astro.props.dashboardData ?? {};
+let dashboardData = {};
+let error = null;
+
+try {
+  // Get user ID from localStorage (set during login)
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+
+  if (token && userId) {
+    // Fetch dashboard data from backend
+    const response = await fetch(`${API_ENDPOINTS.dashboard.refresh}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      dashboardData = await response.json();
+    } else if (response.status === 401) {
+      // Token expired
+      error = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+    } else {
+      error = 'No se pudo cargar el panel.';
+    }
+  } else {
+    error = 'Usuario no autenticado';
+  }
+} catch (err) {
+  console.error('Error fetching dashboard:', err);
+  error = 'Error al conectar con el servidor.';
+}
 ---
 
 <StudentLayout title="Panel de Estudiante">
