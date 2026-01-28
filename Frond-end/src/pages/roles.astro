@@ -1733,59 +1733,61 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
 
             openPanelForEdit(user) {
-                this.isEditing = true;
-                const mapped = this.mapUser(user) || {};
-                console.log('🔧 Abriendo panel de edición. Usuario original:', user);
-                console.log('🔧 Usuario mapeado:', mapped);
-                console.log('🔧 birthdate:', mapped.birthdate, 'address:', mapped.address);
+                console.log('📝 openPanelForEdit - Usuario original:', user);
                 
-                // Asegurar que todos los campos tengan valores
-                const updatedUser = {
-                    id: mapped.id || user?.id || null,
+                this.isEditing = true;
+                this.hasStudentDetails = false;
+                
+                // Mapear el usuario
+                const mapped = this.mapUser(user) || user || {};
+                console.log('📝 Usuario mapeado:', mapped);
+                
+                // Ensegurar que address sea un array
+                let addressArray = ['', '', ''];
+                if (Array.isArray(mapped.address)) {
+                    addressArray = [...mapped.address];
+                } else if (Array.isArray(user?.address)) {
+                    addressArray = [...user.address];
+                }
+                
+                console.log('📝 Address final:', addressArray);
+                
+                // Asignar todos los datos en un objeto nuevo
+                const userData = {
+                    id: mapped.id || user?.id,
                     name: mapped.name || user?.name || '',
                     last_name: mapped.last_name || user?.last_name || '',
                     email: mapped.email || user?.email || '',
                     phone_number: mapped.phone_number || user?.phone_number || '',
                     birthdate: mapped.birthdate || user?.birthdate || '',
                     gender: mapped.gender || user?.gender || 'hombre',
-                    curp: mapped.curp === 'N/A' ? '' : (mapped.curp || user?.curp || ''),
+                    curp: (mapped.curp === 'N/A' ? '' : mapped.curp) || user?.curp || '',
                     blood_type: mapped.blood_type || user?.blood_type || 'O+',
-                    address: Array.isArray(mapped.address) ? [...mapped.address] : (Array.isArray(user?.address) ? [...user.address] : ['', '', '']),
+                    address: addressArray,
                     registration_date: mapped.registration_date || user?.registration_date || new Date().toISOString().split('T')[0],
                     status: mapped.status || user?.status || 'activo',
-                    role: mapped.role || mapped.roleLabel || user?.role || ''
+                    role: mapped.role || mapped.roleLabel || user?.role || '',
+                    studentDetail: {
+                        user_id: mapped.id || user?.id,
+                        career_id: '',
+                        n_control: '',
+                        semestre: 1,
+                        group: '',
+                        workshop: ''
+                    }
                 };
                 
-                // Actualizar cada propiedad individualmente para reactividad en Alpine.js
-                this.newUser.id = updatedUser.id;
-                this.newUser.name = updatedUser.name;
-                this.newUser.last_name = updatedUser.last_name;
-                this.newUser.email = updatedUser.email;
-                this.newUser.phone_number = updatedUser.phone_number;
-                this.newUser.birthdate = updatedUser.birthdate;
-                this.newUser.gender = updatedUser.gender;
-                this.newUser.curp = updatedUser.curp;
-                this.newUser.blood_type = updatedUser.blood_type;
-                // Actualizar address como array reactivo
-                this.newUser.address = Array.isArray(updatedUser.address) ? [...updatedUser.address] : ['', '', ''];
-                this.newUser.registration_date = updatedUser.registration_date;
-                this.newUser.status = updatedUser.status;
-                this.newUser.role = updatedUser.role;
+                console.log('📝 Datos preparados:', userData);
                 
-                // Resetear studentDetail a objeto vacío antes de cargar
-                this.newUser.studentDetail.user_id = mapped.id || user?.id;
-                this.newUser.studentDetail.career_id = '';
-                this.newUser.studentDetail.n_control = '';
-                this.newUser.studentDetail.semestre = 1;
-                this.newUser.studentDetail.group = '';
-                this.newUser.studentDetail.workshop = '';
+                // Reemplazar newUser completamente con los nuevos datos
+                this.newUser = userData;
+                console.log('✅ newUser actualizado:', this.newUser);
                 
-                console.log('✅ Formulario poblado. newUser:', this.newUser);
-                
-                // Cargar datos de estudiante si existen
-                this.loadStudentDetailsForEdit(mapped.id || user?.id);
-                
+                // Mostrar el panel después de actualizar los datos
                 this.isPanelOpen = true;
+                
+                // Cargar detalles de estudiante en background
+                this.loadStudentDetailsForEdit(mapped.id || user?.id);
             },
 
             async loadStudentDetailsForEdit(userId) {
