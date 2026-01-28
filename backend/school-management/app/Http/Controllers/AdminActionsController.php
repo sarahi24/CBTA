@@ -809,14 +809,32 @@ class AdminActionsController extends Controller
     public function updateRoles(Request $request)
     {
         // Validación
-        $validated = $request->validate([
-            'curps' => 'required|array|min:1',
-            'curps.*' => 'string|size:18',
-            'rolesToAdd' => 'array',
-            'rolesToAdd.*' => 'string|exists:roles,name',
-            'rolesToRemove' => 'array',
-            'rolesToRemove.*' => 'string|exists:roles,name',
-        ]);
+        try {
+            $validated = $request->validate([
+                'curps' => 'required|array|min:1',
+                'curps.*' => 'string|size:18',
+                'rolesToAdd' => 'array',
+                'rolesToAdd.*' => 'string|exists:roles,name',
+                'rolesToRemove' => 'array',
+                'rolesToRemove.*' => 'string|exists:roles,name',
+            ], [
+                'curps.required' => 'El campo curps es requerido.',
+                'curps.array' => 'El campo curps debe ser un array.',
+                'curps.min' => 'Debe proporcionar al menos un CURP.',
+                'curps.*.string' => 'Cada CURP debe ser un texto.',
+                'curps.*.size' => 'Cada CURP debe tener exactamente 18 caracteres. Encontrados: ' . 
+                    implode(', ', array_map(fn($c) => strlen($c) . ' chars', $request->input('curps', []))),
+                'rolesToAdd.*.exists' => 'Uno o más roles para agregar no existen en la base de datos. Roles disponibles: admin, student, financial staff',
+                'rolesToRemove.*.exists' => 'Uno o más roles para eliminar no existen en la base de datos. Roles disponibles: admin, student, financial staff',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors(),
+            ], 422);
+        }
 
         try {
             $curps = $validated['curps'];
@@ -898,13 +916,6 @@ class AdminActionsController extends Controller
                 ]
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación.',
-                'error_code' => 'VALIDATION_ERROR',
-                'errors' => $e->errors(),
-            ], 422);
         } catch (\Exception $e) {
             Log::error('Error al actualizar roles: ' . $e->getMessage());
             return response()->json([

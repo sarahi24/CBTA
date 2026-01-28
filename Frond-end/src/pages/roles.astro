@@ -2968,10 +2968,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     this.isSaving = true;
 
-                    // Obtener CURPs de usuarios seleccionados
+                    // Obtener CURPs de usuarios seleccionados, filtrando aquellos sin CURP válido
                     const curps = this.users
                         .filter(u => this.selectedUsers.includes(u.id))
-                        .map(u => u.curp);
+                        .map(u => u.curp)
+                        .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+
+                    if (curps.length === 0) {
+                        this.showNotify('Los usuarios seleccionados no tienen CURP válido (18 caracteres)', 'error');
+                        this.isSaving = false;
+                        return;
+                    }
+
+                    console.log('📤 updateRoles - Enviando:');
+                    console.log('  CURPs válidos:', curps);
+                    console.log('  Roles para agregar:', this.rolesToAdd);
+                    console.log('  Roles para eliminar:', this.rolesToRemove);
 
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/updated-roles`,
@@ -2990,6 +3002,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     );
 
                     const result = await response.json();
+                    console.log('📥 updateRoles - Respuesta:', result);
+
                     if (response.ok && result.success) {
                         const metadata = result.data?.users_roles?.metadata;
                         this.showNotify(
@@ -3000,11 +3014,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.selectedUsers = [];
                         await this.loadUsers(token);
                     } else {
-                        this.showNotify(result.message || 'Error al actualizar roles', 'error');
+                        console.error('❌ Error en respuesta:', result);
+                        // Mostrar errores de validación si existen
+                        if (result.errors) {
+                            const errorMsg = Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                .join('; ');
+                            this.showNotify(errorMsg || result.message || 'Error al actualizar roles', 'error');
+                        } else {
+                            this.showNotify(result.message || `Error ${response.status} al actualizar roles`, 'error');
+                        }
                     }
                 } catch (error) {
                     console.error('❌ Error al actualizar roles:', error);
-                    this.showNotify('Error al actualizar roles', 'error');
+                    this.showNotify(`Error al actualizar roles: ${error.message}`, 'error');
                 } finally {
                     this.isSaving = false;
                 }
