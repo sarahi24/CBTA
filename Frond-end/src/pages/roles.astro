@@ -1797,6 +1797,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return;
                 }
 
+                // Verificar si el usuario actual tiene rol de estudiante
+                const userRole = (this.newUser.role || '').toLowerCase();
+                const isStudent = userRole === 'student' || userRole === 'estudiante';
+                
+                if (!isStudent) {
+                    console.log('ℹ️ Usuario no es estudiante, no se cargan detalles');
+                    this.hasStudentDetails = false;
+                    return;
+                }
+
                 // Cargar carreras si no están cargadas
                 if (!this.careers || this.careers.length === 0) {
                     console.log('📚 Cargando carreras...');
