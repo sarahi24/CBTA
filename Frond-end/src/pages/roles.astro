@@ -148,6 +148,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         class="px-3 md:px-4 py-2 bg-teal-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-teal-700 transition-all flex items-center gap-2">
                     🧭 Nueva Carrera
                 </button>
+                <button @click="promoteStudents()" 
+                        class="px-3 md:px-4 py-2 bg-pink-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-pink-700 transition-all flex items-center gap-2">
+                    📈 Promocionar Estudiantes
+                </button>
                 <button @click="loadUsers(localStorage.getItem('access_token'))" 
                         class="px-3 md:px-4 py-2 bg-gray-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2">
                     🔄 Actualizar
