@@ -1246,4 +1246,42 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene un rol específico por su ID
+     * GET /api/v1/admin-actions/roles/{id}
+     */
+    public function getRoleById($id)
+    {
+        try {
+            $role = Role::find($id);
+
+            if (!$role) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Rol no encontrado.',
+                    'error_code' => 'ROLE_NOT_FOUND',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'role' => [
+                        'id' => $role->id,
+                        'name' => $role->name,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener rol por ID: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
