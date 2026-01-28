@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\CareersController;
+use App\Http\Controllers\AdminActionsController;
 use App\Http\Controllers\Staff\ConceptsController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 use App\Http\Controllers\Staff\DebtsController;
@@ -488,6 +489,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 ], 500);
             }
         });
+
+        Route::post('/promotion', [AdminActionsController::class, 'promoteStudents'])->middleware('permission:promote.student');
 });
     });
 
