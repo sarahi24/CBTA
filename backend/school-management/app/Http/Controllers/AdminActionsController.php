@@ -801,4 +801,117 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Sincroniza roles de múltiples usuarios
+     * POST /api/v1/admin-actions/updated-roles
+     */
+    public function updateRoles(Request $request)
+    {
+        // Validación
+        $validated = $request->validate([
+            'curps' => 'required|array|min:1',
+            'curps.*' => 'string|size:18',
+            'rolesToAdd' => 'array',
+            'rolesToAdd.*' => 'string|exists:roles,name',
+            'rolesToRemove' => 'array',
+            'rolesToRemove.*' => 'string|exists:roles,name',
+        ]);
+
+        try {
+            $curps = $validated['curps'];
+            $rolesToAdd = $validated['rolesToAdd'] ?? [];
+            $rolesToRemove = $validated['rolesToRemove'] ?? [];
+
+            // Buscar usuarios por CURP
+            $users = User::whereIn('curp', $curps)->get();
+            $totalFound = $users->count();
+            $totalUpdated = 0;
+            $failed = 0;
+            $fullNames = [];
+            $processedCurps = [];
+            $chunksProcessed = 0;
+
+            // Procesar en chunks para operaciones masivas
+            $users->chunk(50)->each(function ($chunk) use (
+                $rolesToAdd, 
+                $rolesToRemove, 
+                &$totalUpdated, 
+                &$failed, 
+                &$fullNames, 
+                &$processedCurps, 
+                &$chunksProcessed
+            ) {
+                foreach ($chunk as $user) {
+                    try {
+                        // Agregar roles
+                        if (!empty($rolesToAdd)) {
+                            foreach ($rolesToAdd as $role) {
+                                if (!$user->hasRole($role)) {
+                                    $user->assignRole($role);
+                                }
+                            }
+                        }
+
+                        // Remover roles
+                        if (!empty($rolesToRemove)) {
+                            foreach ($rolesToRemove as $role) {
+                                if ($user->hasRole($role)) {
+                                    $user->removeRole($role);
+                                }
+                            }
+                        }
+
+                        $totalUpdated++;
+                        $fullNames[] = $user->name . ' ' . $user->last_name;
+                        $processedCurps[] = $user->curp;
+                    } catch (\Exception $e) {
+                        $failed++;
+                        Log::error('Error al actualizar roles para usuario ' . $user->curp . ': ' . $e->getMessage());
+                    }
+                }
+                $chunksProcessed++;
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Roles actualizados correctamente.',
+                'data' => [
+                    'users_roles' => [
+                        'fullNames' => $fullNames,
+                        'curps' => $processedCurps,
+                        'updatedRoles' => [
+                            'added' => $rolesToAdd,
+                            'removed' => $rolesToRemove,
+                        ],
+                        'metadata' => [
+                            'totalFound' => $totalFound,
+                            'totalUpdated' => $totalUpdated,
+                            'failed' => $failed,
+                            'operations' => [
+                                'roles_removed' => $rolesToRemove,
+                                'roles_added' => $rolesToAdd,
+                                'chunks_processed' => $chunksProcessed,
+                            ]
+                        ]
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar roles: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
