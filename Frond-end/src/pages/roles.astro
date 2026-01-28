@@ -1617,12 +1617,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                 try {
                     this.isLoadingUsers = true;
+                    console.log('📤 Enviando solicitud de promoción...');
+                    
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/promotion`,
                         { method: 'POST' }
                     );
 
+                    console.log('📥 Respuesta recibida:', response.status);
                     const result = await response.json();
+                    
+                    console.log('📋 Resultado:', result);
+                    
                     if (response.ok && result.success) {
                         const affected = result.data?.affected;
                         this.showNotify(
@@ -1631,11 +1637,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         );
                         await this.loadUsers(token);
                     } else {
-                        this.showNotify(result.message || 'Error al promover estudiantes', 'error');
+                        const errorMsg = result.message || `Error: ${result.error_code || 'desconocido'}`;
+                        console.error('❌ Error en respuesta:', errorMsg);
+                        this.showNotify(errorMsg, 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error en promoteStudents:', error);
-                    this.showNotify('Error al promover estudiantes', 'error');
+                    const errorMsg = error?.message || 'Error desconocido al promover estudiantes';
+                    this.showNotify(errorMsg, 'error');
                 } finally {
                     this.isLoadingUsers = false;
                 }

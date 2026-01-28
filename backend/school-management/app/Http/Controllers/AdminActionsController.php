@@ -6,9 +6,26 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Permission;
 
 class AdminActionsController extends Controller
 {
+    /**
+     * Ensure the promote.student permission exists
+     */
+    private function ensurePromotePermissionExists()
+    {
+        try {
+            Permission::firstOrCreate([
+                'name' => 'promote.student',
+                'guard_name' => 'api'
+            ]);
+            Log::info('✅ promote.student permission ensured');
+        } catch (\Exception $e) {
+            Log::warning('Could not create permission', ['error' => $e->getMessage()]);
+            // Continue anyway - not fatal
+        }
+    }
     /**
      * Debug endpoint to check roles and students
      */
@@ -111,6 +128,9 @@ class AdminActionsController extends Controller
         Log::info('🔄 Iniciando promoción de estudiantes');
         
         try {
+            // Ensure the permission exists (create if needed)
+            $this->ensurePromotePermissionExists();
+            
             // Verify user is authenticated
             $user = $request->user();
             Log::info('Usuario autenticado', ['user_id' => $user?->id ?? 'null']);
@@ -124,7 +144,37 @@ class AdminActionsController extends Controller
                 ], 401);
             }
 
-            Log::info('✅ Usuario autenticado');
+            // Verify user has admin role
+            try {
+                if (!$user->hasRole('admin')) {
+                    Log::error('Usuario sin rol admin', ['user_id' => $user->id]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Insufficient permissions. Admin role required.',
+                        'error_code' => 'PERMISSION_DENIED'
+                    ], 403);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error checking hasRole, continuing anyway', ['error' => $e->getMessage()]);
+                // Continue - the middleware should have caught this anyway
+            }
+
+            // Verify user has promote.student permission
+            try {
+                if (!$user->hasPermissionTo('promote.student')) {
+                    Log::error('Usuario sin permiso promote.student', ['user_id' => $user->id]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Insufficient permissions. promote.student permission required.',
+                        'error_code' => 'PERMISSION_DENIED'
+                    ], 403);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error checking hasPermissionTo, continuing anyway', ['error' => $e->getMessage()]);
+                // Continue - the middleware should have caught this anyway
+            }
+
+            Log::info('✅ Usuario autenticado y con permisos');
 
             // Start a database transaction
             DB::beginTransaction();

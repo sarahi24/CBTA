@@ -31,7 +31,7 @@ class UsersSeeder extends Seeder
         $roles = ['admin', 'financial staff', 'student', 'parent'];
 
         foreach ($roles as $roleName) {
-            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'sanctum']);
+            Role::firstOrCreate(['name' => $roleName]);
         }
 
         $this->command->info('✅ Roles verificados/creados');
