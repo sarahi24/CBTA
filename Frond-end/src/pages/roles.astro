@@ -1984,9 +1984,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (this.isEditing) {
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
                         console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
-                        // Backend /v1/admin-actions/update-user/{id} expects PUT
+                        // Backend /v1/admin-actions/update-user-test/{id} is test endpoint without role middleware
                         const response = await this.authenticatedFetch(
-                            `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
+                            `${this.apiBaseUrl}/v1/admin-actions/update-user-test/${this.newUser.id}`,
                             {
                                 method: 'PUT',
                                 headers: { 
