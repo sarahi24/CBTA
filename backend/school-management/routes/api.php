@@ -123,24 +123,27 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
             ->header('Access-Control-Max-Age', '86400');
     })->where('path', '.*');
     
-    // Debug endpoint without role requirement
+    // Debug endpoint without authentication
     Route::put('/admin-actions/update-user-debug/{id}', function (Request $request, $id) {
-        \Log::info('🔄 DEBUG: Iniciando actualización de usuario', [
-            'user_id' => $id, 
-            'has_token' => $request->user() !== null,
-            'user_roles' => $request->user() ? $request->user()->roles->pluck('name')->toArray() : [],
-            'data' => $request->all()
-        ]);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Debug endpoint alcanzado',
-            'user_id' => $request->user() ? $request->user()->id : null,
-            'user_roles' => $request->user() ? $request->user()->roles->pluck('name')->toArray() : [],
-        ])->header('Access-Control-Allow-Origin', '*')
-          ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-          ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission');
-    })->middleware('auth:sanctum');
+        try {
+            \Log::info('🔄 DEBUG: Iniciando debug endpoint', ['user_id' => $id]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Debug endpoint funciona',
+                'received_id' => $id,
+                'request_data' => $request->all()
+            ])->header('Access-Control-Allow-Origin', '*')
+              ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+              ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission');
+        } catch (\Exception $e) {
+            \Log::error('❌ Error en debug endpoint: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500)->header('Access-Control-Allow-Origin', '*');
+        }
+    });
     
     // Production endpoints with role restriction
     Route::prefix('admin-actions')->middleware(['auth:sanctum', 'role:admin|financial staff', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
