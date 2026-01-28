@@ -251,17 +251,17 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'data' => [
                         'user' => [
                             'id' => $user->id,
-                            'name' => $user->name,
-                            'last_name' => $user->last_name,
-                            'email' => $user->email,
-                            'phone_number' => $user->phone_number,
-                            'birthdate' => $user->birthdate,
-                            'gender' => $user->gender,
-                            'curp' => $user->curp,
+                            'name' => $user->name ?? '',
+                            'last_name' => $user->last_name ?? '',
+                            'email' => $user->email ?? '',
+                            'phone_number' => $user->phone_number ?? '',
+                            'birthdate' => $user->birthdate ? (is_string($user->birthdate) ? $user->birthdate : $user->birthdate->format('Y-m-d')) : '',
+                            'gender' => $user->gender ?? '',
+                            'curp' => $user->curp ?? '',
                             'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
-                            'blood_type' => $validated['blood_type'] ?? 'O+',
-                            'registration_date' => $user->registration_date,
-                            'status' => $user->status,
+                            'blood_type' => 'O+',
+                            'registration_date' => $user->registration_date ? (is_string($user->registration_date) ? $user->registration_date : $user->registration_date->format('Y-m-d')) : '',
+                            'status' => $user->status ?? 'activo',
                             'role' => 'student'
                         ]
                     ]
@@ -349,18 +349,18 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'data' => [
                         'user' => [
                             'id' => $user->id,
-                            'name' => $user->name,
-                            'last_name' => $user->last_name,
-                            'email' => $user->email,
-                            'phone_number' => $user->phone_number,
-                            'birthdate' => $user->birthdate,
-                            'gender' => $user->gender,
-                            'curp' => $user->curp,
+                            'name' => $user->name ?? '',
+                            'last_name' => $user->last_name ?? '',
+                            'email' => $user->email ?? '',
+                            'phone_number' => $user->phone_number ?? '',
+                            'birthdate' => $user->birthdate ? (is_string($user->birthdate) ? $user->birthdate : $user->birthdate->format('Y-m-d')) : '',
+                            'gender' => $user->gender ?? '',
+                            'curp' => $user->curp ?? 'N/A',
                             'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
-                            'blood_type' => $user->blood_type ?? 'O+',
-                            'registration_date' => $user->registration_date,
-                            'status' => $user->status,
-                            'role' => $user->roles->first()?->name ?? 'student'
+                            'blood_type' => 'O+',
+                            'registration_date' => $user->registration_date ? (is_string($user->registration_date) ? $user->registration_date : $user->registration_date->format('Y-m-d')) : '',
+                            'status' => $user->status ?? 'activo',
+                            'role' => $user->roles && $user->roles->count() > 0 ? $user->roles->first()->name : 'Sin rol'
                         ]
                     ]
                 ]);
