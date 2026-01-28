@@ -429,7 +429,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-2">CURP</label>
-                        <input x-model="newUser.curp" type="text" pattern="[A-Z]{4}[0-9]{6}[A-Z]{6}[0-9]{2}" maxlength="18" placeholder="PELJ000512HDFRPN09" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional uppercase">
+                        <input x-model="newUser.curp" type="text" pattern="[A-Z0-9]{18}" maxlength="18" placeholder="PELJ000512HDFRPN09" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional uppercase">
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Calle y Número</label>
