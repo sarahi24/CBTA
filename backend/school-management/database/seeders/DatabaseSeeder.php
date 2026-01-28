@@ -78,6 +78,7 @@ class DatabaseSeeder extends Seeder
             'sync.roles',
             'delete.users',
             'disable.users',
+            'view.permissions',
         ];
 
         foreach ($adminPermissions as $perm) {

@@ -162,6 +162,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::post('/delete-users', [AdminActionsController::class, 'deleteUsers']);
         Route::post('/disable-users', [AdminActionsController::class, 'disableUsers']);
         Route::post('/temporary-disable-users', [AdminActionsController::class, 'temporaryDisableUsers']);
+        Route::post('/find-permissions', [AdminActionsController::class, 'findPermissions']);
 
         Route::post('/register', function (Request $request) {
             try {

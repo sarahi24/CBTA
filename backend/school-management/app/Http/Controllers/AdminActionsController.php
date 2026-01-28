@@ -1055,4 +1055,148 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Muestra permisos existentes filtrados por rol o usuarios
+     * POST /api/v1/admin-actions/find-permissions
+     */
+    public function findPermissions(Request $request)
+    {
+        // Validación
+        $validated = $request->validate([
+            'curps' => 'sometimes|array',
+            'curps.*' => 'string|size:18',
+            'role' => 'sometimes|string|exists:roles,name',
+        ]);
+
+        try {
+            $curps = $validated['curps'] ?? [];
+            $roleName = $validated['role'] ?? null;
+
+            // Si se especifica un rol
+            if ($roleName) {
+                $role = Role::with('permissions')->where('name', $roleName)->first();
+                
+                if (!$role) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Rol no encontrado.',
+                        'error_code' => 'ROLE_NOT_FOUND',
+                    ], 404);
+                }
+
+                // Obtener usuarios con este rol
+                $users = User::whereHas('roles', function ($query) use ($roleName) {
+                    $query->where('name', $roleName);
+                })
+                ->when(!empty($curps), function ($query) use ($curps) {
+                    return $query->whereIn('curp', $curps);
+                })
+                ->get(['id', 'name', 'last_name', 'curp'])
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'fullName' => $user->name . ' ' . $user->last_name,
+                        'curp' => $user->curp,
+                    ];
+                })
+                ->toArray();
+
+                $permissions = $role->permissions
+                    ->map(function ($perm) use ($roleName) {
+                        return [
+                            'id' => $perm->id,
+                            'name' => $perm->name,
+                            'type' => $perm->guard_name ?? 'model',
+                            'belongsTo' => strtoupper($roleName),
+                        ];
+                    })
+                    ->toArray();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Operación completada exitosamente',
+                    'data' => [
+                        'permissions' => [
+                            'role' => $roleName,
+                            'users' => $users,
+                            'permissions' => $permissions,
+                        ]
+                    ]
+                ], 200);
+            }
+
+            // Si se especifican CURPs
+            if (!empty($curps)) {
+                $users = User::whereIn('curp', $curps)->get(['id', 'name', 'last_name', 'curp']);
+                
+                $result = [];
+                foreach ($users as $user) {
+                    $userRoles = $user->roles->pluck('name')->toArray();
+                    $userPermissions = $user->permissions->map(function ($perm) {
+                        return [
+                            'id' => $perm->id,
+                            'name' => $perm->name,
+                            'type' => $perm->guard_name ?? 'model',
+                        ];
+                    })->toArray();
+
+                    $result[] = [
+                        'id' => $user->id,
+                        'fullName' => $user->name . ' ' . $user->last_name,
+                        'curp' => $user->curp,
+                        'roles' => $userRoles,
+                        'permissions' => $userPermissions,
+                    ];
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Operación completada exitosamente',
+                    'data' => [
+                        'permissions' => [
+                            'users' => $result,
+                        ]
+                    ]
+                ], 200);
+            }
+
+            // Si no hay filtros, retornar todos los permisos
+            $allPermissions = Permission::all()
+                ->map(function ($perm) {
+                    return [
+                        'id' => $perm->id,
+                        'name' => $perm->name,
+                        'type' => $perm->guard_name ?? 'model',
+                    ];
+                })
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'permissions' => [
+                        'total' => count($allPermissions),
+                        'permissions' => $allPermissions,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener permisos: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
