@@ -123,6 +123,26 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
             ->header('Access-Control-Max-Age', '86400');
     })->where('path', '.*');
     
+    // Diagnostic endpoint without role requirement
+    Route::prefix('admin-actions')->middleware(['auth:sanctum', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
+        Route::put('/update-user-debug/{id}', function (Request $request, $id) {
+            \Log::info('🔄 DEBUG: Iniciando actualización de usuario', [
+                'user_id' => $id, 
+                'has_token' => $request->user() !== null,
+                'user_roles' => $request->user() ? $request->user()->roles->pluck('name')->toArray() : [],
+                'data' => $request->all()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Debug endpoint alcanzado',
+                'user_id' => $request->user() ? $request->user()->id : null,
+                'user_roles' => $request->user() ? $request->user()->roles->pluck('name')->toArray() : [],
+            ]);
+        });
+    });
+    
+    // Production endpoints with role restriction
     Route::prefix('admin-actions')->middleware(['auth:sanctum', 'role:admin|financial staff', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
         Route::get('/show-users', function (Request $request) {
             try {
