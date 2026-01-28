@@ -506,14 +506,28 @@ class AdminActionsController extends Controller
     public function updatePermissions(Request $request)
     {
         try {
+            // Log incoming data for debugging
+            Log::info('updatePermissions - Datos recibidos:', [
+                'curps' => $request->input('curps'),
+                'role' => $request->input('role'),
+                'permissionsToAdd' => $request->input('permissionsToAdd'),
+                'permissionsToRemove' => $request->input('permissionsToRemove'),
+            ]);
+
             $validated = $request->validate([
                 'curps' => 'nullable|array',
-                'curps.*' => 'string|max:18',
+                'curps.*' => 'string|size:18',
                 'role' => 'nullable|string|max:50',
                 'permissionsToAdd' => 'nullable|array',
-                'permissionsToAdd.*' => 'string|max:100',
+                'permissionsToAdd.*' => 'string|exists:permissions,name',
                 'permissionsToRemove' => 'nullable|array',
-                'permissionsToRemove.*' => 'string|max:100',
+                'permissionsToRemove.*' => 'string|exists:permissions,name',
+            ], [
+                'curps.*.size' => 'Cada CURP debe tener exactamente 18 caracteres. CURPs recibidos: ' . json_encode($request->input('curps', [])),
+                'role.string' => 'El role debe ser una cadena de texto.',
+                'role.max' => 'El role no debe exceder 50 caracteres.',
+                'permissionsToAdd.*.exists' => 'Uno o más permisos para agregar no existen. Permisos recibidos: ' . json_encode($request->input('permissionsToAdd', [])),
+                'permissionsToRemove.*.exists' => 'Uno o más permisos para eliminar no existen. Permisos recibidos: ' . json_encode($request->input('permissionsToRemove', [])),
             ]);
 
             // Validate that either curps or role is provided, not both
@@ -523,7 +537,7 @@ class AdminActionsController extends Controller
             if (($hasCurps && $hasRole) || (!$hasCurps && !$hasRole)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Debe especificar CURP(s) O role, pero no ambos.',
+                    'message' => 'Debe especificar CURP(s) O role, pero no ambos. Recibido: curps=' . json_encode($validated['curps']) . ', role=' . json_encode($validated['role']),
                     'error_code' => 'INVALID_FILTER'
                 ], 422);
             }

@@ -9,6 +9,16 @@ class CorsMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
+        // Handle preflight requests (OPTIONS)
+        if ($request->isMethod('OPTIONS')) {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission')
+                ->header('Access-Control-Max-Age', '86400')
+                ->header('Access-Control-Expose-Headers', 'Authorization');
+        }
+
         $response = $next($request);
 
         // Add CORS headers to the response

@@ -2004,27 +2004,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
                         console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
                         
-                        // First test if API is responding with SIMPLE test endpoint
-                        const testResponse = await this.authenticatedFetch(
-                            `${this.apiBaseUrl}/test-simple`,
-                            {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ test: 'data' })
-                            }
-                        );
-                        
-                        console.log('Test response status:', testResponse.status);
-                        const testResult = await testResponse.json();
-                        console.log('Test response:', testResult);
-                        
-                        if (!testResponse.ok) {
-                            throw new Error(`API no responde correctamente: ${testResponse.status}`);
-                        }
-                        
-                        console.log('✅ API test pasó, intentando actualizar usuario');
-                        
-                        // Then attempt actual update
+                        // Attempt actual update
                         const response = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
                             {
@@ -3125,9 +3105,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     this.isSaving = true;
 
-                    const curps = this.users
+                    // Filter valid CURPs (exclude 'N/A' and invalid ones)
+                    const allCurps = this.users
                         .filter(u => this.selectedUsers.includes(u.id))
                         .map(u => u.curp);
+                    
+                    console.log('🔍 updatePermissions - CURPs originales:', allCurps);
+                    
+                    const curps = allCurps.filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+                    
+                    console.log('✓ CURPs válidos:', curps);
+                    console.log('✗ CURPs inválidos filtrados:', allCurps.filter(c => !c || c === 'N/A' || c.length !== 18));
 
                     // Solo uno de los dos: curps o role
                     const payload = curps.length > 0
@@ -3137,13 +3125,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             : null;
 
                     if (!payload) {
-                        this.showNotify('Selecciona usuarios o un rol', 'error');
+                        const msg = curps.length === 0 && this.selectedUsers.length > 0
+                            ? 'Los usuarios seleccionados no tienen CURP válido (18 caracteres)'
+                            : 'Selecciona usuarios o un rol';
+                        this.showNotify(msg, 'error');
                         this.isSaving = false;
                         return;
                     }
 
-                    payload.permissionsToAdd = this.permissionsToAdd;
-                    payload.permissionsToRemove = this.permissionsToRemove;
+                    payload.permissionsToAdd = this.permissionsToAdd || [];
+                    payload.permissionsToRemove = this.permissionsToRemove || [];
+
+                    console.log('📤 updatePermissions - Enviando:');
+                    console.log('  Payload completo:', JSON.stringify(payload, null, 2));
+                    console.log('  Tipo de payload:', typeof payload);
+                    console.log('  Keys en payload:', Object.keys(payload));
+                    console.log('  Tiene curps?', 'curps' in payload, payload.curps);
+                    console.log('  Tiene role?', 'role' in payload, payload.role);
 
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/update-permissions`,
@@ -3158,6 +3156,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     );
 
                     const result = await response.json();
+                    console.log('📥 updatePermissions - Respuesta:', result);
+                    console.log('📥 Status:', response.status);
+
                     if (response.ok && result.success) {
                         const metadata = result.data?.users_permissions?.[0]?.metadata;
                         this.showNotify(
@@ -3168,11 +3169,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.selectedUsers = [];
                         await this.loadUsers(token);
                     } else {
-                        this.showNotify(result.message || 'Error al actualizar permisos', 'error');
+                        console.error('❌ Error en respuesta:', result);
+                        // Mostrar errores detallados
+                        if (result.errors) {
+                            const errorMsg = Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                .join('; ');
+                            this.showNotify(errorMsg || result.message || 'Error al actualizar permisos', 'error');
+                        } else {
+                            this.showNotify(result.message || `Error ${response.status} al actualizar permisos`, 'error');
+                        }
                     }
                 } catch (error) {
                     console.error('❌ Error al actualizar permisos:', error);
-                    this.showNotify('Error al actualizar permisos', 'error');
+                    this.showNotify(`Error al actualizar permisos: ${error.message}`, 'error');
                 } finally {
                     this.isSaving = false;
                 }
