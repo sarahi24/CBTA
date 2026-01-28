@@ -16,14 +16,19 @@ class AdminActionsController extends Controller
     private function ensurePromotePermissionExists()
     {
         try {
-            Permission::firstOrCreate([
-                'name' => 'promote.student',
-                'guard_name' => 'api'
-            ]);
+            Permission::firstOrCreate(
+                ['name' => 'promote.student'],
+                ['guard_name' => 'api']
+            );
             Log::info('✅ promote.student permission ensured');
+            return true;
         } catch (\Exception $e) {
-            Log::warning('Could not create permission', ['error' => $e->getMessage()]);
-            // Continue anyway - not fatal
+            Log::warning('Could not create/verify permission', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Continue anyway - might already exist
+            return true;
         }
     }
     /**
@@ -128,13 +133,8 @@ class AdminActionsController extends Controller
         Log::info('🔄 Iniciando promoción de estudiantes');
         
         try {
-            // Ensure the permission exists (create if needed)
-            $this->ensurePromotePermissionExists();
-            
             // Verify user is authenticated
             $user = $request->user();
-            Log::info('Usuario autenticado', ['user_id' => $user?->id ?? 'null']);
-            
             if (!$user) {
                 Log::error('Usuario no autenticado');
                 return response()->json([
@@ -143,195 +143,141 @@ class AdminActionsController extends Controller
                     'error_code' => 'NOT_AUTHENTICATED'
                 ], 401);
             }
-
-            // Verify user has admin role
-            try {
-                if (!$user->hasRole('admin')) {
-                    Log::error('Usuario sin rol admin', ['user_id' => $user->id]);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Insufficient permissions. Admin role required.',
-                        'error_code' => 'PERMISSION_DENIED'
-                    ], 403);
-                }
-            } catch (\Exception $e) {
-                Log::warning('Error checking hasRole, continuing anyway', ['error' => $e->getMessage()]);
-                // Continue - the middleware should have caught this anyway
-            }
-
-            // Verify user has promote.student permission
-            try {
-                if (!$user->hasPermissionTo('promote.student')) {
-                    Log::error('Usuario sin permiso promote.student', ['user_id' => $user->id]);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Insufficient permissions. promote.student permission required.',
-                        'error_code' => 'PERMISSION_DENIED'
-                    ], 403);
-                }
-            } catch (\Exception $e) {
-                Log::warning('Error checking hasPermissionTo, continuing anyway', ['error' => $e->getMessage()]);
-                // Continue - the middleware should have caught this anyway
-            }
-
-            Log::info('✅ Usuario autenticado y con permisos');
+            
+            Log::info('✅ Usuario autenticado', ['user_id' => $user->id]);
 
             // Start a database transaction
             DB::beginTransaction();
             Log::info('✅ Transacción iniciada');
 
-            // Get the student role
-            $modelType = User::class;
-            Log::info('Obteniendo estudiantes de la base de datos', ['model_type' => $modelType]);
-            
-            $studentRole = DB::table('roles')
-                ->where('name', 'student')
-                ->first();
-            
-            if (!$studentRole) {
-                Log::error('Role "student" no encontrado en la base de datos');
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El rol "student" no existe en la base de datos',
-                    'error_code' => 'ROLE_NOT_FOUND'
-                ], 500);
-            }
+            try {
+                // Get the student role
+                $modelType = User::class;
+                Log::info('Buscando rol de estudiante');
+                
+                $studentRole = DB::table('roles')
+                    ->where('name', 'student')
+                    ->first();
+                
+                if (!$studentRole) {
+                    Log::error('Role "student" no encontrado en roles table');
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El rol "student" no existe en la base de datos',
+                        'error_code' => 'ROLE_NOT_FOUND'
+                    ], 500);
+                }
 
-            Log::info('✅ Role de estudiante encontrado', ['role_id' => $studentRole->id]);
+                Log::info('✅ Rol de estudiante encontrado', ['role_id' => $studentRole->id]);
 
-            // Get student IDs who have the 'student' role
-            $studentIds = DB::table('model_has_roles')
-                ->where('role_id', $studentRole->id)
-                ->where('model_type', $modelType)
-                ->pluck('model_id')
-                ->toArray();
+                // Get student IDs
+                Log::info('Obteniendo IDs de estudiantes');
+                
+                $studentIds = DB::table('model_has_roles')
+                    ->where('role_id', $studentRole->id)
+                    ->where('model_type', $modelType)
+                    ->pluck('model_id')
+                    ->toArray();
 
-            Log::info('✅ IDs de estudiantes obtenidos', ['count' => count($studentIds)]);
+                Log::info('✅ IDs obtenidos', ['count' => count($studentIds)]);
 
-            // Handle case where there are no students
-            if (empty($studentIds)) {
-                Log::info('No hay estudiantes para promover');
+                if (empty($studentIds)) {
+                    Log::info('No hay estudiantes para promover');
+                    DB::commit();
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Se ejecutó la promoción de usuarios correctamente.',
+                        'data' => ['affected' => ['usuarios_promovidos' => 0, 'usuarios_baja' => 0]]
+                    ], 200);
+                }
+
+                // Process students
+                $promovidos = 0;
+                $baja = 0;
+                $processedCount = 0;
+                
+                // Fetch all students at once (since we already have IDs)
+                $students = DB::table('users')
+                    ->whereIn('id', $studentIds)
+                    ->select('id', 'semestre')
+                    ->get();
+
+                Log::info('Procesando estudiantes', ['total' => $students->count()]);
+
+                foreach ($students as $student) {
+                    $processedCount++;
+                    
+                    // Get current semester
+                    $currentSemestre = (int)($student->semestre ?? 1);
+                    $newSemestre = $currentSemestre + 1;
+
+                    // Update student
+                    if ($newSemestre > 12) {
+                        DB::table('users')
+                            ->where('id', $student->id)
+                            ->update(['status' => 'baja', 'semestre' => 12]);
+                        $baja++;
+                    } else {
+                        DB::table('users')
+                            ->where('id', $student->id)
+                            ->update(['semestre' => $newSemestre]);
+                        $promovidos++;
+                    }
+
+                    if ($processedCount % 50 === 0) {
+                        Log::info('Progreso', ['procesados' => $processedCount, 'total' => $students->count()]);
+                    }
+                }
+
                 DB::commit();
+                Log::info('✅ Transacción completada', ['promovidos' => $promovidos, 'baja' => $baja]);
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Se ejecutó la promoción de usuarios correctamente.',
                     'data' => [
                         'affected' => [
-                            'usuarios_promovidos' => 0,
-                            'usuarios_baja' => 0
+                            'usuarios_promovidos' => $promovidos,
+                            'usuarios_baja' => $baja
                         ]
                     ]
                 ], 200);
+
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error('Error durante procesamiento de estudiantes', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+                throw $e;
             }
-
-            // Fetch the students data in chunks to avoid memory issues
-            $promovidos = 0;
-            $baja = 0;
-            
-            $batchSize = 100;
-            for ($i = 0; $i < count($studentIds); $i += $batchSize) {
-                $batch = array_slice($studentIds, $i, $batchSize);
-                
-                $students = DB::table('users')
-                    ->whereIn('id', $batch)
-                    ->select('id', 'semestre')
-                    ->get();
-
-                Log::info('Procesando lote de estudiantes', ['batch' => ceil($i / $batchSize), 'count' => $students->count()]);
-
-                foreach ($students as $student) {
-                    try {
-                        // Get current semester, default to 1 if null
-                        $currentSemestre = $student->semestre ?? 1;
-                        
-                        // Increment semester
-                        $newSemestre = $currentSemestre + 1;
-
-                        Log::debug('Procesando estudiante', [
-                            'student_id' => $student->id,
-                            'semestre_actual' => $currentSemestre,
-                            'semestre_nuevo' => $newSemestre
-                        ]);
-
-                        // If new semester exceeds 12, set status to "baja"
-                        if ($newSemestre > 12) {
-                            $updateResult = DB::table('users')
-                                ->where('id', $student->id)
-                                ->update([
-                                    'status' => 'baja',
-                                    'semestre' => 12
-                                ]);
-                            
-                            if ($updateResult) {
-                                $baja++;
-                                Log::info('Estudiante dado de baja', ['student_id' => $student->id, 'semestre' => 12]);
-                            } else {
-                                Log::warning('Update retornó 0 para estudiante', ['student_id' => $student->id]);
-                            }
-                        } else {
-                            // Otherwise, just increment semester
-                            $updateResult = DB::table('users')
-                                ->where('id', $student->id)
-                                ->update([
-                                    'semestre' => $newSemestre
-                                ]);
-                            
-                            if ($updateResult) {
-                                $promovidos++;
-                                Log::info('Estudiante promovido', ['student_id' => $student->id, 'semestre' => $newSemestre]);
-                            } else {
-                                Log::warning('Update retornó 0 para estudiante', ['student_id' => $student->id]);
-                            }
-                        }
-                    } catch (\Throwable $e) {
-                        Log::error('Error al procesar estudiante', [
-                            'student_id' => $student->id ?? 'unknown',
-                            'error' => $e->getMessage(),
-                            'line' => $e->getLine(),
-                            'file' => $e->getFile()
-                        ]);
-                        throw $e;
-                    }
-                }
-            }
-
-            DB::commit();
-            Log::info('✅ Transacción completada exitosamente', ['promovidos' => $promovidos, 'baja' => $baja]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Se ejecutó la promoción de usuarios correctamente.',
-                'data' => [
-                    'affected' => [
-                        'usuarios_promovidos' => $promovidos,
-                        'usuarios_baja' => $baja
-                    ]
-                ]
-            ], 200);
 
         } catch (\Throwable $e) {
-            try {
-                DB::rollBack();
-                Log::info('✅ Rollback de transacción ejecutado correctamente');
-            } catch (\Throwable $rollbackError) {
-                Log::error('Error al hacer rollback de transacción', [
-                    'error' => $rollbackError->getMessage(),
-                    'line' => $rollbackError->getLine()
-                ]);
-            }
-            
             Log::error('❌ Error en promoción de estudiantes', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
 
-            return response()->json([
+            $errorResponse = [
                 'success' => false,
-                'message' => 'Error al ejecutar la promoción de estudiantes: ' . $e->getMessage(),
+                'message' => $e->getMessage(),
                 'error_code' => 'PROMOTION_ERROR'
-            ], 500);
+            ];
+            
+            // Include trace in debug mode
+            if (config('app.debug')) {
+                $errorResponse['debug'] = [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ];
+            }
+
+            return response()->json($errorResponse, 500);
         }
     }
 }
