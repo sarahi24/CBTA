@@ -447,7 +447,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Asignar Rol</label>
-                        <select x-model="newUser.role" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional font-semibold">
+                        <select x-model="newUser.role" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional font-semibold">
                             <option value="">🚫 Sin rol</option>
                             <option value="Administrador">Administrador</option>
                             <option value="Caja">Personal de Caja</option>
@@ -1951,6 +1951,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
                     } else {
                         // NO enviar contraseña - el backend la genera automáticamente
+                        // Agregar campos requeridos para registro de nuevo usuario
+                        userData.registration_date = this.normalizeDate(this.newUser.registration_date) || new Date().toISOString().split('T')[0];
+                        userData.status = this.newUser.status || 'activo';
+                        userData.address = this.newUser.address || ['', '', ''];
+                        userData.blood_type = this.newUser.blood_type || 'O+';
+                        
                         // Formatear teléfono con +52 si no lo tiene
                         if (userData.phone_number && !userData.phone_number.startsWith('+52')) {
                             userData.phone_number = '+52' + userData.phone_number.replace(/\D/g, '');
