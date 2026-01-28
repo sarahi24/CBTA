@@ -315,6 +315,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         });
 
         Route::put('/update-user/{id}', function (Request $request, $id) {
+            \Log::info('🔄 Iniciando actualización de usuario', ['user_id' => $id, 'data' => $request->all()]);
+            
             try {
                 $validated = $request->validate([
                     'name' => 'sometimes|string|max:255',
@@ -326,27 +328,78 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'curp' => 'sometimes|string|max:18|unique:users,curp,' . $id,
                     'address' => 'sometimes|array',
                     'address.*' => 'nullable|string',
-                    'blood_type' => 'sometimes|string',
                     'password' => 'sometimes|string|min:8',
                 ]);
+                
+                \Log::info('✅ Validación exitosa', ['validated' => $validated]);
 
                 $user = \App\Models\User::findOrFail($id);
+                \Log::info('✅ Usuario encontrado', ['user_id' => $user->id]);
                 
                 // Convertir address array a string si es necesario
                 if (isset($validated['address']) && is_array($validated['address'])) {
                     $validated['address'] = implode(', ', array_filter($validated['address']));
+                    \Log::info('✅ Dirección convertida', ['address' => $validated['address']]);
                 }
                 
                 if (isset($validated['password'])) {
                     $validated['password'] = bcrypt($validated['password']);
+                    \Log::info('✅ Contraseña encriptada');
                 }
                 
                 // Remover campos que no existen en la tabla users
                 unset($validated['blood_type']);
                 
+                \Log::info('📝 Intentando actualizar usuario con datos', ['validated' => $validated]);
                 $user->update($validated);
+                \Log::info('✅ Usuario actualizado en base de datos');
                 
-                return response()->json([
+                // Formatear birthdate para respuesta
+                $birthdate = '';
+                if ($user->birthdate) {
+                    if (is_string($user->birthdate)) {
+                        $birthdate = $user->birthdate;
+                    } else {
+                        $birthdate = $user->birthdate->format('Y-m-d');
+                    }
+                }
+                
+                // Formatear registration_date para respuesta
+                $registration_date = '';
+                if ($user->registration_date) {
+                    if (is_string($user->registration_date)) {
+                        $registration_date = $user->registration_date;
+                    } else {
+                        $registration_date = $user->registration_date->format('Y-m-d');
+                    }
+                }
+                
+                // Parsear dirección
+                $address = ['', '', ''];
+                if ($user->address) {
+                    if (is_array($user->address)) {
+                        $address = $user->address;
+                    } else if (is_string($user->address)) {
+                        $parts = explode(', ', $user->address);
+                        $address = [
+                            $parts[0] ?? '',
+                            $parts[1] ?? '',
+                            $parts[2] ?? ''
+                        ];
+                    }
+                }
+                
+                // Obtener rol
+                $role = 'Sin rol';
+                try {
+                    if ($user->roles && $user->roles->count() > 0) {
+                        $role = $user->roles->first()->name;
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('⚠️ Error al obtener rol', ['error' => $e->getMessage()]);
+                }
+                
+                $response = [
                     'success' => true,
                     'message' => 'Usuario actualizado correctamente',
                     'data' => [
@@ -356,32 +409,45 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                             'last_name' => $user->last_name ?? '',
                             'email' => $user->email ?? '',
                             'phone_number' => $user->phone_number ?? '',
-                            'birthdate' => $user->birthdate ? (is_string($user->birthdate) ? $user->birthdate : $user->birthdate->format('Y-m-d')) : '',
+                            'birthdate' => $birthdate,
                             'gender' => $user->gender ?? '',
                             'curp' => $user->curp ?? 'N/A',
-                            'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
+                            'address' => $address,
                             'blood_type' => 'O+',
-                            'registration_date' => $user->registration_date ? (is_string($user->registration_date) ? $user->registration_date : $user->registration_date->format('Y-m-d')) : '',
+                            'registration_date' => $registration_date,
                             'status' => $user->status ?? 'activo',
-                            'role' => $user->roles && $user->roles->count() > 0 ? $user->roles->first()->name : 'Sin rol'
+                            'role' => $role
                         ]
                     ]
-                ]);
+                ];
+                
+                \Log::info('✅ Respuesta exitosa construida');
+                return response()->json($response);
+                
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                \Log::error('❌ Usuario no encontrado', ['user_id' => $id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no encontrado'
                 ], 404);
             } catch (\Illuminate\Validation\ValidationException $e) {
+                \Log::error('❌ Error de validación', ['errors' => $e->errors()]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Error de validación',
                     'errors' => $e->errors()
                 ], 422);
             } catch (\Exception $e) {
+                \Log::error('❌ Error general en update-user', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al actualizar usuario: ' . $e->getMessage()
+                    'message' => 'Error al actualizar usuario: ' . $e->getMessage(),
+                    'error_code' => 'INTERNAL_SERVER_ERROR'
                 ], 500);
             }
         });
