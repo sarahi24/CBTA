@@ -87,13 +87,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birthdate' => 'date',
+            'registration_date' => 'date',
         ];
     }
-
-    protected $casts = [
-        'birthdate' => 'date',
-        'registration_date' => 'date',
-        'status' => 'boolean',
-    ];
 
 }
