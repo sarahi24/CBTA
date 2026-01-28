@@ -162,26 +162,37 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'name' => 'required|string|max:255',
                     'last_name' => 'nullable|string|max:255',
                     'email' => 'required|email|unique:users,email',
-                    'password' => 'required|string|min:8',
+                    'password' => 'nullable|string|min:8',
                     'phone_number' => 'nullable|string|max:20',
                     'birthdate' => 'nullable|date_format:Y-m-d',
                     'gender' => 'nullable|in:hombre,mujer,otro',
                     'curp' => 'nullable|string|max:18|unique:users,curp',
                     'registration_date' => 'nullable|date_format:Y-m-d',
-                    'address' => 'nullable|string',
+                    'address' => 'nullable|array',
+                    'address.*' => 'nullable|string',
+                    'blood_type' => 'nullable|string',
                     'status' => 'nullable|in:activo,baja,eliminado',
                 ]);
+
+                // Generar password si no se proporciona
+                $password = $validated['password'] ?? \Illuminate\Support\Str::random(12);
+                
+                // Convertir address array a string si es necesario
+                $address = '';
+                if (is_array($validated['address'] ?? null)) {
+                    $address = implode(', ', array_filter($validated['address']));
+                }
 
                 $user = \App\Models\User::create([
                     'name' => $validated['name'],
                     'last_name' => $validated['last_name'] ?? null,
                     'email' => $validated['email'],
-                    'password' => bcrypt($validated['password']),
+                    'password' => bcrypt($password),
                     'phone_number' => $validated['phone_number'] ?? null,
                     'birthdate' => $validated['birthdate'] ?? null,
                     'gender' => $validated['gender'] ?? 'Hombre',
                     'curp' => $validated['curp'] ?? null,
-                    'address' => $validated['address'] ?? null,
+                    'address' => $address,
                     'registration_date' => $validated['registration_date'] ?? now()->format('Y-m-d'),
                     'status' => $validated['status'] ?? 'activo',
                     'state' => 'N/A',
@@ -204,7 +215,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                             'birthdate' => $user->birthdate,
                             'gender' => $user->gender,
                             'curp' => $user->curp,
-                            'address' => $user->address,
+                            'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
+                            'blood_type' => $validated['blood_type'] ?? 'O+',
                             'registration_date' => $user->registration_date,
                             'status' => $user->status,
                             'role' => 'student'
