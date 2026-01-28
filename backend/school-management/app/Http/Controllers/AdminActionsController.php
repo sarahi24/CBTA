@@ -28,15 +28,6 @@ class AdminActionsController extends Controller
                 ], 403);
             }
 
-            // Verify user has the promote.student permission
-            if (!$user->hasPermissionTo('promote.student')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient permissions. promote.student permission required.',
-                    'error_code' => 'PERMISSION_DENIED'
-                ], 403);
-            }
-
             // Start a database transaction
             DB::beginTransaction();
 
@@ -96,7 +87,7 @@ class AdminActionsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al ejecutar la promoción de estudiantes',
+                'message' => 'Error al ejecutar la promoción de estudiantes: ' . $e->getMessage(),
                 'error_code' => 'PROMOTION_ERROR'
             ], 500);
         }
