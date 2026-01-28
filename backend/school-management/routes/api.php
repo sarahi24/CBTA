@@ -354,25 +354,23 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 $user->update($validated);
                 \Log::info('✅ Usuario actualizado en base de datos');
                 
+                // Recargar usuario para obtener datos frescos
+                $user = \App\Models\User::with('roles')->find($id);
+                \Log::info('✅ Usuario recargado de BD');
+                
                 // Formatear birthdate para respuesta
                 $birthdate = '';
                 if ($user->birthdate) {
-                    if (is_string($user->birthdate)) {
-                        $birthdate = $user->birthdate;
-                    } else {
-                        $birthdate = $user->birthdate->format('Y-m-d');
-                    }
+                    $birthdate = is_string($user->birthdate) ? $user->birthdate : $user->birthdate->format('Y-m-d');
                 }
+                \Log::info('✅ Birthdate formateada', ['birthdate' => $birthdate]);
                 
                 // Formatear registration_date para respuesta
                 $registration_date = '';
                 if ($user->registration_date) {
-                    if (is_string($user->registration_date)) {
-                        $registration_date = $user->registration_date;
-                    } else {
-                        $registration_date = $user->registration_date->format('Y-m-d');
-                    }
+                    $registration_date = is_string($user->registration_date) ? $user->registration_date : $user->registration_date->format('Y-m-d');
                 }
+                \Log::info('✅ Registration_date formateada', ['registration_date' => $registration_date]);
                 
                 // Parsear dirección
                 $address = ['', '', ''];
@@ -388,16 +386,14 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                         ];
                     }
                 }
+                \Log::info('✅ Address parseada', ['address' => $address]);
                 
                 // Obtener rol
                 $role = 'Sin rol';
-                try {
-                    if ($user->roles && $user->roles->count() > 0) {
-                        $role = $user->roles->first()->name;
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('⚠️ Error al obtener rol', ['error' => $e->getMessage()]);
+                if ($user->roles && $user->roles->count() > 0) {
+                    $role = $user->roles->first()->name;
                 }
+                \Log::info('✅ Rol obtenido', ['role' => $role]);
                 
                 $response = [
                     'success' => true,
