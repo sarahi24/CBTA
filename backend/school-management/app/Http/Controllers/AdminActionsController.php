@@ -1284,4 +1284,63 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene un permiso específico por su ID
+     * GET /api/v1/admin-actions/permissions/{id}
+     */
+    public function getPermissionById($id)
+    {
+        try {
+            $permission = Permission::find($id);
+
+            if (!$permission) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Permiso no encontrado.',
+                    'error_code' => 'PERMISSION_NOT_FOUND',
+                ], 404);
+            }
+
+            // Determinar el type basado en guard_name
+            $type = $permission->guard_name ?? 'model';
+            
+            // Determinar belongsTo (simplificado - se puede mejorar con lógica más específica)
+            $belongsTo = 'SYSTEM';
+            if (strpos($permission->name, 'student') !== false) {
+                $belongsTo = 'STUDENT';
+            } elseif (strpos($permission->name, 'concept') !== false) {
+                $belongsTo = 'CONCEPT';
+            } elseif (strpos($permission->name, 'debt') !== false) {
+                $belongsTo = 'DEBT';
+            } elseif (strpos($permission->name, 'payment') !== false) {
+                $belongsTo = 'PAYMENT';
+            } elseif (strpos($permission->name, 'user') !== false) {
+                $belongsTo = 'USER';
+            } elseif (strpos($permission->name, 'permission') !== false || strpos($permission->name, 'role') !== false) {
+                $belongsTo = 'ADMIN';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'permission' => [
+                        'id' => $permission->id,
+                        'name' => $permission->name,
+                        'type' => $type,
+                        'belongsTo' => $belongsTo,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener permiso por ID: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
