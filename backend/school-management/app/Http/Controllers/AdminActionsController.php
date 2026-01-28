@@ -232,4 +232,108 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Attach student details to an existing user
+     */
+    public function attachStudent(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'user_id' => 'required|integer|exists:users,id',
+                'career_id' => 'required|integer|exists:careers,id',
+                'n_control' => 'required|string|max:50|unique:users,n_control',
+                'semestre' => 'required|integer|min:1|max:12',
+                'group' => 'required|string|max:10',
+                'workshop' => 'required|string|max:100',
+            ]);
+
+            $user = User::findOrFail($validated['user_id']);
+
+            // Check if user already has student details
+            if ($user->n_control) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este usuario ya tiene detalles de estudiante asignados.',
+                    'error_code' => 'STUDENT_ALREADY_EXISTS'
+                ], 422);
+            }
+
+            // Update user with student details
+            $user->update([
+                'career_id' => $validated['career_id'],
+                'n_control' => $validated['n_control'],
+                'semestre' => $validated['semestre'],
+                'group' => $validated['group'],
+                'workshop' => $validated['workshop'],
+            ]);
+
+            // Assign student role if not already assigned
+            if (!$user->hasRole('student')) {
+                $user->assignRole('student');
+            }
+
+            // Reload user with relationships
+            $user->load('roles', 'career');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Se asociaron correctamente los datos al estudiante.',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'last_name' => $user->last_name,
+                        'email' => $user->email,
+                        'curp' => $user->curp,
+                        'phone_number' => $user->phone_number,
+                        'birthdate' => $user->birthdate,
+                        'gender' => $user->gender,
+                        'address' => $user->address,
+                        'status' => $user->status,
+                        'registration_date' => $user->registration_date,
+                        'roles' => $user->roles->map(fn($role) => [
+                            'id' => $role->id,
+                            'name' => $role->name
+                        ]),
+                        'studentDetail' => [
+                            'user_id' => $user->id,
+                            'career_id' => $user->career_id,
+                            'n_control' => $user->n_control,
+                            'semestre' => $user->semestre,
+                            'group' => $user->group,
+                            'workshop' => $user->workshop,
+                        ]
+                    ]
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en la validación de datos.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario o recurso no encontrado.',
+                'error_code' => 'NOT_FOUND'
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error('Attach student error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR'
+            ], 500);
+        }
+    }
 }
