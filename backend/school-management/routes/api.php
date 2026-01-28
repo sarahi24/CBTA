@@ -281,11 +281,18 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'birthdate' => 'sometimes|date_format:Y-m-d',
                     'gender' => 'sometimes|in:hombre,mujer,otro',
                     'curp' => 'sometimes|string|max:18|unique:users,curp,' . $id,
-                    'address' => 'sometimes|string',
+                    'address' => 'sometimes|array',
+                    'address.*' => 'nullable|string',
+                    'blood_type' => 'sometimes|string',
                     'password' => 'sometimes|string|min:8',
                 ]);
 
                 $user = \App\Models\User::findOrFail($id);
+                
+                // Convertir address array a string si es necesario
+                if (isset($validated['address']) && is_array($validated['address'])) {
+                    $validated['address'] = implode(', ', array_filter($validated['address']));
+                }
                 
                 if (isset($validated['password'])) {
                     $validated['password'] = bcrypt($validated['password']);
@@ -306,7 +313,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                             'birthdate' => $user->birthdate,
                             'gender' => $user->gender,
                             'curp' => $user->curp,
-                            'address' => $user->address,
+                            'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
+                            'blood_type' => $user->blood_type ?? 'O+',
                             'registration_date' => $user->registration_date,
                             'status' => $user->status,
                             'role' => $user->roles->first()?->name ?? 'student'

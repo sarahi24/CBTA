@@ -1754,37 +1754,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     registration_date: mapped.registration_date || user?.registration_date || new Date().toISOString().split('T')[0],
                     status: mapped.status || user?.status || 'activo',
                     role: mapped.role || mapped.roleLabel || user?.role || ''
-                    // NO incluir studentDetail aquí, se maneja aparte
                 };
                 
-                // Resetear completamente newUser y luego llenar con los datos del usuario
-                this.newUser = { 
-                    id: null, name: '', last_name: '', email: '', phone_number: '',
-                    birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
-                    blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
-                    status: 'activo', role: '',
-                    studentDetail: {
-                        user_id: null,
-                        career_id: '',
-                        n_control: '',
-                        semestre: 1,
-                        group: '',
-                        workshop: ''
-                    }
-                };
-                
-                // Usar Object.assign para actualizar reactivamente en Alpine.js
-                Object.assign(this.newUser, updatedUser);
+                // Actualizar cada propiedad individualmente para reactividad en Alpine.js
+                this.newUser.id = updatedUser.id;
+                this.newUser.name = updatedUser.name;
+                this.newUser.last_name = updatedUser.last_name;
+                this.newUser.email = updatedUser.email;
+                this.newUser.phone_number = updatedUser.phone_number;
+                this.newUser.birthdate = updatedUser.birthdate;
+                this.newUser.gender = updatedUser.gender;
+                this.newUser.curp = updatedUser.curp;
+                this.newUser.blood_type = updatedUser.blood_type;
+                // Actualizar address como array reactivo
+                this.newUser.address = Array.isArray(updatedUser.address) ? [...updatedUser.address] : ['', '', ''];
+                this.newUser.registration_date = updatedUser.registration_date;
+                this.newUser.status = updatedUser.status;
+                this.newUser.role = updatedUser.role;
                 
                 // Resetear studentDetail a objeto vacío antes de cargar
-                Object.assign(this.newUser.studentDetail, {
-                    user_id: mapped.id || user?.id,
-                    career_id: '',
-                    n_control: '',
-                    semestre: 1,
-                    group: '',
-                    workshop: ''
-                });
+                this.newUser.studentDetail.user_id = mapped.id || user?.id;
+                this.newUser.studentDetail.career_id = '';
+                this.newUser.studentDetail.n_control = '';
+                this.newUser.studentDetail.semestre = 1;
+                this.newUser.studentDetail.group = '';
+                this.newUser.studentDetail.workshop = '';
                 
                 console.log('✅ Formulario poblado. newUser:', this.newUser);
                 
@@ -1956,7 +1950,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         birthdate: this.normalizeDate(this.newUser.birthdate) || undefined,
                         gender: this.newUser.gender || undefined,
                         curp: this.newUser.curp || undefined,
-                        address: this.isEditing ? undefined : (this.newUser.address || undefined)
+                        address: this.newUser.address || undefined,
+                        blood_type: this.newUser.blood_type || undefined
                     };
                     // Eliminar claves undefined para no enviar campos vacíos
                     Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
