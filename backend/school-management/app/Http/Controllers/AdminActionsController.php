@@ -336,4 +336,65 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get student details by user ID
+     */
+    public function getStudent(Request $request, $id)
+    {
+        try {
+            $user = User::findOrFail($id);
+
+            // Check if user has student details
+            if (!$user->n_control) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene detalles de estudiante asignados.',
+                    'error_code' => 'STUDENT_DETAILS_NOT_FOUND'
+                ], 404);
+            }
+
+            // Load career relationship if exists
+            $user->load('career');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'user' => [
+                        'user_id' => $user->id,
+                        'id' => $user->id,
+                        'career_id' => $user->career_id,
+                        'n_control' => $user->n_control,
+                        'semestre' => $user->semestre,
+                        'group' => $user->group,
+                        'workshop' => $user->workshop,
+                        'career' => $user->career ? [
+                            'id' => $user->career->id,
+                            'name' => $user->career->career_name ?? $user->career->name
+                        ] : null
+                    ]
+                ]
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no encontrado.',
+                'error_code' => 'NOT_FOUND'
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error('Get student error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR'
+            ], 500);
+        }
+    }
 }
