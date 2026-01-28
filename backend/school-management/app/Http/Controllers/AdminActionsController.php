@@ -498,4 +498,158 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Update permissions for multiple users
+     * Can filter by CURPs or by role (only one of them)
+     */
+    public function updatePermissions(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'curps' => 'nullable|array',
+                'curps.*' => 'string|max:18',
+                'role' => 'nullable|string|max:50',
+                'permissionsToAdd' => 'nullable|array',
+                'permissionsToAdd.*' => 'string|max:100',
+                'permissionsToRemove' => 'nullable|array',
+                'permissionsToRemove.*' => 'string|max:100',
+            ]);
+
+            // Validate that either curps or role is provided, not both
+            $hasCurps = !empty($validated['curps']);
+            $hasRole = !empty($validated['role']);
+
+            if (($hasCurps && $hasRole) || (!$hasCurps && !$hasRole)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe especificar CURP(s) O role, pero no ambos.',
+                    'error_code' => 'INVALID_FILTER'
+                ], 422);
+            }
+
+            // Validate that at least one permission action is provided
+            if (empty($validated['permissionsToAdd']) && empty($validated['permissionsToRemove'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe especificar permisos para agregar o eliminar.',
+                    'error_code' => 'NO_PERMISSIONS'
+                ], 422);
+            }
+
+            // Get users based on filter
+            $query = User::query();
+            if ($hasCurps) {
+                $query->whereIn('curp', $validated['curps']);
+            } else {
+                $query->whereHas('roles', function ($q) use ($validated) {
+                    $q->where('name', $validated['role']);
+                });
+            }
+
+            $users = $query->with('roles')->get();
+
+            if ($users->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron usuarios con los criterios especificados.',
+                    'error_code' => 'NO_USERS_FOUND'
+                ], 404);
+            }
+
+            // Process permissions
+            $updatedUsers = [];
+            $totalFound = $users->count();
+            $totalUpdated = 0;
+            $failedUsers = [];
+            $permissionsAdded = [];
+            $permissionsRemoved = [];
+
+            DB::beginTransaction();
+
+            foreach ($users as $user) {
+                try {
+                    // Remove permissions
+                    if (!empty($validated['permissionsToRemove'])) {
+                        foreach ($validated['permissionsToRemove'] as $perm) {
+                            if ($user->hasPermissionTo($perm)) {
+                                $user->revokePermissionTo($perm);
+                                if (!in_array($perm, $permissionsRemoved)) {
+                                    $permissionsRemoved[] = $perm;
+                                }
+                            }
+                        }
+                    }
+
+                    // Add permissions
+                    if (!empty($validated['permissionsToAdd'])) {
+                        foreach ($validated['permissionsToAdd'] as $perm) {
+                            if (!$user->hasPermissionTo($perm)) {
+                                $user->givePermissionTo($perm);
+                                if (!in_array($perm, $permissionsAdded)) {
+                                    $permissionsAdded[] = $perm;
+                                }
+                            }
+                        }
+                    }
+
+                    // Get updated permissions
+                    $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
+
+                    $updatedUsers[] = [
+                        'fullName' => trim(($user->name ?? '') . ' ' . ($user->last_name ?? '')),
+                        'curp' => $user->curp,
+                        'role' => $user->roles->first()?->name ?? 'N/A',
+                        'updatedPermissions' => $userPermissions,
+                    ];
+
+                    $totalUpdated++;
+                } catch (\Exception $e) {
+                    Log::warning("Failed to update permissions for user {$user->id}: " . $e->getMessage());
+                    $failedUsers[] = $user->id;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permisos actualizados correctamente.',
+                'data' => [
+                    'users_permissions' => $updatedUsers,
+                    'metadata' => [
+                        'totalFound' => $totalFound,
+                        'totalUpdated' => $totalUpdated,
+                        'failed' => count($failedUsers),
+                        'failedUsers' => $failedUsers,
+                        'operations' => [
+                            'permissions_removed' => $permissionsRemoved,
+                            'permissions_added' => $permissionsAdded,
+                        ]
+                    ]
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en la validación de datos.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Update permissions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR'
+            ], 500);
+        }
+    }
 }
