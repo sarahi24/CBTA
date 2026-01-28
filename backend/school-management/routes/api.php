@@ -157,6 +157,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     // Production endpoints with role restriction
     Route::prefix('admin-actions')->middleware(['auth:sanctum', 'role:admin|financial staff', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
         Route::get('/show-users', [AdminActionsController::class, 'showUsers']);
+        Route::get('/show-users/{id}', [AdminActionsController::class, 'showUserById']);
 
         Route::post('/register', function (Request $request) {
             try {

@@ -725,4 +725,80 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get detailed user information by ID
+     */
+    public function showUserById(Request $request, $id)
+    {
+        try {
+            $user = User::with('roles', 'permissions', 'career')->findOrFail($id);
+
+            // Basic info
+            $basicInfo = [
+                'phone_number' => $user->phone_number ?? '',
+                'address' => $user->address ?? '',
+                'blood_type' => $user->blood_type ?? '',
+            ];
+
+            // Roles
+            $roles = $user->roles->pluck('name')->toArray();
+
+            // Permissions
+            $permissions = $user->permissions->pluck('name')->toArray();
+
+            // Student detail (if applicable)
+            $studentDetail = null;
+            if ($user->n_control) {
+                $studentDetail = [
+                    'nControl' => $user->n_control,
+                    'semestre' => $user->semestre,
+                    'group' => $user->group,
+                    'workshop' => $user->workshop,
+                    'careerName' => $user->career?->career_name ?? $user->career?->name ?? 'N/A',
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario encontrado.',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'last_name' => $user->last_name,
+                        'email' => $user->email,
+                        'curp' => $user->curp,
+                        'birthdate' => $user->birthdate,
+                        'gender' => $user->gender,
+                        'status' => $user->status,
+                        'created_at' => $user->created_at,
+                        'basicInfo' => $basicInfo,
+                        'roles' => $roles,
+                        'permissions' => $permissions,
+                        'studentDetail' => $studentDetail,
+                    ]
+                ]
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no encontrado.',
+                'error_code' => 'NOT_FOUND'
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error('Show user by ID error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR'
+            ], 500);
+        }
+    }
 }
