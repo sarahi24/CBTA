@@ -113,7 +113,17 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
 
     // Admin Actions - User Management
     // Allow both 'admin' and 'financial staff' roles to access
-    Route::prefix('admin-actions')->middleware('role:admin|financial staff')->group(function(){
+    
+    // CORS preflight for admin-actions
+    Route::options('/admin-actions/{path?}', function () {
+        return response()->json([], 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission')
+            ->header('Access-Control-Max-Age', '86400');
+    })->where('path', '.*');
+    
+    Route::prefix('admin-actions')->middleware(['auth:sanctum', 'role:admin|financial staff'])->group(function(){
         Route::get('/show-users', function (Request $request) {
             try {
                 $users = \App\Models\User::with('roles')->get()->map(function($user) {
@@ -418,21 +428,24 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 ];
                 
                 \Log::info('✅ Respuesta exitosa construida');
-                return response()->json($response);
+                return response()->json($response)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission');
                 
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
                 \Log::error('❌ Usuario no encontrado', ['user_id' => $id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no encontrado'
-                ], 404);
+                ], 404)->header('Access-Control-Allow-Origin', '*');
             } catch (\Illuminate\Validation\ValidationException $e) {
                 \Log::error('❌ Error de validación', ['errors' => $e->errors()]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Error de validación',
                     'errors' => $e->errors()
-                ], 422);
+                ], 422)->header('Access-Control-Allow-Origin', '*');
             } catch (\Exception $e) {
                 \Log::error('❌ Error general en update-user', [
                     'error' => $e->getMessage(),
@@ -444,7 +457,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'success' => false,
                     'message' => 'Error al actualizar usuario: ' . $e->getMessage(),
                     'error_code' => 'INTERNAL_SERVER_ERROR'
-                ], 500);
+                ], 500)->header('Access-Control-Allow-Origin', '*');
             }
         });
 });
