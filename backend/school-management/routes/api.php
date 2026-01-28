@@ -18,12 +18,14 @@ use App\Http\Controllers\Students\WebhookController;
 use App\Models\PaymentConcept;
 
 // ===== ABSOLUTE SIMPLEST TEST ENDPOINT =====
-Route::get('/test-simple', function () {
-    return response()->json(['success' => true, 'message' => 'Simple test works']);
-});
+Route::middleware([\App\Http\Middleware\CorsMiddleware::class])->group(function () {
+    Route::get('/test-simple', function () {
+        return response()->json(['success' => true, 'message' => 'Simple test works']);
+    });
 
-Route::put('/test-simple', function (Request $request) {
-    return response()->json(['success' => true, 'message' => 'Simple PUT works']);
+    Route::put('/test-simple', function (Request $request) {
+        return response()->json(['success' => true, 'message' => 'Simple PUT works']);
+    });
 });
 
 // ===== AUTHENTICATED & PROTECTED ROUTES =====
