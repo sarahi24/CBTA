@@ -113,7 +113,15 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
 
     // Admin Actions - User Management
     // Allow both 'admin' and 'financial staff' roles to access
-    Route::prefix('admin-actions')->middleware('role:admin|financial staff')->group(function(){
+    Route::prefix('admin-actions')->group(function(){
+        // Test endpoint without role middleware
+        Route::put('/update-user-test/{id}', function (Request $request, $id) {
+            \Log::info('🔄 TEST: Iniciando actualización de usuario', ['user_id' => $id, 'data' => $request->all()]);
+            return response()->json(['success' => true, 'message' => 'Endpoint alcanzado', 'received' => $request->all()]);
+        });
+        
+        // Production endpoints with role middleware
+        Route::middleware('role:admin|financial staff')->group(function() {
         Route::get('/show-users', function (Request $request) {
             try {
                 $users = \App\Models\User::with('roles')->get()->map(function($user) {
@@ -447,8 +455,6 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 ], 500);
             }
         });
-    });
-
-});
-
+        }); // Cierre del middleware role
+    }); // Cierre del prefix admin-actions
 
