@@ -490,6 +490,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
             }
         });
 
+        Route::post('/promotion-test', [AdminActionsController::class, 'testPromotion']);
         Route::post('/promotion', [AdminActionsController::class, 'promoteStudents']);
         Route::get('/promotion-debug', [AdminActionsController::class, 'debugPromotion']);
 });
