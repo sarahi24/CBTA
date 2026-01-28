@@ -16,24 +16,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Students\WebhookController;
 use App\Models\PaymentConcept;
 
-// ===== PUBLIC TEST ENDPOINTS (NO MIDDLEWARE) =====
-Route::get('/v1/test', function () {
-    return response()->json(['success' => true, 'message' => 'API is working'])
-        ->header('Access-Control-Allow-Origin', '*');
-});
-
-Route::put('/v1/test', function (Request $request) {
-    return response()->json(['success' => true, 'message' => 'PUT works', 'data' => $request->all()])
-        ->header('Access-Control-Allow-Origin', '*');
-});
-
-Route::options('/v1/{path?}', function () {
-    return response()->json([])
-        ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission');
-})->where('path', '.*');
-
 // ===== AUTHENTICATED & PROTECTED ROUTES =====
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
@@ -60,6 +42,15 @@ Route::prefix('v1')->middleware('throttle:10,1')->group(function () {
     // Test endpoint para debug
     Route::get('/test-endpoint', function () {
         return response()->json(['success' => true, 'message' => 'Test endpoint working']);
+    });
+    
+    // ===== PUBLIC TEST ENDPOINTS =====
+    Route::get('/test', function () {
+        return response()->json(['success' => true, 'message' => 'GET works']);
+    });
+
+    Route::put('/test', function (Request $request) {
+        return response()->json(['success' => true, 'message' => 'PUT works']);
     });
 });
 Route::post('/stripe/webhook', [WebhookController::class, 'handle']);
