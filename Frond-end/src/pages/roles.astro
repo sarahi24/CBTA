@@ -1970,9 +1970,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         birthdate: this.normalizeDate(this.newUser.birthdate) || undefined,
                         gender: this.newUser.gender || undefined,
                         curp: this.newUser.curp || undefined,
-                        address: this.newUser.address || undefined,
-                        blood_type: this.newUser.blood_type || undefined
+                        address: this.newUser.address || undefined
                     };
+                    
+                    // En creación, agregar blood_type
+                    if (!this.isEditing) {
+                        userData.blood_type = this.newUser.blood_type || 'O+';
+                    }
+                    
                     // Eliminar claves undefined para no enviar campos vacíos
                     Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
                     

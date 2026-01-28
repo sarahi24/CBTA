@@ -341,6 +341,9 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     $validated['password'] = bcrypt($validated['password']);
                 }
                 
+                // Remover campos que no existen en la tabla users
+                unset($validated['blood_type']);
+                
                 $user->update($validated);
                 
                 return response()->json([
