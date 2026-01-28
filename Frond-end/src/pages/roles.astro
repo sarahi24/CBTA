@@ -456,7 +456,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
 
                     <!-- SECCIÓN DE DATOS DE ESTUDIANTE (solo si ya está asociado como estudiante) -->
-                    <template x-if="isEditing && newUser.studentDetail && (newUser.studentDetail.n_control || newUser.studentDetail.career_id)">
+                    <template x-if="isEditing && hasStudentDetails">
                     <div class="sm:col-span-2 pt-6 border-t-2 border-slate-200">
                         <h3 class="text-lg font-bold text-institucional mb-4 flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1012,6 +1012,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     group: '',
                     workshop: ''
                 },
+                hasStudentDetails: false,
 
                 // Estados para gestión de carreras
                 showCareerModal: false,
@@ -1691,6 +1692,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             openPanelForAdd() {
                 this.isEditing = false;
+                this.hasStudentDetails = false;
                 this.newUser = { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
@@ -1819,9 +1821,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 workshop: studentDetail.workshop || ''
                             });
                             
+                            // Marcar que el usuario tiene detalles de estudiante
+                            this.hasStudentDetails = true;
                             console.log('✅ Datos de estudiante cargados en el formulario:', this.newUser.studentDetail);
                         } else {
                             console.log('ℹ️ El usuario no es estudiante o sin detalles académicos');
+                            this.hasStudentDetails = false;
                             // Mantener studentDetail como objeto vacío
                             Object.assign(this.newUser.studentDetail, {
                                 user_id: userId,
@@ -1834,6 +1839,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
                     } else if (response.status === 404) {
                         console.log('ℹ️ No hay detalles de estudiante para este usuario');
+                        this.hasStudentDetails = false;
                         Object.assign(this.newUser.studentDetail, {
                             user_id: userId,
                             career_id: '',
@@ -1892,7 +1898,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
-            closePanel() { this.isPanelOpen = false; },
+            closePanel() { 
+                this.isPanelOpen = false;
+                this.hasStudentDetails = false;
+            },
 
             async saveUser() {
                 this.isSaving = true;
