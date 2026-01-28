@@ -961,4 +961,51 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Da de baja múltiples usuarios (cambia status a 'baja')
+     * POST /api/v1/admin-actions/disable-users
+     */
+    public function disableUsers(Request $request)
+    {
+        // Validación
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:users,id',
+        ]);
+
+        try {
+            $ids = $validated['ids'];
+
+            // Actualizar status a 'baja'
+            $totalUpdated = User::whereIn('id', $ids)
+                ->update(['status' => 'baja']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estatus de usuarios actualizados correctamente.',
+                'data' => [
+                    'concept' => [
+                        'newStatus' => 'baja',
+                        'totalUpdated' => $totalUpdated,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al dar de baja usuarios: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
