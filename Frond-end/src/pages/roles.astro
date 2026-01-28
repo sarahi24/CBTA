@@ -1629,6 +1629,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     console.log('📋 Resultado:', result);
                     
+                    // Show debug info if present
+                    if (result.debug) {
+                        console.error('🐛 Debug Info:', result.debug);
+                    }
+                    
                     if (response.ok && result.success) {
                         const affected = result.data?.affected;
                         this.showNotify(
@@ -1639,6 +1644,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         const errorMsg = result.message || `Error: ${result.error_code || 'desconocido'}`;
                         console.error('❌ Error en respuesta:', errorMsg);
+                        console.error('❌ Detalles:', result);
                         this.showNotify(errorMsg, 'error');
                     }
                 } catch (error) {
