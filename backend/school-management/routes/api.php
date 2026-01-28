@@ -495,6 +495,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::get('/promotion-debug', [AdminActionsController::class, 'debugPromotion']);
         Route::post('/attach-student', [AdminActionsController::class, 'attachStudent']);
         Route::get('/get-student/{id}', [AdminActionsController::class, 'getStudent']);
+        Route::patch('/update-student/{id}', [AdminActionsController::class, 'updateStudent']);
 });
     });
 

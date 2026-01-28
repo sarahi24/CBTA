@@ -72,6 +72,7 @@ class DatabaseSeeder extends Seeder
             'promote.student',
             'attach.student',
             'view.student',
+            'update.student',
         ];
 
         foreach ($adminPermissions as $perm) {
