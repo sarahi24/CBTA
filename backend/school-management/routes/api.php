@@ -122,12 +122,20 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     
                     return [
                         'id' => $user->id,
+                        'name' => $user->name,
+                        'last_name' => $user->last_name,
                         'fullName' => $fullName ?: 'Sin nombre',
                         'email' => $user->email,
+                        'phone_number' => $user->phone_number ?? '',
+                        'birthdate' => $user->birthdate ? $user->birthdate->format('Y-m-d') : '',
+                        'gender' => $user->gender ?? '',
                         'curp' => $user->curp ?? 'N/A',
+                        'blood_type' => $user->blood_type ?? 'O+',
+                        'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
+                        'registration_date' => $user->registration_date ? $user->registration_date->format('Y-m-d') : '',
+                        'status' => $user->status === 'activo' ? 'active' : $user->status,
                         'role' => $firstRole ? $firstRole->name : 'Sin rol',
                         'roles_count' => $user->roles->count(),
-                        'status' => $user->status === 'activo' ? 'active' : $user->status,
                         'created_at' => $user->created_at->format('Y-m-d H:i:s'),
                         'createdAtHuman' => $user->created_at->diffForHumans(),
                     ];
