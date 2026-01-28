@@ -74,6 +74,7 @@ class DatabaseSeeder extends Seeder
             'view.student',
             'update.student',
             'sync.permissions',
+            'view.users',
         ];
 
         foreach ($adminPermissions as $perm) {

@@ -652,4 +652,77 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get all users with filtering and pagination
+     */
+    public function showUsers(Request $request)
+    {
+        try {
+            $perPage = $request->query('perPage', 15);
+            $page = $request->query('page', 1);
+            $status = $request->query('status', 'activo');
+            $forceRefresh = $request->query('forceRefresh', false);
+
+            // Validate pagination params
+            $perPage = max(1, min(100, (int)$perPage));
+            $page = max(1, (int)$page);
+
+            // Build query
+            $query = User::with('roles', 'permissions');
+
+            // Filter by status
+            if ($status && $status !== 'all') {
+                $query->where('status', $status);
+            }
+
+            // Get paginated results
+            $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+            // Format users
+            $users = $paginated->items();
+            $formattedUsers = collect($users)->map(function($user) {
+                $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
+                
+                return [
+                    'id' => $user->id,
+                    'fullName' => $fullName ?: 'Sin nombre',
+                    'email' => $user->email ?? '',
+                    'curp' => $user->curp ?? 'N/A',
+                    'status' => $user->status,
+                    'roles_count' => $user->roles->count(),
+                    'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+                    'createdAtHuman' => $user->created_at->diffForHumans(),
+                ];
+            })->toArray();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuarios encontrados.',
+                'data' => [
+                    'users' => [
+                        'items' => $formattedUsers,
+                        'currentPage' => $paginated->currentPage(),
+                        'lastPage' => $paginated->lastPage(),
+                        'perPage' => $paginated->perPage(),
+                        'total' => $paginated->total(),
+                        'hasMorePages' => $paginated->hasMorePages(),
+                        'nextPage' => $paginated->hasMorePages() ? $paginated->currentPage() + 1 : null,
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Show users error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR'
+            ], 500);
+        }
+    }
 }
