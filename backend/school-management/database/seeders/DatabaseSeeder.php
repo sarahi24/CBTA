@@ -66,6 +66,17 @@ class DatabaseSeeder extends Seeder
         }
 
         // ------------------------
+        // PERMISOS DE ADMIN
+        // ------------------------
+        $adminPermissions = [
+            'promote.student',
+        ];
+
+        foreach ($adminPermissions as $perm) {
+            Permission::firstOrCreate(['name' => $perm]);
+        }
+
+        // ------------------------
         // CREAR ROLES Y ASIGNAR PERMISOS
         // ------------------------
         $studentRole = Role::firstOrCreate(['name' => 'student']);
@@ -73,6 +84,9 @@ class DatabaseSeeder extends Seeder
 
         $staffRole = Role::firstOrCreate(['name' => 'financial staff']);
         $staffRole->syncPermissions($staffPermissions);
+
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole->syncPermissions(array_merge($staffPermissions, $adminPermissions));
 
         // ------------------------
         // CREAR USUARIOS DE PRUEBA
