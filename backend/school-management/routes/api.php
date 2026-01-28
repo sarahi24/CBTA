@@ -114,35 +114,24 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     // Admin Actions - User Management
     // Allow both 'admin' and 'financial staff' roles to access
     
-    // CORS preflight for admin-actions
-    Route::options('/admin-actions/{path?}', function () {
-        return response()->json([], 200)
-            ->header('Access-Control-Allow-Origin', '*')
-            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission')
-            ->header('Access-Control-Max-Age', '86400');
-    })->where('path', '.*');
-    
-    // Debug endpoint without authentication
-    Route::put('/admin-actions/update-user-debug/{id}', function (Request $request, $id) {
-        try {
-            \Log::info('🔄 DEBUG: Iniciando debug endpoint', ['user_id' => $id]);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Debug endpoint funciona',
-                'received_id' => $id,
-                'request_data' => $request->all()
-            ])->header('Access-Control-Allow-Origin', '*')
-              ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-              ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Role, X-User-Permission');
-        } catch (\Exception $e) {
-            \Log::error('❌ Error en debug endpoint: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500)->header('Access-Control-Allow-Origin', '*');
-        }
+    Route::prefix('admin-actions')->middleware('auth:sanctum')->group(function(){
+        // Debug endpoint without role requirement
+        Route::put('/update-user-debug/{id}', function (Request $request, $id) {
+            try {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Debug endpoint works',
+                    'received_id' => $id
+                ]);
+            } catch (\Exception $e) {
+                return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+        });
+        
+        // CORS preflight
+        Route::options('/{path?}', function () {
+            return response()->json([]);
+        })->where('path', '.*');
     });
     
     // Production endpoints with role restriction
