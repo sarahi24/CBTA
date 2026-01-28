@@ -1941,20 +1941,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.showNotify(msg, 'error');
                         }
                     } else {
-                        // Generar contraseña automática
-                        const autoPassword = 'Pass' + Math.random().toString(36).slice(-8) + '!';
-                        userData.password = autoPassword;
-                        
+                        // NO enviar contraseña - el backend la genera automáticamente
                         // Formatear teléfono con +52 si no lo tiene
                         if (userData.phone_number && !userData.phone_number.startsWith('+52')) {
                             userData.phone_number = '+52' + userData.phone_number.replace(/\D/g, '');
                         }
                         
                         console.log('📤 Enviando datos de nuevo usuario:');
-                        console.log(JSON.stringify({
-                            ...userData,
-                            password: '***HIDDEN***'
-                        }, null, 2));
+                        console.log(JSON.stringify(userData, null, 2));
                         
                         const controller = new AbortController();
                         const timeoutId = setTimeout(() => controller.abort(), 10000);
