@@ -26,6 +26,12 @@ COPY . .
 # Instalar dependencias de Laravel
 RUN composer install
 
+# Limpiar cache después de deploy
+RUN php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan view:clear && \
+    php artisan cache:clear
+
 # Exponer puerto de PHP-FPM
 EXPOSE 9000
 
