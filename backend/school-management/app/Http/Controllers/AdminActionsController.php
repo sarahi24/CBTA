@@ -914,4 +914,51 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Elimina múltiples usuarios (soft delete - cambia status a 'eliminado')
+     * POST /api/v1/admin-actions/delete-users
+     */
+    public function deleteUsers(Request $request)
+    {
+        // Validación
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:users,id',
+        ]);
+
+        try {
+            $ids = $validated['ids'];
+
+            // Actualizar status a 'eliminado'
+            $totalUpdated = User::whereIn('id', $ids)
+                ->update(['status' => 'eliminado']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estatus de usuarios actualizados correctamente.',
+                'data' => [
+                    'concept' => [
+                        'newStatus' => 'eliminado',
+                        'totalUpdated' => $totalUpdated,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar usuarios: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }

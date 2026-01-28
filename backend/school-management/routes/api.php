@@ -159,6 +159,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::get('/show-users', [AdminActionsController::class, 'showUsers']);
         Route::get('/show-users/{id}', [AdminActionsController::class, 'showUserById']);
         Route::post('/updated-roles', [AdminActionsController::class, 'updateRoles']);
+        Route::post('/delete-users', [AdminActionsController::class, 'deleteUsers']);
 
         Route::post('/register', function (Request $request) {
             try {
