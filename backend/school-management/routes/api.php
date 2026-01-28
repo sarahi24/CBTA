@@ -163,6 +163,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::post('/disable-users', [AdminActionsController::class, 'disableUsers']);
         Route::post('/temporary-disable-users', [AdminActionsController::class, 'temporaryDisableUsers']);
         Route::post('/find-permissions', [AdminActionsController::class, 'findPermissions']);
+        Route::get('/find-roles', [AdminActionsController::class, 'findRoles']);
 
         Route::post('/register', function (Request $request) {
             try {

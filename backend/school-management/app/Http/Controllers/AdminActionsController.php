@@ -1199,4 +1199,51 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Muestra todos los roles existentes en el sistema
+     * GET /api/v1/admin-actions/find-roles?forceRefresh=false
+     */
+    public function findRoles(Request $request)
+    {
+        try {
+            // Validación del parámetro forceRefresh
+            $forceRefresh = $request->query('forceRefresh', 'false') === 'true';
+            $cacheKey = 'admin_roles_list';
+
+            // Si forceRefresh es true, limpiar cache
+            if ($forceRefresh) {
+                Cache::forget($cacheKey);
+                Log::info('Admin: Cache de roles actualizado forzadamente');
+            }
+
+            // Obtener roles del cache o de la BD
+            $roles = Cache::rememberForever($cacheKey, function () {
+                return Role::all(['id', 'name'])
+                    ->map(function ($role) {
+                        return [
+                            'id' => $role->id,
+                            'name' => $role->name,
+                        ];
+                    })
+                    ->toArray();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'roles' => $roles,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener roles: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
