@@ -398,11 +398,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Teléfono</label>
-                            <input x-model="newUser.phone_number" type="tel" placeholder="5512345678" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                            <input x-model="newUser.phone_number" type="tel" placeholder="5512345678" :required="!isEditing" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Fecha Nacimiento</label>
-                            <input x-model="newUser.birthdate" type="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                            <input x-model="newUser.birthdate" type="date" :required="!isEditing" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
@@ -432,18 +432,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <input x-model="newUser.curp" type="text" pattern="[A-Z0-9]{18}" maxlength="18" placeholder="PELJ000512HDFRPN09" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional uppercase">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Calle y Número</label>
-                        <input x-model="newUser.address[0]" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Colonia</label>
-                            <input x-model="newUser.address[1]" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Ciudad/Estado</label>
-                            <input x-model="newUser.address[2]" type="text" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
-                        </div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Dirección</label>
+                        <input x-model="newUser.address" type="text" placeholder="Calle, número, colonia, ciudad" :required="!isEditing" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Asignar Rol</label>
@@ -987,7 +977,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 filterStatus: '',
                 newUser: { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
-                    birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
+                    birthdate: '', gender: 'hombre', curp: '', address: '',
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                     status: 'activo', role: 'Administrador',
                     studentDetail: {
@@ -1095,6 +1085,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 return value;
             },
 
+            generatePassword() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+                let password = '';
+                for (let i = 0; i < 12; i++) {
+                    password += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return password;
+            },
+
             statusLabel(status) {
                 const key = (status || '').toLowerCase();
                 if (key === 'activo' || key === 'active') return 'Activo';
@@ -1129,13 +1128,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 else if (statusKey === 'baja-temporal' || statusKey === 'baja temporal' || statusKey === 'temporary-disable') status = 'baja-temporal';
                 else if (statusKey) status = statusKey;
 
-                // Asegurar que address siempre sea un array
-                let address = ['', '', ''];
+                // Address puede ser string o array, convertir a string para simplificar
+                let address = '';
                 if (Array.isArray(raw.address)) {
-                    address = raw.address;
+                    address = raw.address.filter(Boolean).join(', ');
                 } else if (typeof raw.address === 'string') {
-                    // Si es un string, dividirlo
-                    address = [raw.address, '', ''];
+                    address = raw.address || '';
                 }
 
                 // Extraer name y last_name desde fullName si no vienen separados
@@ -1695,7 +1693,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.hasStudentDetails = false;
                 this.newUser = { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
-                    birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
+                    birthdate: '', gender: 'hombre', curp: '', address: '',
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                     status: 'activo', role: 'Administrador',
                     studentDetail: {
@@ -1738,7 +1736,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 // Resetear completamente newUser y luego llenar con los datos del usuario
                 this.newUser = { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
-                    birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
+                    birthdate: '', gender: 'hombre', curp: '', address: '',
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
                     status: 'activo', role: '',
                     studentDetail: {
@@ -1914,9 +1912,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
                 
                 try {
-                    // Construir payload mínimo para evitar 500 del backend por campos vacíos
-                    // NOTA: update-user/{id} solo acepta: name, last_name, email, phone_number, 
-                    // birthdate, gender, curp, password (no: role, address, blood_type, registration_date, status)
+                    // Validar campos requeridos en creación
+                    if (!this.isEditing) {
+                        const requiredFields = ['name', 'last_name', 'email', 'phone_number', 'birthdate', 'gender', 'curp'];
+                        const missing = requiredFields.filter(f => !this.newUser[f]);
+                        if (missing.length > 0) {
+                            this.showNotify(`Campos requeridos: ${missing.join(', ')}`, 'error');
+                            this.isSaving = false;
+                            return;
+                        }
+                    }
+                    
+                    // Construir payload
                     const userData = {
                         name: this.newUser.name || undefined,
                         last_name: this.newUser.last_name || undefined,
@@ -1924,17 +1931,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         phone_number: this.newUser.phone_number || undefined,
                         birthdate: this.normalizeDate(this.newUser.birthdate) || undefined,
                         gender: this.newUser.gender || undefined,
-                        curp: this.newUser.curp || undefined
+                        curp: this.newUser.curp || undefined,
+                        address: this.isEditing ? undefined : (this.newUser.address || undefined)
                     };
                     // Eliminar claves undefined para no enviar campos vacíos
                     Object.keys(userData).forEach(k => userData[k] === undefined && delete userData[k]);
-                    // No enviar: password, role, address, blood_type, registration_date, status
-                    // ya que update-user/{id} no los acepta según validaciones del backend
                     
                     if (this.isEditing) {
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
                         console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
-                        // Backend /v1/admin-actions/update-user/{id} expects PUT, not PATCH
+                        // Backend /v1/admin-actions/update-user/{id} expects PUT
                         const response = await this.authenticatedFetch(
                             `${this.apiBaseUrl}/v1/admin-actions/update-user/${this.newUser.id}`,
                             {
@@ -1990,12 +1996,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.showNotify(msg, 'error');
                         }
                     } else {
-                        // NO enviar contraseña - el backend la genera automáticamente
-                        // Agregar campos requeridos para registro de nuevo usuario
+                        // Creación de nuevo usuario
+                        // Agregar campos requeridos para registro
                         userData.registration_date = this.normalizeDate(this.newUser.registration_date) || new Date().toISOString().split('T')[0];
                         userData.status = this.newUser.status || 'activo';
-                        userData.address = this.newUser.address || ['', '', ''];
-                        userData.blood_type = this.newUser.blood_type || 'O+';
+                        userData.address = this.newUser.address || '';
+                        
+                        // Generar password automáticamente si no se proporciona
+                        const password = this.generatePassword();
+                        userData.password = password;
                         
                         // Formatear teléfono con +52 si no lo tiene
                         if (userData.phone_number && !userData.phone_number.startsWith('+52')) {
@@ -2028,7 +2037,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (response.status === 201 && result.success) {
                             const newUser = this.mapUser(result.data?.user || result.data || result || userData);
                             this.users.push(newUser);
-                            this.showNotify(result.message || 'Usuario creado');
+                            this.showNotify(result.message || 'Usuario creado con contraseña: ' + password);
                             this.closePanel();
                         } else {
                             console.error('❌ Error de validación:', result);

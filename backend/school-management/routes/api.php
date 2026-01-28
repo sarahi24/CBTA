@@ -164,8 +164,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'email' => 'required|email|unique:users,email',
                     'password' => 'required|string|min:8',
                     'phone_number' => 'nullable|string|max:20',
-                    'curp' => 'nullable|string|max:18',
+                    'birthdate' => 'nullable|date_format:Y-m-d',
                     'gender' => 'nullable|in:hombre,mujer,otro',
+                    'curp' => 'nullable|string|max:18|unique:users,curp',
+                    'registration_date' => 'nullable|date_format:Y-m-d',
+                    'address' => 'nullable|string',
+                    'status' => 'nullable|in:activo,baja,eliminado',
                 ]);
 
                 $user = \App\Models\User::create([
@@ -174,9 +178,14 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'email' => $validated['email'],
                     'password' => bcrypt($validated['password']),
                     'phone_number' => $validated['phone_number'] ?? null,
+                    'birthdate' => $validated['birthdate'] ?? null,
+                    'gender' => $validated['gender'] ?? 'Hombre',
                     'curp' => $validated['curp'] ?? null,
-                    'gender' => $validated['gender'] ?? 'hombre',
-                    'status' => 'activo'
+                    'address' => $validated['address'] ?? null,
+                    'registration_date' => $validated['registration_date'] ?? now()->format('Y-m-d'),
+                    'status' => $validated['status'] ?? 'activo',
+                    'state' => 'N/A',
+                    'municipality' => 'N/A'
                 ]);
 
                 // Asignar rol de estudiante por defecto
@@ -186,15 +195,20 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'success' => true,
                     'message' => 'Usuario creado correctamente',
                     'data' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'last_name' => $user->last_name,
-                        'email' => $user->email,
-                        'phone_number' => $user->phone_number,
-                        'curp' => $user->curp,
-                        'gender' => $user->gender,
-                        'role' => 'student',
-                        'status' => $user->status
+                        'user' => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'last_name' => $user->last_name,
+                            'email' => $user->email,
+                            'phone_number' => $user->phone_number,
+                            'birthdate' => $user->birthdate,
+                            'gender' => $user->gender,
+                            'curp' => $user->curp,
+                            'address' => $user->address,
+                            'registration_date' => $user->registration_date,
+                            'status' => $user->status,
+                            'role' => 'student'
+                        ]
                     ]
                 ], 201);
             } catch (\Illuminate\Validation\ValidationException $e) {
@@ -252,8 +266,10 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     'last_name' => 'sometimes|string|max:255',
                     'email' => 'sometimes|email|unique:users,email,' . $id,
                     'phone_number' => 'sometimes|string|max:20',
-                    'curp' => 'sometimes|string|max:18',
+                    'birthdate' => 'sometimes|date_format:Y-m-d',
                     'gender' => 'sometimes|in:hombre,mujer,otro',
+                    'curp' => 'sometimes|string|max:18|unique:users,curp,' . $id,
+                    'address' => 'sometimes|string',
                     'password' => 'sometimes|string|min:8',
                 ]);
 
@@ -268,7 +284,22 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                 return response()->json([
                     'success' => true,
                     'message' => 'Usuario actualizado correctamente',
-                    'data' => $user
+                    'data' => [
+                        'user' => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'last_name' => $user->last_name,
+                            'email' => $user->email,
+                            'phone_number' => $user->phone_number,
+                            'birthdate' => $user->birthdate,
+                            'gender' => $user->gender,
+                            'curp' => $user->curp,
+                            'address' => $user->address,
+                            'registration_date' => $user->registration_date,
+                            'status' => $user->status,
+                            'role' => $user->roles->first()?->name ?? 'student'
+                        ]
+                    ]
                 ]);
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
                 return response()->json([
