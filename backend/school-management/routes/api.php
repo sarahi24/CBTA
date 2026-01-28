@@ -120,19 +120,54 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
                     $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                     $firstRole = $user->roles->first();
                     
+                    // Formatear fecha de nacimiento
+                    $birthdate = '';
+                    if ($user->birthdate) {
+                        if (is_string($user->birthdate)) {
+                            $birthdate = $user->birthdate;
+                        } else {
+                            $birthdate = $user->birthdate->format('Y-m-d');
+                        }
+                    }
+                    
+                    // Formatear fecha de registro
+                    $registration_date = '';
+                    if ($user->registration_date) {
+                        if (is_string($user->registration_date)) {
+                            $registration_date = $user->registration_date;
+                        } else {
+                            $registration_date = $user->registration_date->format('Y-m-d');
+                        }
+                    }
+                    
+                    // Parsear dirección
+                    $address = ['', '', ''];
+                    if ($user->address) {
+                        if (is_array($user->address)) {
+                            $address = $user->address;
+                        } else if (is_string($user->address)) {
+                            $parts = explode(', ', $user->address);
+                            $address = [
+                                $parts[0] ?? '',
+                                $parts[1] ?? '',
+                                $parts[2] ?? ''
+                            ];
+                        }
+                    }
+                    
                     return [
                         'id' => $user->id,
-                        'name' => $user->name,
-                        'last_name' => $user->last_name,
+                        'name' => $user->name ?? '',
+                        'last_name' => $user->last_name ?? '',
                         'fullName' => $fullName ?: 'Sin nombre',
-                        'email' => $user->email,
+                        'email' => $user->email ?? '',
                         'phone_number' => $user->phone_number ?? '',
-                        'birthdate' => $user->birthdate ? $user->birthdate->format('Y-m-d') : '',
+                        'birthdate' => $birthdate,
                         'gender' => $user->gender ?? '',
                         'curp' => $user->curp ?? 'N/A',
                         'blood_type' => $user->blood_type ?? 'O+',
-                        'address' => $user->address ? explode(', ', $user->address) : ['', '', ''],
-                        'registration_date' => $user->registration_date ? $user->registration_date->format('Y-m-d') : '',
+                        'address' => $address,
+                        'registration_date' => $registration_date,
                         'status' => $user->status === 'activo' ? 'active' : $user->status,
                         'role' => $firstRole ? $firstRole->name : 'Sin rol',
                         'roles_count' => $user->roles->count(),

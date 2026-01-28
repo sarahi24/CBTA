@@ -1733,10 +1733,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
 
             openPanelForEdit(user) {
-                console.log('📝 openPanelForEdit - Usuario original:', user);
+                console.log('📝 openPanelForEdit - Usuario original COMPLETO:', JSON.stringify(user, null, 2));
                 
                 this.isEditing = true;
                 this.hasStudentDetails = false;
+                
+                // Verificar qué campos tiene el usuario original
+                console.log('🔍 Campos del usuario original:');
+                console.log('  - phone_number:', user.phone_number);
+                console.log('  - birthdate:', user.birthdate);
+                console.log('  - gender:', user.gender);
+                console.log('  - address:', user.address);
+                console.log('  - blood_type:', user.blood_type);
                 
                 // Mapear el usuario
                 const mapped = this.mapUser(user) || user || {};
@@ -1777,7 +1785,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     }
                 };
                 
-                console.log('📝 Datos preparados:', userData);
+                console.log('📝 Datos preparados para formulario:', JSON.stringify(userData, null, 2));
                 
                 // Reemplazar newUser completamente con los nuevos datos
                 this.newUser = userData;
