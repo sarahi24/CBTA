@@ -1008,4 +1008,51 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Da de baja temporal a múltiples usuarios (cambia status a 'baja-temporal')
+     * POST /api/v1/admin-actions/temporary-disable-users
+     */
+    public function temporaryDisableUsers(Request $request)
+    {
+        // Validación
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:users,id',
+        ]);
+
+        try {
+            $ids = $validated['ids'];
+
+            // Actualizar status a 'baja-temporal'
+            $totalUpdated = User::whereIn('id', $ids)
+                ->update(['status' => 'baja-temporal']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estatus de usuarios actualizados correctamente.',
+                'data' => [
+                    'concept' => [
+                        'newStatus' => 'baja-temporal',
+                        'totalUpdated' => $totalUpdated,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al dar de baja temporal usuarios: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error_code' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
 }
