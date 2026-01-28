@@ -1985,9 +1985,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.log('🔄 Actualizando usuario ID:', this.newUser.id);
                         console.log('📤 Payload enviado:', JSON.stringify(userData, null, 2));
                         
-                        // First test if API is responding with public endpoint
+                        // First test if API is responding with SIMPLE test endpoint
                         const testResponse = await this.authenticatedFetch(
-                            `${this.apiBaseUrl}/v1/test`,
+                            `${this.apiBaseUrl}/test-simple`,
                             {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
@@ -1995,8 +1995,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             }
                         );
                         
+                        console.log('Test response status:', testResponse.status);
+                        const testResult = await testResponse.json();
+                        console.log('Test response:', testResult);
+                        
                         if (!testResponse.ok) {
-                            throw new Error(`API no responde: ${testResponse.status}`);
+                            throw new Error(`API no responde correctamente: ${testResponse.status}`);
                         }
                         
                         console.log('✅ API test pasó, intentando actualizar usuario');

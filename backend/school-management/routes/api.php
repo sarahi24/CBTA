@@ -16,6 +16,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Students\WebhookController;
 use App\Models\PaymentConcept;
 
+// ===== ABSOLUTE SIMPLEST TEST ENDPOINT =====
+Route::get('/test-simple', function () {
+    return response()->json(['success' => true, 'message' => 'Simple test works']);
+});
+
+Route::put('/test-simple', function (Request $request) {
+    return response()->json(['success' => true, 'message' => 'Simple PUT works']);
+});
+
 // ===== AUTHENTICATED & PROTECTED ROUTES =====
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
