@@ -1375,137 +1375,16 @@ class AdminActionsController extends Controller
      */
     public function promotion(Request $request)
     {
-        try {
-            Log::info('▶️ PROMOTION ENDPOINT INICIADO');
-
-            // Paso 1: Verificar que el rol student existe
-            Log::info('Paso 1: Verificando rol student...');
-            try {
-                $studentRole = \Spatie\Permission\Models\Role::where('name', 'student')->first();
-                if (!$studentRole) {
-                    Log::warning('⚠️ Rol student no encontrado en BD');
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Rol student no existe',
-                        'error_code' => 'ROLE_NOT_FOUND'
-                    ], 400);
-                }
-                Log::info('✓ Rol encontrado');
-            } catch (\Exception $roleEx) {
-                Log::error('Error buscando rol: ' . $roleEx->getMessage());
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error verificando rol',
-                    'error_code' => 'ROLE_CHECK_ERROR'
-                ], 500);
-            }
-
-            // Paso 2: Obtener estudiantes
-            Log::info('Paso 2: Obteniendo estudiantes...');
-            try {
-                $query = User::class;
-                Log::info('User class ok');
-                
-                // Intentar obtener usuarios con rol student
-                $students = User::role('student')->get();
-                Log::info('Estudiantes obtenidos: ' . count($students));
-                
-                // Filtrar solo los que no están dados de baja
-                $students = $students->filter(function($s) {
-                    return $s->status !== 'baja';
-                });
-                
-                Log::info('Después de filtrar por status: ' . count($students));
-            } catch (\Exception $queryEx) {
-                Log::error('Error en query: ' . $queryEx->getMessage());
-                Log::error('Trace: ' . $queryEx->getTraceAsString());
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error obteniendo estudiantes',
-                    'error_code' => 'QUERY_ERROR'
-                ], 500);
-            }
-
-            // Si no hay estudiantes, retornar success
-            if ($students->isEmpty()) {
-                Log::info('✓ No hay estudiantes para procesar');
-                return response()->json([
-                    'success' => true,
-                    'message' => 'No hay estudiantes para promover',
-                    'data' => [
-                        'affected' => [
-                            'usuarios_promovidos' => 0,
-                            'usuarios_baja' => 0
-                        ]
-                    ]
-                ], 200);
-            }
-
-            // Paso 3: Procesar estudiantes
-            Log::info('Paso 3: Procesando ' . count($students) . ' estudiantes...');
-            $promovidos = 0;
-            $bajas = 0;
-            $errores = [];
-
-            foreach ($students as $student) {
-                try {
-                    $id = $student->id ?? 'UNKNOWN';
-                    $semestre = $student->semestre ?? 0;
-                    $nuevoSemestre = $semestre + 1;
-                    
-                    Log::info("  Usuario $id: semestre $semestre → $nuevoSemestre");
-                    
-                    if ($nuevoSemestre > 12) {
-                        $student->status = 'baja';
-                        $student->semestre = $nuevoSemestre;
-                        $student->save();
-                        $bajas++;
-                        Log::info("    ✓ Dado de baja");
-                    } else {
-                        $student->semestre = $nuevoSemestre;
-                        $student->save();
-                        $promovidos++;
-                        Log::info("    ✓ Promovido");
-                    }
-                } catch (\Exception $itemEx) {
-                    $errId = $student->id ?? 'UNKNOWN';
-                    Log::error("  ❌ Error procesando $errId: " . $itemEx->getMessage());
-                    $errores[] = "Error en usuario $errId";
-                }
-            }
-
-            Log::info("✅ COMPLETADO: $promovidos promovidos, $bajas dados de baja");
-            
-            if (!empty($errores)) {
-                Log::warning('Errores durante proceso: ' . implode('; ', $errores));
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Promoción completada',
-                'data' => [
-                    'affected' => [
-                        'usuarios_promovidos' => $promovidos,
-                        'usuarios_baja' => $bajas
-                    ]
+        // Test simple
+        return response()->json([
+            'success' => true,
+            'message' => 'Test endpoint',
+            'data' => [
+                'affected' => [
+                    'usuarios_promovidos' => 0,
+                    'usuarios_baja' => 0
                 ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('❌ ERROR GENERAL: ' . $e->getMessage());
-            Log::error('Línea: ' . $e->getLine());
-            Log::error('Archivo: ' . $e->getFile());
-            Log::error('Trace: ' . $e->getTraceAsString());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error inesperado: ' . $e->getMessage(),
-                'error_code' => 'INTERNAL_ERROR',
-                'details' => [
-                    'line' => $e->getLine(),
-                    'file' => basename($e->getFile())
-                ]
-            ], 500);
-        }
+            ]
+        ], 200);
     }
 }
