@@ -3138,7 +3138,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 if (this.permissionsToAdd.length === 0 && this.permissionsToRemove.length === 0) {
-                    this.showNotify('Selecciona permisos para agregar o eliminar', 'error');
+                    this.showNotify('Selecciona al menos un permiso para agregar o eliminar', 'error');
                     return;
                 }
 
@@ -3178,7 +3178,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     console.log('📤 updatePermissions - Enviando:');
                     console.log('  Payload completo:', JSON.stringify(payload, null, 2));
-                    console.log('  Tipo de payload:', typeof payload);
+                    console.log('  permissionsToAdd tipo:', typeof this.permissionsToAdd);
+                    console.log('  permissionsToAdd contenido:', this.permissionsToAdd);
+                    console.log('  permissionsToRemove tipo:', typeof this.permissionsToRemove);
+                    console.log('  permissionsToRemove contenido:', this.permissionsToRemove);
+                    console.log('  permissionsToAdd es array?:', Array.isArray(payload.permissionsToAdd));
+                    console.log('  permissionsToRemove es array?:', Array.isArray(payload.permissionsToRemove));
+                    console.log('  Tipos dentro de Add:', payload.permissionsToAdd.map(p => typeof p));
                     console.log('  Keys en payload:', Object.keys(payload));
                     console.log('  Tiene curps?', 'curps' in payload, payload.curps);
                     console.log('  Tiene role?', 'role' in payload, payload.role);
