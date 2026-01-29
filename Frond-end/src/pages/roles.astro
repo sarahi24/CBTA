@@ -116,10 +116,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         class="px-3 md:px-4 py-2 bg-indigo-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-2">
                     🔑 Permisos
                 </button>
-                <button @click="promoteStudents()" 
-                        class="px-3 md:px-4 py-2 bg-amber-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-amber-700 transition-all flex items-center gap-2">
-                    📚 Promocionar Estudiantes
-                </button>
                 <div class="relative" x-data="{ showImportMenu: false }">
                     <button @click="showImportMenu = !showImportMenu" 
                             class="px-3 md:px-4 py-2 bg-emerald-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
@@ -1525,10 +1521,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             // Mostrar roles de todos los usuarios
                             console.log('📋 Roles de cada usuario después de recargar:');
                             this.users.forEach((user, idx) => {
-                                console.log(`  ${idx + 1}. ${user.fullName} (${user.curp}): ${user.roles_count || 0} roles`);
-                                if (user.roles && user.roles.length > 0) {
-                                    console.log(`     Roles: ${user.roles.map(r => r.name).join(', ')}`);
+                                console.log(`  ${idx + 1}. ${user.fullName} (${user.curp}):`);
+                                console.log(`     roles_count: ${user.roles_count || 0}`);
+                                console.log(`     roles array:`, user.roles);
+                                console.log(`     roleLabel: ${user.roleLabel}`);
+                                if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+                                    console.log(`     ✅ Roles names: ${user.roles.map(r => r.name || r).join(', ')}`);
+                                } else {
+                                    console.log(`     ❌ No roles array or empty`);
                                 }
+                            });
                             });
                         }
                         this.apiError = null;
