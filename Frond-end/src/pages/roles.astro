@@ -717,8 +717,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             <div x-show="showStudentModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
                 <div @click="showStudentModal = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
                 <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">🎓 Asociar Detalles de Estudiante</h3>
-                    <p class="text-slate-500 text-sm mb-6">Asignar información académica al usuario seleccionado</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">
+                        <span x-show="!studentDetails.n_control">🎓 Asociar Detalles de Estudiante</span>
+                        <span x-show="studentDetails.n_control">✏️ Editar Detalles de Estudiante</span>
+                    </h3>
+                    <p class="text-slate-500 text-sm mb-6">
+                        <span x-show="!studentDetails.n_control">Asignar información académica al usuario seleccionado</span>
+                        <span x-show="studentDetails.n_control">Actualizar carrera, grupo y taller del estudiante</span>
+                    </p>
                     
                     <!-- Datos del usuario seleccionado -->
                     <div x-show="currentStudentUser" class="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-200">
@@ -751,15 +757,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                             
                             <div>
-                                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Número de Control *</label>
+                                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">
+                                    Número de Control *
+                                    <span x-show="studentDetails.n_control" class="text-xs font-normal text-amber-600 ml-2">(No editable)</span>
+                                </label>
                                 <input x-model="studentDetails.n_control" type="text" required 
-                                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                       :readonly="!!studentDetails.n_control"
+                                       :class="studentDetails.n_control ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
+                                       class="w-full p-3 border border-slate-200 rounded-xl input-institucional">
                             </div>
                             
                             <div>
-                                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Semestre *</label>
+                                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">
+                                    Semestre *
+                                    <span x-show="studentDetails.n_control" class="text-xs font-normal text-amber-600 ml-2">(Use promoción masiva)</span>
+                                </label>
                                 <input x-model="studentDetails.semestre" type="number" required min="1" max="12" 
-                                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                       :readonly="!!studentDetails.n_control"
+                                       :class="studentDetails.n_control ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
+                                       class="w-full p-3 border border-slate-200 rounded-xl input-institucional">
                             </div>
                             
                             <div>
@@ -780,8 +796,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 Cancelar
                             </button>
                             <button type="submit" :disabled="isSaving" class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50">
-                                <span x-show="!isSaving">Guardar Detalles</span>
-                                <span x-show="isSaving">Guardando...</span>
+                                <span x-show="!isSaving && !studentDetails.n_control">Asociar Estudiante</span>
+                                <span x-show="!isSaving && studentDetails.n_control">Actualizar Detalles</span>
+                                <span x-show="isSaving && !studentDetails.n_control">Asociando...</span>
+                                <span x-show="isSaving && studentDetails.n_control">Actualizando...</span>
                             </button>
                         </div>
                     </form>
