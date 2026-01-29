@@ -21,25 +21,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         .hover-institucional:hover { background-color: #234238; }
         
         .input-institucional:focus {
-                outline: none;
-                border-color: #2E594D;
-                box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
+            outline: none;
+            border-color: #2E594D;
+            box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
         }
         
         /* FORZAR TABLA HORIZONTAL 1x3 */
         table.stats-table {
-                table-layout: fixed !important;
-                width: 100% !important;
-                border-collapse: collapse;
+            table-layout: fixed !important;
+            width: 100% !important;
+            border-collapse: collapse;
         }
         
         table.stats-table td {
-                width: 33.333% !important;
+            width: 33.333% !important;
         }
         
         .dropzone-active {
-                border-color: #2E594D;
-                background-color: rgba(46, 89, 77, 0.05);
+            border-color: #2E594D;
+            background-color: rgba(46, 89, 77, 0.05);
         }
         
         @media (max-width: 768px) {
@@ -1141,23 +1141,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<script is:inline>
-    // Register rolesData IMMEDIATELY before Alpine initializes
-    if (typeof Alpine === 'undefined') {
-        // Alpine not loaded yet, wait for it
-        window.addEventListener('alpine:init', () => {
-            registerRolesData();
-        });
-    } else {
-        // Alpine is already loaded, register immediately
-        registerRolesData();
-    }
-    
-    function registerRolesData() {
+<script defer>
+    // Prevenir múltiples inicializaciones de Alpine
+    (function() {
         if (window.__rolesDataRegistered__) return;
         window.__rolesDataRegistered__ = true;
         
-        Alpine.data('rolesData', () => {
+        function registerComponent() {
+            if (typeof Alpine === 'undefined') {
+                console.error('Alpine.js no está cargado aún');
+                setTimeout(registerComponent, 100);
+                return;
+            }
+            Alpine.data('rolesData', () => {
+                window.__rolesDataInitialized__ = true;
                 return {
                     users: [],
                     apiBaseUrl: window.__API_BASE_URL__ || '',
@@ -1237,8 +1234,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 permissionsToRemove: [],
                 permissionTargetRole: '',
 
-                // Función helper para hacer fetch con auto-refresh
-                async authenticatedFetch(url, options = {}, isRetry = false) {
+            // Función helper para hacer fetch con auto-refresh
+            async authenticatedFetch(url, options = {}, isRetry = false) {
                 const token = localStorage.getItem('access_token');
                 
                 if (!token) {
@@ -1389,7 +1386,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 return mapped;
             },
 
-                get stats() {
+            get stats() {
                 const total = this.users.length;
                 const active = this.users.filter(u => u.status === 'activo').length;
                 const admins = this.users.filter(u => u.roleKey === 'admin' || u.roleLabel === 'Administrador').length;
@@ -2505,7 +2502,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
-                downloadTemplate() {
+            downloadTemplate() {
                 const template = [{
                     name: 'Juan',
                     last_name: 'Pérez López',
@@ -3650,9 +3647,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 );
             }
         };
-        });
-    }
-    
-    // Initialize immediately
-    registerRolesData();
+        }
+        
+        registerComponent();
+        
+        // Registrar cuando Alpine esté disponible
+        if (typeof Alpine !== 'undefined' && window.Alpine?.data) {
+            registerComponent();
+        } else {
+            // Esperar a que Alpine esté listo
+            document.addEventListener('alpine:init', registerComponent);
+            // Fallback: reintentar después de 500ms
+            setTimeout(() => {
+                if (!window.__rolesDataInitialized__) {
+                    registerComponent();
+                }
+            }, 500);
+        }
+    })();
 </script>
