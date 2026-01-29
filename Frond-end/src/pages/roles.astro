@@ -1154,6 +1154,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         window.__rolesDataRegistered__ = true;
         
         Alpine.data('rolesData', () => {
+            return {
                     users: [],
                     apiBaseUrl: window.__API_BASE_URL__ || '',
                     apiError: null,
