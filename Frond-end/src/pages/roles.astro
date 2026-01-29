@@ -958,8 +958,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
                                     <template x-for="permission in availablePermissions" :key="permission.id">
                                         <label class="flex items-center gap-2 p-2 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors">
-                                            <input type="checkbox" :value="permission.name" 
-                                                   x-model="permissionsToAdd"
+                                            <input type="checkbox" 
+                                                   :checked="permissionsToAdd.includes(permission.name)"
+                                                   @change="$event.target.checked ? permissionsToAdd.push(permission.name) : permissionsToAdd.splice(permissionsToAdd.indexOf(permission.name), 1)"
                                                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
                                             <span class="text-sm font-medium text-blue-800" x-text="permission.displayName || permission.name"></span>
                                         </label>
@@ -973,8 +974,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
                                     <template x-for="permission in availablePermissions" :key="permission.id">
                                         <label class="flex items-center gap-2 p-2 hover:bg-orange-100 rounded-lg cursor-pointer transition-colors">
-                                            <input type="checkbox" :value="permission.name" 
-                                                   x-model="permissionsToRemove"
+                                            <input type="checkbox"
+                                                   :checked="permissionsToRemove.includes(permission.name)"
+                                                   @change="$event.target.checked ? permissionsToRemove.push(permission.name) : permissionsToRemove.splice(permissionsToRemove.indexOf(permission.name), 1)"
                                                    class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
                                             <span class="text-sm font-medium text-orange-800" x-text="permission.displayName || permission.name"></span>
                                         </label>
