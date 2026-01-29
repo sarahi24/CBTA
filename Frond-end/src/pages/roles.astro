@@ -1142,20 +1142,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <script defer>
-    // Prevenir múltiples inicializaciones de Alpine
-    (function() {
+    // Wait for Alpine to be ready and register the component
+    function initRolesData() {
         if (window.__rolesDataRegistered__) return;
+        if (typeof Alpine === 'undefined') {
+            // Alpine not ready yet, try again
+            setTimeout(initRolesData, 50);
+            return;
+        }
+        
         window.__rolesDataRegistered__ = true;
         
-        function registerComponent() {
-            if (typeof Alpine === 'undefined') {
-                console.error('Alpine.js no está cargado aún');
-                setTimeout(registerComponent, 100);
-                return;
-            }
-            Alpine.data('rolesData', () => {
-                window.__rolesDataInitialized__ = true;
-                return {
+        Alpine.data('rolesData', () => {
                     users: [],
                     apiBaseUrl: window.__API_BASE_URL__ || '',
                     apiError: null,
@@ -3647,22 +3645,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 );
             }
         };
-        }
-        
-        registerComponent();
-        
-        // Registrar cuando Alpine esté disponible
-        if (typeof Alpine !== 'undefined' && window.Alpine?.data) {
-            registerComponent();
-        } else {
-            // Esperar a que Alpine esté listo
-            document.addEventListener('alpine:init', registerComponent);
-            // Fallback: reintentar después de 500ms
-            setTimeout(() => {
-                if (!window.__rolesDataInitialized__) {
-                    registerComponent();
-                }
-            }, 500);
-        }
-    })();
+        });
+    }
+    
+    // Initialize immediately
+    initRolesData();
+    
+    // Also listen for Alpine init event as fallback
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRolesData);
+    }
+    
+    // Another fallback
+    window.addEventListener('load', initRolesData);
 </script>
