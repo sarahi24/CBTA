@@ -2470,7 +2470,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const result = await response.json();
                         console.log('✅ Respuesta GET student:', JSON.stringify(result, null, 2));
                         
-                        const student = result.data?.user || {};
+                        const student = result.data?.student_details || {};
                         console.log('📚 Detalles del estudiante cargados desde backend:', JSON.stringify(student, null, 2));
                         
                         // Usar los datos del backend directamente
