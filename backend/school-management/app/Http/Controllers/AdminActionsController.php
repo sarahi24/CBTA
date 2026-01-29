@@ -1378,43 +1378,54 @@ class AdminActionsController extends Controller
         try {
             Log::info('📋 Iniciando promoción de estudiantes');
 
-            // Obtener todos los estudiantes con rol 'student'
-            $students = User::whereHas('roles', function ($query) {
-                $query->where('name', 'student');
-            })
-            ->where('status', '!=', 'baja')  // Excluir ya dados de baja
-            ->get();
+            // Obtener todos los estudiantes con rol 'student' que no estén dados de baja
+            Log::info('🔍 Consultando base de datos para estudiantes...');
+            
+            $students = User::role('student')
+                ->where('status', '!=', 'baja')
+                ->get();
 
-            Log::info('👥 Estudiantes encontrados: ' . $students->count());
+            Log::info('👥 Estudiantes encontrados: ' . count($students));
+            
+            if (count($students) === 0) {
+                Log::info('⚠️ No hay estudiantes activos');
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No hay estudiantes activos para promover.',
+                    'data' => [
+                        'affected' => [
+                            'usuarios_promovidos' => 0,
+                            'usuarios_baja' => 0
+                        ]
+                    ]
+                ], 200);
+            }
 
             $usuariosPromovidos = 0;
             $usuariosBaja = 0;
 
-            DB::beginTransaction();
-
             foreach ($students as $student) {
                 try {
-                    // Incrementar semestre
-                    $newSemester = ($student->semestre ?? 1) + 1;
+                    $semesterActual = intval($student->semestre ?? 0);
+                    $nuevoSemestre = $semesterActual + 1;
                     
-                    if ($newSemester > 12) {
-                        // Dar de baja si sobrepasa semestre 12
-                        $student->update(['status' => 'baja', 'semestre' => $newSemester]);
-                        Log::info("📋 Usuario {$student->id} ({$student->email}) dado de baja - semestre {$newSemester}");
+                    Log::info("Procesando {$student->id}: semestre {$semesterActual} → {$nuevoSemestre}");
+                    
+                    if ($nuevoSemestre > 12) {
+                        $student->update(['status' => 'baja', 'semestre' => $nuevoSemestre]);
                         $usuariosBaja++;
+                        Log::info("  ✓ Dado de baja");
                     } else {
-                        // Actualizar semestre
-                        $student->update(['semestre' => $newSemester]);
-                        Log::info("📚 Usuario {$student->id} ({$student->email}) promovido a semestre {$newSemester}");
+                        $student->update(['semestre' => $nuevoSemestre]);
                         $usuariosPromovidos++;
+                        Log::info("  ✓ Promovido");
                     }
-                } catch (\Exception $e) {
-                    Log::error("Error al procesar estudiante {$student->id}: " . $e->getMessage());
-                    throw $e;
+                } catch (\Exception $inner) {
+                    Log::error("Error en {$student->id}: " . $inner->getMessage());
                 }
             }
 
-            DB::commit();
+            Log::info("✅ Terminado: $usuariosPromovidos promovidos, $usuariosBaja dados de baja");
 
             return response()->json([
                 'success' => true,
@@ -1428,12 +1439,13 @@ class AdminActionsController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error en promoción de estudiantes: ' . $e->getMessage());
+            Log::error('❌ Error: ' . $e->getMessage());
+            Log::error('Línea: ' . $e->getLine() . ', Archivo: ' . $e->getFile());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error al ejecutar la promoción de estudiantes.',
-                'error_code' => 'PROMOTION_ERROR',
+                'message' => 'Error: ' . $e->getMessage(),
+                'error_code' => 'PROMOTION_ERROR'
             ], 500);
         }
     }
