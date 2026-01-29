@@ -3209,13 +3209,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.selectedUsers = [];
                         await this.loadUsers(token);
                     } else {
-                        console.error('❌ Error en respuesta:', result);
+                        console.error('❌ Error en respuesta (status ' + response.status + '):', result);
+                        console.error('📋 Errores detallados:', result.errors);
+                        console.error('📋 Mensaje:', result.message);
+                        
                         // Mostrar errores detallados
                         if (result.errors) {
+                            console.error('🔍 Errores encontrados:');
+                            Object.entries(result.errors).forEach(([field, msgs]) => {
+                                console.error(`   ${field}:`, msgs);
+                            });
+                            
                             const errorMsg = Object.entries(result.errors)
                                 .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-                                .join('; ');
-                            this.showNotify(errorMsg || result.message || 'Error al actualizar permisos', 'error');
+                                .join('\n');
+                            this.showNotify('❌ ' + (errorMsg || result.message || 'Error al actualizar permisos'), 'error');
                         } else {
                             this.showNotify(result.message || `Error ${response.status} al actualizar permisos`, 'error');
                         }
