@@ -1368,4 +1368,73 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Promueve a los estudiantes incrementando su semestre
+     * Los estudiantes que sobrepasan semestre 12 son dados de baja
+     */
+    public function promotion(Request $request)
+    {
+        try {
+            Log::info('📋 Iniciando promoción de estudiantes');
+
+            // Obtener todos los estudiantes con rol 'student'
+            $students = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->where('status', '!=', 'baja')  // Excluir ya dados de baja
+            ->get();
+
+            Log::info('👥 Estudiantes encontrados: ' . $students->count());
+
+            $usuariosPromovidos = 0;
+            $usuariosBaja = 0;
+
+            DB::beginTransaction();
+
+            foreach ($students as $student) {
+                try {
+                    // Incrementar semestre
+                    $newSemester = ($student->semestre ?? 1) + 1;
+                    
+                    if ($newSemester > 12) {
+                        // Dar de baja si sobrepasa semestre 12
+                        $student->update(['status' => 'baja', 'semestre' => $newSemester]);
+                        Log::info("📋 Usuario {$student->id} ({$student->email}) dado de baja - semestre {$newSemester}");
+                        $usuariosBaja++;
+                    } else {
+                        // Actualizar semestre
+                        $student->update(['semestre' => $newSemester]);
+                        Log::info("📚 Usuario {$student->id} ({$student->email}) promovido a semestre {$newSemester}");
+                        $usuariosPromovidos++;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error al procesar estudiante {$student->id}: " . $e->getMessage());
+                    throw $e;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Se ejecutó la promoción de usuarios correctamente.',
+                'data' => [
+                    'affected' => [
+                        'usuarios_promovidos' => $usuariosPromovidos,
+                        'usuarios_baja' => $usuariosBaja
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error en promoción de estudiantes: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al ejecutar la promoción de estudiantes.',
+                'error_code' => 'PROMOTION_ERROR',
+            ], 500);
+        }
+    }
 }

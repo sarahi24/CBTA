@@ -116,6 +116,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         class="px-3 md:px-4 py-2 bg-indigo-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-2">
                     🔑 Permisos
                 </button>
+                <button @click="promoteStudents()" 
+                        class="px-3 md:px-4 py-2 bg-amber-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-amber-700 transition-all flex items-center gap-2">
+                    📚 Promocionar Estudiantes
+                </button>
                 <div class="relative" x-data="{ showImportMenu: false }">
                     <button @click="showImportMenu = !showImportMenu" 
                             class="px-3 md:px-4 py-2 bg-emerald-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
@@ -3198,6 +3202,60 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 } catch (error) {
                     console.error('❌ Error al actualizar permisos:', error);
                     this.showNotify(`Error al actualizar permisos: ${error.message}`, 'error');
+                } finally {
+                    this.isSaving = false;
+                }
+            },
+
+            async promoteStudents() {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return;
+                }
+
+                // Confirmar la acción
+                if (!confirm('⚠️ Esto va a incrementar el semestre de todos los estudiantes activos y dar de baja a los que sobrepasan el semestre 12.\n\n¿Deseas continuar?')) {
+                    return;
+                }
+
+                try {
+                    this.isSaving = true;
+                    this.showNotify('Procesando promoción de estudiantes...', 'info');
+
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/promotion`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'promote.student'
+                            },
+                            body: JSON.stringify({})
+                        }
+                    );
+
+                    const result = await response.json();
+                    console.log('📊 Respuesta de promoción:', result);
+
+                    if (response.ok && result.success) {
+                        const { usuarios_promovidos, usuarios_baja } = result.data?.affected || {};
+                        this.showNotify(
+                            `✅ Promoción completada!\n📚 Estudiantes promovidos: ${usuarios_promovidos || 0}\n👋 Estudiantes dados de baja: ${usuarios_baja || 0}`,
+                            'success'
+                        );
+                        
+                        // Recargar usuarios
+                        await this.loadUsers(token);
+                    } else {
+                        this.showNotify(
+                            result.message || 'Error al ejecutar la promoción',
+                            'error'
+                        );
+                    }
+                } catch (error) {
+                    console.error('❌ Error en promoción:', error);
+                    this.showNotify(`Error al promover estudiantes: ${error.message}`, 'error');
                 } finally {
                     this.isSaving = false;
                 }
