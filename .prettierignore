@@ -1,0 +1,10 @@
+# Prevent Prettier from formatting critical script blocks
+# The roles.astro file has complex Alpine.js scripts that must not be auto-formatted
+Frond-end/src/pages/roles.astro
+
+# Ignore other build and dependency files
+node_modules/
+dist/
+build/
+.next/
+.astro/
