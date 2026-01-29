@@ -3186,6 +3186,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         await this.loadUsers(token);
                     } else {
                         console.error('❌ Error en respuesta:', result);
+                        console.error('📋 Errores detallados:', JSON.stringify(result.errors, null, 2));
                         // Mostrar errores de validación si existen
                         if (result.errors) {
                             const errorMsg = Object.entries(result.errors)
