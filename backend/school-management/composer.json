@@ -11,6 +11,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "mailersend/laravel-driver": "^2.11",
+        "phpoffice/phpspreadsheet": "^3.7",
         "spatie/laravel-permission": "^6.21",
         "stripe/stripe-php": "^17.6"
     },

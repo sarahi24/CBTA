@@ -414,6 +414,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::get('/get-student/{id}', [AdminActionsController::class, 'getStudent']);
         Route::patch('/update-student/{id}', [AdminActionsController::class, 'updateStudent']);
         Route::post('/update-permissions', [AdminActionsController::class, 'updatePermissions']);
+        Route::post('/import', [AdminActionsController::class, 'import']);
+        Route::post('/import-students', [AdminActionsController::class, 'importStudents']);
 });
     });
 

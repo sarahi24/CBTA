@@ -1368,4 +1368,307 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Importar usuarios desde archivo Excel
+     */
+    public function import(Request $request)
+    {
+        try {
+            Log::info('📥 Iniciando importación de usuarios');
+
+            // Validar archivo
+            $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:10240'
+            ]);
+
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+
+            // Cargar Excel
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+
+            // Eliminar encabezado si existe
+            if (isset($rows[0]) && is_string($rows[0][0]) && stripos($rows[0][0], 'nombre') !== false) {
+                array_shift($rows);
+            }
+
+            $summary = [
+                'total_rows_received' => count($rows),
+                'rows_processed' => 0,
+                'rows_inserted' => 0,
+                'rows_failed' => 0,
+                'success_rate' => 0
+            ];
+
+            $errors = [
+                'row_errors' => [],
+                'global_errors' => [],
+                'total_errors' => 0
+            ];
+
+            $warnings = [
+                'list' => [],
+                'total_warnings' => 0
+            ];
+
+            $rowNumber = 1; // Empieza en 1 (después del header)
+
+            foreach ($rows as $row) {
+                $rowNumber++;
+                
+                try {
+                    // Validar que la fila tenga datos
+                    if (empty(array_filter($row))) {
+                        continue;
+                    }
+
+                    $summary['rows_processed']++;
+
+                    // Extraer datos
+                    $userData = [
+                        'name' => $row[0] ?? null,
+                        'last_name' => $row[1] ?? null,
+                        'email' => $row[2] ?? null,
+                        'phone_number' => $row[3] ?? null,
+                        'birthdate' => $row[4] ?? null,
+                        'gender' => $row[5] ?? null,
+                        'curp' => $row[6] ?? null,
+                        'street' => $row[7] ?? null,
+                        'city' => $row[8] ?? null,
+                        'state' => $row[9] ?? null,
+                        'zip_code' => $row[10] ?? null,
+                        'blood_type' => $row[11] ?? null,
+                        'registration_date' => $row[12] ?? now()->format('Y-m-d'),
+                        'status' => $row[13] ?? 'activo',
+                        'password' => bcrypt('password123'), // Password por defecto
+                    ];
+
+                    $studentData = [
+                        'career_id' => $row[14] ?? null,
+                        'n_control' => $row[15] ?? null,
+                        'semestre' => $row[16] ?? null,
+                        'group' => $row[17] ?? null,
+                        'workshop' => $row[18] ?? null,
+                    ];
+
+                    // Validaciones básicas
+                    if (empty($userData['name'])) {
+                        throw new \Exception('Nombre requerido');
+                    }
+                    if (empty($userData['email'])) {
+                        throw new \Exception('Email requerido');
+                    }
+                    if (empty($userData['curp']) || $userData['curp'] === 'N/A') {
+                        throw new \Exception('CURP requerida');
+                    }
+
+                    // Verificar si el usuario ya existe
+                    $existingUser = User::where('email', $userData['email'])->first();
+                    if ($existingUser) {
+                        throw new \Exception('El email ya está registrado');
+                    }
+
+                    // Crear usuario
+                    $user = User::create($userData);
+                    
+                    // Asignar rol de estudiante
+                    $user->assignRole('student');
+
+                    // Crear detalles de estudiante si hay datos
+                    if ($studentData['career_id']) {
+                        $user->studentDetails()->create($studentData);
+                    }
+
+                    $summary['rows_inserted']++;
+                    Log::info("✅ Usuario importado: {$user->email}");
+
+                } catch (\Exception $e) {
+                    $summary['rows_failed']++;
+                    $errors['row_errors'][] = [
+                        'type' => 'row_error',
+                        'message' => $e->getMessage(),
+                        'row_number' => $rowNumber,
+                        'context' => [
+                            'email' => $row[2] ?? 'N/A',
+                            'name' => $row[0] ?? 'N/A'
+                        ],
+                        'timestamp' => now()->toIso8601String()
+                    ];
+                    $errors['total_errors']++;
+                    Log::warning("❌ Error fila {$rowNumber}: {$e->getMessage()}");
+                }
+            }
+
+            // Calcular tasa de éxito
+            $summary['success_rate'] = $summary['rows_processed'] > 0
+                ? round(($summary['rows_inserted'] / $summary['rows_processed']) * 100, 2)
+                : 0;
+
+            $hasErrors = $errors['total_errors'] > 0;
+            $hasWarnings = $warnings['total_warnings'] > 0;
+
+            Log::info('📊 Resumen de importación:', $summary);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuarios importados correctamente.',
+                'data' => [
+                    'summary' => [
+                        'summary' => $summary,
+                        'errors' => $errors,
+                        'warnings' => $warnings,
+                        'timestamp' => now()->format('Y-m-d H:i:s'),
+                        'has_errors' => $hasErrors,
+                        'has_warnings' => $hasWarnings
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('❌ Error de validación:', ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en la validación del archivo',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error en importación:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error inesperado',
+                'error_code' => 'INTERNAL_SERVER_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Importar detalles de estudiantes
+     */
+    public function importStudents(Request $request)
+    {
+        try {
+            Log::info('📥 Iniciando importación de detalles de estudiantes');
+
+            // Validar archivo
+            $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:10240'
+            ]);
+
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+
+            // Cargar Excel
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+
+            // Eliminar encabezado
+            if (isset($rows[0]) && is_string($rows[0][0])) {
+                array_shift($rows);
+            }
+
+            $summary = [
+                'total_rows_received' => count($rows),
+                'rows_processed' => 0,
+                'rows_inserted' => 0,
+                'rows_failed' => 0,
+                'success_rate' => 0
+            ];
+
+            $errors = [
+                'row_errors' => [],
+                'global_errors' => [],
+                'total_errors' => 0
+            ];
+
+            $warnings = [
+                'list' => [],
+                'total_warnings' => 0
+            ];
+
+            $rowNumber = 1;
+
+            foreach ($rows as $row) {
+                $rowNumber++;
+                
+                try {
+                    if (empty(array_filter($row))) {
+                        continue;
+                    }
+
+                    $summary['rows_processed']++;
+
+                    $userId = $row[0] ?? null;
+                    $studentData = [
+                        'career_id' => $row[1] ?? null,
+                        'n_control' => $row[2] ?? null,
+                        'semestre' => $row[3] ?? null,
+                        'group' => $row[4] ?? null,
+                        'workshop' => $row[5] ?? null,
+                    ];
+
+                    if (!$userId) {
+                        throw new \Exception('ID de usuario requerido');
+                    }
+
+                    $user = User::findOrFail($userId);
+                    
+                    // Actualizar o crear detalles de estudiante
+                    $user->studentDetails()->updateOrCreate(
+                        ['user_id' => $userId],
+                        $studentData
+                    );
+
+                    $summary['rows_inserted']++;
+
+                } catch (\Exception $e) {
+                    $summary['rows_failed']++;
+                    $errors['row_errors'][] = [
+                        'type' => 'row_error',
+                        'message' => $e->getMessage(),
+                        'row_number' => $rowNumber,
+                        'context' => ['user_id' => $row[0] ?? 'N/A'],
+                        'timestamp' => now()->toIso8601String()
+                    ];
+                    $errors['total_errors']++;
+                }
+            }
+
+            $summary['success_rate'] = $summary['rows_processed'] > 0
+                ? round(($summary['rows_inserted'] / $summary['rows_processed']) * 100, 2)
+                : 0;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Detalles de estudiantes importados correctamente.',
+                'data' => [
+                    'summary' => [
+                        'summary' => $summary,
+                        'errors' => $errors,
+                        'warnings' => $warnings,
+                        'timestamp' => now()->format('Y-m-d H:i:s'),
+                        'has_errors' => $errors['total_errors'] > 0,
+                        'has_warnings' => $warnings['total_warnings'] > 0
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error en importación de estudiantes:', [
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error inesperado',
+                'error_code' => 'INTERNAL_SERVER_ERROR'
+            ], 500);
+        }
+    }
 }
