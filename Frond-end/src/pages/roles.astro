@@ -1519,6 +1519,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.log('📋 Estructura del primer usuario:');
                         if (this.users.length > 0) {
                             console.log(JSON.stringify(this.users[0], null, 2));
+                            // Mostrar roles de todos los usuarios
+                            console.log('📋 Roles de cada usuario después de recargar:');
+                            this.users.forEach((user, idx) => {
+                                console.log(`  ${idx + 1}. ${user.fullName} (${user.curp}): ${user.roles_count || 0} roles`);
+                                if (user.roles && user.roles.length > 0) {
+                                    console.log(`     Roles: ${user.roles.map(r => r.name).join(', ')}`);
+                                }
+                            });
                         }
                         this.apiError = null;
                     } else {
@@ -3183,7 +3191,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         );
                         this.showRolesModal = false;
                         this.selectedUsers = [];
+                        
+                        console.log('🔄 Iniciando recarga de usuarios...');
+                        console.log('📊 Usuarios antes de reload:', this.users.length);
                         await this.loadUsers(token);
+                        console.log('📊 Usuarios después de reload:', this.users.length);
+                        console.log('✅ Recarga completada');
                     } else {
                         console.error('❌ Error en respuesta:', result);
                         console.error('📋 Errores detallados:', JSON.stringify(result.errors, null, 2));
