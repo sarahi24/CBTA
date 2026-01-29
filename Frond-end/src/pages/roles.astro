@@ -1806,10 +1806,45 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     if (response.ok && result.success) {
                         const summary = result.data?.summary?.summary;
+                        const hasErrors = result.data?.summary?.has_errors;
+                        const hasWarnings = result.data?.summary?.has_warnings;
+                        
                         this.showNotify(
                             `✅ Importación completada: ${summary?.rows_inserted || 0} insertados, ${summary?.rows_failed || 0} fallidos`,
                             'success'
                         );
+                        
+                        // Si hay errores, mostrar modal con detalles
+                        if (hasErrors || hasWarnings) {
+                            const errorDetails = result.data?.summary?.errors;
+                            const warnings = result.data?.summary?.warnings;
+                            
+                            let detailedMessage = `Resumen de importación de estudiantes:\n\n`;
+                            detailedMessage += `✅ Filas insertadas: ${summary?.rows_inserted || 0}\n`;
+                            detailedMessage += `❌ Filas fallidas: ${summary?.rows_failed || 0}\n`;
+                            detailedMessage += `📊 Tasa de éxito: ${summary?.success_rate || 0}%\n\n`;
+                            
+                            if (errorDetails?.row_errors?.length > 0) {
+                                detailedMessage += `Errores encontrados:\n`;
+                                errorDetails.row_errors.slice(0, 5).forEach(err => {
+                                    detailedMessage += `- Fila ${err.row_number}: ${err.message}\n`;
+                                });
+                                if (errorDetails.row_errors.length > 5) {
+                                    detailedMessage += `... y ${errorDetails.row_errors.length - 5} errores más.\n`;
+                                }
+                            }
+                            
+                            this.showError(
+                                '⚠️ Importación de Estudiantes con Errores',
+                                detailedMessage,
+                                {
+                                    summary: summary,
+                                    errors: errorDetails,
+                                    warnings: warnings
+                                }
+                            );
+                        }
+                        
                         this.closeImportStudentsModal();
                         await this.loadUsers(token);
                     } else {
@@ -1817,21 +1852,41 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         const validation = result.errors ? Object.values(result.errors).flat().join(', ') : '';
                         const message = validation || result.message || `Error ${response.status} al importar`;
-                        this.importStudentsError = message;
-
+                        
                         const validationList = result.errors
                             ? Object.entries(result.errors).map(([k, v]) => `${k}: ${(v || []).join(', ')}`)
                             : [];
-                        const rowErrors = Array.isArray(result.data?.summary?.errors)
-                            ? result.data.summary.errors.map((e, i) => `Fila ${i + 1}: ${JSON.stringify(e)}`)
+                        const rowErrors = Array.isArray(result.data?.summary?.errors?.row_errors)
+                            ? result.data.summary.errors.row_errors.map(e => `Fila ${e.row_number}: ${e.message}`)
                             : [];
+                        
+                        this.importStudentsError = message;
                         this.importStudentsErrorDetails = [...validationList, ...rowErrors];
-
-                        this.showNotify(message, 'error');
+                        
+                        // Usar modal de error en lugar de solo notificación
+                        this.showError(
+                            '❌ Error al Importar Estudiantes',
+                            message,
+                            {
+                                error_code: result.error_code,
+                                status: response.status,
+                                errors: result.errors,
+                                validation_errors: validationList,
+                                row_errors: rowErrors
+                            }
+                        );
                     }
                 } catch (error) {
                     console.error('❌ Error al importar estudiantes:', error);
-                    this.showNotify('Error al importar estudiantes', 'error');
+                    
+                    this.showError(
+                        '❌ Error de Conexión',
+                        'Error al importar estudiantes: ' + error.message,
+                        {
+                            name: error?.name,
+                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/import-students`
+                        }
+                    );
                 } finally {
                     this.isSaving = false;
                 }
@@ -2437,22 +2492,79 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     });
 
                     const result = await response.json();
+                    console.log('📥 Resultado de importación:', result);
+                    
                     if (response.ok && result.success) {
                         const summary = result.data?.summary?.summary;
                         const hasErrors = result.data?.summary?.has_errors;
+                        const hasWarnings = result.data?.summary?.has_warnings;
+                        
+                        // Mostrar resumen básico
                         const message = hasErrors
                             ? `⚠️ Importación con errores: ${summary?.rows_inserted || 0} insertados, ${summary?.rows_failed || 0} fallidos`
                             : `✅ Importación completada: ${summary?.rows_inserted || 0} usuarios importados`;
                         
                         this.showNotify(message, hasErrors ? 'error' : 'success');
+                        
+                        // Si hay errores o warnings, mostrar modal con detalles
+                        if (hasErrors || hasWarnings) {
+                            const errorDetails = result.data?.summary?.errors;
+                            const warnings = result.data?.summary?.warnings;
+                            
+                            // Construir mensaje detallado
+                            let detailedMessage = `Resumen de importación:\n\n`;
+                            detailedMessage += `✅ Filas procesadas: ${summary?.rows_processed || 0}\n`;
+                            detailedMessage += `✅ Filas insertadas: ${summary?.rows_inserted || 0}\n`;
+                            detailedMessage += `❌ Filas fallidas: ${summary?.rows_failed || 0}\n`;
+                            detailedMessage += `📊 Tasa de éxito: ${summary?.success_rate || 0}%\n\n`;
+                            
+                            if (errorDetails?.row_errors?.length > 0) {
+                                detailedMessage += `Errores por fila:\n`;
+                                errorDetails.row_errors.slice(0, 5).forEach(err => {
+                                    detailedMessage += `- Fila ${err.row_number}: ${err.message}\n`;
+                                });
+                                if (errorDetails.row_errors.length > 5) {
+                                    detailedMessage += `... y ${errorDetails.row_errors.length - 5} errores más.\n`;
+                                }
+                            }
+                            
+                            this.showError(
+                                hasErrors ? '⚠️ Importación con Errores' : 'ℹ️ Importación con Advertencias',
+                                detailedMessage,
+                                {
+                                    summary: summary,
+                                    errors: errorDetails,
+                                    warnings: warnings,
+                                    timestamp: result.data?.summary?.timestamp
+                                }
+                            );
+                        }
+                        
                         this.closeImportModal();
                         await this.loadUsers(token);
                     } else {
-                        this.showNotify(result.message || 'Error al importar usuarios', 'error');
+                        // Error general de la API
+                        this.showError(
+                            '❌ Error al Importar Usuarios',
+                            result.message || 'Error al importar usuarios',
+                            {
+                                error_code: result.error_code,
+                                status: response.status,
+                                errors: result.errors
+                            }
+                        );
                     }
                 } catch (error) {
                     console.error('❌ Error al importar:', error);
-                    this.showNotify('Error al procesar importación', 'error');
+                    
+                    this.showError(
+                        '❌ Error de Conexión',
+                        'Error al procesar importación: ' + error.message,
+                        {
+                            name: error?.name,
+                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/import`
+                        }
+                    );
                 } finally {
                     this.isSaving = false;
                 }
