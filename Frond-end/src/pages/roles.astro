@@ -1653,8 +1653,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('📤 Enviando solicitud de promoción...');
                     
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/promotion`,
-                        { method: 'POST' }
+                        `${this.apiBaseUrl}/v1/admin-actions/promote`,
+                        { method: 'PATCH' }
                     );
 
                     console.log('📥 Respuesta recibida:', response.status);
@@ -3261,9 +3261,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.showNotify('Procesando promoción de estudiantes...', 'info');
 
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/promotion`,
+                        `${this.apiBaseUrl}/v1/admin-actions/promote`,
                         {
-                            method: 'POST',
+                            method: 'PATCH',
                             headers: {
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'promote.student'
