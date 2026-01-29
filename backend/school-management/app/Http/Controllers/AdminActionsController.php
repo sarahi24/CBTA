@@ -1368,23 +1368,4 @@ class AdminActionsController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Promueve a los estudiantes incrementando su semestre
-     * Los estudiantes que sobrepasan semestre 12 son dados de baja
-     */
-    public function promotion(Request $request)
-    {
-        // Test simple
-        return response()->json([
-            'success' => true,
-            'message' => 'Test endpoint',
-            'data' => [
-                'affected' => [
-                    'usuarios_promovidos' => 0,
-                    'usuarios_baja' => 0
-                ]
-            ]
-        ], 200);
-    }
 }

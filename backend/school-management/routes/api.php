@@ -157,7 +157,6 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::get('/find-roles', [AdminActionsController::class, 'findRoles']);
         Route::get('/roles/{id}', [AdminActionsController::class, 'getRoleById']);
         Route::get('/permissions/{id}', [AdminActionsController::class, 'getPermissionById']);
-        Route::post('/promotion', [AdminActionsController::class, 'promotion']);
 
         Route::post('/register', function (Request $request) {
             try {
