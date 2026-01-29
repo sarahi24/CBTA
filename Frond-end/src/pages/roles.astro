@@ -3166,8 +3166,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             },
                             body: JSON.stringify({
                                 curps,
-                                rolesToAdd: this.rolesToAdd,
-                                rolesToRemove: this.rolesToRemove
+                                rolesToAdd: this.rolesToAdd.length > 0 ? this.rolesToAdd : [],
+                                rolesToRemove: this.rolesToRemove.length > 0 ? this.rolesToRemove : []
                             })
                         }
                     );
@@ -3223,7 +3223,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('🔄 Cargando roles para sincronización masiva...');
                     
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/get-roles`,
+                        `${this.apiBaseUrl}/v1/admin-actions/all-roles`,
                         {
                             method: 'GET',
                             headers: {
@@ -3311,8 +3311,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             },
                             body: JSON.stringify({
                                 curps: curps,
-                                rolesToAdd: this.syncRolesToAdd,
-                                rolesToRemove: this.syncRolesToRemove
+                                rolesToAdd: this.syncRolesToAdd.length > 0 ? this.syncRolesToAdd : [],
+                                rolesToRemove: this.syncRolesToRemove.length > 0 ? this.syncRolesToRemove : []
                             })
                         }
                     );
