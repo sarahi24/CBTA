@@ -1142,16 +1142,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <script is:inline>
-    // Robust Alpine initialization
-    function initRolesData() {
+    // Register rolesData IMMEDIATELY before Alpine initializes
+    if (typeof Alpine === 'undefined') {
+        // Alpine not loaded yet, wait for it
+        window.addEventListener('alpine:init', () => {
+            registerRolesData();
+        });
+    } else {
+        // Alpine is already loaded, register immediately
+        registerRolesData();
+    }
+    
+    function registerRolesData() {
         if (window.__rolesDataRegistered__) return;
-        
-        // Check if Alpine is available
-        if (typeof Alpine === 'undefined') {
-            setTimeout(initRolesData, 50);
-            return;
-        }
-        
         window.__rolesDataRegistered__ = true;
         
         Alpine.data('rolesData', () => {
@@ -3650,25 +3653,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         });
     }
     
-    // Initialize with multiple fallbacks
-    
-    // Immediate attempt
-    initRolesData();
-    
-    // DOMContentLoaded fallback
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => initRolesData(), 10);
-        });
-    }
-    
-    // Load event fallback
-    window.addEventListener('load', () => {
-        setTimeout(() => initRolesData(), 10);
-    });
-    
-    // Alpine init event listener (newest fallback)
-    document.addEventListener('alpine:init', () => {
-        initRolesData();
-    });
+    // Initialize immediately
+    registerRolesData();
 </script>
