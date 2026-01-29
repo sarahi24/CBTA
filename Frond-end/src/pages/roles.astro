@@ -3581,8 +3581,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.isSaving = true;
                     this.showNotify('Procesando promoción de estudiantes...', 'info');
 
+                    console.log('🎓 Solicitando promoción de estudiantes...');
+                    console.log('  Endpoint: /v1/admin-actions/promote');
+                    console.log('  Método: POST');
+                    console.log('  Headers: X-User-Role=admin, X-User-Permission=promote.student');
+
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/promotion`,
+                        `${this.apiBaseUrl}/v1/admin-actions/promote`,
                         {
                             method: 'POST',
                             headers: {
@@ -3605,7 +3610,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         // Recargar usuarios
                         await this.loadUsers(token);
+                    } else if (response.status === 500) {
+                        console.error('🚨 ERROR 500 - EL BACKEND TIENE UN ERROR INTERNO');
+                        console.error('📋 Mensaje:', result.message);
+                        console.error('📋 Error code:', result.error_code);
+                        this.showNotify(
+                            '❌ Error del servidor al promover estudiantes.\n\nEl backend necesita revisión (error 500).',
+                            'error'
+                        );
                     } else {
+                        console.error('❌ Error en promoción:', result);
                         this.showNotify(
                             result.message || 'Error al ejecutar la promoción',
                             'error'
