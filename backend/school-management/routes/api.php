@@ -408,7 +408,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         });
 
         Route::post('/promotion-test', [AdminActionsController::class, 'testPromotion']);
-        Route::post('/promotion', [AdminActionsController::class, 'promoteStudents']);
+        Route::patch('/promote', [AdminActionsController::class, 'promoteStudents']);
         Route::get('/promotion-debug', [AdminActionsController::class, 'debugPromotion']);
         Route::post('/attach-student', [AdminActionsController::class, 'attachStudent']);
         Route::get('/get-student/{id}', [AdminActionsController::class, 'getStudent']);
