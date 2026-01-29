@@ -1799,58 +1799,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
-            async promoteStudents() {
-                if (!confirm('¿Estás seguro de promover a TODOS los estudiantes? Se incrementará el semestre y se darán de baja los que sobrepasen el semestre 12.')) {
-                    return;
-                }
-
-                const token = localStorage.getItem('access_token');
-                if (!token) {
-                    this.showNotify('No hay token de autenticación', 'error');
-                    return;
-                }
-
-                try {
-                    this.isLoadingUsers = true;
-                    console.log('📤 Enviando solicitud de promoción...');
-                    
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/promotion`,
-                        { method: 'POST' }
-                    );
-
-                    console.log('📥 Respuesta recibida:', response.status);
-                    const result = await response.json();
-                    
-                    console.log('📋 Resultado:', result);
-                    
-                    // Show debug info if present
-                    if (result.debug) {
-                        console.error('🐛 Debug Info:', result.debug);
-                    }
-                    
-                    if (response.ok && result.success) {
-                        const affected = result.data?.affected;
-                        this.showNotify(
-                            `✅ Promoción completada: ${affected?.usuarios_promovidos || 0} promovidos, ${affected?.usuarios_baja || 0} dados de baja`,
-                            'success'
-                        );
-                        await this.loadUsers(token);
-                    } else {
-                        const errorMsg = result.message || `Error: ${result.error_code || 'desconocido'}`;
-                        console.error('❌ Error en respuesta:', errorMsg);
-                        console.error('❌ Detalles:', result);
-                        this.showNotify(errorMsg, 'error');
-                    }
-                } catch (error) {
-                    console.error('❌ Error en promoteStudents:', error);
-                    const errorMsg = error?.message || 'Error desconocido al promover estudiantes';
-                    this.showNotify(errorMsg, 'error');
-                } finally {
-                    this.isLoadingUsers = false;
-                }
-            },
-
             openImportStudentsModal() {
                 this.isImportingStudents = true;
             },
