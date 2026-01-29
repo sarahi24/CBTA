@@ -1422,6 +1422,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (this.users.length > 0) {
                             console.log(JSON.stringify(this.users[0], null, 2));
                         }
+                        
+                        // Mostrar roles de cada usuario
+                        console.log('========================================');
+                        console.log('👥 ROLES DE USUARIOS:');
+                        console.log('========================================');
+                        this.users.forEach((user, index) => {
+                            const rolesStr = user.roles && user.roles.length > 0 
+                                ? user.roles.join(', ') 
+                                : 'Sin roles';
+                            console.log(`${index + 1}. ${user.name} (${user.email}) → Roles: ${rolesStr}`);
+                        });
+                        console.log('========================================');
+                        
                         this.apiError = null;
                     } else {
                         const errorData = await response.json().catch(() => ({}));
