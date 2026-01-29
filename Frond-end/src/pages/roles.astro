@@ -3334,6 +3334,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }, 2000);
                     } else {
                         console.error('❌ Error en la sincronización:', result);
+                        console.error('📋 Errores detallados:', JSON.stringify(result.errors, null, 2));
                         this.syncResult = result;
                         
                         // Mostrar errores de validación
