@@ -1025,10 +1025,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             <template x-for="user in selectedUsers" :key="user.id">
                                 <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm" x-text="user.name.charAt(0)"></div>
+                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm" x-text="(user.name || 'U').charAt(0)"></div>
                                         <div>
-                                            <p class="text-sm font-semibold text-slate-800" x-text="`${user.name} ${user.last_name}`"></p>
-                                            <p class="text-xs text-slate-500" x-text="user.curp"></p>
+                                            <p class="text-sm font-semibold text-slate-800" x-text="`${user.name || 'Sin nombre'} ${user.last_name || ''}`"></p>
+                                            <p class="text-xs text-slate-500" x-text="user.curp || 'Sin CURP'"></p>
                                         </div>
                                     </div>
                                     <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium" 
