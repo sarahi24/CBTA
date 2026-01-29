@@ -116,6 +116,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         class="px-3 md:px-4 py-2 bg-indigo-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-2">
                     🔑 Permisos
                 </button>
+                <button @click="promoteStudents()" 
+                        class="px-3 md:px-4 py-2 bg-amber-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-amber-700 transition-all flex items-center gap-2">
+                    📚 Promocionar Estudiantes
+                </button>
                 <div class="relative" x-data="{ showImportMenu: false }">
                     <button @click="showImportMenu = !showImportMenu" 
                             class="px-3 md:px-4 py-2 bg-emerald-600 text-white text-sm md:text-base font-semibold rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
@@ -1141,33 +1145,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<script defer>
+<script is:inline>
     // Prevenir múltiples inicializaciones de Alpine
     (function() {
         if (window.__rolesDataRegistered__) return;
         window.__rolesDataRegistered__ = true;
         
         function registerComponent() {
-            if (typeof Alpine === 'undefined') {
-                console.error('Alpine.js no está cargado aún');
-                setTimeout(registerComponent, 100);
-                return;
-            }
-            Alpine.data('rolesData', () => {
-                window.__rolesDataInitialized__ = true;
-                return {
-                    users: [],
-                    apiBaseUrl: window.__API_BASE_URL__ || '',
-                    apiError: null,
-                    isLoadingUsers: true,
-                    isPanelOpen: false,
-                    isEditing: false,
-                    isDeleting: false,
-                    isSaving: false,
-                    isImporting: false,
-                    isImportingStudents: false,
-                    isDragging: false,
-                    selectedFile: null,
+            Alpine.data('rolesData', () => ({
+                users: [],
+                apiBaseUrl: window.__API_BASE_URL__ || '',
+                apiError: null,
+                isLoadingUsers: true,
+                isPanelOpen: false,
+                isEditing: false,
+                isDeleting: false,
+                isSaving: false,
+                isImporting: false,
+                isImportingStudents: false,
+                isDragging: false,
+                selectedFile: null,
                 importedData: [],
                 importStudentsError: '',
                 importStudentsErrorDetails: [],
@@ -1528,16 +1525,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             // Mostrar roles de todos los usuarios
                             console.log('📋 Roles de cada usuario después de recargar:');
                             this.users.forEach((user, idx) => {
-                                console.log(`  ${idx + 1}. ${user.fullName} (${user.curp}):`);
-                                console.log(`     roles_count: ${user.roles_count || 0}`);
-                                console.log(`     roles array:`, user.roles);
-                                console.log(`     roleLabel: ${user.roleLabel}`);
-                                if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-                                    console.log(`     ✅ Roles names: ${user.roles.map(r => r.name || r).join(', ')}`);
-                                } else {
-                                    console.log(`     ❌ No roles array or empty`);
+                                console.log(`  ${idx + 1}. ${user.fullName} (${user.curp}): ${user.roles_count || 0} roles`);
+                                if (user.roles && user.roles.length > 0) {
+                                    console.log(`     Roles: ${user.roles.map(r => r.name).join(', ')}`);
                                 }
-                            });
                             });
                         }
                         this.apiError = null;
@@ -1803,6 +1794,58 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 } catch (error) {
                     console.error('❌ Error al activar usuarios:', error);
                     this.showNotify('Error de conexión', 'error');
+                }
+            },
+
+            async promoteStudents() {
+                if (!confirm('¿Estás seguro de promover a TODOS los estudiantes? Se incrementará el semestre y se darán de baja los que sobrepasen el semestre 12.')) {
+                    return;
+                }
+
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return;
+                }
+
+                try {
+                    this.isLoadingUsers = true;
+                    console.log('📤 Enviando solicitud de promoción...');
+                    
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/promotion`,
+                        { method: 'POST' }
+                    );
+
+                    console.log('📥 Respuesta recibida:', response.status);
+                    const result = await response.json();
+                    
+                    console.log('📋 Resultado:', result);
+                    
+                    // Show debug info if present
+                    if (result.debug) {
+                        console.error('🐛 Debug Info:', result.debug);
+                    }
+                    
+                    if (response.ok && result.success) {
+                        const affected = result.data?.affected;
+                        this.showNotify(
+                            `✅ Promoción completada: ${affected?.usuarios_promovidos || 0} promovidos, ${affected?.usuarios_baja || 0} dados de baja`,
+                            'success'
+                        );
+                        await this.loadUsers(token);
+                    } else {
+                        const errorMsg = result.message || `Error: ${result.error_code || 'desconocido'}`;
+                        console.error('❌ Error en respuesta:', errorMsg);
+                        console.error('❌ Detalles:', result);
+                        this.showNotify(errorMsg, 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Error en promoteStudents:', error);
+                    const errorMsg = error?.message || 'Error desconocido al promover estudiantes';
+                    this.showNotify(errorMsg, 'error');
+                } finally {
+                    this.isLoadingUsers = false;
                 }
             },
 
@@ -3540,13 +3583,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     console.log('🎓 Solicitando promoción de estudiantes...');
                     console.log('  Endpoint: /v1/admin-actions/promote');
-                    console.log('  Método: PATCH');
+                    console.log('  Método: POST');
                     console.log('  Headers: X-User-Role=admin, X-User-Permission=promote.student');
 
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/promote`,
                         {
-                            method: 'PATCH',
+                            method: 'POST',
                             headers: {
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'promote.student'
@@ -3646,22 +3689,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     `Revisa la consola del navegador (F12) para más detalles.`
                 );
             }
-        };
-        registerComponent();
+        }));
         }
         
         // Registrar cuando Alpine esté disponible
-        if (typeof Alpine !== 'undefined' && window.Alpine?.data) {
+        if (typeof Alpine !== 'undefined') {
             registerComponent();
         } else {
-            // Esperar a que Alpine esté listo
             document.addEventListener('alpine:init', registerComponent);
-            // Fallback: reintentar después de 500ms
-            setTimeout(() => {
-                if (!window.__rolesDataInitialized__) {
-                    registerComponent();
-                }
-            }, 500);
         }
     })();
 </script>
