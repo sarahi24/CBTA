@@ -1507,13 +1507,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.log('📦 Response data:', result);
                         
                         // Backend devuelve {success: true, data: {users: {items: [...]}}, message: '...'}
+                        // FORZAR REACTIVIDAD: Crear nuevo array en lugar de reasignar
+                        let newUsers = [];
                         if (result.success && result.data && result.data.users && result.data.users.items) {
-                            this.users = result.data.users.items.map(u => this.mapUser(u));
+                            newUsers = result.data.users.items.map(u => this.mapUser(u));
                         } else if (Array.isArray(result)) {
-                            this.users = result.map(u => this.mapUser(u));
-                        } else {
-                            this.users = [];
+                            newUsers = result.map(u => this.mapUser(u));
                         }
+                        
+                        // Limpiar array existente y llenar con nuevos datos
+                        this.users.splice(0, this.users.length, ...newUsers);
                         
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
                         console.log('📋 Estructura del primer usuario:');
