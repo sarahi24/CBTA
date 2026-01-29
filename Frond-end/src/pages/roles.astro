@@ -1220,6 +1220,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 // Log para debugging
                 console.log('🔍 mapUser recibió:', raw);
+                console.log('🔍 raw.roles:', raw.roles);
+                console.log('🔍 raw.role:', raw.role);
+                
+                // Extraer roles como array
+                let roles = [];
+                if (Array.isArray(raw.roles)) {
+                    roles = raw.roles.map(r => {
+                        if (typeof r === 'string') return r;
+                        if (r && r.name) return r.name;
+                        return String(r);
+                    });
+                } else if (raw.role) {
+                    roles = [raw.role];
+                } else if (raw.role_name) {
+                    roles = [raw.role_name];
+                }
+                
+                console.log('🔍 roles extraídos:', roles);
                 
                 const roleValue = raw.role || raw.role_name || (Array.isArray(raw.roles) ? raw.roles[0] : (raw.roles?.[0]?.name || raw.roles?.[0])) || '';
                 const roleKey = roleValue.toString().toLowerCase();
@@ -1270,6 +1288,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     registration_date: this.normalizeDate(raw.registration_date),
                     status: status,
                     fullName: raw.fullName || `${name} ${last_name}`.trim(),
+                    roles: roles, // Array de roles
                     role: roleLabel,
                     roleLabel,
                     roleKey,
