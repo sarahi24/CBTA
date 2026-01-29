@@ -1195,6 +1195,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     role: roleLabel,
                     roleLabel,
                     roleKey,
+                    // Campos de estudiante (si existen)
+                    n_control: raw.n_control || '',
+                    career_id: raw.career_id || '',
+                    semestre: raw.semestre || 1,
+                    group: raw.group || '',
+                    workshop: raw.workshop || ''
                 };
 
                 console.log('📤 mapUser retorna:', mapped);
@@ -2448,7 +2454,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 await this.loadCareers();
                 
                 try {
-                    // Obtener detalles del estudiante si ya existen
+                    // SIEMPRE consultar el backend primero para obtener datos frescos
+                    console.log('🔄 Consultando backend para obtener datos de estudiante...');
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/get-student/${userId}`,
                         {
@@ -2461,8 +2468,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     if (response.ok) {
                         const result = await response.json();
+                        console.log('✅ Respuesta GET student:', JSON.stringify(result, null, 2));
+                        
                         const student = result.data?.user || {};
-                        console.log('📚 Detalles del estudiante cargados:', student);
+                        console.log('📚 Detalles del estudiante cargados desde backend:', JSON.stringify(student, null, 2));
+                        
+                        // Usar los datos del backend directamente
                         this.studentDetails = {
                             user_id: userId,
                             career_id: student.career_id || '',
@@ -2471,9 +2482,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             group: student.group || '',
                             workshop: student.workshop || ''
                         };
-                    } else {
-                        console.log('ℹ️ No hay detalles previos, creando nuevo registro');
-                        // No tiene detalles, crear uno nuevo
+                        console.log('✓ Datos de estudiante cargados correctamente desde backend');
+                    } else if (response.status === 404) {
+                        // No tiene detalles aún, crear uno nuevo
+                        console.log('ℹ️ No hay detalles previos (404), creando nuevo registro');
                         this.studentDetails = {
                             user_id: userId,
                             career_id: '',
@@ -2482,13 +2494,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             group: '',
                             workshop: ''
                         };
+                    } else {
+                        // Error inesperado
+                        throw new Error(`Error ${response.status} al consultar detalles`);
                     }
                     
-                    console.log('📋 Estado final de studentDetails:', this.studentDetails);
+                    console.log('📋 Estado final de studentDetails:', JSON.stringify(this.studentDetails, null, 2));
                     this.showStudentModal = true;
                 } catch (error) {
                     console.error('❌ Error al abrir panel de estudiante:', error);
-                    this.showNotify('Error al cargar detalles del estudiante', 'error');
+                    this.showNotify(`Error al cargar detalles: ${error.message}`, 'error');
                 }
             },
 
