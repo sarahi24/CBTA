@@ -3317,24 +3317,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 try {
-                    // Obtener permisos actuales de los usuarios o rol
-                    const curps = this.users
-                        .filter(u => this.selectedUsers.includes(u.id))
-                        .map(u => u.curp);
-
-                    // Build query parameters
-                    const params = new URLSearchParams();
-                    if (curps.length > 0) {
-                        curps.forEach(curp => params.append('curps[]', curp));
-                    }
-                    if (this.permissionTargetRole) {
-                        params.append('role', this.permissionTargetRole);
-                    }
-
+                    // Cargar permisos disponibles (sin parámetros, como find-roles)
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions?${params.toString()}`,
+                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
                         {
-                            method: 'GET',
                             headers: {
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.permissions'
@@ -3344,7 +3330,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     const result = await response.json();
                     if (response.ok && result.success) {
-                        const permissions = result.data?.permissions?.permissions || [];
+                        const permissions = result.data?.permissions || [];
                         
                         // Traducir nombres de permisos al español
                         const permissionsTranslation = {
