@@ -360,6 +360,7 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       const totalEl = document.getElementById('students-total');
       const exportXlsx = document.getElementById('export-xlsx');
       const clearBtn = document.getElementById('clear-storage');
+      const importFile = document.getElementById('import-file');
       const tableContainer = document.getElementById('table-container');
       const searchInput = document.getElementById('search-input');
       const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
@@ -939,7 +940,7 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
       });
 
       // Lógica de IMPORTACIÓN Masiva (Upsert por numControl)
-      importFile.addEventListener('change', (e) => {
+      if (importFile) importFile.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
 
