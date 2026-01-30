@@ -3561,20 +3561,45 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 try {
-                    // Cargar permisos disponibles (sin parámetros, como find-roles)
+                    // Determinar endpoint y payload correctos para permisos
+                    const selectedCurps = this.users
+                        .filter(u => this.selectedUsers.includes(u.id))
+                        .map(u => u.curp)
+                        .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+
+                    let endpoint = '';
+                    let payload = null;
+
+                    if (selectedCurps.length > 0) {
+                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-curps`;
+                        payload = { curps: selectedCurps };
+                    } else if (this.permissionTargetRole) {
+                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-role`;
+                        payload = { role: this.permissionTargetRole };
+                    } else {
+                        this.showNotify('Los usuarios seleccionados no tienen CURP válido (18 caracteres)', 'error');
+                        return;
+                    }
+
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
+                        endpoint,
                         {
+                            method: 'POST',
                             headers: {
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.permissions'
-                            }
+                            },
+                            body: JSON.stringify(payload)
                         }
                     );
 
                     const result = await response.json();
                     if (response.ok && result.success) {
-                        const permissions = result.data?.permissions || [];
+                        const permissions =
+                            result.data?.permissions?.permissions ||
+                            result.data?.permissions?.items ||
+                            result.data?.permissions ||
+                            [];
                         
                         // Traducir nombres de permisos al español
                         const permissionsTranslation = {
