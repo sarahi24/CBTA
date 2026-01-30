@@ -1595,8 +1595,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         // Backend devuelve {success: true, data: {users: {items: [...]}}, message: '...'}
                         if (result.success && result.data && result.data.users && result.data.users.items) {
+                            console.log('🔍 RAW USERS desde backend (primeros 2):');
+                            console.log(JSON.stringify(result.data.users.items.slice(0, 2), null, 2));
                             this.users = result.data.users.items.map(u => this.mapUser(u));
                         } else if (Array.isArray(result)) {
+                            console.log('🔍 RAW USERS desde backend (primeros 2):');
+                            console.log(JSON.stringify(result.slice(0, 2), null, 2));
                             this.users = result.map(u => this.mapUser(u));
                         } else {
                             this.users = [];
@@ -1928,16 +1932,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             affected.usuarios_promovidos ??
                             affected.promoted ??
                             affected.updated ??
-                            0;
+                            null;
                         const dropped =
                             affected.usuarios_baja ??
                             affected.deactivated ??
                             affected.dropped ??
-                            0;
-                        this.showNotify(
-                            `✅ Promoción completada: ${promoted} promovidos, ${dropped} dados de baja`,
-                            'success'
-                        );
+                            null;
+
+                        if (promoted === null && dropped === null) {
+                            this.showNotify(
+                                result.message || 'Promoción iniciada en segundo plano.',
+                                'success'
+                            );
+                        } else {
+                            this.showNotify(
+                                `✅ Promoción completada: ${promoted ?? 0} promovidos, ${dropped ?? 0} dados de baja`,
+                                'success'
+                            );
+                        }
+
                         await this.loadUsers(token);
                     } else {
                         const errorMsg = result.message || `Error: ${result.error_code || 'desconocido'}`;
