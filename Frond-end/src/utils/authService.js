@@ -20,16 +20,21 @@ export const AuthService = {
       });
 
       const data = await handleAPIResponse(response);
-      
-      // Guardar tokens
-      if (data.data?.access_token) {
-        this.setToken(data.data.access_token);
+
+      // Guardar tokens (estructura: data.user_tokens)
+      const tokenBundle = data?.data?.user_tokens || data?.data || {};
+      const accessToken = tokenBundle.access_token || data?.access_token;
+      const refreshToken = tokenBundle.refresh_token || data?.refresh_token;
+      const userData = tokenBundle.user_data || data?.user_data;
+
+      if (accessToken) {
+        this.setToken(accessToken);
       }
-      if (data.data?.refresh_token) {
-        this.setRefreshToken(data.data.refresh_token);
+      if (refreshToken) {
+        this.setRefreshToken(refreshToken);
       }
-      if (data.data?.user_data) {
-        this.setUserData(data.data.user_data);
+      if (userData) {
+        this.setUserData(userData);
       }
 
       return data;
@@ -98,12 +103,16 @@ export const AuthService = {
       });
 
       const data = await handleAPIResponse(response);
-      
-      if (data.data?.access_token) {
-        this.setToken(data.data.access_token);
+
+      const tokenBundle = data?.data?.user_tokens || data?.data || {};
+      const accessToken = tokenBundle.access_token || data?.access_token;
+      const newRefreshToken = tokenBundle.refresh_token || data?.refresh_token;
+
+      if (accessToken) {
+        this.setToken(accessToken);
       }
-      if (data.data?.refresh_token) {
-        this.setRefreshToken(data.data.refresh_token);
+      if (newRefreshToken) {
+        this.setRefreshToken(newRefreshToken);
       }
 
       return data;
@@ -129,6 +138,55 @@ export const AuthService = {
       return await handleAPIResponse(response);
     } catch (error) {
       console.error('Forgot password error:', error);
+      throw error;
+    }
+  },
+
+  // Reset password con token
+  async resetPassword(payload) {
+    try {
+      const response = await fetch(API_ENDPOINTS.auth.resetPassword, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      return await handleAPIResponse(response);
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error;
+    }
+  },
+
+  // Verificar email (si el frontend maneja el link)
+  async verifyEmail(id, hash) {
+    try {
+      const response = await fetch(API_ENDPOINTS.auth.verifyEmail(id, hash), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      return await handleAPIResponse(response);
+    } catch (error) {
+      console.error('Verify email error:', error);
+      throw error;
+    }
+  },
+
+  // Enviar notificación de verificación de email (requiere auth)
+  async sendEmailVerificationNotification() {
+    try {
+      const response = await this.authenticatedFetch(API_ENDPOINTS.auth.verificationNotification, {
+        method: 'POST',
+      });
+      return await handleAPIResponse(response);
+    } catch (error) {
+      console.error('Verification notification error:', error);
       throw error;
     }
   },
@@ -240,14 +298,14 @@ export const AuthService = {
   // Get user role
   getUserRole() {
     const userData = this.getUserData();
-    if (!userData || !Array.isArray(userData)) return null;
-    
-    // userData es un array de objetos con roles
-    const firstUser = userData[0];
-    if (firstUser && firstUser.roles && Array.isArray(firstUser.roles)) {
-      return firstUser.roles[0]; // Retornar el primer rol
+    if (!userData) return null;
+
+    const firstUser = Array.isArray(userData) ? userData[0] : userData;
+    if (firstUser && Array.isArray(firstUser.roles) && firstUser.roles.length > 0) {
+      return firstUser.roles[0];
     }
-    return null;
+
+    return firstUser?.role || firstUser?.type || null;
   },
 
   // Check if user has specific role

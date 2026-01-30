@@ -8,10 +8,11 @@ export const API_ENDPOINTS = {
     login: `${API_BASE_URL}/v1/login`,
     register: `${API_BASE_URL}/v1/register`,
     logout: `${API_BASE_URL}/v1/logout`,
-    refresh: `${API_BASE_URL}/v1/refresh`,
-    forgotPassword: `${API_BASE_URL}/forgot-password`,
-    verifyEmail: (id, hash) => `${API_BASE_URL}/verify-email/${id}/${hash}`,
+    refresh: `${API_BASE_URL}/v1/refresh-token`,
+    forgotPassword: `${API_BASE_URL}/v1/forgot-password`,
+    verifyEmail: (id, hash) => `${API_BASE_URL}/v1/verify-email/${id}/${hash}`,
     resetPassword: `${API_BASE_URL}/reset-password`,
+    verificationNotification: `${API_BASE_URL}/email/verification-notification`,
   },
 
   // Admin Actions - Acciones administrativas

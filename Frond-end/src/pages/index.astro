@@ -268,6 +268,26 @@ const pageTitle = "Acceso al Sistema - SIGE";
         message: '',
         isLoading: false,
 
+        init() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const verified = params.get('verified');
+                const reset = params.get('reset');
+
+                if (verified === '1') {
+                    this.message = '✅ Correo verificado correctamente. Ya puedes iniciar sesión.';
+                } else if (verified === '0') {
+                    this.error = '❌ No se pudo verificar el correo. Intenta reenviar el enlace.';
+                }
+
+                if (reset === '1') {
+                    this.message = '✅ Contraseña actualizada. Ya puedes iniciar sesión.';
+                }
+            } catch (e) {
+                console.warn('URL params parse error:', e);
+            }
+        },
+
         async handleLogin() {
             this.error = '';
             this.isLoading = true;
