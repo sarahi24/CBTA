@@ -3322,18 +3322,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         .filter(u => this.selectedUsers.includes(u.id))
                         .map(u => u.curp);
 
+                    // Build query parameters
+                    const params = new URLSearchParams();
+                    if (curps.length > 0) {
+                        curps.forEach(curp => params.append('curps[]', curp));
+                    }
+                    if (this.permissionTargetRole) {
+                        params.append('role', this.permissionTargetRole);
+                    }
+
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
+                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions?${params.toString()}`,
                         {
-                            method: 'POST',
+                            method: 'GET',
                             headers: {
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.permissions'
-                            },
-                            body: JSON.stringify({
-                                curps: curps.length > 0 ? curps : undefined,
-                                role: this.permissionTargetRole || undefined
-                            })
+                            }
                         }
                     );
 
