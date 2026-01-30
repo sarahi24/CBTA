@@ -925,6 +925,30 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                         </div>
                         
+                        <!-- ⚠️ Advertencia de conflictos -->
+                        <div x-show="rolesToAdd.filter(r => rolesToRemove.includes(r)).length > 0" 
+                             class="p-4 bg-amber-50 border-2 border-amber-400 rounded-xl">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="font-bold text-amber-900 mb-1">⚠️ Conflicto Detectado</p>
+                                    <p class="text-sm text-amber-800 mb-2">
+                                        Los siguientes roles están marcados para <strong>agregar Y eliminar</strong>:
+                                    </p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="role in rolesToAdd.filter(r => rolesToRemove.includes(r))" :key="role">
+                                            <span class="px-3 py-1 bg-amber-200 text-amber-900 rounded-full text-xs font-bold" x-text="role || '(Sin rol)'"></span>
+                                        </template>
+                                    </div>
+                                    <p class="text-xs text-amber-700 mt-2">
+                                        💡 <strong>Solución:</strong> Desmarca el rol de una de las dos columnas
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="flex gap-3">
                             <button type="button" @click="showRolesModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
                                 Cancelar
@@ -1597,6 +1621,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (result.success && result.data && result.data.users && result.data.users.items) {
                             console.log('🔍 RAW USERS desde backend (primeros 2):');
                             console.log(JSON.stringify(result.data.users.items.slice(0, 2), null, 2));
+                            
+                            // ⚠️ ADVERTENCIA: Backend no incluye roles
+                            if (result.data.users.items.length > 0 && !result.data.users.items[0].roles) {
+                                console.warn('⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️');
+                                console.warn('⚠️ EL BACKEND NO ESTÁ ENVIANDO LOS ROLES');
+                                console.warn('⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️');
+                                console.warn('');
+                                console.warn('El backend devuelve roles_count pero NO el array de roles');
+                                console.warn('');
+                                console.warn('🔧 SOLUCIÓN EN EL BACKEND:');
+                                console.warn('   Archivo: backend/school-management/app/Http/Controllers/AdminActionsController.php');
+                                console.warn('   Método: showUsers()');
+                                console.warn('   Línea a modificar:');
+                                console.warn('      ANTES: $users = User::select(...)->get();');
+                                console.warn('      DESPUÉS: $users = User::select(...)->with("roles")->get();');
+                                console.warn('');
+                                console.warn('💡 Agregar ->with("roles") antes de ->get()');
+                                console.warn('');
+                            }
+                            
                             this.users = result.data.users.items.map(u => this.mapUser(u));
                         } else if (Array.isArray(result)) {
                             console.log('🔍 RAW USERS desde backend (primeros 2):');
@@ -3420,6 +3464,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     if (curps.length === 0) {
                         this.showNotify('Los usuarios seleccionados no tienen CURP válido (18 caracteres)', 'error');
+                        this.isSaving = false;
+                        return;
+                    }
+
+                    // 🔍 VALIDACIÓN: Detectar roles duplicados entre add y remove
+                    const duplicateRoles = this.rolesToAdd.filter(role => this.rolesToRemove.includes(role));
+                    
+                    if (duplicateRoles.length > 0) {
+                        this.showError(
+                            '⚠️ Conflicto de Roles',
+                            `Los siguientes roles están marcados para agregar Y eliminar: ${duplicateRoles.join(', ')}`,
+                            {
+                                duplicates: duplicateRoles,
+                                suggestion: 'Desmarca el rol de una de las columnas (Agregar o Eliminar)'
+                            }
+                        );
                         this.isSaving = false;
                         return;
                     }
