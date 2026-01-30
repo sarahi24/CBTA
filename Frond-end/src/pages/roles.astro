@@ -718,12 +718,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 <div @click="showStudentModal = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
                 <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
                     <h3 class="text-2xl font-bold text-slate-800 mb-2">
-                        <span x-show="!studentDetails.n_control">🎓 Asociar Detalles de Estudiante</span>
-                        <span x-show="studentDetails.n_control">✏️ Editar Detalles de Estudiante</span>
+                        <span x-show="!hasStudentDetails">🎓 Asociar Detalles de Estudiante</span>
+                        <span x-show="hasStudentDetails">✏️ Editar Detalles de Estudiante</span>
                     </h3>
                     <p class="text-slate-500 text-sm mb-6">
-                        <span x-show="!studentDetails.n_control">Asignar información académica al usuario seleccionado</span>
-                        <span x-show="studentDetails.n_control">Actualizar carrera, grupo y taller del estudiante</span>
+                        <span x-show="!hasStudentDetails">Asignar información académica al usuario seleccionado</span>
+                        <span x-show="hasStudentDetails">Actualizar carrera, grupo y taller del estudiante</span>
                     </p>
                     
                     <!-- Datos del usuario seleccionado -->
@@ -759,22 +759,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">
                                     Número de Control *
-                                    <span x-show="studentDetails.n_control" class="text-xs font-normal text-amber-600 ml-2">(No editable)</span>
+                                    <span x-show="hasStudentDetails" class="text-xs font-normal text-amber-600 ml-2">(No editable)</span>
                                 </label>
                                 <input x-model="studentDetails.n_control" type="text" required 
-                                       :readonly="!!studentDetails.n_control"
-                                       :class="studentDetails.n_control ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
+                                       :readonly="hasStudentDetails"
+                                       :class="hasStudentDetails ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
                                        class="w-full p-3 border border-slate-200 rounded-xl input-institucional">
                             </div>
                             
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">
                                     Semestre *
-                                    <span x-show="studentDetails.n_control" class="text-xs font-normal text-amber-600 ml-2">(Use promoción masiva)</span>
+                                    <span x-show="hasStudentDetails" class="text-xs font-normal text-amber-600 ml-2">(Use promoción masiva)</span>
                                 </label>
                                 <input x-model="studentDetails.semestre" type="number" required min="1" max="12" 
-                                       :readonly="!!studentDetails.n_control"
-                                       :class="studentDetails.n_control ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
+                                       :readonly="hasStudentDetails"
+                                       :class="hasStudentDetails ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
                                        class="w-full p-3 border border-slate-200 rounded-xl input-institucional">
                             </div>
                             
@@ -3088,25 +3088,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         console.error('❌ Error desde API:', JSON.stringify(result, null, 2));
                         
-                        const errorMessages = result.errors
-                            ? Object.entries(result.errors)
-                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-                                .join('\n')
-                            : '';
-                        console.error('📋 Errores de validación:\n' + errorMessages);
-
-                        this.showError(
-                            '❌ Error al asociar estudiante',
-                            result.message || `Error: ${response.status}`,
-                            {
-                                status: response.status,
-                                error_code: result.error_code,
-                                errors: result.errors,
-                                details: errorMessages
-                            }
-                        );
-
-                        this.showNotify(result.message || `Error: ${response.status}`, 'error');
+                        // Mostrar errores de validación detallados
+                        if (result.errors) {
+                            const errorMessages = Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+                                .join('\n');
+                            console.error('📋 Errores de validación:\n' + errorMessages);
+                            this.showNotify(`Error de validación:\n${errorMessages}`, 'error');
+                        } else {
+                            this.showNotify(result.message || `Error: ${response.status}`, 'error');
+                        }
                     }
                 } catch (error) {
                     console.error('❌ Error al guardar estudiante:', error);
