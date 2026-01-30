@@ -3682,8 +3682,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         return;
                     }
 
-                    payload.permissionsToAdd = this.permissionsToAdd || [];
-                    payload.permissionsToRemove = this.permissionsToRemove || [];
+                    // Asegurar que ambos arrays siempre se envíen (aunque estén vacíos)
+                    payload.permissionsToAdd = Array.isArray(this.permissionsToAdd) ? this.permissionsToAdd : [];
+                    payload.permissionsToRemove = Array.isArray(this.permissionsToRemove) ? this.permissionsToRemove : [];
+
+                    // Validar que todos los elementos sean strings
+                    payload.permissionsToAdd = payload.permissionsToAdd.map(p => typeof p === 'string' ? p : (p.name || String(p)));
+                    payload.permissionsToRemove = payload.permissionsToRemove.map(p => typeof p === 'string' ? p : (p.name || String(p)));
 
                     console.log('📤 updatePermissions - Enviando:');
                     console.log('  Payload completo:', JSON.stringify(payload, null, 2));
@@ -3694,6 +3699,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('  permissionsToAdd es array?:', Array.isArray(payload.permissionsToAdd));
                     console.log('  permissionsToRemove es array?:', Array.isArray(payload.permissionsToRemove));
                     console.log('  Tipos dentro de Add:', payload.permissionsToAdd.map(p => typeof p));
+                    console.log('  Types dentro de Remove:', payload.permissionsToRemove.map(p => typeof p));
                     console.log('  Keys en payload:', Object.keys(payload));
                     console.log('  Tiene curps?', 'curps' in payload, payload.curps);
                     console.log('  Tiene role?', 'role' in payload, payload.role);
