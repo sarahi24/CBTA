@@ -1903,7 +1903,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/promote`,
-                        { method: 'PATCH' }
+                        {
+                            method: 'PATCH',
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'promote.student'
+                            }
+                        }
                     );
 
                     console.log('📥 Respuesta recibida:', response.status);
@@ -1917,9 +1923,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     }
                     
                     if (response.ok && result.success) {
-                        const affected = result.data?.affected;
+                        const affected = result.data?.affected || result.data?.data?.affected || {};
+                        const promoted =
+                            affected.usuarios_promovidos ??
+                            affected.promoted ??
+                            affected.updated ??
+                            0;
+                        const dropped =
+                            affected.usuarios_baja ??
+                            affected.deactivated ??
+                            affected.dropped ??
+                            0;
                         this.showNotify(
-                            `✅ Promoción completada: ${affected?.usuarios_promovidos || 0} promovidos, ${affected?.usuarios_baja || 0} dados de baja`,
+                            `✅ Promoción completada: ${promoted} promovidos, ${dropped} dados de baja`,
                             'success'
                         );
                         await this.loadUsers(token);
