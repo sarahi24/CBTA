@@ -211,6 +211,48 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     throw error;
                 }
             },
+
+            async forgotPassword(email) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                    const response = await fetch(`${this.API_BASE_URL}/v1/forgot-password`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ email }),
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        let errorMessage = errorData.message || errorData.error || response.statusText;
+                        if (errorData.errors) {
+                            const validationErrors = Object.values(errorData.errors).flat().join(', ');
+                            errorMessage = `${errorMessage}: ${validationErrors}`;
+                        }
+                        throw new Error(errorMessage || `Error ${response.status}: ${response.statusText}`);
+                    }
+
+                    return await response.json();
+                } catch (error) {
+                    console.error('Forgot password error:', error);
+
+                    if (error.name === 'AbortError') {
+                        throw new Error('La solicitud tardó demasiado. Por favor, verifica tu conexión.');
+                    }
+                    if (error instanceof TypeError && error.message.includes('fetch')) {
+                        throw new Error('No se pudo conectar al servidor. Verifica tu conexión a internet.');
+                    }
+
+                    throw error;
+                }
+            },
             
             getUserRole() {
                 const userData = localStorage.getItem(this.USER_DATA_KEY);
