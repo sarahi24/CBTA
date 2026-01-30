@@ -3088,16 +3088,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         console.error('❌ Error desde API:', JSON.stringify(result, null, 2));
                         
-                        // Mostrar errores de validación detallados
-                        if (result.errors) {
-                            const errorMessages = Object.entries(result.errors)
-                                .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
-                                .join('\n');
-                            console.error('📋 Errores de validación:\n' + errorMessages);
-                            this.showNotify(`Error de validación:\n${errorMessages}`, 'error');
-                        } else {
-                            this.showNotify(result.message || `Error: ${response.status}`, 'error');
-                        }
+                        const errorMessages = result.errors
+                            ? Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                .join('\n')
+                            : '';
+                        console.error('📋 Errores de validación:\n' + errorMessages);
+
+                        this.showError(
+                            '❌ Error al asociar estudiante',
+                            result.message || `Error: ${response.status}`,
+                            {
+                                status: response.status,
+                                error_code: result.error_code,
+                                errors: result.errors,
+                                details: errorMessages
+                            }
+                        );
+
+                        this.showNotify(result.message || `Error: ${response.status}`, 'error');
                     }
                 } catch (error) {
                     console.error('❌ Error al guardar estudiante:', error);
