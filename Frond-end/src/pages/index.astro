@@ -429,8 +429,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
             }
 
             try {
-                const { AuthService } = await import('/src/utils/authService.js');
-                const response = await AuthService.forgotPassword(this.email);
+                const response = await window.AuthService.forgotPassword(this.email);
                 
                 if (response.success) {
                     this.message = '📩 Se ha enviado un enlace de recuperación a tu correo.';
