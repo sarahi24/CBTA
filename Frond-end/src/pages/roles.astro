@@ -1000,6 +1000,166 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
         </template>
 
+        <!-- Modal de Importación de Usuarios -->
+        <template x-teleport="body">
+            <div x-show="showImportModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                <div @click="!isImporting && closeImportModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+                <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">📥 Importar Usuarios</h3>
+                    <p class="text-slate-500 text-sm mb-6">
+                        Carga un archivo Excel (.xlsx) con los datos de los usuarios
+                    </p>
+                    
+                    <!-- Resumen de importación exitosa -->
+                    <template x-if="importResult && !importError">
+                        <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                            <h4 class="font-bold text-green-900 mb-3">✓ Importación Completada</h4>
+                            <div class="space-y-2 text-sm text-green-800">
+                                <div class="flex justify-between">
+                                    <span>Total de filas recibidas:</span>
+                                    <span class="font-semibold" x-text="importResult.summary?.total_rows_received || importResult.total_rows_received || '0'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Filas procesadas:</span>
+                                    <span class="font-semibold" x-text="importResult.summary?.rows_processed || importResult.rows_processed || '0'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Filas insertadas:</span>
+                                    <span class="font-semibold" x-text="importResult.summary?.rows_inserted || importResult.rows_inserted || '0'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Filas fallidas:</span>
+                                    <span class="font-semibold" x-text="importResult.summary?.rows_failed || importResult.rows_failed || '0'"></span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t border-green-200">
+                                    <span>Tasa de éxito:</span>
+                                    <span class="font-semibold" x-text="(importResult.summary?.success_rate || importResult.success_rate || 0).toFixed(2) + '%'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Mostrar errores si los hay -->
+                            <template x-if="importResult.errors || importResult.summary?.errors">
+                                <div x-show="(importResult.errors?.total_errors || importResult.summary?.errors?.total_errors || 0) > 0" class="mt-4 pt-4 border-t border-green-200">
+                                    <h5 class="font-bold text-red-900 mb-2">⚠️ Errores Encontrados</h5>
+                                    <div class="space-y-2 max-h-40 overflow-y-auto">
+                                        <template x-for="error in (importResult.errors?.row_errors || importResult.summary?.errors?.row_errors || []).slice(0, 5)" :key="error.row_number">
+                                            <div class="p-2 bg-red-100 rounded text-sm text-red-800">
+                                                <strong x-text="`Fila ${error.row_number}:`"></strong>
+                                                <span x-text="error.message"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Error en la importación -->
+                    <template x-if="importError">
+                        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                            <h4 class="font-bold text-red-900 mb-3">❌ Error en la Importación</h4>
+                            <p class="text-sm text-red-800 mb-3" x-text="importError.message"></p>
+                            
+                            <template x-if="importError.hasDetails && importError.errors">
+                                <div class="mt-3 p-2 bg-red-100 rounded text-sm text-red-800 max-h-32 overflow-y-auto">
+                                    <template x-for="(messages, field) in importError.errors" :key="field">
+                                        <div class="mb-2">
+                                            <strong x-text="`${field}:`"></strong>
+                                            <ul class="ml-4 mt-1">
+                                                <template x-for="message in (Array.isArray(messages) ? messages : [messages])" :key="message">
+                                                    <li class="text-xs" x-text="`• ${message}`"></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Formulario de carga -->
+                    <template x-if="!importResult && !importError">
+                        <form @submit.prevent="importUsersFromFile()" class="space-y-6">
+                            <!-- Input de archivo -->
+                            <div class="p-4 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:border-institucional transition-colors">
+                                <label class="cursor-pointer block">
+                                    <div class="flex items-center justify-center gap-3">
+                                        <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        <div class="text-center">
+                                            <p class="font-semibold text-slate-700">
+                                                <template x-if="!importFile">Selecciona un archivo Excel</template>
+                                                <template x-if="importFile" x-text="`Archivo: ${importFile.name}`"></template>
+                                            </p>
+                                            <p class="text-xs text-slate-500">(.xlsx o .xls)</p>
+                                        </div>
+                                    </div>
+                                    <input type="file" 
+                                           @change="handleFileSelect"
+                                           accept=".xlsx,.xls"
+                                           class="hidden"
+                                           :disabled="isImporting">
+                                </label>
+                            </div>
+
+                            <!-- Información sobre formato del archivo -->
+                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                <h4 class="font-bold text-blue-900 mb-2 text-sm">📋 Columnas Requeridas (en orden):</h4>
+                                <div class="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                                    <div>1. Nombre</div>
+                                    <div>2. Apellidos</div>
+                                    <div>3. Email</div>
+                                    <div>4. Teléfono (+52)</div>
+                                    <div>5. Fecha nacimiento (YYYY-MM-DD)</div>
+                                    <div>6. Género</div>
+                                    <div>7. CURP</div>
+                                    <div>8. Calle</div>
+                                    <div>9. Ciudad</div>
+                                    <div>10. Estado</div>
+                                    <div>11. Código postal</div>
+                                    <div>12. Tipo de sangre</div>
+                                    <div>13. Fecha registro (YYYY-MM-DD)</div>
+                                    <div>14. Estado</div>
+                                    <div>15. Career ID</div>
+                                    <div>16. N. Control</div>
+                                    <div>17. Semestre</div>
+                                    <div>18. Grupo</div>
+                                    <div>19. Taller</div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3">
+                                <button type="button" 
+                                        @click="closeImportModal()" 
+                                        :disabled="isImporting"
+                                        class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors disabled:opacity-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit" 
+                                        :disabled="isImporting || !importFile"
+                                        class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50">
+                                    <span x-show="!isImporting">Importar Usuarios</span>
+                                    <span x-show="isImporting">Importando...</span>
+                                </button>
+                            </div>
+                        </form>
+                    </template>
+
+                    <!-- Botón de cierre para resultados -->
+                    <template x-if="importResult || importError">
+                        <div class="flex gap-3">
+                            <button type="button" 
+                                    @click="closeImportModal()"
+                                    class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
         <!-- Modal de Error Global -->
         <template x-teleport="body">
             <div x-show="showErrorModal" x-cloak class="fixed inset-0 z-[150] flex items-center justify-center p-4">
@@ -1132,6 +1292,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 permissionsToAdd: [],
                 permissionsToRemove: [],
                 permissionTargetRole: '',
+
+                // Estados para importación de usuarios
+                showImportModal: false,
+                importFile: null,
+                isImporting: false,
+                importResult: null,
+                importError: null,
 
             // Función helper para hacer fetch con auto-refresh
             async authenticatedFetch(url, options = {}, isRetry = false) {
@@ -3653,6 +3820,119 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return { success: false, message: error.message };
                 } finally {
                     this.isSaving = false;
+                }
+            },
+
+            // ==================== IMPORTACIÓN DE USUARIOS ====================
+            
+            openImportModal() {
+                this.showImportModal = true;
+                this.importFile = null;
+                this.importResult = null;
+                this.importError = null;
+            },
+
+            closeImportModal() {
+                this.showImportModal = false;
+                this.importFile = null;
+                this.importResult = null;
+                this.importError = null;
+            },
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validar que sea un archivo Excel
+                const validTypes = [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-excel'
+                ];
+                
+                const fileName = file.name.toLowerCase();
+                if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                    this.showNotify('Solo se permiten archivos Excel (.xlsx o .xls)', 'error');
+                    return;
+                }
+
+                if (!validTypes.includes(file.type) && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                    this.showNotify('Tipo de archivo inválido. Por favor, selecciona un archivo Excel', 'error');
+                    return;
+                }
+
+                this.importFile = file;
+                this.importError = null;
+            },
+
+            async importUsersFromFile() {
+                if (!this.importFile) {
+                    this.showNotify('Por favor selecciona un archivo', 'error');
+                    return;
+                }
+
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return;
+                }
+
+                this.isImporting = true;
+                this.importError = null;
+                this.importResult = null;
+
+                try {
+                    // Crear FormData para enviar el archivo
+                    const formData = new FormData();
+                    formData.append('file', this.importFile);
+
+                    // Realizar la solicitud
+                    const response = await fetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/import-users`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'import.users'
+                            },
+                            body: formData
+                        }
+                    );
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        this.importResult = result.data?.summary || result.data;
+                        this.showNotify('✓ Usuarios importados correctamente', 'success');
+                        
+                        // Recargar usuarios después de la importación
+                        setTimeout(() => {
+                            this.loadUsers();
+                        }, 1000);
+
+                        // Cerrar modal después de 2 segundos si la importación fue exitosa
+                        setTimeout(() => {
+                            this.closeImportModal();
+                        }, 3000);
+                    } else {
+                        // Error en la validación
+                        const errorMsg = result.message || 'Error en la importación';
+                        this.importError = {
+                            message: errorMsg,
+                            errors: result.errors || null,
+                            hasDetails: !!result.errors
+                        };
+                        this.showNotify(`Error: ${errorMsg}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Error al importar usuarios:', error);
+                    this.importError = {
+                        message: error.message,
+                        hasDetails: false
+                    };
+                    this.showNotify(`Error: ${error.message}`, 'error');
+                } finally {
+                    this.isImporting = false;
                 }
             },
 
