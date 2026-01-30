@@ -3921,7 +3921,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }, 3000);
                     } else {
                         // Error en la validación
-                        console.error('❌ Error response:', {status: response.status, result});
+                        console.error('❌ Error response:', {
+                            status: response.status, 
+                            result: JSON.stringify(result, null, 2)
+                        });
+                        console.log('Full error object:', result);
                         const errorMsg = result.message || 'Error en la importación';
                         this.importError = {
                             message: errorMsg,
