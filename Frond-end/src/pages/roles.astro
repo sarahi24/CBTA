@@ -3491,6 +3491,180 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
             },
 
+            /**
+             * Actualizar permisos de un usuario individual por userId
+             * @param {number} userId - ID del usuario
+             * @param {string[]} permissionsToAdd - Array de permisos a agregar
+             * @param {string[]} permissionsToRemove - Array de permisos a eliminar
+             */
+            async updateUserPermissions(userId, permissionsToAdd = [], permissionsToRemove = []) {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return { success: false, message: 'No autenticado' };
+                }
+
+                if (!userId) {
+                    this.showNotify('ID de usuario requerido', 'error');
+                    return { success: false, message: 'ID de usuario requerido' };
+                }
+
+                if (permissionsToAdd.length === 0 && permissionsToRemove.length === 0) {
+                    this.showNotify('Selecciona al menos un permiso para agregar o eliminar', 'error');
+                    return { success: false, message: 'Sin cambios de permisos' };
+                }
+
+                try {
+                    this.isSaving = true;
+
+                    const payload = {
+                        permissionsToAdd: permissionsToAdd,
+                        permissionsToRemove: permissionsToRemove
+                    };
+
+                    console.log(`📤 updateUserPermissions - Enviando para userId ${userId}:`, payload);
+
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/update-permissions/${userId}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'sync.permissions'
+                            },
+                            body: JSON.stringify(payload)
+                        }
+                    );
+
+                    const result = await response.json();
+                    console.log('📥 updateUserPermissions - Respuesta:', result);
+
+                    if (response.ok && result.success) {
+                        const updatedUser = result.data?.updated?.[0];
+                        const addedCount = updatedUser?.permissions?.added?.length || 0;
+                        const removedCount = updatedUser?.permissions?.removed?.length || 0;
+                        
+                        this.showNotify(
+                            `✅ Permisos actualizados: ${addedCount} agregados, ${removedCount} eliminados`,
+                            'success'
+                        );
+                        
+                        // Recargar usuarios para reflejar los cambios
+                        await this.loadUsers(token);
+                        
+                        return { success: true, data: result.data };
+                    } else {
+                        console.error('❌ Error en respuesta:', result);
+                        
+                        let errorMsg = result.message || 'Error al actualizar permisos';
+                        
+                        // Mostrar errores de validación si existen
+                        if (result.errors) {
+                            const errorDetails = Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                .join('\n');
+                            errorMsg = errorDetails || errorMsg;
+                        }
+                        
+                        this.showNotify(`❌ ${errorMsg}`, 'error');
+                        return { success: false, message: errorMsg, errors: result.errors };
+                    }
+                } catch (error) {
+                    console.error('❌ Error al actualizar permisos del usuario:', error);
+                    this.showNotify(`Error: ${error.message}`, 'error');
+                    return { success: false, message: error.message };
+                } finally {
+                    this.isSaving = false;
+                }
+            },
+
+            /**
+             * Actualizar roles de un usuario individual por userId
+             * @param {number} userId - ID del usuario
+             * @param {string[]} rolesToAdd - Array de roles a agregar
+             * @param {string[]} rolesToRemove - Array de roles a eliminar
+             */
+            async updateUserRoles(userId, rolesToAdd = [], rolesToRemove = []) {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return { success: false, message: 'No autenticado' };
+                }
+
+                if (!userId) {
+                    this.showNotify('ID de usuario requerido', 'error');
+                    return { success: false, message: 'ID de usuario requerido' };
+                }
+
+                if (rolesToAdd.length === 0 && rolesToRemove.length === 0) {
+                    this.showNotify('Selecciona al menos un rol para agregar o eliminar', 'error');
+                    return { success: false, message: 'Sin cambios de roles' };
+                }
+
+                try {
+                    this.isSaving = true;
+
+                    const payload = {
+                        rolesToAdd: rolesToAdd,
+                        rolesToRemove: rolesToRemove
+                    };
+
+                    console.log(`📤 updateUserRoles - Enviando para userId ${userId}:`, payload);
+
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/updated-roles/${userId}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'sync.roles'
+                            },
+                            body: JSON.stringify(payload)
+                        }
+                    );
+
+                    const result = await response.json();
+                    console.log('📥 updateUserRoles - Respuesta:', result);
+
+                    if (response.ok && result.success) {
+                        const updatedUser = result.data?.updated;
+                        const addedCount = updatedUser?.roles?.added?.length || 0;
+                        const removedCount = updatedUser?.roles?.removed?.length || 0;
+                        
+                        this.showNotify(
+                            `✅ Roles actualizados: ${addedCount} agregados, ${removedCount} eliminados`,
+                            'success'
+                        );
+                        
+                        // Recargar usuarios para reflejar los cambios
+                        await this.loadUsers(token);
+                        
+                        return { success: true, data: result.data };
+                    } else {
+                        console.error('❌ Error en respuesta:', result);
+                        
+                        let errorMsg = result.message || 'Error al actualizar roles';
+                        
+                        // Mostrar errores de validación si existen
+                        if (result.errors) {
+                            const errorDetails = Object.entries(result.errors)
+                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                                .join('\n');
+                            errorMsg = errorDetails || errorMsg;
+                        }
+                        
+                        this.showNotify(`❌ ${errorMsg}`, 'error');
+                        return { success: false, message: errorMsg, errors: result.errors };
+                    }
+                } catch (error) {
+                    console.error('❌ Error al actualizar roles del usuario:', error);
+                    this.showNotify(`Error: ${error.message}`, 'error');
+                    return { success: false, message: error.message };
+                } finally {
+                    this.isSaving = false;
+                }
+            },
+
             async promoteStudents() {
                 const token = localStorage.getItem('access_token');
                 if (!token) {
