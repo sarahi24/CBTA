@@ -3884,6 +3884,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const formData = new FormData();
                     formData.append('file', this.importFile);
 
+                    console.log('📥 Importando archivo:', {
+                        fileName: this.importFile.name,
+                        fileSize: this.importFile.size,
+                        fileType: this.importFile.type
+                    });
+
                     // Realizar la solicitud
                     const response = await fetch(
                         `${this.apiBaseUrl}/v1/admin-actions/import-users`,
@@ -3915,6 +3921,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }, 3000);
                     } else {
                         // Error en la validación
+                        console.error('❌ Error response:', {status: response.status, result});
                         const errorMsg = result.message || 'Error en la importación';
                         this.importError = {
                             message: errorMsg,
