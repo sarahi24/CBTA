@@ -1418,12 +1418,45 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 console.log('🔍 roles extraídos:', roles);
                 
-                const roleValue = raw.role || raw.role_name || (Array.isArray(raw.roles) ? raw.roles[0] : (raw.roles?.[0]?.name || raw.roles?.[0])) || '';
-                const roleKey = roleValue.toString().toLowerCase();
+                // Crear etiquetas para todos los roles del usuario
+                const rolesTranslation = {
+                    'admin': 'Administrador',
+                    'administrador': 'Administrador',
+                    'caja': 'Caja',
+                    'financial-staff': 'Caja',
+                    'financial staff': 'Caja',
+                    'maestro': 'Maestro',
+                    'teacher': 'Maestro',
+                    'docente': 'Maestro',
+                    'student': 'Estudiante',
+                    'estudiante': 'Estudiante',
+                    'parent': 'Padre/Tutor',
+                    'padre': 'Padre/Tutor',
+                    'supervisor': 'Supervisor',
+                    'unverified': 'Sin Verificar',
+                    'applicant': 'Solicitante'
+                };
+                
                 let roleLabel = 'Sin rol';
-                if (roleKey === 'admin' || roleKey === 'administrador') roleLabel = 'Administrador';
-                else if (roleKey === 'caja' || roleKey === 'financial-staff' || roleKey === 'financial staff') roleLabel = 'Caja';
-                else if (roleKey === 'maestro' || roleKey === 'teacher' || roleKey === 'docente') roleLabel = 'Maestro';
+                let roleKey = '';
+                
+                if (roles.length > 0) {
+                    // Traducir todos los roles al español
+                    const translatedRoles = roles.map(r => {
+                        const key = r.toString().toLowerCase();
+                        return rolesTranslation[key] || r;
+                    });
+                    
+                    roleLabel = translatedRoles.join(', ');
+                    roleKey = roles[0].toString().toLowerCase();
+                } else {
+                    // Intentar con campos individuales si no hay array de roles
+                    const roleValue = raw.role || raw.role_name || '';
+                    if (roleValue) {
+                        roleKey = roleValue.toString().toLowerCase();
+                        roleLabel = rolesTranslation[roleKey] || roleValue;
+                    }
+                }
 
                 const statusKey = (raw.status || '').toString().toLowerCase();
                 let status = 'inactivo';
