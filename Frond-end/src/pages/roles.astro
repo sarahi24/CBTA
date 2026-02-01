@@ -3531,11 +3531,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('📥 updateRoles - Respuesta:', result);
 
                     if (response.ok && result.success) {
-                        const metadata = result.data?.users_roles?.metadata;
-                        this.showNotify(
-                            `✅ Roles actualizados: ${metadata?.totalUpdated || 0} usuarios afectados`,
-                            'success'
-                        );
+                        const summary = result.data?.users_roles?.summary;
+                        const totalUpdated = summary?.totalUpdated || 0;
+                        const totalFailed = summary?.totalFailed || 0;
+                        
+                        let message = `✅ Roles actualizados: ${totalUpdated} usuario(s) afectado(s)`;
+                        if (totalFailed > 0) {
+                            message += ` (${totalFailed} fallido(s))`;
+                        }
+                        
+                        this.showNotify(message, totalFailed > 0 ? 'warning' : 'success');
                         this.showRolesModal = false;
                         this.selectedUsers = [];
                         await this.loadUsers(token);
@@ -3765,11 +3770,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('📥 Status:', response.status);
 
                     if (response.ok && result.success) {
-                        const metadata = result.data?.users_permissions?.[0]?.metadata;
-                        this.showNotify(
-                            `✅ Permisos actualizados: ${metadata?.totalUpdated || 0} usuarios afectados`,
-                            'success'
-                        );
+                        const summary = result.data?.users_permissions?.[0]?.summary;
+                        const totalUpdated = summary?.totalUpdated || 0;
+                        const totalFailed = summary?.totalFailed || 0;
+                        
+                        let message = `✅ Permisos actualizados: ${totalUpdated} usuario(s) afectado(s)`;
+                        if (totalFailed > 0) {
+                            message += ` (${totalFailed} fallido(s))`;
+                        }
+                        
+                        this.showNotify(message, totalFailed > 0 ? 'warning' : 'success');
                         this.showPermissionsModal = false;
                         this.selectedUsers = [];
                         await this.loadUsers(token);
