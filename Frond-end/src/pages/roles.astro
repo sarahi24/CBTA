@@ -3561,45 +3561,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 try {
-                    // Determinar endpoint y payload correctos para permisos
-                    const selectedCurps = this.users
-                        .filter(u => this.selectedUsers.includes(u.id))
-                        .map(u => u.curp)
-                        .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
-
-                    let endpoint = '';
-                    let payload = null;
-
-                    if (selectedCurps.length > 0) {
-                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-curps`;
-                        payload = { curps: selectedCurps };
-                    } else if (this.permissionTargetRole) {
-                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-role`;
-                        payload = { role: this.permissionTargetRole };
-                    } else {
-                        this.showNotify('Los usuarios seleccionados no tienen CURP válido (18 caracteres)', 'error');
-                        return;
-                    }
-
+                    // Cargar todos los permisos disponibles del sistema
                     const response = await this.authenticatedFetch(
-                        endpoint,
+                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
                         {
-                            method: 'POST',
                             headers: {
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.permissions'
-                            },
-                            body: JSON.stringify(payload)
+                            }
                         }
                     );
 
                     const result = await response.json();
+                    console.log('📦 Permisos disponibles:', result);
+                    
                     if (response.ok && result.success) {
-                        const permissions =
-                            result.data?.permissions?.permissions ||
-                            result.data?.permissions?.items ||
-                            result.data?.permissions ||
-                            [];
+                        const permissions = result.data?.permissions || [];
                         
                         // Traducir nombres de permisos al español
                         const permissionsTranslation = {
@@ -3617,7 +3594,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             'update.student': 'Actualizar Estudiante',
                             'view.student': 'Ver Estudiante',
                             'import.users': 'Importar Usuarios',
-                            'promote.student': 'Promover Estudiante'
+                            'promote.student': 'Promover Estudiante',
+                            'sync.permissions': 'Sincronizar Permisos',
+                            'sync.roles': 'Sincronizar Roles',
+                            'finalize.concepts': 'Finalizar Conceptos',
+                            'disable.concepts': 'Deshabilitar Conceptos',
+                            'activate.concepts': 'Activar Conceptos',
+                            'eliminate.concepts': 'Eliminar Conceptos',
+                            'eliminate.logical.concepts': 'Eliminar Lógicamente Conceptos'
                         };
                         
                         this.availablePermissions = permissions.map(perm => ({
@@ -3625,6 +3609,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             name: perm.name,
                             displayName: permissionsTranslation[perm.name] || perm.name
                         }));
+                        
+                        console.log('✅ Permisos cargados:', this.availablePermissions.length);
                         
                         this.permissionsToAdd = [];
                         this.permissionsToRemove = [];
