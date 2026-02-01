@@ -3690,16 +3690,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     addArray = addArray.filter(p => p != null).map(p => typeof p === 'string' ? p : (p.name || String(p)));
                     removeArray = removeArray.filter(p => p != null).map(p => typeof p === 'string' ? p : (p.name || String(p)));
 
-                    // Asignar al payload con nombres en snake_case que el backend espera
-                    payload.permissions_to_add = addArray;
-                    payload.permissions_to_remove = removeArray;
+                    // Asignar al payload con nombres en camelCase que el backend espera
+                    payload.permissionsToAdd = addArray;
+                    payload.permissionsToRemove = removeArray;
 
                     console.log('📤 updatePermissions - Enviando:');
                     console.log('  Payload completo:', JSON.stringify(payload, null, 2));
                     console.log('  this.permissionsToAdd:', this.permissionsToAdd);
                     console.log('  this.permissionsToRemove:', this.permissionsToRemove);
-                    console.log('  permissions_to_add (final):', payload.permissions_to_add);
-                    console.log('  permissions_to_remove (final):', payload.permissions_to_remove);
+                    console.log('  permissionsToAdd (final):', payload.permissionsToAdd);
+                    console.log('  permissionsToRemove (final):', payload.permissionsToRemove);
                     console.log('  Tipos en Add:', payload.permissions_to_add.map(p => typeof p));
                     console.log('  Tipos en Remove:', payload.permissions_to_remove.map(p => typeof p));
                     console.log('  Keys en payload:', Object.keys(payload));
