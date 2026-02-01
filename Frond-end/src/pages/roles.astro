@@ -3511,6 +3511,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('  Roles para agregar:', this.rolesToAdd);
                     console.log('  Roles para eliminar:', this.rolesToRemove);
 
+                    // Asegurar que siempre sean arrays
+                    const rolesToAdd = Array.isArray(this.rolesToAdd) ? this.rolesToAdd : [];
+                    const rolesToRemove = Array.isArray(this.rolesToRemove) ? this.rolesToRemove : [];
+
+                    const payload = {
+                        curps,
+                        rolesToAdd,
+                        rolesToRemove
+                    };
+
+                    console.log('📦 Payload completo:', JSON.stringify(payload, null, 2));
+
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/updated-roles`,
                         {
@@ -3519,11 +3531,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'sync.roles'
                             },
-                            body: JSON.stringify({
-                                curps,
-                                rolesToAdd: this.rolesToAdd,
-                                rolesToRemove: this.rolesToRemove
-                            })
+                            body: JSON.stringify(payload)
                         }
                     );
 
