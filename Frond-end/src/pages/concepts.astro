@@ -87,7 +87,7 @@ async function loadConcepts(){
   try {
     const data = await apiFetch(`${API_BASE}/v1/concepts?perPage=50`, {
       headers: {
-        'X-User-Role': 'admin',
+        'X-User-Role': 'admin|financial-staff',
         'X-User-Permission': 'view.concepts'
       }
     });
@@ -197,7 +197,7 @@ async function mutateConcept(id, action){
   await apiFetch(endpoints[action], {
     method,
     headers: {
-      'X-User-Role': 'admin',
+      'X-User-Role': 'admin|financial-staff',
       'X-User-Permission': perms[action]
     }
   });

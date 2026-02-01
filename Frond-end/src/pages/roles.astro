@@ -3560,8 +3560,35 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return;
                 }
 
+                // Traducir nombres de permisos al español
+                const permissionsTranslation = {
+                    'view.students': 'Ver Estudiantes',
+                    'create.user': 'Crear Usuario',
+                    'update.users': 'Actualizar Usuarios',
+                    'delete.users': 'Eliminar Usuarios',
+                    'view.concepts': 'Ver Conceptos',
+                    'create.concepts': 'Crear Conceptos',
+                    'update.concepts': 'Actualizar Conceptos',
+                    'view.payments': 'Ver Pagos',
+                    'view.roles': 'Ver Roles',
+                    'view.permissions': 'Ver Permisos',
+                    'attach.student': 'Asociar Estudiante',
+                    'update.student': 'Actualizar Estudiante',
+                    'view.student': 'Ver Estudiante',
+                    'import.users': 'Importar Usuarios',
+                    'promote.student': 'Promover Estudiante',
+                    'sync.permissions': 'Sincronizar Permisos',
+                    'sync.roles': 'Sincronizar Roles',
+                    'finalize.concepts': 'Finalizar Conceptos',
+                    'disable.concepts': 'Deshabilitar Conceptos',
+                    'activate.concepts': 'Activar Conceptos',
+                    'eliminate.concepts': 'Eliminar Conceptos',
+                    'eliminate.logical.concepts': 'Eliminar Lógicamente Conceptos'
+                };
+
                 try {
-                    // Cargar todos los permisos disponibles del sistema
+                    // Intentar cargar permisos desde el endpoint
+                    console.log('🔍 Intentando cargar permisos desde API...');
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
                         {
@@ -3573,36 +3600,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     );
 
                     const result = await response.json();
-                    console.log('📦 Permisos disponibles:', result);
+                    console.log('📦 Respuesta completa del servidor:', JSON.stringify(result, null, 2));
                     
                     if (response.ok && result.success) {
-                        const permissions = result.data?.permissions || [];
+                        let permissions = result.data?.permissions || [];
+                        console.log('✅ Permisos recibidos del servidor:', permissions);
                         
-                        // Traducir nombres de permisos al español
-                        const permissionsTranslation = {
-                            'view.students': 'Ver Estudiantes',
-                            'create.user': 'Crear Usuario',
-                            'update.users': 'Actualizar Usuarios',
-                            'delete.users': 'Eliminar Usuarios',
-                            'view.concepts': 'Ver Conceptos',
-                            'create.concepts': 'Crear Conceptos',
-                            'update.concepts': 'Actualizar Conceptos',
-                            'view.payments': 'Ver Pagos',
-                            'view.roles': 'Ver Roles',
-                            'view.permissions': 'Ver Permisos',
-                            'attach.student': 'Asociar Estudiante',
-                            'update.student': 'Actualizar Estudiante',
-                            'view.student': 'Ver Estudiante',
-                            'import.users': 'Importar Usuarios',
-                            'promote.student': 'Promover Estudiante',
-                            'sync.permissions': 'Sincronizar Permisos',
-                            'sync.roles': 'Sincronizar Roles',
-                            'finalize.concepts': 'Finalizar Conceptos',
-                            'disable.concepts': 'Deshabilitar Conceptos',
-                            'activate.concepts': 'Activar Conceptos',
-                            'eliminate.concepts': 'Eliminar Conceptos',
-                            'eliminate.logical.concepts': 'Eliminar Lógicamente Conceptos'
-                        };
+                        // Si no hay permisos desde el API, usar lista predefinida
+                        if (!permissions.length) {
+                            console.warn('⚠️ No se recibieron permisos del servidor, usando lista predefinida');
+                            permissions = Object.keys(permissionsTranslation).map((key, idx) => ({
+                                id: idx + 1,
+                                name: key
+                            }));
+                        }
                         
                         this.availablePermissions = permissions.map(perm => ({
                             id: perm.id,
@@ -3610,18 +3621,30 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             displayName: permissionsTranslation[perm.name] || perm.name
                         }));
                         
-                        console.log('✅ Permisos cargados:', this.availablePermissions.length);
+                        console.log('✅ Permisos mapeados:', this.availablePermissions);
                         
                         this.permissionsToAdd = [];
                         this.permissionsToRemove = [];
                         this.showPermissionsModal = true;
                     } else {
-                        console.error('Error response:', result);
-                        this.showNotify('Error al cargar permisos: ' + (result.message || 'Error desconocido'), 'error');
+                        throw new Error(result.message || 'Error al cargar permisos');
                     }
                 } catch (error) {
-                    console.error('❌ Error al cargar permisos:', error);
-                    this.showNotify('Error al cargar permisos', 'error');
+                    console.error('❌ Error al cargar permisos desde API:', error);
+                    console.log('💡 Usando lista de permisos predefinida...');
+                    
+                    // Usar lista predefinida de permisos si falla la API
+                    this.availablePermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
+                        id: idx + 1,
+                        name: key,
+                        displayName: permissionsTranslation[key]
+                    }));
+                    
+                    console.log('✅ Permisos predefinidos cargados:', this.availablePermissions.length);
+                    
+                    this.permissionsToAdd = [];
+                    this.permissionsToRemove = [];
+                    this.showPermissionsModal = true;
                 }
             },
 
