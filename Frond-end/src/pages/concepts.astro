@@ -40,9 +40,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
   </div>
 
-<script type="module" client:load>
+<script type="module">
 const PRIMARY_TEXT_COLOR_HEX = '#2E584C';
-const API_BASE = API_BASE_URL;
+const API_BASE = 'https://nginx-production-728f.up.railway.app/api';
 
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m]));
