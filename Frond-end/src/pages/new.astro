@@ -90,7 +90,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             title: '',
             amount: 0,
             description: '',
-          status: 'activo',
+          status: 'active',
             startDate: '',
             endDate: '',
             
@@ -238,6 +238,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             applicantTags: []
           };
 
+          console.log('Sending payload:', payload);
+
           const token = localStorage.getItem('access_token');
           if (!token) {
             this.errorMessage = '❌ No hay token, inicia sesión.';
@@ -262,13 +264,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           })
           .then(async (res) => {
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.message || 'Error al guardar');
+            if (!res.ok) {
+              console.error('Backend error:', data);
+              const errorMsg = data.message || data.error || JSON.stringify(data.errors || data) || 'Error al guardar';
+              throw new Error(errorMsg);
+            }
             localStorage.removeItem('editingConcept');
             this.errorMessage = '✓ Concepto guardado en el servidor. Redirigiendo...';
             setTimeout(() => { window.location.href = '/concepts'; }, 1200);
           })
           .catch(err => {
-            console.error(err);
+            console.error('Full error:', err);
             this.errorMessage = `❌ ${err.message}`;
           })
           .finally(() => { this.isSaving = false; });
