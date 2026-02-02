@@ -52,7 +52,7 @@ const title = "Mis Métodos de Pago";
           },
 
         async cargarTarjetas(forceRefresh = false) {
-          if (!this.token) {
+          if (!this.token || !this.userId) {
             this.error = 'Por favor inicia sesión';
             return;
           }
@@ -61,7 +61,7 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
+            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
             if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
             const response = await fetch(url.toString(), {
@@ -70,7 +70,8 @@ const title = "Mis Métodos de Pago";
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-User-Role': 'student'
+                'X-User-Role': 'student',
+                'X-User-Permission': 'delete.card'
               }
             });
 
@@ -164,7 +165,8 @@ const title = "Mis Métodos de Pago";
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-User-Role': 'student'
+                'X-User-Role': 'student',
+                'X-User-Permission': 'create.setup'
               },
               body: JSON.stringify({
                 number: numLimpio,
@@ -215,7 +217,8 @@ const title = "Mis Métodos de Pago";
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-User-Role': 'student',
-                'X-User-Permission': 'vi
+                'X-User-Permission': 'view.cards'
+              }
             });
 
             if (!response.ok) {
