@@ -10,166 +10,234 @@ const title = "Mis Métodos de Pago";
 <StudentLayout title={title}>
   <div 
     class="page-wrapper"
-    x-data={`{ 
-      showModal: false,
-      alumno: 'Usuario',
-      tarjetas: [],
-      form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
+    x-data="window.__tarjetasData || {}"
+  >
+    <script is:inline>
+      window.__tarjetasData = {
+        showModal: false,
+        alumno: 'Usuario',
+        tarjetas: [],
+        isLoading: false,
+        error: '',
+        success: '',
+        form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
+        token: null,
+        userId: null,
 
-      // 1. Cargar tarjetas al iniciar
-      async init() {
-        // Obtener datos del usuario desde localStorage de forma más robusta
-        const userName = localStorage.getItem('userName');
-        const userDataStr = localStorage.getItem('userData');
-        
-        if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-          this.alumno = userName;
-        } else if (userDataStr) {
-          try {
-            const userData = JSON.parse(userDataStr);
-            this.alumno = userData.fullName || userData.name || 'Usuario';
-          } catch (e) {
-            this.alumno = 'Usuario';
+        async init() {
+          const userName = localStorage.getItem('userName');
+          const userDataStr = localStorage.getItem('user_data');
+          this.token = localStorage.getItem('access_token');
+          this.userId = localStorage.getItem('userId');
+          
+          if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+            this.alumno = userName;
+          } else if (userDataStr) {
+            try {
+              const userData = JSON.parse(userDataStr);
+              this.alumno = userData.fullName || userData.name || 'Usuario';
+            } catch (e) {
+              this.alumno = 'Usuario';
+            }
           }
-        } else {
-          this.alumno = 'Usuario';
-        }
-        
-        const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
-        
-        console.log('🔍 [Tarjetas] Nombre cargado:', this.alumno);
-        console.log('🔍 [Tarjetas] Token disponible:', !!token);
-        console.log('🔍 [Tarjetas] UserId:', userId);
-        
-        // Cargar tarjetas desde API
-        if (token && userId) {
+          
+          console.log('🔍 [Tarjetas] Nombre:', this.alumno);
+          console.log('🔍 [Tarjetas] Token:', !!this.token);
+          console.log('🔍 [Tarjetas] UserId:', this.userId);
+          
+          await this.cargarTarjetas();
+        },
+
+        async cargarTarjetas(forceRefresh = false) {
+          if (!this.token || !this.userId) {
+            this.error = 'Por favor inicia sesión';
+            return;
+          }
+
+          this.isLoading = true;
+          this.error = '';
+
           try {
-            const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + userId, {
+            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
+            if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+            const response = await fetch(url.toString(), {
+              method: 'GET',
               headers: {
-                'Authorization': 'Bearer ' + token,
+                'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-User-Role': 'student',
+                'X-User-Permission': 'delete.card'
               }
             });
-            
-            if (response.ok) {
-              const cardsData = await response.json();
-              this.tarjetas = Array.isArray(cardsData) ? cardsData.map(card => ({
-                id: card.id,
-                tipo: card.brand || 'Tarjeta',
-                terminacion: card.last4 || card.terminacion || '****',
-                vencimiento: card.exp_month && card.exp_year ? (String(card.exp_month).padStart(2, '0') + '/' + String(card.exp_year).slice(-2)) : card.vencimiento || 'N/A',
-                logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
-              })) : [];
-              this.actualizarStorage();
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.message || 'Error al cargar tarjetas');
             }
-          } catch (err) {
-            console.error('Error al cargar tarjetas:', err);
-          }
-        }
-        
-        // Si no hay tarjetas de API, cargar desde localStorage
-        if (this.tarjetas.length === 0) {
-          const guardadas = localStorage.getItem('mis_tarjetas');
-          if (guardadas) {
-            this.tarjetas = JSON.parse(guardadas);
-          }
-        }
-      },
 
-      actualizarStorage() {
-        localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
-      },
-
-      formatCardNumber(value) {
-        return value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim();
-      },
-
-      get cardType() {
-        const num = this.form.numero.replace(/\\s/g, '');
-        if (num.startsWith('4')) return 'Visa';
-        if (num.startsWith('5')) return 'Mastercard';
-        return '';
-      },
-
-      guardarTarjeta() {
-        const numLimpio = this.form.numero.replace(/\\s/g, '');
-        if (numLimpio.length < 15) return alert('Número de tarjeta no válido');
-        
-        const token = localStorage.getItem('token');
-        const cardPayload = {
-          number: numLimpio,
-          holder_name: this.form.titular,
-          exp_month: parseInt(this.form.mes),
-          exp_year: parseInt('20' + this.form.anio),
-          cvv: this.form.cvv
-        };
-
-        fetch('https://nginx-production-728f.up.railway.app/api/v1/cards', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(cardPayload)
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.id) {
-            // Card saved successfully, add to local list
-            const nueva = {
-              id: data.id,
-              tipo: this.cardType || 'Tarjeta',
-              terminacion: numLimpio.slice(-4),
-              vencimiento: this.form.mes + '/' + this.form.anio,
-              logo: this.cardType === 'Visa' 
-                ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' 
-                : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
-            };
+            const data = await response.json();
+            const cardsArray = data.data?.cards || data.cards || [];
             
-            this.tarjetas.push(nueva);
-            this.actualizarStorage();
-            this.showModal = false;
+            this.tarjetas = cardsArray.map(card => ({
+              id: card.id,
+              tipo: card.brand || 'Tarjeta',
+              masked_card: card.masked_card || ('**** **** **** ' + (card.last4 || '****')),
+              vencimiento: card.expiration_date || (card.exp_month + '/' + card.exp_year),
+              status: card.status || 'active',
+              logo: this.getCardLogo(card.brand)
+            }));
+
+            localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
+          } catch (err) {
+            console.error('❌ Error al cargar tarjetas:', err);
+            this.error = err.message || 'Error al cargar tarjetas';
+            
+            // Fallback a localStorage
+            const guardadas = localStorage.getItem('mis_tarjetas');
+            if (guardadas) {
+              try {
+                this.tarjetas = JSON.parse(guardadas);
+              } catch (e) {}
+            }
+          } finally {
+            this.isLoading = false;
+          }
+        },
+
+        getCardLogo(brand) {
+          const brandLower = (brand || '').toLowerCase();
+          if (brandLower === 'visa') {
+            return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
+          } else if (brandLower === 'mastercard') {
+            return 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
+          }
+          return 'https://via.placeholder.com/50?text=Card';
+        },
+
+        formatCardNumber(value) {
+          return value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+        },
+
+        get cardType() {
+          const num = this.form.numero.replace(/\\s/g, '');
+          if (num.startsWith('4')) return 'Visa';
+          if (num.startsWith('5')) return 'Mastercard';
+          if (num.startsWith('3')) return 'Amex';
+          return '';
+        },
+
+        async agregarNuevaTarjeta() {
+          this.error = '';
+          this.success = '';
+
+          const numLimpio = this.form.numero.replace(/\\s/g, '');
+          if (numLimpio.length < 13) {
+            this.error = '❌ Número de tarjeta no válido';
+            return;
+          }
+
+          if (!this.form.titular) {
+            this.error = '❌ Por favor, ingresa el titular';
+            return;
+          }
+
+          if (!this.form.mes || !this.form.anio) {
+            this.error = '❌ Por favor, ingresa fecha de vencimiento';
+            return;
+          }
+
+          if (this.form.cvv.length < 3) {
+            this.error = '❌ CVV no válido';
+            return;
+          }
+
+          this.isLoading = true;
+
+          try {
+            const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ' + this.token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-User-Role': 'student',
+                'X-User-Permission': 'create.setup'
+              },
+              body: JSON.stringify({
+                number: numLimpio,
+                holder_name: this.form.titular,
+                exp_month: parseInt(this.form.mes),
+                exp_year: parseInt('20' + this.form.anio),
+                cvv: this.form.cvv
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.message || 'Error al registrar tarjeta');
+            }
+
+            const data = await response.json();
+
+            // Si hay checkout_url, redirigir a Stripe
+            if (data.data?.checkout_url) {
+              window.location.href = data.data.checkout_url;
+              return;
+            }
+
+            this.success = '✅ Tarjeta registrada exitosamente';
             this.form = { numero: '', titular: '', mes: '', anio: '', cvv: '' };
-          } else {
-            alert('Error al guardar la tarjeta. Intenta de nuevo.');
+            this.showModal = false;
+            
+            setTimeout(() => this.cargarTarjetas(true), 1000);
+          } catch (err) {
+            console.error('❌ Error:', err);
+            this.error = err.message || 'Error al registrar tarjeta';
+          } finally {
+            this.isLoading = false;
           }
-        })
-        .catch(err => {
-          console.error('Error saving card:', err);
-          alert('Error al conectar con el servidor');
-        });
-      },
+        },
 
-      eliminarTarjeta(id) {
-        const token = localStorage.getItem('token');
-        if (!confirm('¿Estás seguro de que deseas eliminar esta tarjeta?')) return;
+        async eliminarTarjeta(paymentMethodId) {
+          if (!confirm('¿Estás seguro de que deseas eliminar esta tarjeta?')) return;
 
-        fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + id, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+          this.isLoading = true;
+          this.error = '';
+
+          try {
+            const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + paymentMethodId, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': 'Bearer ' + this.token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-User-Role': 'student',
+                'X-User-Permission': 'view.cards'
+              }
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.message || 'Error al eliminar tarjeta');
+            }
+
+            this.success = '✅ Tarjeta eliminada correctamente';
+            this.tarjetas = this.tarjetas.filter(t => t.id !== paymentMethodId);
+            localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
+            
+            setTimeout(() => this.success = '', 3000);
+          } catch (err) {
+            console.error('❌ Error:', err);
+            this.error = err.message || 'Error al eliminar tarjeta';
+            setTimeout(() => this.error = '', 3000);
+          } finally {
+            this.isLoading = false;
           }
-        })
-        .then(res => {
-          if (res.ok) {
-            this.tarjetas = this.tarjetas.filter(t => t.id !== id);
-            this.actualizarStorage();
-          } else {
-            alert('Error al eliminar la tarjeta');
-          }
-        })
-        .catch(err => {
-          console.error('Error deleting card:', err);
-          alert('Error al conectar con el servidor');
-        });
-      }
-    }`}
-  >
+        }
+      };
+    </script>
     <header class="main-header">
       <div class="header-content">
         <div class="user-profile">
@@ -231,7 +299,7 @@ const title = "Mis Métodos de Pago";
                    <img :src="tarjeta.logo" alt="logo" class="bank-logo">
                 </div>
                 <div class="details">
-                  <h3 x-text="'•••• ' + tarjeta.terminacion"></h3>
+                  <h3 x-text="'•••• ' + tarjeta.masked_card.slice(-4)"></h3>
                   <p class="date">
                     <span x-text="tarjeta.tipo"></span> | Exp: <span x-text="tarjeta.vencimiento"></span>
                   </p>
@@ -261,6 +329,8 @@ const title = "Mis Métodos de Pago";
             <h2 class="grand-total">Nueva Tarjeta</h2>
             <p class="subtitle">Ingresa los datos de tu método de pago</p>
           </div>
+          <div x-show="error" class="alert alert-error" x-text="error" x-cloak></div>
+          <div x-show="success" class="alert alert-success" x-text="success" x-cloak></div>
           <div class="card-form-grid">
             <div class="input-field">
               <label for="card-numero">Número de Tarjeta</label>
@@ -288,7 +358,9 @@ const title = "Mis Métodos de Pago";
               </div>
             </div>
             <div class="button-group">
-                <button @click="guardarTarjeta()" class="btn-primary-action">VINCULAR TARJETA</button>
+                <button @click="agregarNuevaTarjeta()" :disabled="isLoading" class="btn-primary-action">
+                  <span x-text="isLoading ? 'Procesando...' : 'VINCULAR TARJETA'"></span>
+                </button>
                 <button @click="showModal = false" class="btn-secondary-action">Cancelar</button>
             </div>
           </div>
@@ -388,6 +460,9 @@ const title = "Mis Métodos de Pago";
   .button-group { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; }
   .btn-primary-action { background: var(--primary); color: white; padding: 1.1rem; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; }
   .btn-secondary-action { background: transparent; color: var(--text-muted); border: none; font-weight: 700; cursor: pointer; text-decoration: underline; font-size: 0.9rem; }
+  .alert { padding: 1rem; border-radius: 12px; margin-bottom: 1rem; font-weight: 600; font-size: 0.9rem; }
+  .alert-error { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .alert-success { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
 
   @media (max-width: 768px) {
     .page-wrapper { padding: 1rem 0.5rem; }
