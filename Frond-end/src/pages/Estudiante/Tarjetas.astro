@@ -49,7 +49,7 @@ const title = "Mis Métodos de Pago";
         },
 
         async cargarTarjetas(forceRefresh = false) {
-          if (!this.token || !this.userId) {
+          if (!this.token) {
             this.error = 'Por favor inicia sesión';
             return;
           }
@@ -58,7 +58,7 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
+            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
             if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
             const response = await fetch(url.toString(), {
@@ -67,8 +67,7 @@ const title = "Mis Métodos de Pago";
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-User-Role': 'student',
-                'X-User-Permission': 'delete.card'
+                'X-User-Role': 'student'
               }
             });
 
@@ -78,7 +77,7 @@ const title = "Mis Métodos de Pago";
             }
 
             const data = await response.json();
-            const cardsArray = data.data?.cards || data.cards || [];
+            const cardsArray = data.data?.cards || data.cards || data.data || [];
             
             this.tarjetas = cardsArray.map(card => ({
               id: card.id,
@@ -162,8 +161,7 @@ const title = "Mis Métodos de Pago";
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-User-Role': 'student',
-                'X-User-Permission': 'create.setup'
+                'X-User-Role': 'student'
               },
               body: JSON.stringify({
                 number: numLimpio,
@@ -214,8 +212,7 @@ const title = "Mis Métodos de Pago";
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-User-Role': 'student',
-                'X-User-Permission': 'view.cards'
-              }
+                'X-User-Permission': 'vi
             });
 
             if (!response.ok) {
