@@ -52,7 +52,7 @@ const title = "Mis Métodos de Pago";
           },
 
         async cargarTarjetas(forceRefresh = false) {
-          if (!this.token || !this.userId) {
+          if (!this.token) {
             this.error = 'Por favor inicia sesión';
             return;
           }
@@ -61,7 +61,7 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
+            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
             if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
             const response = await fetch(url.toString(), {
