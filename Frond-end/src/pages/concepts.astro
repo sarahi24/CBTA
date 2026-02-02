@@ -213,6 +213,8 @@ window.editConcept = (id) => {
     amount: c.amount,
     description: c.description,
     status: c.status,
+    start_date: c.start_date,
+    end_date: c.end_date,
     scopeRules: {
       allStudents: (c.applies_to || c.appliesTo) === 'todos',
       careers: c.careerIds || c.careers || [],
