@@ -10,43 +10,46 @@ const title = "Mis Métodos de Pago";
 <StudentLayout title={title}>
   <div 
     class="page-wrapper"
-    x-data="window.__tarjetasData || {}"
+    x-data="tarjetasInit()"
+    @load="init()"
   >
     <script is:inline>
-      window.__tarjetasData = {
-        showModal: false,
-        alumno: 'Usuario',
-        tarjetas: [],
-        isLoading: false,
-        error: '',
-        success: '',
-        form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
-        token: null,
-        userId: null,
+      function tarjetasInit() {
+        return {
+          showModal: false,
+          alumno: 'Usuario',
+          tarjetas: [],
+          isLoading: false,
+          error: '',
+          success: '',
+          form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
+          token: null,
+          userId: null,
+          cardType: 'Tarjeta',
 
-        async init() {
-          const userName = localStorage.getItem('userName');
-          const userDataStr = localStorage.getItem('user_data');
-          this.token = localStorage.getItem('access_token');
-          this.userId = localStorage.getItem('userId');
-          
-          if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-            this.alumno = userName;
-          } else if (userDataStr) {
-            try {
-              const userData = JSON.parse(userDataStr);
-              this.alumno = userData.fullName || userData.name || 'Usuario';
-            } catch (e) {
-              this.alumno = 'Usuario';
+          async init() {
+            const userName = localStorage.getItem('userName');
+            const userDataStr = localStorage.getItem('user_data');
+            this.token = localStorage.getItem('access_token');
+            this.userId = localStorage.getItem('userId');
+            
+            if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+              this.alumno = userName;
+            } else if (userDataStr) {
+              try {
+                const userData = JSON.parse(userDataStr);
+                this.alumno = userData.fullName || userData.name || 'Usuario';
+              } catch (e) {
+                this.alumno = 'Usuario';
+              }
             }
-          }
-          
-          console.log('🔍 [Tarjetas] Nombre:', this.alumno);
-          console.log('🔍 [Tarjetas] Token:', !!this.token);
-          console.log('🔍 [Tarjetas] UserId:', this.userId);
-          
-          await this.cargarTarjetas();
-        },
+            
+            console.log('🔍 [Tarjetas] Nombre:', this.alumno);
+            console.log('🔍 [Tarjetas] Token:', !!this.token);
+            console.log('🔍 [Tarjetas] UserId:', this.userId);
+            
+            await this.cargarTarjetas();
+          },
 
         async cargarTarjetas(forceRefresh = false) {
           if (!this.token) {
@@ -234,6 +237,7 @@ const title = "Mis Métodos de Pago";
           }
         }
       };
+      }
     </script>
     <header class="main-header">
       <div class="header-content">
