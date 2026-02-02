@@ -1,44 +1,80 @@
 ---
-// Updated version - Jan 26, 2026 - API Integration
+// Updated version - Feb 2, 2026 - Complete Dashboard API Integration
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 import StatCard from './components/StatCard.astro';
 import ProgressCircle from './components/ProgressCircle.astro';
 import PaymentsTable from './components/PaymentsTable.astro'; 
 import { API_ENDPOINTS, handleAPIResponse } from '../../config/api.js';
 
-let dashboardData = {};
+let dashboardData = {
+  alumnoNombre: 'Estudiante',
+  history: [],
+  overdue: null,
+  paid: null,
+  pending: null
+};
 let error = null;
 
 try {
   // Get user ID from localStorage (set during login)
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
   const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
 
   if (token && userId) {
-    // Fetch dashboard data from backend
-    const response = await fetch(`${API_ENDPOINTS.dashboard.refresh}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
+    dashboardData.alumnoNombre = userName;
 
-    if (response.ok) {
-      dashboardData = await response.json();
-    } else if (response.status === 401) {
-      // Token expired
-      error = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
-    } else {
-      error = 'No se pudo cargar el panel.';
+    // Import and use DashboardAPI
+    const { DashboardAPI } = await import('../../utils/dashboardAPI.js');
+
+    try {
+      // Fetch all dashboard data in parallel
+      const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all([
+        DashboardAPI.getPaymentHistory(userId, token).catch(e => ({ error: e.message })),
+        DashboardAPI.getOverdueTotal(userId, token).catch(e => ({ error: e.message })),
+        DashboardAPI.getPaidTotal(userId, token).catch(e => ({ error: e.message })),
+        DashboardAPI.getPendingTotal(userId, token).catch(e => ({ error: e.message }))
+      ]);
+
+      // Process payment history
+      if (historyRes && !historyRes.error) {
+        const items = historyRes.data?.payment_history?.items || [];
+        dashboardData.history = items.map(payment => ({
+          id: payment.id,
+          concepto: payment.concept || 'Pago',
+          monto: payment.amount || '0.00',
+          fecha: payment.date || new Date().toLocaleDateString('es-MX'),
+          metodo: payment.method || 'Método desconocido',
+          status: payment.status || 'pending'
+        }));
+      }
+
+      // Process overdue total
+      if (overdueRes && !overdueRes.error) {
+        dashboardData.overdue = overdueRes.data?.total_overdue || { totalAmount: '0.00', totalCount: 0 };
+      }
+
+      // Process paid total
+      if (paidRes && !paidRes.error) {
+        dashboardData.paid = paidRes.paid_data || { totalPayments: '0.00' };
+      }
+
+      // Process pending total
+      if (pendingRes && !pendingRes.error) {
+        dashboardData.pending = pendingRes.data?.total_pending || { totalAmount: '0.00', totalCount: 0 };
+      }
+
+      console.log('✅ Dashboard data loaded successfully');
+    } catch (err) {
+      console.error('❌ Error loading dashboard data:', err);
+      error = 'Error al cargar los datos del panel';
     }
   } else {
     error = 'Usuario no autenticado';
   }
 } catch (err) {
-  console.error('Error fetching dashboard:', err);
-  error = 'Error al conectar con el servidor.';
+  console.error('Error initializing dashboard:', err);
+  error = 'Error al conectar con el servidor';
 }
 ---
 
