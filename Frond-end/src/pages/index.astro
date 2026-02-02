@@ -303,9 +303,13 @@ const pageTitle = "Acceso al Sistema - SIGE";
     x-data="{
         mode: 'login',
         name: '',
+        lastName: '',
         email: '',
         password: '',
         confirmPassword: '',
+        phoneNumber: '',
+        curp: '',
+        status: 'activo',
         error: '',
         message: '',
         isLoading: false,
@@ -415,7 +419,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
             this.message = '';
             this.isLoading = true;
 
-            if (!this.name || !this.email || !this.password || !this.confirmPassword) {
+            if (!this.name || !this.lastName || !this.email || !this.password || !this.confirmPassword || !this.phoneNumber || !this.curp || !this.status) {
                 this.error = '⚠️ Por favor, completa todos los campos de registro.';
                 this.isLoading = false;
                 return;
@@ -433,12 +437,22 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 return;
             }
 
+            if (this.curp.length !== 18) {
+                this.error = '⚠️ La CURP debe tener exactamente 18 caracteres.';
+                this.isLoading = false;
+                return;
+            }
+
             try {
                 const userData = {
                     name: this.name,
+                    last_name: this.lastName,
                     email: this.email,
                     password: this.password,
                     password_confirmation: this.confirmPassword,
+                    phone_number: this.phoneNumber,
+                    curp: this.curp,
+                    status: this.status,
                 };
                 
                 const response = await window.AuthService.register(userData);
@@ -447,8 +461,13 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     this.message = '✅ Registro exitoso. Ya puedes iniciar sesión.';
                     this.mode = 'login';
                     this.name = '';
+                    this.lastName = '';
+                    this.email = '';
                     this.password = '';
                     this.confirmPassword = '';
+                    this.phoneNumber = '';
+                    this.curp = '';
+                    this.status = 'activo';
                 } else {
                     this.error = '❌ ' + (response.message || 'Error en el registro.');
                 }
@@ -578,16 +597,33 @@ const pageTitle = "Acceso al Sistema - SIGE";
 
             <form class="space-y-5" x-show="mode === 'register'" @submit.prevent="handleRegister" x-cloak>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="text" x-model="name" placeholder="Nombre Completo" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="text" x-model="name" placeholder="Nombre" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="email" x-model="email" placeholder="Correo Electrónico" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="text" x-model="lastName" placeholder="Apellido" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="password" x-model="password" placeholder="Nueva Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="email" x-model="email" placeholder="Correo Electrónico" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="password" x-model="confirmPassword" placeholder="Confirmar Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="tel" x-model="phoneNumber" placeholder="Número de Teléfono" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                </div>
+                <div class="flex items-center rounded-xl p-3 input-inset-shadow">
+                    <input type="text" x-model="curp" placeholder="CURP (18 caracteres)" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0 uppercase" maxlength="18" required>
+                </div>
+                <div class="flex items-center rounded-xl p-3 input-inset-shadow">
+                    <select x-model="status" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                        <option value="">Selecciona un estado</option>
+                        <option value="activo">Activo</option>
+                        <option value="baja">Baja</option>
+                        <option value="eliminado">Eliminado</option>
+                    </select>
+                </div>
+                <div class="flex items-center rounded-xl p-3 input-inset-shadow">
+                    <input type="password" x-model="password" placeholder="Nueva Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                </div>
+                <div class="flex items-center rounded-xl p-3 input-inset-shadow">
+                    <input type="password" x-model="confirmPassword" placeholder="Confirmar Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50">
                     <span x-text="isLoading ? 'Creando cuenta...' : 'Registrarme'"></span>
