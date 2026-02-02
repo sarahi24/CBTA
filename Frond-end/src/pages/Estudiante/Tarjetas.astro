@@ -52,7 +52,7 @@ const title = "Mis Métodos de Pago";
           },
 
         async cargarTarjetas(forceRefresh = false) {
-          if (!this.token) {
+          if (!this.token || !this.userId) {
             this.error = 'Por favor inicia sesión';
             return;
           }
@@ -61,7 +61,7 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
+            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
             if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
             const response = await fetch(url.toString(), {
@@ -75,12 +75,17 @@ const title = "Mis Métodos de Pago";
               }
             });
 
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response headers:', [...response.headers.entries()]);
+
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
+              console.error('❌ Error response:', errorData);
               throw new Error(errorData.message || 'Error al cargar tarjetas');
             }
 
             const data = await response.json();
+            console.log('✅ Cards data received:', data);
             const cardsArray = data.data?.cards || data.cards || data.data || [];
             
             this.tarjetas = cardsArray.map(card => ({
