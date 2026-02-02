@@ -308,6 +308,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
         password: '',
         confirmPassword: '',
         phoneNumber: '',
+        birthdate: '',
         curp: '',
         status: 'activo',
         error: '',
@@ -419,7 +420,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
             this.message = '';
             this.isLoading = true;
 
-            if (!this.name || !this.lastName || !this.email || !this.password || !this.confirmPassword || !this.phoneNumber || !this.curp || !this.status) {
+            if (!this.name || !this.lastName || !this.email || !this.password || !this.confirmPassword || !this.phoneNumber || !this.birthdate || !this.curp || !this.status) {
                 this.error = '⚠️ Por favor, completa todos los campos de registro.';
                 this.isLoading = false;
                 return;
@@ -443,6 +444,24 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 return;
             }
 
+            // Validar formato de teléfono mexicano
+            const phoneRegex = /^\+52\d{10}$/;
+            if (!phoneRegex.test(this.phoneNumber)) {
+                this.error = '⚠️ El teléfono debe ser un número mexicano válido (+521234567890).';
+                this.isLoading = false;
+                return;
+            }
+
+            // Validar fecha de nacimiento
+            const birthDate = new Date(this.birthdate);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            if (age < 13 || isNaN(birthDate.getTime())) {
+                this.error = '⚠️ Debes tener al menos 13 años para registrarte.';
+                this.isLoading = false;
+                return;
+            }
+
             try {
                 const userData = {
                     name: this.name,
@@ -451,6 +470,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     password: this.password,
                     password_confirmation: this.confirmPassword,
                     phone_number: this.phoneNumber,
+                    birthdate: this.birthdate,
                     curp: this.curp,
                     status: this.status,
                 };
@@ -466,6 +486,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     this.password = '';
                     this.confirmPassword = '';
                     this.phoneNumber = '';
+                    this.birthdate = '';
                     this.curp = '';
                     this.status = 'activo';
                 } else {
@@ -606,7 +627,10 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     <input type="email" x-model="email" placeholder="Correo Electrónico" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="tel" x-model="phoneNumber" placeholder="Número de Teléfono" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="tel" x-model="phoneNumber" placeholder="Teléfono (+521234567890)" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                </div>
+                <div class="flex items-center rounded-xl p-3 input-inset-shadow">
+                    <input type="date" x-model="birthdate" placeholder="Fecha de Nacimiento" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
                     <input type="text" x-model="curp" placeholder="CURP (18 caracteres)" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0 uppercase" maxlength="18" required>
