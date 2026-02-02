@@ -61,7 +61,7 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
+            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
             if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
             const response = await fetch(url.toString(), {
@@ -71,16 +71,13 @@ const title = "Mis Métodos de Pago";
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-User-Role': 'student',
-                'X-User-Permission': 'delete.card'
+                'X-User-Permission': 'view.cards'
               }
             });
 
-            console.log('📡 Response status:', response.status);
-            console.log('📡 Response headers:', [...response.headers.entries()]);
-
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
-              console.error('❌ Error response:', errorData);
+              console.error('❌ Error al cargar tarjetas:', errorData);
               throw new Error(errorData.message || 'Error al cargar tarjetas');
             }
 
@@ -222,7 +219,7 @@ const title = "Mis Métodos de Pago";
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-User-Role': 'student',
-                'X-User-Permission': 'view.cards'
+                'X-User-Permission': 'delete.card'
               }
             });
 

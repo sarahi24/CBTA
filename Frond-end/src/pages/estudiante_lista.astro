@@ -28,18 +28,8 @@ const CAREER_MAP = CAREERS.reduce((acc, curr) => {
 
 // Lógica de carga de datos (Lado del Servidor)
 let students = [];
-try {
-  const res = await fetch(API_ENDPOINTS.students.list);
-  if (res.ok) {
-    const json = await res.json();
-    students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-  }
-} catch (e) {
-  if (!students || !students.length) {
-    // Fallback data removed - API should provide students
-    students = [];
-  }
-}
+// En build time no tenemos acceso a tokens, por lo que iniciaremos con array vacío
+// Los datos se cargarán en el cliente si es necesario
 
 // Normalización de los datos iniciales (excluyendo password)
 students = students.map((s, i) => ({
@@ -318,6 +308,95 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
           return acc;
       }, {});
 
+      const readLocal = () => {
+        try {
+          // Primero intentar cargar desde localStorage
+          const raw = localStorage.getItem(STORAGE_KEY);
+          let arr = [];
+          
+          if (raw) {
+            try {
+              arr = JSON.parse(raw);
+              if (!Array.isArray(arr)) arr = [];
+            } catch (e) {
+              console.warn('⚠️ Error al parsear localStorage:', e);
+              arr = [];
+            }
+          }
+          
+          // Si no hay datos en localStorage, cargar desde API
+          if (arr.length === 0) {
+            loadStudentsFromAPI().then(() => {
+              const updatedRaw = localStorage.getItem(STORAGE_KEY);
+              if (updatedRaw) {
+                arr = JSON.parse(updatedRaw);
+              }
+            });
+          }
+          
+          // Si aún no hay datos, usar los iniciales
+          if (arr.length === 0 && initial.length > 0) {
+            arr = initial.slice();
+            console.log('📥 Usando datos iniciales. Total:', arr.length);
+          }
+          
+          return arr.length > 0 ? arr : initial.slice();
+        } catch (e) {
+          console.warn('⚠️ Error al leer datos:', e);
+          return initial.slice();
+        }
+      };
+      
+      // Nueva función para cargar estudiantes desde la API
+      async function loadStudentsFromAPI() {
+        try {
+          const token = localStorage.getItem('access_token');
+          if (!token) {
+            console.log('ℹ️ No hay token, usando datos locales');
+            return;
+          }
+          
+          const url = new URL('${API_ENDPOINTS.students.list}');
+          url.searchParams.append('perPage', '1000');
+          
+          const res = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-User-Role': 'financial-staff',
+              'X-User-Permission': 'view.students'
+            }
+          });
+          
+          if (res.ok) {
+            const json = await res.json();
+            const items = json.data?.payments?.items || json.data?.items || [];
+            
+            if (Array.isArray(items) && items.length > 0) {
+              const students = items.map(item => ({
+                id: String(item.userId || item.id),
+                numControl: (item.numControl || item.num_control || '').toUpperCase(),
+                nombre: item.fullName?.split(' ')[0] || item.nombre || '',
+                apellidoP: item.fullName?.split(' ')[1] || item.apellidoP || '',
+                apellidoM: item.fullName?.split(' ')[2] || item.apellidoM || '',
+                semestre: parseInt(item.semestre || item.semester || '0', 10),
+                carrera: (item.career_name || item.carrera || '').toUpperCase(),
+                correo: (item.email || item.correo || '').toLowerCase(),
+              }));
+              
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+              console.log('✅ Estudiantes cargados desde API:', students.length);
+            }
+          } else {
+            console.warn('⚠️ Error al cargar estudiantes:', res.status);
+          }
+        } catch (e) {
+          console.error('❌ Error al cargar estudiantes desde API:', e);
+        }
+      }
+      
       const readLocal = () => {
         try {
           // Leer el localStorage (tanto del STORAGE_KEY como de roles.astro que usa la misma clave)
