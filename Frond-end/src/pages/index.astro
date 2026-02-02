@@ -300,40 +300,44 @@ const pageTitle = "Acceso al Sistema - SIGE";
 <body class="min-h-screen antialiased font-inter relative">
 
 <section class="min-h-screen flex items-center justify-center p-4 relative z-20"
-    x-data="{
-        mode: 'login',
-        name: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        phoneNumber: '',
-        birthdate: '',
-        curp: '',
-        status: 'activo',
-        error: '',
-        message: '',
-        isLoading: false,
+    @alpine="init"
+    x-data="window.__authFormData || {}"
+>
+    <script is:inline>
+        window.__authFormData = {
+            mode: 'login',
+            name: '',
+            lastName: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            phoneNumber: '',
+            birthdate: '',
+            curp: '',
+            status: 'activo',
+            error: '',
+            message: '',
+            isLoading: false,
 
-        init() {
-            try {
-                const params = new URLSearchParams(window.location.search);
-                const verified = params.get('verified');
-                const reset = params.get('reset');
+            init() {
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    const verified = params.get('verified');
+                    const reset = params.get('reset');
 
-                if (verified === '1') {
-                    this.message = '✅ Correo verificado correctamente. Ya puedes iniciar sesión.';
-                } else if (verified === '0') {
-                    this.error = '❌ No se pudo verificar el correo. Intenta reenviar el enlace.';
+                    if (verified === '1') {
+                        this.message = '✅ Correo verificado correctamente. Ya puedes iniciar sesión.';
+                    } else if (verified === '0') {
+                        this.error = '❌ No se pudo verificar el correo. Intenta reenviar el enlace.';
+                    }
+
+                    if (reset === '1') {
+                        this.message = '✅ Contraseña actualizada. Ya puedes iniciar sesión.';
+                    }
+                } catch (e) {
+                    console.warn('URL params parse error:', e);
                 }
-
-                if (reset === '1') {
-                    this.message = '✅ Contraseña actualizada. Ya puedes iniciar sesión.';
-                }
-            } catch (e) {
-                console.warn('URL params parse error:', e);
-            }
-        },
+            },
 
         async handleLogin() {
             this.error = '';
@@ -525,7 +529,8 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 this.isLoading = false;
             }
         }
-    }"
+    };
+    </script>
 >
 
     <div class="absolute top-8 left-1/2 transform -translate-x-1/2 translate-y-3 z-30">
