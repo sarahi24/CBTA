@@ -7,17 +7,35 @@
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 
 /**
- * Helper: Detecta errores de autenticación (401) y redirige al login
+ * Helper: Detecta errores de autenticación (401)
  */
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
-    // Mostrar alerta
-    alert('⚠️ Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.');
-    // Limpiar token
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_id');
-    // Redirigir a login
-    window.location.href = '/login';
+    const currentToken = localStorage.getItem('access_token');
+    
+    // Log para debugging
+    console.warn('⚠️ 401 Unauthorized');
+    console.warn('Token en localStorage:', currentToken ? 'SÍ (presente)' : 'NO (no encontrado)');
+    
+    // Mostrar opciones al usuario
+    const choice = confirm(
+      '❌ Error de autenticación (401 - No autorizado)\n\n' +
+      'Tu token puede estar:\n' +
+      '• Expirado\n' +
+      '• Inválido\n' +
+      '• Revocado por el servidor\n\n' +
+      '¿Deseas ir al login para re-autenticarte?\n\n' +
+      'Sí = Ir a login\n' +
+      'No = Reintentar (cierra esta ventana y actualiza la página)'
+    );
+    
+    if (choice) {
+      // Limpiar token
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_id');
+      // Redirigir a login
+      window.location.href = '/login';
+    }
     return true;
   }
   return false;

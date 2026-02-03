@@ -6,17 +6,35 @@
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 
 /**
- * Helper: Detecta errores de autenticación (401) y redirige al login
+ * Helper: Detecta errores de autenticación (401)
  */
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
-    // Mostrar alerta
-    alert('⚠️ Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.');
-    // Limpiar token
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_id');
-    // Redirigir a login
-    window.location.href = '/login';
+    const currentToken = localStorage.getItem('access_token');
+    
+    // Log para debugging
+    console.warn('⚠️ 401 Unauthorized');
+    console.warn('Token en localStorage:', currentToken ? 'SÍ (presente)' : 'NO (no encontrado)');
+    
+    // Mostrar opciones al usuario
+    const choice = confirm(
+      '❌ Error de autenticación (401 - No autorizado)\n\n' +
+      'Tu token puede estar:\n' +
+      '• Expirado\n' +
+      '• Inválido\n' +
+      '• Revocado por el servidor\n\n' +
+      '¿Deseas ir al login para re-autenticarte?\n\n' +
+      'Sí = Ir a login\n' +
+      'No = Reintentar (cierra esta ventana y actualiza la página)'
+    );
+    
+    if (choice) {
+      // Limpiar token
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_id');
+      // Redirigir a login
+      window.location.href = '/login';
+    }
     return true;
   }
   return false;
@@ -29,6 +47,17 @@ export const AdminAPI = {
    */
   async getPermissionsByUser(userId, token, roles = []) {
     try {
+      // Debug: Log token info
+      console.log('🔐 AdminAPI.getPermissionsByUser - Token Info:');
+      console.log('   Token presente:', !!token);
+      console.log('   Token longitud:', token ? token.length : 0);
+      console.log('   Token primeros 20 chars:', token ? token.substring(0, 20) + '...' : 'VACÍO');
+      
+      if (!token) {
+        console.error('❌ Token no proporcionado');
+        throw new Error('No hay token de autenticación');
+      }
+
       const response = await fetch(`${API_BASE}/admin-actions/permissions/by-user/${userId}`, {
         method: 'POST',
         headers: {
@@ -44,10 +73,14 @@ export const AdminAPI = {
         })
       });
 
+      console.log('📥 Response status:', response.status);
+
       // Detectar error de autenticación
       if (response.status === 401) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ 401 Error details:', errorData);
         handleAuthError(401);
-        throw new Error('No autenticado - sesión expirada');
+        throw new Error('No autenticado - sesión expirada o sin permisos');
       }
 
       if (!response.ok) {

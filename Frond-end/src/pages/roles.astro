@@ -3678,9 +3678,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     // Usar AdminAPI para obtener permisos por usuario
                     let response = null;
                     if (adminAPIReady) {
+                        console.log('🔐 Token a enviar:');
+                        console.log('   this.token:', this.token ? 'definido' : 'UNDEFINED');
+                        console.log('   localStorage token:', token ? 'presente' : 'VACÍO');
+                        
+                        const tokenToUse = this.token || token;
+                        console.log('   Token final:', tokenToUse ? tokenToUse.substring(0, 20) + '...' : 'SIN TOKEN');
+                        
                         response = await window.AdminAPI.getPermissionsByUser(
                             this.selectedUsers[0],
-                            this.token,
+                            tokenToUse,
                             Array.from(userRoles)
                         ).catch(e => {
                             console.warn('⚠️ No se pudo obtener permisos por usuario:', e);
