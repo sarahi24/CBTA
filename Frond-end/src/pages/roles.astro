@@ -3633,51 +3633,28 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 };
 
                 try {
-                    // Intentar cargar permisos desde el endpoint
-                    console.log('🔍 Intentando cargar permisos desde API...');
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
-                        {
-                            headers: {
-                                'X-User-Role': 'admin',
-                                'X-User-Permission': 'view.permissions'
-                            }
-                        }
-                    );
-
-                    const result = await response.json();
-                    console.log('📦 Respuesta completa del servidor:', JSON.stringify(result, null, 2));
+                    // Usar lista de permisos predefinida directamente
+                    console.log('📋 Usando lista de permisos predefinida...');
                     
-                    if (response.ok && result.success) {
-                        let permissions = result.data?.permissions || [];
-                        console.log('✅ Permisos recibidos del servidor:', permissions);
-                        
-                        // Si no hay permisos desde el API, usar lista predefinida
-                        if (!permissions.length) {
-                            console.warn('⚠️ No se recibieron permisos del servidor, usando lista predefinida');
-                            permissions = Object.keys(permissionsTranslation).map((key, idx) => ({
-                                id: idx + 1,
-                                name: key
-                            }));
-                        }
-                        
-                        this.availablePermissions = permissions.map(perm => ({
-                            id: perm.id,
-                            name: perm.name,
-                            displayName: permissionsTranslation[perm.name] || perm.name
-                        }));
-                        
-                        console.log('✅ Permisos mapeados:', this.availablePermissions);
-                        
-                        this.permissionsToAdd = [];
-                        this.permissionsToRemove = [];
-                        this.showPermissionsModal = true;
-                    } else {
-                        throw new Error(result.message || 'Error al cargar permisos');
-                    }
+                    const permissions = Object.keys(permissionsTranslation).map((key, idx) => ({
+                        id: idx + 1,
+                        name: key
+                    }));
+                    
+                    this.availablePermissions = permissions.map(perm => ({
+                        id: perm.id,
+                        name: perm.name,
+                        displayName: permissionsTranslation[perm.name] || perm.name
+                    }));
+                    
+                    console.log('✅ Permisos mapeados:', this.availablePermissions);
+                    
+                    this.permissionsToAdd = [];
+                    this.permissionsToRemove = [];
+                    this.showPermissionsModal = true;
                 } catch (error) {
-                    console.error('❌ Error al cargar permisos desde API:', error);
-                    console.log('💡 Usando lista de permisos predefinida...');
+                    console.error('❌ Error al cargar permisos:', error);
+                    console.log('💡 Usando lista de permisos predefinida como fallback...');
                     
                     // Usar lista predefinida de permisos si falla la API
                     this.availablePermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
