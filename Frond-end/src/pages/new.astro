@@ -68,18 +68,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     <div
       x-data="{ 
         /* Variables de estado y datos */
-        careers: [
-            // LISTA DE CARRERAS FINAL
-            { id: 'TAG-E', name: 'Técnico Agropecuario' },
-            { id: 'TOF', name: 'Téc. en Ofimática' },
-            { id: 'TEM', name: 'Téc. en Admón. de Emp.' },
-            { id: 'TAG-M', name: 'Téc. Agropecuario (Mixta)' },
-            { id: 'TRH', name: 'Téc. Admón. R. Humanos (Mixta)' },
-        ],
-          
-        // SEMESTRES MANTENIDOS EN 10:
-        semesters: Array.from({length: 10}, (_, i) => ({ id: (i+1).toString(), name: (i+1) + '° Sem' })),
-
+        careers: [],
+        semesters: [],
         allStudents: [],
 
         apiBaseUrl: window.__API_BASE_URL__ || '',
@@ -103,8 +93,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         errorMessage: '',
         
         // Funciones
-        initPage() {
-          this.loadStudents();
+        async initPage() {
+          await this.loadStudents();
           const urlParams = new URLSearchParams(window.location.search);
           const rawConcept = localStorage.getItem('editingConcept');
           
@@ -120,32 +110,104 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         },
 
-        loadStudents() {
+        async loadStudents() {
+          const token = localStorage.getItem('access_token');
+          const fallbackCareers = [
+            { id: 'TAG-E', name: 'Técnico Agropecuario' },
+            { id: 'TOF', name: 'Téc. en Ofimática' },
+            { id: 'TEM', name: 'Téc. en Admón. de Emp.' },
+            { id: 'TAG-M', name: 'Téc. Agropecuario (Mixta)' },
+            { id: 'TRH', name: 'Téc. Admón. R. Humanos (Mixta)' }
+          ];
+          const fallbackSemesters = Array.from({length: 10}, (_, i) => ({ id: (i + 1).toString(), name: (i + 1) + '°' }));
+
+          const mapStudents = (items = []) => {
+            this.allStudents = items.map(item => {
+              const fullName = (
+                item.fullName || item.nombre || [
+                  String(item.nombre ?? '').trim(),
+                  String(item.apellidoP ?? item.apellidoPaterno ?? '').trim(),
+                  String(item.apellidoM ?? item.apellidoMaterno ?? '').trim()
+                ].filter(n => n).join(' ')
+              ).trim();
+
+              const userId = item.userId ?? item.id ?? item.user_id ?? null;
+              const control = item.numControl ?? item.num_control ?? item.n_control ?? '';
+              const careerId = item.career_id ?? item.careerId ?? null;
+              const careerName = item.career_name ?? item.carrera ?? item.career ?? '';
+              const normalizedCareerId = careerId !== null && careerId !== undefined
+                ? String(careerId)
+                : (careerName ? String(careerName) : '');
+              const semester = item.semestre ?? item.semester ?? '';
+
+              return {
+                id: userId ? String(userId) : '',
+                control: String(control || ''),
+                name: fullName || 'Sin nombre',
+                careerId: normalizedCareerId,
+                careerName: String(careerName || ''),
+                semester: String(semester || '')
+              };
+            }).filter(s => s.id);
+
+            const careersMap = new Map();
+            this.allStudents.forEach(s => {
+              const key = s.careerId || s.careerName;
+              if (!key) return;
+              careersMap.set(key, { id: s.careerId || s.careerName, name: s.careerName || ('Carrera ' + s.careerId) });
+            });
+            this.careers = Array.from(careersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+            const semesterSet = new Set();
+            this.allStudents.forEach(s => {
+              if (s.semester) semesterSet.add(String(s.semester));
+            });
+            this.semesters = Array.from(semesterSet)
+              .sort((a, b) => Number(a) - Number(b))
+              .map(id => ({ id, name: id + '°' }));
+          };
+
+          try {
+            if (!token) throw new Error('No token');
+            const url = new URL(this.apiBaseUrl + '/v1/students');
+            url.searchParams.append('perPage', '1000');
+            const res = await fetch(url.toString(), {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-User-Role': 'financial-staff',
+                'X-User-Permission': 'view.students'
+              }
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(json.message || 'Error al cargar estudiantes');
+            const items = json.data?.payments?.items || json.data?.items || json.data || [];
+            if (Array.isArray(items) && items.length) {
+              mapStudents(items);
+              return;
+            }
+          } catch (e) {
+            console.warn('⚠️ Fallback local de estudiantes:', e?.message || e);
+          }
+
           try {
             const raw = localStorage.getItem('studentsList');
             if (raw) {
               const parsed = JSON.parse(raw);
-              this.allStudents = parsed.map(s => {
-                  // 1. CONCATENAR NOMBRE COMPLETO
-                  const fullName = [
-                      String(s.nombre ?? '').trim(),
-                      String(s.apellidoP ?? s.apellidoPaterno ?? '').trim(),
-                      String(s.apellidoM ?? s.apellidoMaterno ?? '').trim()
-                  ].filter(n => n).join(' '); 
-                  
-                  return {
-                      // 2. CORRECCIÓN: PRIORIZAR numControl sobre el ID largo (s.id)
-                      id: String(s.numControl ?? s.id ?? ''), 
-                      // Nombre Completo
-                      name: fullName, 
-                      career: String(s.carrera ?? s.career ?? ''),
-                      semester: String(s.semestre ?? s.semestre ?? '')
-                  };
-              }).filter(s => s.id);
-              return;
+              if (Array.isArray(parsed) && parsed.length) {
+                mapStudents(parsed);
+                return;
+              }
             }
-          } catch (e) { console.warn(e); }
+          } catch (e) {
+            console.warn('⚠️ Error al leer studentsList:', e);
+          }
+
           this.allStudents = [];
+          this.careers = fallbackCareers;
+          this.semesters = fallbackSemesters;
         },
 
         populateForm(concept) {
@@ -165,7 +227,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               if (Array.isArray(concept.scopeRules.specificStudents)) {
                   this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => {
                       const student = this.allStudents.find(s => String(s.id) === String(id));
-                      return student ? {id: student.id, name: student.name} : {id: String(id), name: 'ID: ' + id};
+                    return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
                   });
               }
           }
@@ -174,7 +236,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         toggleSpecificStudent(student) {
           const index = this.formData.selectedSpecificStudents.findIndex(s => s.id === student.id);
           if (index === -1) {
-            this.formData.selectedSpecificStudents.push({id: student.id, name: student.name});
+            this.formData.selectedSpecificStudents.push({
+              id: student.id,
+              name: student.name,
+              control: student.control
+            });
           } else {
             this.formData.selectedSpecificStudents.splice(index, 1);
           }
@@ -184,11 +250,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         get filteredStudents() {
           if (!this.searchTerm) return [];
           const searchLower = this.searchTerm.toLowerCase();
-          return this.allStudents.filter(student =>
-            // Busca por Nombre Completo (student.name) o Matrícula (student.id)
-            student.name.toLowerCase().includes(searchLower) ||
-            student.id.includes(searchLower)
-          ).slice(0, 5);
+          const careerFilter = this.formData.selectedCareers;
+          const semesterFilter = this.formData.selectedSemesters;
+
+          return this.allStudents.filter(student => {
+            const matchesSearch =
+              student.name.toLowerCase().includes(searchLower) ||
+              String(student.control || '').includes(searchLower) ||
+              String(student.id || '').includes(searchLower);
+
+            const matchesCareer = !careerFilter.length || careerFilter.includes(student.careerId);
+            const matchesSemester = !semesterFilter.length || semesterFilter.includes(student.semester);
+
+            return matchesSearch && matchesCareer && matchesSemester;
+          }).slice(0, 8);
         },
 
         removeSpecificStudent(studentId) {
@@ -456,7 +531,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   <template x-for="student in filteredStudents" :key="student.id">
                     <div @click="toggleSpecificStudent(student); open = false" class="p-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm flex justify-between items-center transition">
                       <span x-text="student.name" class="text-gray-800 font-medium"></span>
-                      <span x-text="'Matrícula: ' + student.id" class="text-gray-500 text-xs"></span>
+                      <span x-text="'Matrícula: ' + (student.control || student.id)" class="text-gray-500 text-xs"></span>
                       <i x-show="formData.selectedSpecificStudents.some(s => s.id === student.id)" class="fas fa-check-circle text-active"></i>
                     </div>
                   </template>
@@ -466,7 +541,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               <div class="flex flex-wrap gap-2 mt-3" x-show="formData.selectedSpecificStudents.length > 0" x-transition.slide.up>
                 <template x-for="student in formData.selectedSpecificStudents" :key="student.id">
                   <div class="flex items-center gap-2 bg-lightest text-active px-2 py-1 rounded-full text-xs font-semibold border border-[var(--primary-lightest)] shadow-sm">
-                    <span x-text="student.name + ' (Matrícula: ' + (student.id.length > 10 ? '...' + student.id.slice(-5) : student.id) + ')'"></span>
+                    <span x-text="student.name + ' (Matrícula: ' + (student.control || student.id) + ')'"}></span>
                     <button type="button" @click="removeSpecificStudent(student.id)" class="text-active hover:text-red-500 transition focus:outline-none">
                       <i class="fas fa-times-circle text-xs"></i>
                     </button>
@@ -533,8 +608,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         if (rules.specificStudents.length > 0) {
             return activeStudents.filter(alumno => {
                 // *** CORRECCIÓN APLICADA AQUÍ ***
-                // Se usa la misma lógica de prioridad que en Alpine (numControl ?? id) para coincidir con la lista de IDs seleccionados.
-                const alumnoId = String(alumno.numControl ?? alumno.id ?? ''); 
+            // Se usa la misma lógica de prioridad que en Alpine (userId ?? id ?? numControl) para coincidir con la lista de IDs seleccionados.
+            const alumnoId = String(alumno.userId ?? alumno.id ?? alumno.numControl ?? alumno.n_control ?? ''); 
                 return rules.specificStudents.includes(alumnoId);
             });
         }
@@ -544,7 +619,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             let cumpleCareers = true;
             let cumpleSemesters = true;
             
-            const alumnoCareer = String(alumno.career ?? alumno.carrera ?? '');
+            const alumnoCareer = String(alumno.career_id ?? alumno.careerId ?? alumno.career ?? alumno.carrera ?? '');
             const alumnoSemester = String(alumno.semester ?? alumno.semestre ?? '');
 
             if (rules.careers.length > 0) {
