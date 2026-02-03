@@ -59,7 +59,7 @@ function getStatusBadge(status){
   return '<span class="inline-block mt-1 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase">Vigente</span>';
 }
 
-async function apiFetch(url, options={}) {
+async function apiFetch(url, options = {}) {
   const token = localStorage.getItem('access_token');
   if (!token) throw new Error('No hay token, inicia sesión');
   const res = await fetch(url, {
@@ -71,7 +71,12 @@ async function apiFetch(url, options={}) {
       ...options.headers,
     }
   });
-  const data = await res.json().catch(() => ({}));
+
+  if (res.status === 204) return { success: true };
+
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
+
   if (!res.ok) {
     throw new Error(data.message || 'Error de API');
   }
@@ -189,18 +194,24 @@ async function mutateConcept(id, action){
     finalize: `${API_BASE}/v1/concepts/${id}/finalize`,
     activate: `${API_BASE}/v1/concepts/${id}/activate`,
     disable: `${API_BASE}/v1/concepts/${id}/disable`,
-    delete: `${API_BASE}/v1/concepts/${id}/logical`
+    delete: `${API_BASE}/v1/concepts/${id}`
   };
   const perms = {
     finalize: 'finalize.concepts',
     activate: 'activate.concepts',
     disable: 'disable.concepts',
-    delete: 'eliminate.logical.concepts'
+    delete: 'eliminate.concepts'
+  };
+  const methods = {
+    finalize: 'POST',
+    activate: 'POST',
+    disable: 'POST',
+    delete: 'DELETE'
   };
   
   try {
     await apiFetch(endpoints[action], {
-      method: 'POST',
+      method: methods[action],
       headers: {
         'X-User-Role': 'financial-staff',
         'X-User-Permission': perms[action]

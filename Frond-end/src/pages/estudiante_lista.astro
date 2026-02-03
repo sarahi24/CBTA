@@ -238,16 +238,19 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
             {/* CABECERA DE LA TABLA con el color de fondo específico #2E594D */}
             <thead class="text-left sticky top-0 z-10" style={`background-color:${ACCENT_COLOR_HEX}; color: #FFFFFF;`}>
               <tr>
-                <th class="px-3 py-2 text-center w-[4%]">
+                <th class="px-3 py-2 text-center w-[3%]">
                     <input type="checkbox" id="select-all" class="rounded text-white focus:ring-emerald-500" style={`background-color:${ACCENT_HOVER_COLOR_HEX}; border-color:white;`} />
                 </th>
-                <th class="px-3 py-2 font-bold w-[12%]">N. Control</th>
-                <th class="px-3 py-2 font-bold w-[15%]">Nombre</th>
-                <th class="px-3 py-2 font-bold w-[15%]">Apellido P.</th>
-                <th class="px-3 py-2 font-bold w-[15%]">Apellido M.</th>
-                <th class="px-3 py-2 font-bold text-center w-[10%]">Semestre</th>
-                <th class="px-3 py-2 font-bold w-[12%]">Carrera</th>
-                <th class="px-3 py-2 font-bold w-[15%]">Correo</th>
+                <th class="px-3 py-2 font-bold w-[9%]">N. Control</th>
+                <th class="px-3 py-2 font-bold w-[10%]">Nombre</th>
+                <th class="px-3 py-2 font-bold w-[10%]">Apellido P.</th>
+                <th class="px-3 py-2 font-bold w-[10%]">Apellido M.</th>
+                <th class="px-3 py-2 font-bold text-center w-[7%]">Semestre</th>
+                <th class="px-3 py-2 font-bold w-[9%]">Carrera</th>
+                <th class="px-3 py-2 font-bold text-center w-[7%]">Pendientes</th>
+                <th class="px-3 py-2 font-bold text-center w-[7%]">Vencidos</th>
+                <th class="px-3 py-2 font-bold text-right w-[10%]">Monto Pendiente</th>
+                <th class="px-3 py-2 font-bold text-right w-[10%]">Monto Pagado</th>
                 <th class="px-3 py-2 font-bold text-center w-[8%] min-w-[100px]">Acciones</th>
               </tr>
             </thead>
@@ -345,18 +348,25 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
 
           // Mapear los datos de la API al formato esperado
           const apiStudents = result.data.payments.items.map((student, index) => {
-            // Dividir el nombre completo en nombre, apellido paterno, apellido materno
-            const names = (student.fullName || '').trim().split(/\s+/);
+            // El API devuelve fullName completo, lo dividimos en nombre y apellidos
+            const fullNameParts = (student.fullName || '').trim().split(/\s+/);
+            const nombre = fullNameParts[0] || '';
+            const apellidoP = fullNameParts[1] || '';
+            const apellidoM = fullNameParts.slice(2).join(' ') || '';
             
             return {
               id: String(student.userId || Date.now() + index),
-              numControl: (student.numControl || student.num_control || '').toUpperCase(),
-              nombre: names[0] || '',
-              apellidoP: names[1] || '',
-              apellidoM: names.slice(2).join(' ') || '',
+              numControl: String(student.userId || ''),
+              nombre: nombre,
+              apellidoP: apellidoP,
+              apellidoM: apellidoM,
               semestre: student.semestre || 0,
               carrera: (student.career_name || '').toUpperCase(),
-              correo: student.email || ''
+              correo: student.email || '',
+              num_pending: student.num_pending || 0,
+              num_expired: student.num_expired || 0,
+              total_amount_pending: student.total_amount_pending || '0.00',
+              total_paid: student.total_paid || '0.00'
             };
           });
 
@@ -700,7 +710,7 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
 
         tbody.innerHTML = '';
         if (paginatedList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">No se encontraron estudiantes que coincidan con los filtros.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="text-center py-6 text-gray-500">No se encontraron estudiantes que coincidan con los filtros.</td></tr>`;
         }
         
         paginatedList.forEach(s => {
@@ -722,7 +732,14 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
               <td class="px-3 py-2">${escapeHtml(s.apellidoM)}</td>
               <td class="px-3 py-2 text-center font-semibold">${s.semestre === 0 ? '-' : s.semestre}</td>
               <td class="px-3 py-2 text-emerald-700 font-medium">${CARRERA_MAP[s.carrera] || s.carrera}</td>
-              <td class="px-3 py-2 text-xs text-gray-600">${escapeHtml(s.correo)}</td>
+              <td class="px-3 py-2 text-center">
+                  <span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${s.num_pending > 0 ? 'bg-red-100 text-red-700 font-bold' : 'bg-green-100 text-green-700'}">${s.num_pending || 0}</span>
+              </td>
+              <td class="px-3 py-2 text-center">
+                  <span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${s.num_expired > 0 ? 'bg-orange-100 text-orange-700 font-bold' : 'bg-green-100 text-green-700'}">${s.num_expired || 0}</span>
+              </td>
+              <td class="px-3 py-2 text-right font-semibold text-red-600">$${parseFloat(s.total_amount_pending || 0).toFixed(2)}</td>
+              <td class="px-3 py-2 text-right font-semibold text-green-600">$${parseFloat(s.total_paid || 0).toFixed(2)}</td>
               <td class="px-3 py-2 flex justify-center space-x-1 min-w-[100px]">
                   <button data-id="${s.id}" class="edit-btn text-emerald-600 hover:text-emerald-800 p-1 rounded-full hover:bg-emerald-50 transition" title="Editar Registro">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
