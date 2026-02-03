@@ -185,17 +185,17 @@ async function mutateConcept(id, action){
     finalize: `${API_BASE}/v1/concepts/${id}/finalize`,
     activate: `${API_BASE}/v1/concepts/${id}/activate`,
     disable: `${API_BASE}/v1/concepts/${id}/disable`,
-    delete: `${API_BASE}/v1/concepts/${id}`
+    delete: `${API_BASE}/v1/concepts/${id}/disable` // Usar disable en lugar de DELETE
   };
   const perms = {
     finalize: 'finalize.concepts',
     activate: 'activate.concepts',
     disable: 'disable.concepts',
-    delete: 'eliminate.concepts'
+    delete: 'disable.concepts' // Usar permiso de disable
   };
-  const method = action === 'delete' ? 'DELETE' : 'POST';
+  // Todos usan POST
   await apiFetch(endpoints[action], {
-    method,
+    method: 'POST',
     headers: {
       'X-User-Role': 'financial-staff',
       'X-User-Permission': perms[action]
