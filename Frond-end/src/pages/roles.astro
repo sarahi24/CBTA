@@ -1225,17 +1225,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<script is:inline>
-    // PASO 1: Cargar AdminAPI de forma inmediata ANTES que Alpine se registre
-    let adminAPILoaded = import('/src/utils/adminAPI.js').then(module => {
-        window.AdminAPI = module.AdminAPI;
-        console.log('✅ AdminAPI cargada globalmente en window');
-        return window.AdminAPI;
-    }).catch(err => {
-        console.error('❌ Error cargando AdminAPI:', err);
-    });
+<!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
+<script>
+    import { AdminAPI } from '../../utils/adminAPI.js';
+    window.AdminAPI = AdminAPI;
+    window.__adminAPILoaded = true;
+    console.log('✅ AdminAPI cargada:', window.AdminAPI);
+</script>
 
-    // PASO 2: Prevenir múltiples inicializaciones de Alpine
+<script is:inline>
+    // Prevenir múltiples inicializaciones de Alpine
     (function() {
         if (window.__rolesDataRegistered__) return;
         window.__rolesDataRegistered__ = true;
@@ -3658,19 +3657,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     console.log('🔎 Cargando permisos desde la API...');
 
-                    // Esperar a que AdminAPI esté disponible (máximo 15 segundos)
+                    // Esperar a que AdminAPI esté disponible (máximo 20 segundos)
                     let adminAPIReady = false;
                     let waitAttempts = 0;
-                    const maxAttempts = 150; // 150 * 100ms = 15 segundos
+                    const maxAttempts = 200; // 200 * 100ms = 20 segundos
                     
                     while (!adminAPIReady && waitAttempts < maxAttempts) {
-                        if (window.AdminAPI && typeof window.AdminAPI.getPermissionsByUser === 'function') {
+                        if (window.__adminAPILoaded && window.AdminAPI && typeof window.AdminAPI.getPermissionsByUser === 'function') {
                             adminAPIReady = true;
                             console.log('✅ AdminAPI lista después de', waitAttempts * 100, 'ms');
                             break;
                         }
+                        if (waitAttempts % 10 === 0) {
+                            console.log(`⏳ Esperando AdminAPI... (intento ${waitAttempts}/${maxAttempts})`);
+                        }
                         await new Promise(resolve => setTimeout(resolve, 100));
                         waitAttempts++;
+                    }
+
+                    if (!adminAPIReady) {
+                        console.warn('⚠️ AdminAPI no disponible después de 20 segundos');
                     }
 
                     // Obtener los roles de los usuarios seleccionados
