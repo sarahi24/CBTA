@@ -1225,17 +1225,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<script>
-    // Cargar AdminAPI de forma síncrona antes de Alpine
-    (async function() {
-        const { AdminAPI } = await import('/src/utils/adminAPI.js');
-        window.AdminAPI = AdminAPI;
-        console.log('✅ AdminAPI cargada globalmente');
-    })();
-</script>
-
 <script is:inline>
-    // Prevenir múltiples inicializaciones de Alpine
+    // PASO 1: Cargar AdminAPI de forma inmediata ANTES que Alpine se registre
+    let adminAPILoaded = import('/src/utils/adminAPI.js').then(module => {
+        window.AdminAPI = module.AdminAPI;
+        console.log('✅ AdminAPI cargada globalmente en window');
+        return window.AdminAPI;
+    }).catch(err => {
+        console.error('❌ Error cargando AdminAPI:', err);
+    });
+
+    // PASO 2: Prevenir múltiples inicializaciones de Alpine
     (function() {
         if (window.__rolesDataRegistered__) return;
         window.__rolesDataRegistered__ = true;
@@ -3658,22 +3658,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     console.log('🔎 Cargando permisos desde la API...');
 
-                    // Esperar a que AdminAPI esté disponible
-                    if (!window.AdminAPI) {
-                        console.log('⏳ AdminAPI no disponible aún, esperando...');
-                        await new Promise(resolve => {
-                            const checkInterval = setInterval(() => {
-                                if (window.AdminAPI) {
-                                    clearInterval(checkInterval);
-                                    resolve();
-                                }
-                            }, 100);
-                            // Timeout de 5 segundos
-                            setTimeout(() => {
-                                clearInterval(checkInterval);
-                                resolve();
-                            }, 5000);
-                        });
+                    // Esperar a que AdminAPI esté disponible (máximo 15 segundos)
+                    let adminAPIReady = false;
+                    let waitAttempts = 0;
+                    const maxAttempts = 150; // 150 * 100ms = 15 segundos
+                    
+                    while (!adminAPIReady && waitAttempts < maxAttempts) {
+                        if (window.AdminAPI && typeof window.AdminAPI.getPermissionsByUser === 'function') {
+                            adminAPIReady = true;
+                            console.log('✅ AdminAPI lista después de', waitAttempts * 100, 'ms');
+                            break;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        waitAttempts++;
                     }
 
                     // Obtener los roles de los usuarios seleccionados
@@ -3687,7 +3684,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     // Usar AdminAPI para obtener permisos por usuario
                     let response = null;
-                    if (window.AdminAPI && typeof window.AdminAPI.getPermissionsByUser === 'function') {
+                    if (adminAPIReady) {
                         response = await window.AdminAPI.getPermissionsByUser(
                             this.selectedUsers[0],
                             this.token,
