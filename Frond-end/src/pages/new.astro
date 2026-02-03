@@ -170,7 +170,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           try {
             if (!token) throw new Error('No token');
             const url = new URL(this.apiBaseUrl + '/v1/students');
-            url.searchParams.append('perPage', '1000');
             const res = await fetch(url.toString(), {
               method: 'GET',
               headers: {
@@ -332,7 +331,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               'Accept': 'application/json',
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
-              'X-User-Role': 'admin|financial-staff',
+              'X-User-Role': 'financial-staff',
               'X-User-Permission': this.formData.id ? 'update.concepts' : 'create.concepts'
             },
             body: JSON.stringify(payload)

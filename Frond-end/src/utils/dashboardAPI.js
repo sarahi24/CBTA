@@ -1,6 +1,6 @@
 /**
- * Dashboard API Service
- * Funciones para interactuar con los endpoints del dashboard
+ * Dashboard API Service - Staff Version
+ * Funciones para interactuar con los endpoints del dashboard del personal financiero
  */
 
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
@@ -11,13 +11,13 @@ export const DashboardAPI = {
    */
   async refreshCache(token) {
     try {
-      const response = await fetch(`${API_BASE}/dashboard/refresh`, {
+      const response = await fetch(`${API_BASE}/dashboard-staff/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': 'student',
+          'X-User-Role': 'financial-staff',
           'X-User-Permission': 'refresh.all.dashboard'
         }
       });
@@ -35,11 +35,12 @@ export const DashboardAPI = {
   },
 
   /**
-   * Obtener historial de pagos
+   * Obtener todos los conceptos de pago
    */
-  async getPaymentHistory(userId, token, page = 1, perPage = 15, forceRefresh = false) {
+  async getConcepts(token, onlyThisYear = true, page = 1, perPage = 15, forceRefresh = false) {
     try {
-      const url = new URL(`${API_BASE}/dashboard/history/${userId}`);
+      const url = new URL(`${API_BASE}/dashboard-staff/concepts`);
+      url.searchParams.append('only_this_year', onlyThisYear);
       url.searchParams.append('page', page);
       url.searchParams.append('perPage', perPage);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
@@ -50,29 +51,30 @@ export const DashboardAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': 'student',
-          'X-User-Permission': 'view.payments.history'
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.concepts.history'
         }
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar historial');
+        throw new Error(errorData.message || 'Error al cargar conceptos');
       }
 
       return await response.json();
     } catch (err) {
-      console.error('❌ Error fetching payment history:', err);
+      console.error('❌ Error fetching concepts:', err);
       throw err;
     }
   },
 
   /**
-   * Obtener total de pagos vencidos
+   * Obtener monto total de pagos realizados
    */
-  async getOverdueTotal(userId, token, forceRefresh = false) {
+  async getPaymentsMade(token, onlyThisYear = true, forceRefresh = false) {
     try {
-      const url = new URL(`${API_BASE}/dashboard/overdue/${userId}`);
+      const url = new URL(`${API_BASE}/dashboard-staff/payments`);
+      url.searchParams.append('only_this_year', onlyThisYear);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
       const response = await fetch(url.toString(), {
@@ -81,39 +83,8 @@ export const DashboardAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': 'student',
-          'X-User-Permission': 'view.own.overdue.concepts.summary'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar vencidos');
-      }
-
-      return await response.json();
-    } catch (err) {
-      console.error('❌ Error fetching overdue total:', err);
-      throw err;
-    }
-  },
-
-  /**
-   * Obtener total de pagos realizados
-   */
-  async getPaidTotal(userId, token, forceRefresh = false) {
-    try {
-      const url = new URL(`${API_BASE}/dashboard/paid/${userId}`);
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'student',
-          'X-User-Permission': 'view.own.paid.concepts.summary'
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.all.paid.concepts.summary'
         }
       });
 
@@ -124,17 +95,18 @@ export const DashboardAPI = {
 
       return await response.json();
     } catch (err) {
-      console.error('❌ Error fetching paid total:', err);
+      console.error('❌ Error fetching payments made:', err);
       throw err;
     }
   },
 
   /**
-   * Obtener total de pagos pendientes
+   * Obtener el número total de estudiantes
    */
-  async getPendingTotal(userId, token, forceRefresh = false) {
+  async getStudentsCount(token, onlyThisYear = true, forceRefresh = false) {
     try {
-      const url = new URL(`${API_BASE}/dashboard/pending/${userId}`);
+      const url = new URL(`${API_BASE}/dashboard-staff/students`);
+      url.searchParams.append('only_this_year', onlyThisYear);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
       const response = await fetch(url.toString(), {
@@ -143,19 +115,79 @@ export const DashboardAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': 'student',
-          'X-User-Permission': 'view.own.pending.concepts.summary'
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.all.students.summary'
         }
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pendientes');
+        throw new Error(errorData.message || 'Error al cargar total de estudiantes');
       }
 
       return await response.json();
     } catch (err) {
-      console.error('❌ Error fetching pending total:', err);
+      console.error('❌ Error fetching students count:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Obtener cantidad y monto total de pagos pendientes
+   */
+  async getPendingPayments(token, onlyThisYear = true, forceRefresh = false) {
+    try {
+      const url = new URL(`${API_BASE}/dashboard-staff/pending`);
+      url.searchParams.append('only_this_year', onlyThisYear);
+      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.all.pending.concepts.summary'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al cargar pagos pendientes');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ Error fetching pending payments:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Crear un payout con todo el balance disponible
+   */
+  async createPayout(token) {
+    try {
+      const response = await fetch(`${API_BASE}/dashboard-staff/payout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'create.payout'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al crear payout');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ Error creating payout:', err);
       throw err;
     }
   },
@@ -163,19 +195,19 @@ export const DashboardAPI = {
   /**
    * Obtener todos los datos del dashboard
    */
-  async getAllDashboardData(userId, token) {
+  async getAllDashboardData(token, onlyThisYear = true) {
     try {
-      const [history, overdue, paid, pending] = await Promise.all([
-        this.getPaymentHistory(userId, token),
-        this.getOverdueTotal(userId, token),
-        this.getPaidTotal(userId, token),
-        this.getPendingTotal(userId, token)
+      const [concepts, payments, students, pending] = await Promise.all([
+        this.getConcepts(token, onlyThisYear),
+        this.getPaymentsMade(token, onlyThisYear),
+        this.getStudentsCount(token, onlyThisYear),
+        this.getPendingPayments(token, onlyThisYear)
       ]);
 
       return {
-        history,
-        overdue,
-        paid,
+        concepts,
+        payments,
+        students,
         pending
       };
     } catch (err) {

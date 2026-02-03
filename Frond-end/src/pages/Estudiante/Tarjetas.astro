@@ -181,14 +181,18 @@ const title = "Mis Métodos de Pago";
 
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
+              if (response.status === 403) {
+                throw new Error('No tienes permisos para registrar tarjetas (permiso: create.setup).');
+              }
               throw new Error(errorData.message || 'Error al registrar tarjeta');
             }
 
             const data = await response.json();
 
             // Si hay checkout_url, redirigir a Stripe
-            if (data.data?.checkout_url) {
-              window.location.href = data.data.checkout_url;
+            const checkoutUrl = data.checkout_url || data.data?.checkout_url;
+            if (checkoutUrl) {
+              window.location.href = checkoutUrl;
               return;
             }
 
