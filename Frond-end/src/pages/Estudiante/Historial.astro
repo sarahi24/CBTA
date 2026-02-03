@@ -1,6 +1,6 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
-import { API_ENDPOINTS } from '../../config/api.js';
+import { StudentAPI } from '../../utils/studentAPI.js';
 
 let alumnoBackend = "Estudiante";
 let title = "Historial de Pagos";
@@ -8,25 +8,19 @@ let historialSemilla = [];
 let error = null;
 
 try {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
   const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
   const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
 
   if (token && userId) {
     alumnoBackend = userName;
 
-    // Fetch payment history
+    // Fetch payment history using StudentAPI
     try {
-      const historyRes = await fetch(API_ENDPOINTS.paymentHistory.get(userId), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
+      const historyRes = await StudentAPI.getPaymentHistoryFull(userId, token);
       
-      if (historyRes.ok) {
-        const historyData = await historyRes.json();
+      if (historyRes) {
+        const historyData = historyRes.data?.payment_history?.items || historyRes.data || [];
         historialSemilla = Array.isArray(historyData) ? historyData.map(payment => ({
           id: payment.id,
           concepto: payment.concept_name || payment.concepto || 'Pago',
@@ -36,16 +30,17 @@ try {
           folio: payment.reference_number || payment.folio || 'PAY-' + payment.id,
           categoria: payment.category || payment.categoria || 'Pago'
         })) : [];
+        console.log('✅ Historial cargado:', historialSemilla.length, 'pagos');
       }
     } catch (err) {
-      console.error('Error fetching payment history:', err);
+      console.error('❌ Error fetching payment history:', err);
       historialSemilla = [];
     }
   } else {
     error = 'Usuario no autenticado';
   }
 } catch (err) {
-  console.error('Error initializing Historial:', err);
+  console.error('❌ Error initializing Historial:', err);
   error = 'Error al cargar el historial';
 }
 ---

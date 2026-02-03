@@ -1225,6 +1225,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
+<script type="module">
+    // Importar AdminAPI en el contexto global para Alpine
+    import { AdminAPI } from '/src/utils/adminAPI.js';
+    window.AdminAPI = AdminAPI;
+</script>
+
 <script is:inline>
     // Prevenir múltiples inicializaciones de Alpine
     (function() {
@@ -3649,36 +3655,49 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     console.log('🔎 Cargando permisos desde la API...');
 
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({})
+                    // Obtener los roles de los usuarios seleccionados
+                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
+                    const userRoles = new Set();
+                    selectedUsersData.forEach(user => {
+                        if (Array.isArray(user.roles)) {
+                            user.roles.forEach(r => userRoles.add(r));
                         }
-                    );
+                    });
 
-                    const result = await response.json().catch(() => ({}));
-                    const apiPermissions = result?.data?.permissions?.permissions || result?.data?.permissions || result?.data?.items || result?.permissions || [];
+                    // Usar AdminAPI para obtener permisos por usuario
+                    const response = await window.AdminAPI.getPermissionsByUser(
+                        this.selectedUsers[0],
+                        this.token,
+                        Array.from(userRoles)
+                    ).catch(e => {
+                        console.warn('⚠️ No se pudo obtener permisos por usuario, intentando fallback...');
+                        return null;
+                    });
+
+                    let apiPermissions = [];
+                    if (response) {
+                        const permData = response?.data?.permissions?.permissions || 
+                                        response?.data?.permissions || 
+                                        response?.data?.items || 
+                                        response?.permissions || [];
+                        apiPermissions = Array.isArray(permData) ? permData : [];
+                        console.log('✅ Permisos cargados desde API:', apiPermissions.length);
+                    } else {
+                        console.warn('⚠️ API sin permisos válidos. Usando fallback.');
+                    }
 
                     let allPermissions = [];
-                    if (response.ok && Array.isArray(apiPermissions) && apiPermissions.length > 0) {
+                    if (Array.isArray(apiPermissions) && apiPermissions.length > 0) {
                         allPermissions = apiPermissions.map((perm, idx) => ({
                             id: perm.id || idx + 1,
                             name: perm.name || perm.permission || perm.code || '',
                             displayName: permissionsTranslation[perm.name] || perm.name
                         })).filter(p => p.name);
-
-                        console.log('✅ Permisos cargados desde API:', allPermissions.length);
                     } else {
-                        console.warn('⚠️ API sin permisos válidos. Usando fallback.');
                         allPermissions = fallbackPermissions;
                     }
 
                     // Obtener permisos actuales de los usuarios seleccionados
-                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
                     const currentPermissions = new Set();
                     
                     selectedUsersData.forEach(user => {

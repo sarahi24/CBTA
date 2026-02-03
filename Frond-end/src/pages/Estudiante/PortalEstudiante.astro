@@ -1,10 +1,10 @@
 ---
-// Updated version - Feb 2, 2026 - Complete Dashboard API Integration
+// Updated version - Feb 3, 2026 - Student API Service Integration
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 import StatCard from './components/StatCard.astro';
 import ProgressCircle from './components/ProgressCircle.astro';
 import PaymentsTable from './components/PaymentsTable.astro'; 
-import { API_ENDPOINTS, handleAPIResponse } from '../../config/api.js';
+import { StudentAPI } from '../../utils/studentAPI.js';
 
 let dashboardData = {
   alumnoNombre: 'Estudiante',
@@ -24,16 +24,13 @@ try {
   if (token && userId) {
     dashboardData.alumnoNombre = userName;
 
-    // Import and use DashboardAPI
-    const { DashboardAPI } = await import('../../utils/dashboardAPI.js');
-
     try {
-      // Fetch all dashboard data in parallel
+      // Fetch all dashboard data in parallel using StudentAPI
       const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-        DashboardAPI.getPaymentHistory(userId, token).catch(e => ({ error: e.message })),
-        DashboardAPI.getOverdueTotal(userId, token).catch(e => ({ error: e.message })),
-        DashboardAPI.getPaidTotal(userId, token).catch(e => ({ error: e.message })),
-        DashboardAPI.getPendingTotal(userId, token).catch(e => ({ error: e.message }))
+        StudentAPI.getPaymentHistory(userId, token).catch(e => ({ error: e.message })),
+        StudentAPI.getOverdueTotal(userId, token).catch(e => ({ error: e.message })),
+        StudentAPI.getPaidTotal(userId, token).catch(e => ({ error: e.message })),
+        StudentAPI.getPendingTotal(userId, token).catch(e => ({ error: e.message }))
       ]);
 
       // Process payment history

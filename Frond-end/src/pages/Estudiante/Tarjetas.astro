@@ -1,6 +1,6 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
-import { API_ENDPOINTS } from '../../config/api.js';
+import { StudentAPI } from '../../utils/studentAPI.js';
 
 let tarjetasIniciales = [];
 const title = "Mis Métodos de Pago";
@@ -8,6 +8,12 @@ const title = "Mis Métodos de Pago";
 ---
 
 <StudentLayout title={title}>
+  <script type="module">
+    // Importar StudentAPI en el contexto global para Alpine
+    import { StudentAPI } from '/src/utils/studentAPI.js';
+    window.StudentAPI = StudentAPI;
+  </script>
+  
   <div 
     class="page-wrapper"
     x-data="tarjetasInit()"
@@ -47,6 +53,7 @@ const title = "Mis Métodos de Pago";
             console.log('🔍 [Tarjetas] Nombre:', this.alumno);
             console.log('🔍 [Tarjetas] Token:', !!this.token);
             console.log('🔍 [Tarjetas] UserId:', this.userId);
+            console.log('🔍 [Tarjetas] StudentAPI disponible:', !!window.StudentAPI);
             
             await this.cargarTarjetas();
           },
@@ -61,32 +68,13 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            // Primero intentar sin parámetros (según Angel)
-            let url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
-            if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-            // Si hay userId, agregarlo como query parameter
-            if (this.userId) url.searchParams.append('id', this.userId);
-
-            const response = await fetch(url.toString(), {
-              method: 'GET',
-              headers: {
-                'Authorization': 'Bearer ' + this.token,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-User-Role': 'student',
-                'X-User-Permission': 'delete.card'
-              }
-            });
-
-            const data = await response.json().catch(() => ({}));
-
-            if (!response.ok) {
-              console.error('❌ Error al cargar tarjetas:', data);
-              throw new Error(data.message || 'Error al cargar tarjetas');
-            }
-
-            console.log('✅ Cards data received:', data);
-            const cardsArray = data.data?.cards || data.cards || data.data || [];
+            console.log('📥 Cargando tarjetas desde StudentAPI...');
+            const data = await window.StudentAPI.getPaymentMethods(this.userId, this.token);
+            
+            console.log('✅ Cards data received from StudentAPI:', data);
+            const cardsArray = Array.isArray(data.data) ? data.data : 
+                               data.data?.cards ? data.data.cards : 
+                               Array.isArray(data) ? data : [];
             
             this.tarjetas = cardsArray.map(card => ({
               id: card.id,
