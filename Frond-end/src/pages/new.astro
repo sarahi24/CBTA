@@ -297,54 +297,52 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               }
           }
           
-          // Payload base siempre incluye todos los campos según la API
+          // Payload base con campos obligatorios
           const payload = {
             concept_name: this.formData.title,
             description: this.formData.description || '',
             status: this.formData.status === 'active' ? 'activo' : 'inactivo',
             amount: parseFloat(this.formData.amount),
             start_date: this.formData.startDate,
-            end_date: this.formData.endDate
+            end_date: this.formData.endDate,
+            applies_to: 'todos',
+            semestres: [],
+            careers: [],
+            students: [],
+            exceptionStudents: [],
+            applicantTags: []
           };
 
-          // Determinar applies_to y agregar campos de alcance
-          if (this.formData.allStudents) {
-            payload.applies_to = 'todos';
-            payload.semestres = [];
-            payload.careers = [];
-            payload.students = [];
-          } else {
-            // Arrays según especificación de la API:
-            // - semestres: array de integers
-            // - careers: array de integers
-            // - students: array de STRINGS
-            payload.semestres = this.formData.selectedSemesters.length > 0 
-              ? this.formData.selectedSemesters.map(s => parseInt(s)) 
-              : [];
-            payload.careers = this.formData.selectedCareers.length > 0 
-              ? this.formData.selectedCareers.map(c => parseInt(c)) 
-              : [];
-            payload.students = this.formData.selectedSpecificStudents.length > 0 
-              ? this.formData.selectedSpecificStudents.map(s => String(s.id)) 
-              : [];
+          // Si NO es para todos, configurar alcance específico
+          if (!this.formData.allStudents) {
+            // Convertir tipos correctamente según API
+            const semestresInt = this.formData.selectedSemesters.map(s => {
+              const parsed = parseInt(s);
+              return isNaN(parsed) ? 0 : parsed;
+            }).filter(n => n > 0);
 
-            // Determinar applies_to basado en qué está seleccionado
-            if (payload.students.length > 0) {
+            const careersInt = this.formData.selectedCareers.map(c => {
+              // Si c ya es número, usarlo; si es string que parece número, parsearlo
+              if (typeof c === 'number') return c;
+              const parsed = parseInt(c);
+              return isNaN(parsed) ? 0 : parsed;
+            }).filter(n => n > 0);
+
+            const studentsStr = this.formData.selectedSpecificStudents.map(s => String(s.id));
+
+            payload.semestres = semestresInt;
+            payload.careers = careersInt;
+            payload.students = studentsStr;
+
+            // Determinar applies_to
+            if (studentsStr.length > 0) {
               payload.applies_to = 'students';
-            } else if (payload.semestres.length > 0 && payload.careers.length > 0) {
-              payload.applies_to = 'career';
-            } else if (payload.semestres.length > 0) {
+            } else if (semestresInt.length > 0) {
               payload.applies_to = 'semester';
-            } else if (payload.careers.length > 0) {
+            } else if (careersInt.length > 0) {
               payload.applies_to = 'career';
-            } else {
-              payload.applies_to = 'todos';
             }
           }
-
-          // Campos opcionales pero incluidos para consistencia
-          payload.exceptionStudents = [];
-          payload.applicantTags = [];
 
           console.log('Sending payload:', payload);
 
