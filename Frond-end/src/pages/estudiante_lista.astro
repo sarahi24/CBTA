@@ -313,11 +313,12 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
         try {
           const token = localStorage.getItem('access_token');
           if (!token) {
-            console.log('ℹ️ No hay token, usando datos locales');
+            console.log('ℹ️ No hay token de autenticación. Por favor inicia sesión.');
             return false;
           }
           
-          const url = 'https://nginx-production-728f.up.railway.app/api/v1/students';
+          // Intentar primero con el endpoint del dashboard que sabemos funciona
+          const url = 'https://nginx-production-728f.up.railway.app/api/v1/dashboard-staff/students';
           
           const res = await fetch(url, {
             method: 'GET',
@@ -326,42 +327,54 @@ const initialJSON = JSON.stringify(students).replace(/</g, '\\u003c');
               'Content-Type': 'application/json',
               'Accept': 'application/json',
               'X-User-Role': 'financial-staff',
-              'X-User-Permission': 'view.students'
+              'X-User-Permission': 'view.all.students.summary'
             }
           });
           
           if (res.ok) {
             const json = await res.json();
-            const items = json.data?.payments?.items || json.data?.items || json.data || [];
+            // El dashboard devuelve: { data: { total: N, students: [...] } }
+            const items = json.data?.students || json.data?.items || [];
             
             if (Array.isArray(items) && items.length > 0) {
               const students = items.map(item => {
-                const fullName = item.fullName || '';
-                const nameParts = fullName.split(' ');
+                const fullName = item.fullName || item.full_name || '';
+                const nameParts = fullName.split(' ').filter(p => p);
                 
                 return {
-                  id: String(item.userId || item.id || Date.now() + Math.random()),
-                  numControl: (item.numControl || item.num_control || item.control || '').toUpperCase(),
-                  nombre: nameParts[0] || item.nombre || '',
-                  apellidoP: nameParts[1] || item.apellidoP || item.apellido_paterno || '',
+                  id: String(item.userId || item.user_id || item.id || Date.now() + Math.random()),
+                  numControl: (item.numControl || item.num_control || item.control || item.numero_control || '').toUpperCase(),
+                  nombre: nameParts[0] || item.nombre || item.first_name || '',
+                  apellidoP: nameParts[1] || item.apellidoP || item.apellido_paterno || item.last_name || '',
                   apellidoM: nameParts[2] || item.apellidoM || item.apellido_materno || '',
-                  semestre: parseInt(item.semestre || item.semester || '0', 10),
-                  carrera: (item.career_name || item.career || item.carrera || '').toUpperCase(),
-                  correo: (item.email || item.correo || '').toLowerCase(),
+                  semestre: parseInt(item.semestre || item.semester || item.nivel || '0', 10),
+                  carrera: (item.career_name || item.career || item.carrera || item.programa || '').toUpperCase(),
+                  correo: (item.email || item.correo || item.mail || '').toLowerCase(),
                 };
               });
               
               localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-              console.log('✅ Estudiantes cargados desde API:', students.length);
+              console.log('✅ Estudiantes cargados desde Dashboard API:', students.length);
               return true;
+            } else {
+              console.warn('⚠️ La API no devolvió estudiantes. Datos recibidos:', json);
+              return false;
             }
           } else {
-            console.warn('⚠️ Error al cargar estudiantes:', res.status, await res.text().catch(() => ''));
+            const errorText = await res.text().catch(() => '');
+            console.error('❌ Error al cargar estudiantes:', res.status, errorText);
+            
+            if (res.status === 403) {
+              console.error('❌ Permiso denegado. El usuario no tiene acceso a /dashboard-staff/students');
+            } else if (res.status === 401) {
+              console.error('❌ Sesión expirada.');
+            }
+            return false;
           }
         } catch (e) {
           console.error('❌ Error al cargar estudiantes desde API:', e);
+          return false;
         }
-        return false;
       }
       
       const readLocal = () => {
