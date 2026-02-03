@@ -119,7 +119,11 @@ function renderConcepts(){
       if (applies === 'semesters' || applies === 'semester') return `${(c.semesters||[]).length} semestres`;
       return 'No definido';
     })();
-    const pending = c.pendingCharges || 0;
+    
+    // Intentar obtener estudiantes afectados de varios campos posibles
+    const affectedCount = c.affectedStudentsCount || c.affected_students_count || 
+                          (c.userIds||c.user_ids||[]).length || 
+                          (c.metadata?.students_count) || 0;
 
     return `
       <div class="bg-white rounded-xl shadow-lg border ${isInactive ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'} p-5 flex flex-col justify-between transition hover:shadow-2xl">
@@ -141,8 +145,8 @@ function renderConcepts(){
             <span class="font-semibold text-gray-800">${escapeHtml(c.start_date || '')} - ${escapeHtml(c.end_date || '')}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-gray-500 font-medium text-xs uppercase italic">Adeudos Activos:</span>
-            <span class="font-bold ${pending > 0 ? 'text-red-600' : 'text-green-600'}">${pending}</span>
+            <span class="text-gray-500 font-medium text-xs uppercase italic">Estudiantes Afectados:</span>
+            <span class="font-bold ${affectedCount > 0 ? 'text-blue-600' : 'text-gray-400'}">${affectedCount}</span>
           </div>
         </div>
 
