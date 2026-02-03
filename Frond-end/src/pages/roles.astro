@@ -3652,16 +3652,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const response = await this.authenticatedFetch(
                         `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
                         {
-                            method: 'GET',
+                            method: 'POST',
                             headers: {
+                                'Content-Type': 'application/json',
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.permissions'
-                            }
+                            },
+                            body: JSON.stringify({})
                         }
                     );
 
                     const result = await response.json().catch(() => ({}));
-                    const apiPermissions = result?.data?.permissions || result?.data?.items || result?.permissions || [];
+                    const apiPermissions = result?.data?.permissions?.permissions || result?.data?.permissions || result?.data?.items || result?.permissions || [];
 
                     let allPermissions = [];
                     if (response.ok && Array.isArray(apiPermissions) && apiPermissions.length > 0) {
@@ -3746,39 +3748,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     this.isSaving = true;
 
-                    // Filter valid CURPs (exclude 'N/A' and invalid ones)
-                    const allCurps = this.users
+                    // Obtener IDs de usuarios seleccionados
+                    const selectedUserIds = this.users
                         .filter(u => this.selectedUsers.includes(u.id))
-                        .map(u => u.curp);
+                        .map(u => u.id);
                     
-                    console.log('🔍 updatePermissions - CURPs originales:', allCurps);
+                    console.log('🔍 updatePermissions - IDs de usuarios:', selectedUserIds);
                     
-                    const curps = allCurps.filter(curp => curp && curp !== 'N/A' && curp.length === 18);
-                    
-                    console.log('✓ CURPs válidos:', curps);
-                    console.log('✗ CURPs inválidos filtrados:', allCurps.filter(c => !c || c === 'N/A' || c.length !== 18));
-
-                    // Solo uno de los dos: curps o role
-                    const payload = curps.length > 0
-                        ? { curps }
-                        : this.permissionTargetRole
-                            ? { role: this.permissionTargetRole }
-                            : null;
-
-                    if (!payload) {
-                        const msg = curps.length === 0 && this.selectedUsers.length > 0
-                            ? 'Los usuarios seleccionados no tienen CURP válido (18 caracteres)'
-                            : 'Selecciona usuarios o un rol';
-                        this.showNotify(msg, 'error');
+                    if (selectedUserIds.length === 0) {
+                        this.showNotify('No hay usuarios seleccionados', 'error');
                         this.isSaving = false;
                         return;
                     }
 
-                    // Asegurar que ambos arrays siempre se envíen (aunque estén vacíos)
+                    // Preparar arrays de permisos
                     let addArray = Array.isArray(this.permissionsToAdd) ? this.permissionsToAdd : [];
                     let removeArray = Array.isArray(this.permissionsToRemove) ? this.permissionsToRemove : [];
 
-                    // Validar que todos los elementos sean strings (filtrar undefined/null)
+                    // Validar que todos los elementos sean strings
                     addArray = addArray.filter(p => p != null).map(p => typeof p === 'string' ? p : (p.name || String(p)));
                     removeArray = removeArray.filter(p => p != null).map(p => typeof p === 'string' ? p : (p.name || String(p)));
 
@@ -3793,44 +3780,51 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         return;
                     }
 
-                    // Asignar al payload con nombres en camelCase que el backend espera
-                    payload.permissionsToAdd = addArray;
-                    payload.permissionsToRemove = removeArray;
+                    console.log('📤 updatePermissions - Permisos a agregar:', addArray);
+                    console.log('📤 updatePermissions - Permisos a eliminar:', removeArray);
 
-                    console.log('📤 updatePermissions - Enviando:');
-                    console.log('  Payload completo:', JSON.stringify(payload, null, 2));
-                    console.log('  this.permissionsToAdd:', this.permissionsToAdd);
-                    console.log('  this.permissionsToRemove:', this.permissionsToRemove);
-                    console.log('  permissionsToAdd (final):', payload.permissionsToAdd);
-                    console.log('  permissionsToRemove (final):', payload.permissionsToRemove);
-                    console.log('  Tipos en Add:', payload.permissionsToAdd.map(p => typeof p));
-                    console.log('  Tipos en Remove:', payload.permissionsToRemove.map(p => typeof p));
-                    console.log('  Keys en payload:', Object.keys(payload));
-                    console.log('  Tiene curps?', 'curps' in payload, payload.curps);
-                    console.log('  Tiene role?', 'role' in payload, payload.role);
+                    // Actualizar permisos para cada usuario individualmente
+                    let totalUpdated = 0;
+                    let totalFailed = 0;
+                    const errors = [];
 
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/update-permissions`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'X-User-Role': 'admin',
-                                'X-User-Permission': 'sync.permissions'
-                            },
-                            body: JSON.stringify(payload)
+                    for (const userId of selectedUserIds) {
+                        try {
+                            const response = await this.authenticatedFetch(
+                                `${this.apiBaseUrl}/v1/admin-actions/update-permissions/${userId}`,
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-User-Role': 'admin',
+                                        'X-User-Permission': 'sync.permissions'
+                                    },
+                                    body: JSON.stringify({
+                                        permissionsToAdd: addArray,
+                                        permissionsToRemove: removeArray
+                                    })
+                                }
+                            );
+
+                            const result = await response.json();
+                            console.log(`📥 Respuesta para usuario ${userId}:`, result);
+
+                            if (response.ok && result.success) {
+                                totalUpdated++;
+                            } else {
+                                totalFailed++;
+                                errors.push(`Usuario ${userId}: ${result.message || 'Error desconocido'}`);
+                            }
+                        } catch (error) {
+                            totalFailed++;
+                            errors.push(`Usuario ${userId}: ${error.message}`);
+                            console.error(`❌ Error al actualizar usuario ${userId}:`, error);
                         }
-                    );
+                    }
 
-                    const result = await response.json();
-                    console.log('📥 updatePermissions - Respuesta:', result);
-                    console.log('📥 Status:', response.status);
-
-                    if (response.ok && result.success) {
-                        const summary = result.data?.users_permissions?.[0]?.summary;
-                        const totalUpdated = summary?.totalUpdated || 0;
-                        const totalFailed = summary?.totalFailed || 0;
-                        
-                        let message = `✅ Permisos actualizados: ${totalUpdated} usuario(s) afectado(s)`;
+                    // Mostrar resultado
+                    if (totalUpdated > 0) {
+                        let message = `✅ Permisos actualizados: ${totalUpdated} usuario(s)`;
                         if (totalFailed > 0) {
                             message += ` (${totalFailed} fallido(s))`;
                         }
@@ -3840,25 +3834,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         this.selectedUsers = [];
                         await this.loadUsers(token);
                     } else {
-                        console.error('❌ Error en respuesta (status ' + response.status + '):', result);
-                        console.error('📋 Errores detallados:', result.errors);
-                        console.error('📋 Mensaje:', result.message);
-                        
-                        // Mostrar errores detallados
-                        if (result.errors) {
-                            console.error('🔍 Errores encontrados:');
-                            Object.entries(result.errors).forEach(([field, msgs]) => {
-                                console.error(`   ${field}:`, msgs);
-                            });
-                            
-                            const errorMsg = Object.entries(result.errors)
-                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-                                .join('\n');
-                            this.showNotify('❌ ' + (errorMsg || result.message || 'Error al actualizar permisos'), 'error');
-                        } else {
-                            this.showNotify(result.message || `Error ${response.status} al actualizar permisos`, 'error');
-                        }
+                        const errorMsg = errors.length > 0 ? errors.join('\n') : 'No se pudo actualizar ningún usuario';
+                        this.showNotify(`❌ ${errorMsg}`, 'error');
                     }
+
                 } catch (error) {
                     console.error('❌ Error al actualizar permisos:', error);
                     this.showNotify(`Error al actualizar permisos: ${error.message}`, 'error');
