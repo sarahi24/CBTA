@@ -58,6 +58,18 @@ export const AdminAPI = {
         throw new Error('No hay token de autenticación');
       }
 
+      // Debug: Log request body
+      const requestBody = {
+        roles: Array.isArray(roles) ? roles : [],
+        forceRefresh: true
+      };
+      
+      console.log('📦 AdminAPI.getPermissionsByUser - Request Body:');
+      console.log('   userId:', userId);
+      console.log('   roles:', requestBody.roles);
+      console.log('   roles.length:', requestBody.roles.length);
+      console.log('   forceRefresh:', requestBody.forceRefresh);
+
       const response = await fetch(`${API_BASE}/admin-actions/permissions/by-user/${userId}`, {
         method: 'POST',
         headers: {
@@ -67,10 +79,7 @@ export const AdminAPI = {
           'X-User-Role': 'admin',
           'X-User-Permission': 'view.permissions'
         },
-        body: JSON.stringify({
-          roles: roles,
-          forceRefresh: true
-        })
+        body: JSON.stringify(requestBody)
       });
 
       console.log('📥 Response status:', response.status);
@@ -85,7 +94,8 @@ export const AdminAPI = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar permisos del usuario');
+        console.error('❌ Error response:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: Error al cargar permisos`);
       }
 
       return await response.json();
