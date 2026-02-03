@@ -3531,32 +3531,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const rolesToAdd = Array.isArray(this.rolesToAdd) ? this.rolesToAdd : [];
                     const rolesToRemove = Array.isArray(this.rolesToRemove) ? this.rolesToRemove : [];
 
-                    const payload = {
+                    // Usar AdminAPI para actualizar roles
+                    const result = await window.AdminAPI.updateMultipleUsersRoles(
                         curps,
                         rolesToAdd,
-                        rolesToRemove
-                    };
-
-                    console.log('📦 Payload completo:', JSON.stringify(payload, null, 2));
-
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/updated-roles`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'X-User-Role': 'admin',
-                                'X-User-Permission': 'sync.roles'
-                            },
-                            body: JSON.stringify(payload)
-                        }
+                        rolesToRemove,
+                        token
                     );
 
-                    const result = await response.json();
                     console.log('📥 updateRoles - Respuesta:', result);
 
-                    if (response.ok && result.success) {
+                    if (result.success) {
                         const summary = result.data?.users_roles?.summary;
-                        const totalUpdated = summary?.totalUpdated || 0;
+                        const totalUpdated = summary?.totalUpdated || curps.length;
                         const totalFailed = summary?.totalFailed || 0;
                         
                         let message = `✅ Roles actualizados: ${totalUpdated} usuario(s) afectado(s)`;
@@ -3572,7 +3559,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.error('❌ Error en respuesta:', result);
                         
                         // Usar modal de error para mostrar detalles completos
-                        let errorMessage = result.message || `Error ${response.status} al actualizar roles`;
+                        let errorMessage = result.message || `Error al actualizar roles`;
                         
                         if (result.errors) {
                             const errorDetails = Object.entries(result.errors)
@@ -3836,26 +3823,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     for (const userId of selectedUserIds) {
                         try {
-                            const response = await this.authenticatedFetch(
-                                `${this.apiBaseUrl}/v1/admin-actions/update-permissions/${userId}`,
-                                {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-User-Role': 'admin',
-                                        'X-User-Permission': 'sync.permissions'
-                                    },
-                                    body: JSON.stringify({
-                                        permissionsToAdd: addArray,
-                                        permissionsToRemove: removeArray
-                                    })
-                                }
+                            // Usar AdminAPI para actualizar permisos de un usuario
+                            const result = await window.AdminAPI.updateUserPermissions(
+                                userId,
+                                addArray,
+                                removeArray,
+                                token
                             );
 
-                            const result = await response.json();
                             console.log(`📥 Respuesta para usuario ${userId}:`, result);
 
-                            if (response.ok && result.success) {
+                            if (result.success) {
                                 totalUpdated++;
                             } else {
                                 totalFailed++;
