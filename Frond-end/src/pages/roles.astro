@@ -1227,7 +1227,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
 <!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
 <script>
-    import { AdminAPI } from '../../utils/adminAPI.js';
+    import { AdminAPI } from '../utils/adminAPI.js';
     window.AdminAPI = AdminAPI;
     window.__adminAPILoaded = true;
     console.log('✅ AdminAPI cargada:', window.AdminAPI);
