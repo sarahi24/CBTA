@@ -968,8 +968,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             <!-- Agregar Permisos -->
                             <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                                 <h4 class="font-bold text-blue-900 mb-3">➕ Agregar Permisos</h4>
+                                <div x-show="permissionsAvailableToAdd.length === 0" class="text-sm text-blue-600 italic py-2">
+                                    Los usuarios seleccionados ya tienen todos los permisos disponibles.
+                                </div>
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
-                                    <template x-for="(permission, idx) in (availablePermissions || [])" :key="permission.id || permission.name || idx">
+                                    <template x-for="(permission, idx) in (permissionsAvailableToAdd || [])" :key="permission.id || permission.name || idx">
                                         <label class="flex items-center gap-2 p-2 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors">
                                             <input type="checkbox" 
                                                    :checked="permissionsToAdd.includes(permission.name)"
@@ -984,8 +987,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             <!-- Eliminar Permisos -->
                             <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl">
                                 <h4 class="font-bold text-orange-900 mb-3">➖ Eliminar Permisos</h4>
+                                <div x-show="permissionsAvailableToRemove.length === 0" class="text-sm text-orange-600 italic py-2">
+                                    Los usuarios seleccionados no tienen permisos para eliminar.
+                                </div>
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
-                                    <template x-for="(permission, idx) in (availablePermissions || [])" :key="permission.id || permission.name || idx">
+                                    <template x-for="(permission, idx) in (permissionsAvailableToRemove || [])" :key="permission.id || permission.name || idx">
                                         <label class="flex items-center gap-2 p-2 hover:bg-orange-100 rounded-lg cursor-pointer transition-colors">
                                             <input type="checkbox"
                                                    :checked="permissionsToRemove.includes(permission.name)"
@@ -1301,6 +1307,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 // Estados para gestión de permisos
                 showPermissionsModal: false,
                 availablePermissions: [],
+                permissionsAvailableToAdd: [],
+                permissionsAvailableToRemove: [],
                 permissionsToAdd: [],
                 permissionsToRemove: [],
                 permissionTargetRole: '',
@@ -3655,18 +3663,39 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const result = await response.json().catch(() => ({}));
                     const apiPermissions = result?.data?.permissions || result?.data?.items || result?.permissions || [];
 
+                    let allPermissions = [];
                     if (response.ok && Array.isArray(apiPermissions) && apiPermissions.length > 0) {
-                        this.availablePermissions = apiPermissions.map((perm, idx) => ({
+                        allPermissions = apiPermissions.map((perm, idx) => ({
                             id: perm.id || idx + 1,
                             name: perm.name || perm.permission || perm.code || '',
                             displayName: permissionsTranslation[perm.name] || perm.name
                         })).filter(p => p.name);
 
-                        console.log('✅ Permisos cargados desde API:', this.availablePermissions.length);
+                        console.log('✅ Permisos cargados desde API:', allPermissions.length);
                     } else {
                         console.warn('⚠️ API sin permisos válidos. Usando fallback.');
-                        this.availablePermissions = fallbackPermissions;
+                        allPermissions = fallbackPermissions;
                     }
+
+                    // Obtener permisos actuales de los usuarios seleccionados
+                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
+                    const currentPermissions = new Set();
+                    
+                    selectedUsersData.forEach(user => {
+                        if (Array.isArray(user.permissions)) {
+                            user.permissions.forEach(p => currentPermissions.add(p));
+                        }
+                    });
+
+                    console.log('👤 Permisos actuales de usuarios seleccionados:', Array.from(currentPermissions));
+
+                    // Separar permisos en "disponibles para agregar" y "disponibles para eliminar"
+                    this.availablePermissions = allPermissions; // Guardar todos para referencia
+                    this.permissionsAvailableToAdd = allPermissions.filter(p => !currentPermissions.has(p.name));
+                    this.permissionsAvailableToRemove = allPermissions.filter(p => currentPermissions.has(p.name));
+
+                    console.log('➕ Permisos disponibles para agregar:', this.permissionsAvailableToAdd.length);
+                    console.log('➖ Permisos disponibles para eliminar:', this.permissionsAvailableToRemove.length);
 
                     this.permissionsToAdd = [];
                     this.permissionsToRemove = [];
@@ -3675,8 +3704,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.error('❌ Error al cargar permisos:', error);
                     console.log('💡 Usando lista de permisos predefinida como fallback...');
 
-                    this.availablePermissions = fallbackPermissions;
-                    console.log('✅ Permisos predefinidos cargados:', this.availablePermissions.length);
+                    const allPermissions = fallbackPermissions;
+                    
+                    // Obtener permisos actuales de los usuarios seleccionados
+                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
+                    const currentPermissions = new Set();
+                    
+                    selectedUsersData.forEach(user => {
+                        if (Array.isArray(user.permissions)) {
+                            user.permissions.forEach(p => currentPermissions.add(p));
+                        }
+                    });
+
+                    this.availablePermissions = allPermissions;
+                    this.permissionsAvailableToAdd = allPermissions.filter(p => !currentPermissions.has(p.name));
+                    this.permissionsAvailableToRemove = allPermissions.filter(p => currentPermissions.has(p.name));
+
+                    console.log('✅ Permisos predefinidos cargados:', allPermissions.length);
+                    console.log('➕ Disponibles para agregar:', this.permissionsAvailableToAdd.length);
+                    console.log('➖ Disponibles para eliminar:', this.permissionsAvailableToRemove.length);
 
                     this.permissionsToAdd = [];
                     this.permissionsToRemove = [];
