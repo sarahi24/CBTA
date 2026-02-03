@@ -3632,44 +3632,58 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'eliminate.logical.concepts': 'Eliminar Lógicamente Conceptos'
                 };
 
+                const fallbackPermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
+                    id: idx + 1,
+                    name: key,
+                    displayName: permissionsTranslation[key]
+                }));
+
                 try {
-                    // Usar lista de permisos predefinida directamente
-                    console.log('📋 Usando lista de permisos predefinida...');
-                    
-                    const permissions = Object.keys(permissionsTranslation).map((key, idx) => ({
-                        id: idx + 1,
-                        name: key
-                    }));
-                    
-                    this.availablePermissions = permissions.map(perm => ({
-                        id: perm.id,
-                        name: perm.name,
-                        displayName: permissionsTranslation[perm.name] || perm.name
-                    }));
-                    
-                    console.log('✅ Permisos mapeados:', this.availablePermissions);
-                    
+                    console.log('🔎 Cargando permisos desde la API...');
+
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/find-permissions`,
+                        {
+                            method: 'GET',
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'view.permissions'
+                            }
+                        }
+                    );
+
+                    const result = await response.json().catch(() => ({}));
+                    const apiPermissions = result?.data?.permissions || result?.data?.items || result?.permissions || [];
+
+                    if (response.ok && Array.isArray(apiPermissions) && apiPermissions.length > 0) {
+                        this.availablePermissions = apiPermissions.map((perm, idx) => ({
+                            id: perm.id || idx + 1,
+                            name: perm.name || perm.permission || perm.code || '',
+                            displayName: permissionsTranslation[perm.name] || perm.name
+                        })).filter(p => p.name);
+
+                        console.log('✅ Permisos cargados desde API:', this.availablePermissions.length);
+                    } else {
+                        console.warn('⚠️ API sin permisos válidos. Usando fallback.');
+                        this.availablePermissions = fallbackPermissions;
+                    }
+
                     this.permissionsToAdd = [];
                     this.permissionsToRemove = [];
                     this.showPermissionsModal = true;
                 } catch (error) {
                     console.error('❌ Error al cargar permisos:', error);
                     console.log('💡 Usando lista de permisos predefinida como fallback...');
-                    
-                    // Usar lista predefinida de permisos si falla la API
-                    this.availablePermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
-                        id: idx + 1,
-                        name: key,
-                        displayName: permissionsTranslation[key]
-                    }));
-                    
+
+                    this.availablePermissions = fallbackPermissions;
                     console.log('✅ Permisos predefinidos cargados:', this.availablePermissions.length);
-                    
+
                     this.permissionsToAdd = [];
                     this.permissionsToRemove = [];
                     this.showPermissionsModal = true;
                 }
             },
+
 
             async updatePermissions() {
                 const token = localStorage.getItem('access_token');
@@ -3721,6 +3735,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     // Validar que todos los elementos sean strings (filtrar undefined/null)
                     addArray = addArray.filter(p => p != null).map(p => typeof p === 'string' ? p : (p.name || String(p)));
                     removeArray = removeArray.filter(p => p != null).map(p => typeof p === 'string' ? p : (p.name || String(p)));
+
+                    // Filtrar permisos inválidos usando la lista disponible
+                    const validPermissionNames = new Set((this.availablePermissions || []).map(p => p.name));
+                    addArray = addArray.filter(p => validPermissionNames.has(p));
+                    removeArray = removeArray.filter(p => validPermissionNames.has(p));
+
+                    if (addArray.length === 0 && removeArray.length === 0) {
+                        this.showNotify('Los permisos seleccionados no son válidos según el backend', 'error');
+                        this.isSaving = false;
+                        return;
+                    }
 
                     // Asignar al payload con nombres en camelCase que el backend espera
                     payload.permissionsToAdd = addArray;
