@@ -695,6 +695,21 @@ class AdminActionsController extends Controller
 
             // Format users
             $users = $paginated->items();
+            
+            // Debug: Check if WITH loaded
+            if (count($users) > 0) {
+                $firstUser = $users[0];
+                \Log::info('🔍 DEBUG - First user relationship check', [
+                    'user_id' => $firstUser->id,
+                    'relationLoaded_roles' => $firstUser->relationLoaded('roles'),
+                    'relationLoaded_permissions' => $firstUser->relationLoaded('permissions'),
+                    'roles_exists' => isset($firstUser->roles),
+                    'roles_is_collection' => $firstUser->roles instanceof \Illuminate\Support\Collection,
+                    'roles_count' => $firstUser->roles ? $firstUser->roles->count() : 'NULL',
+                    'roles_dump' => $firstUser->roles,
+                ]);
+            }
+            
             $formattedUsers = collect($users)->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                 
