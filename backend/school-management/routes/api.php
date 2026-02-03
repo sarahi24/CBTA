@@ -97,7 +97,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:finalize concepts')->post('/{concept}/finalize', [ConceptsController::class, 'finalize']);
         Route::middleware('permission:disable concepts')->post('/{concept}/disable', [ConceptsController::class, 'disable']);
         Route::middleware('permission:eliminate concepts')->post('/{concept}/eliminate', [ConceptsController::class, 'eliminate']);
-        Route::middleware('permission:eliminate.logical.concepts')->post('/{concept}/logical', [ConceptsController::class, 'eliminate']);
+        Route::middleware('permission:eliminate logical concepts')->post('/{concept}/logical', [ConceptsController::class, 'eliminate']);
 
     });
 
