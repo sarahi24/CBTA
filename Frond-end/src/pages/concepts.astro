@@ -193,15 +193,20 @@ async function mutateConcept(id, action){
     disable: 'disable.concepts',
     delete: 'eliminate.logical.concepts'
   };
-  // Todos usan POST
-  await apiFetch(endpoints[action], {
-    method: 'POST',
-    headers: {
-      'X-User-Role': 'financial-staff',
-      'X-User-Permission': perms[action]
-    }
-  });
-  await loadConcepts();
+  
+  try {
+    await apiFetch(endpoints[action], {
+      method: 'POST',
+      headers: {
+        'X-User-Role': 'financial-staff',
+        'X-User-Permission': perms[action]
+      }
+    });
+    await loadConcepts();
+  } catch (err) {
+    console.error(`Error en ${action}:`, err);
+    alert(`Error: ${err.message}`);
+  }
 }
 
 /* --- EXPOSICIÓN GLOBAL --- */
