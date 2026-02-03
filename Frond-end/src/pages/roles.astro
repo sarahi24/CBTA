@@ -1225,10 +1225,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<script type="module">
-    // Importar AdminAPI en el contexto global para Alpine
-    import { AdminAPI } from '/src/utils/adminAPI.js';
-    window.AdminAPI = AdminAPI;
+<script>
+    // Cargar AdminAPI de forma síncrona antes de Alpine
+    (async function() {
+        const { AdminAPI } = await import('/src/utils/adminAPI.js');
+        window.AdminAPI = AdminAPI;
+        console.log('✅ AdminAPI cargada globalmente');
+    })();
 </script>
 
 <script is:inline>
@@ -3655,6 +3658,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     console.log('🔎 Cargando permisos desde la API...');
 
+                    // Esperar a que AdminAPI esté disponible
+                    if (!window.AdminAPI) {
+                        console.log('⏳ AdminAPI no disponible aún, esperando...');
+                        await new Promise(resolve => {
+                            const checkInterval = setInterval(() => {
+                                if (window.AdminAPI) {
+                                    clearInterval(checkInterval);
+                                    resolve();
+                                }
+                            }, 100);
+                            // Timeout de 5 segundos
+                            setTimeout(() => {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }, 5000);
+                        });
+                    }
+
                     // Obtener los roles de los usuarios seleccionados
                     const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
                     const userRoles = new Set();
@@ -3665,14 +3686,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     });
 
                     // Usar AdminAPI para obtener permisos por usuario
-                    const response = await window.AdminAPI.getPermissionsByUser(
-                        this.selectedUsers[0],
-                        this.token,
-                        Array.from(userRoles)
-                    ).catch(e => {
-                        console.warn('⚠️ No se pudo obtener permisos por usuario, intentando fallback...');
-                        return null;
-                    });
+                    let response = null;
+                    if (window.AdminAPI && typeof window.AdminAPI.getPermissionsByUser === 'function') {
+                        response = await window.AdminAPI.getPermissionsByUser(
+                            this.selectedUsers[0],
+                            this.token,
+                            Array.from(userRoles)
+                        ).catch(e => {
+                            console.warn('⚠️ No se pudo obtener permisos por usuario:', e);
+                            return null;
+                        });
+                    } else {
+                        console.warn('⚠️ AdminAPI no disponible, usando fallback');
+                    }
 
                     let apiPermissions = [];
                     if (response) {
