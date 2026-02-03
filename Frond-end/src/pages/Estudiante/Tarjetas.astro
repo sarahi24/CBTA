@@ -52,7 +52,7 @@ const title = "Mis Métodos de Pago";
           },
 
         async cargarTarjetas(forceRefresh = false) {
-          if (!this.token || !this.userId) {
+          if (!this.token) {
             this.error = 'Por favor inicia sesión';
             return;
           }
@@ -61,8 +61,11 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            const url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards/' + this.userId);
+            // Primero intentar sin parámetros (según Angel)
+            let url = new URL('https://nginx-production-728f.up.railway.app/api/v1/cards');
             if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+            // Si hay userId, agregarlo como query parameter
+            if (this.userId) url.searchParams.append('id', this.userId);
 
             const response = await fetch(url.toString(), {
               method: 'GET',

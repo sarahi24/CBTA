@@ -297,6 +297,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               }
           }
           
+          // Determinar applies_to basado en las selecciones
+          let appliesTo = 'todos';
+          if (!this.formData.allStudents) {
+            if (this.formData.selectedSpecificStudents.length > 0) {
+              appliesTo = 'students';
+            } else if (this.formData.selectedSemesters.length > 0) {
+              appliesTo = 'semester';
+            } else if (this.formData.selectedCareers.length > 0) {
+              appliesTo = 'career';
+            }
+          }
+
           const payload = {
             concept_name: this.formData.title,
             description: this.formData.description || '',
@@ -304,13 +316,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             amount: parseFloat(this.formData.amount),
             start_date: this.formData.startDate,
             end_date: this.formData.endDate,
-            applies_to: this.formData.allStudents ? 'todos' : ((this.formData.selectedSpecificStudents.length > 0) ? 'students' : 'career'),
-            semestres: this.formData.selectedSemesters.map(Number),
-            careers: this.formData.selectedCareers,
-            students: this.formData.selectedSpecificStudents.map(s => s.id),
-            exceptionStudents: [],
-            applicantTags: []
+            applies_to: appliesTo
           };
+
+          // Solo agregar campos de alcance si no es 'todos'
+          if (appliesTo !== 'todos') {
+            if (this.formData.selectedSemesters.length > 0) {
+              payload.semestres = this.formData.selectedSemesters.map(Number);
+            }
+            if (this.formData.selectedCareers.length > 0) {
+              payload.careers = this.formData.selectedCareers;
+            }
+            if (this.formData.selectedSpecificStudents.length > 0) {
+              payload.students = this.formData.selectedSpecificStudents.map(s => s.id);
+            }
+          }
 
           console.log('Sending payload:', payload);
 
