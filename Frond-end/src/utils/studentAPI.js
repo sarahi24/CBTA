@@ -6,6 +6,23 @@
 
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 
+/**
+ * Helper: Detecta errores de autenticación (401) y redirige al login
+ */
+function handleAuthError(statusCode) {
+  if (statusCode === 401) {
+    // Mostrar alerta
+    alert('⚠️ Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.');
+    // Limpiar token
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_id');
+    // Redirigir a login
+    window.location.href = '/login';
+    return true;
+  }
+  return false;
+}
+
 export const StudentAPI = {
   /**
    * DASHBOARD - GET /api/v1/dashboard/history/{studentId?}
@@ -22,6 +39,12 @@ export const StudentAPI = {
           'Accept': 'application/json'
         }
       });
+
+      // Detectar error de autenticación
+      if (response.status === 401) {
+        handleAuthError(401);
+        throw new Error('No autenticado - sesión expirada');
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
