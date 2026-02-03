@@ -683,7 +683,8 @@ class AdminActionsController extends Controller
             $page = max(1, (int)$page);
 
             // Build query
-            $query = User::with('roles', 'permissions');
+            // Note: Explicitly load roles from ALL guards to ensure they're included
+            $query = User::query();
 
             // Filter by status
             if ($status && $status !== 'all') {
@@ -699,6 +700,10 @@ class AdminActionsController extends Controller
             // Debug: Check if WITH loaded
             if (count($users) > 0) {
                 $firstUser = $users[0];
+                
+                // Get roles using direct relationship call
+                $firstUser->load('roles', 'permissions');
+                
                 \Log::info('🔍 DEBUG - First user relationship check', [
                     'user_id' => $firstUser->id,
                     'relationLoaded_roles' => $firstUser->relationLoaded('roles'),
@@ -706,11 +711,15 @@ class AdminActionsController extends Controller
                     'roles_exists' => isset($firstUser->roles),
                     'roles_is_collection' => $firstUser->roles instanceof \Illuminate\Support\Collection,
                     'roles_count' => $firstUser->roles ? $firstUser->roles->count() : 'NULL',
-                    'roles_dump' => $firstUser->roles,
+                    'roles_dump' => $firstUser->roles ? $firstUser->roles->pluck('name')->toArray() : [],
                 ]);
             }
             
-            $formattedUsers = collect($users)->map(function($user) {
+            // Eager load roles and permissions for all users
+            $usersCollection = collect($users);
+            $usersCollection->load('roles', 'permissions');
+            
+            $formattedUsers = $usersCollection->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                 
                 // Debug: Log roles info
