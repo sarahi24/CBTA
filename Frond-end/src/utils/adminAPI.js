@@ -629,5 +629,35 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.finalizeConcept:', err);
       throw err;
     }
+  },
+
+  /**
+   * POST /api/v1/concepts/{concept}/disable
+   * Deshabilitar un concepto de pago (cambiar status a inactivo)
+   */
+  async disableConcept(conceptId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/${conceptId}/disable`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'disable.concepts'
+        }
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al deshabilitar concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.disableConcept:', err);
+      throw err;
+    }
   }
 };
