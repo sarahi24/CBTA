@@ -1234,6 +1234,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </script>
 
 <script is:inline>
+    
     // Prevenir múltiples inicializaciones de Alpine
     (function() {
         if (window.__rolesDataRegistered__) return;
@@ -3697,15 +3698,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 try {
                     this.isSaving = true;
 
-                    // Obtener IDs de usuarios seleccionados
-                    const selectedUserIds = this.users
+                    // Obtener CURPs de usuarios seleccionados
+                    const selectedUserCurps = this.users
                         .filter(u => this.selectedUsers.includes(u.id))
-                        .map(u => u.id);
+                        .map(u => u.curp)
+                        .filter(curp => curp);
                     
-                    console.log('🔍 updatePermissions - IDs de usuarios:', selectedUserIds);
+                    console.log('🔍 updatePermissions - CURPs de usuarios:', selectedUserCurps);
                     
-                    if (selectedUserIds.length === 0) {
-                        this.showNotify('No hay usuarios seleccionados', 'error');
+                    if (selectedUserCurps.length === 0) {
+                        this.showNotify('No hay usuarios seleccionados o sin CURP', 'error');
                         this.isSaving = false;
                         return;
                     }
@@ -3724,43 +3726,29 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     removeArray = removeArray.filter(p => validPermissionNames.has(p));
 
                     if (addArray.length === 0 && removeArray.length === 0) {
-                        this.showNotify('Los permisos seleccionados no son válidos según el backend', 'error');
+                        this.showNotify('Selecciona al menos un permiso para agregar o eliminar', 'error');
                         this.isSaving = false;
                         return;
                     }
 
                     console.log('📤 updatePermissions - Permisos a agregar:', addArray);
                     console.log('📤 updatePermissions - Permisos a eliminar:', removeArray);
+                    console.log('📤 updatePermissions - CURPs a actualizar:', selectedUserCurps);
 
-                    // Actualizar permisos para cada usuario individualmente
-                    let totalUpdated = 0;
-                    let totalFailed = 0;
-                    const errors = [];
+                    // Actualizar permisos para todos los usuarios de una vez
+                    const result = await window.AdminAPI.updateMultipleUsersPermissions(
+                        selectedUserCurps,
+                        addArray,
+                        removeArray,
+                        token,
+                        true  // isCurps = true
+                    );
 
-                    for (const userId of selectedUserIds) {
-                        try {
-                            // Usar AdminAPI para actualizar permisos de un usuario
-                            const result = await window.AdminAPI.updateUserPermissions(
-                                userId,
-                                addArray,
-                                removeArray,
-                                token
-                            );
+                    console.log('📥 Respuesta de actualización de permisos:', result);
 
-                            console.log(`📥 Respuesta para usuario ${userId}:`, result);
-
-                            if (result.success) {
-                                totalUpdated++;
-                            } else {
-                                totalFailed++;
-                                errors.push(`Usuario ${userId}: ${result.message || 'Error desconocido'}`);
-                            }
-                        } catch (error) {
-                            totalFailed++;
-                            errors.push(`Usuario ${userId}: ${error.message}`);
-                            console.error(`❌ Error al actualizar usuario ${userId}:`, error);
-                        }
-                    }
+                    const totalUpdated = result.success ? selectedUserCurps.length : 0;
+                    const totalFailed = result.success ? 0 : selectedUserCurps.length;
+                    const errors = result.success ? [] : [result.message || 'Error al actualizar permisos'];
 
                     // Mostrar resultado
                     if (totalUpdated > 0) {
