@@ -231,8 +231,10 @@ async function mutateConcept(id, action){
   } catch (err) {
     console.error(`Error en ${action}:`, err);
     
-    // Manejo especial para conflictos 409
-    if (err.message.includes('ya está')) {
+    // Manejo especial para conflictos 409 o mensajes de estado ya existente
+    if (err.message.includes('ya está') || 
+        err.message.includes('ya fue') || 
+        err.message.includes('elimina')) {
       alert(`⚠️ ${err.message}\n\nActualizando lista...`);
       await loadConcepts(); // Recargar para mostrar estado actualizado
     } else {
