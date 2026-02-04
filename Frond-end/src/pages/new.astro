@@ -316,15 +316,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (!this.formData.allStudents) {
             const studentsStr = this.formData.selectedSpecificStudents.map(s => String(s.id));
 
-            // Backend espera un solo semestre (número) y una sola carrera (string)
+            // Backend espera valores en español: 'carrera', 'semestre', 'estudiantes'
             if (studentsStr.length > 0) {
-              payload.applies_to = 'students';
+              payload.applies_to = 'estudiantes'; // NO 'students'
               payload.students = studentsStr;
             } else if (this.formData.selectedSemesters.length > 0) {
-              payload.applies_to = 'semester';
+              payload.applies_to = 'semestre'; // NO 'semester'
               payload.semestre = parseInt(this.formData.selectedSemesters[0]);
             } else if (this.formData.selectedCareers.length > 0) {
-              payload.applies_to = 'career';
+              payload.applies_to = 'carrera'; // NO 'career'
               payload.career = String(this.formData.selectedCareers[0]);
             }
           }
