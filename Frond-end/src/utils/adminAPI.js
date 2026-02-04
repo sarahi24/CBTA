@@ -599,5 +599,35 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.updateConceptRelations:', err);
       throw err;
     }
+  },
+
+  /**
+   * POST /api/v1/concepts/{concept}/finalize
+   * Finalizar un concepto de pago (cambiar status a finalizado)
+   */
+  async finalizeConcept(conceptId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/${conceptId}/finalize`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'finalize.concepts'
+        }
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al finalizar concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.finalizeConcept:', err);
+      throw err;
+    }
   }
 };
