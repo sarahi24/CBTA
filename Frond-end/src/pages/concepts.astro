@@ -217,10 +217,27 @@ async function mutateConcept(id, action){
         'X-User-Permission': perms[action]
       }
     });
+    
+    // Mostrar mensaje de éxito
+    const successMessages = {
+      finalize: 'Concepto finalizado exitosamente',
+      activate: 'Concepto activado exitosamente',
+      disable: 'Concepto deshabilitado exitosamente',
+      delete: 'Concepto eliminado exitosamente'
+    };
+    alert(`✓ ${successMessages[action]}`);
+    
     await loadConcepts();
   } catch (err) {
     console.error(`Error en ${action}:`, err);
-    alert(`Error: ${err.message}`);
+    
+    // Manejo especial para conflictos 409
+    if (err.message.includes('ya está')) {
+      alert(`⚠️ ${err.message}\n\nActualizando lista...`);
+      await loadConcepts(); // Recargar para mostrar estado actualizado
+    } else {
+      alert(`❌ Error: ${err.message}`);
+    }
   }
 }
 
