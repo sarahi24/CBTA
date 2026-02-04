@@ -116,7 +116,7 @@ const title = "Mis Métodos de Pago";
             const data = await response.json();
             console.log('📦 Respuesta del backend:', data);
             
-            const checkoutUrl = data.checkout_url || data.data?.checkout_url;
+            const checkoutUrl = data.data?.url_checkout || data.checkout_url || data.data?.checkout_url;
             console.log('🔗 Checkout URL extraída:', checkoutUrl);
 
             if (checkoutUrl) {
