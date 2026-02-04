@@ -689,5 +689,35 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.activateConcept:', err);
       throw err;
     }
+  },
+
+  /**
+   * DELETE /api/v1/concepts/{id}/eliminate
+   * Eliminar un concepto de pago (eliminación física)
+   */
+  async eliminateConcept(conceptId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/${conceptId}/eliminate`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'eliminate.concepts'
+        }
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al eliminar concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.eliminateConcept:', err);
+      throw err;
+    }
   }
 };
