@@ -219,6 +219,13 @@ export const AdminAPI = {
         body.role = curpsOrRole;
       }
 
+      console.log('🔐🔐🔐 updateMultipleUsersPermissions 🔐🔐🔐');
+      console.log('isCurps:', isCurps);
+      console.log('curpsOrRole:', curpsOrRole);
+      console.log('permissionsToAdd:', permissionsToAdd);
+      console.log('permissionsToRemove:', permissionsToRemove);
+      console.log('Body completo a enviar:', JSON.stringify(body, null, 2));
+
       const response = await fetch(`${API_BASE}/admin-actions/update-permissions`, {
         method: 'POST',
         headers: {
@@ -231,8 +238,12 @@ export const AdminAPI = {
         body: JSON.stringify(body)
       });
 
+      console.log('STATUS:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('❌❌❌ 422 VALIDATION ERROR:');
+        console.error(JSON.stringify(errorData, null, 2));
         throw new Error(errorData.message || 'Error al actualizar permisos de múltiples usuarios');
       }
 
