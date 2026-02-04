@@ -714,6 +714,16 @@ class AdminActionsController extends Controller
                 if (!$user->relationLoaded('permissions')) {
                     $user->load('permissions');
                 }
+                
+                // Debug logging
+                \Log::info('🔍 DEBUG User roles after load:', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'relationLoaded_roles' => $user->relationLoaded('roles'),
+                    'roles_relation' => $user->roles ? $user->roles->pluck('name')->toArray() : 'NULL',
+                    'roles_count' => $user->roles ? $user->roles->count() : 0,
+                ]);
+                
                 return $user;
             });
             
