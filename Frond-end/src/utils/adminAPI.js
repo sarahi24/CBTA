@@ -47,30 +47,21 @@ export const AdminAPI = {
    */
   async getPermissionsByUser(userId, token, roles = []) {
     try {
-      // Debug: Log token info
-      console.log('🔐 AdminAPI.getPermissionsByUser - Token Info:');
-      console.log('   Token presente:', !!token);
-      console.log('   Token longitud:', token ? token.length : 0);
-      console.log('   Token primeros 20 chars:', token ? token.substring(0, 20) + '...' : 'VACÍO');
+      console.log('🔐🔐🔐 INICIANDO getPermissionsByUser 🔐🔐🔐');
+      console.log('userId:', userId);
+      console.log('token presente:', !!token);
+      console.log('roles:', roles);
       
       if (!token) {
-        console.error('❌ Token no proporcionado');
         throw new Error('No hay token de autenticación');
       }
 
-      // Debug: Log request body
-      const requestBody = {
-        roles: Array.isArray(roles) ? roles : [],
-        forceRefresh: true
-      };
-      
-      console.log('📦 AdminAPI.getPermissionsByUser - Request Body:');
-      console.log('   userId:', userId);
-      console.log('   roles:', requestBody.roles);
-      console.log('   roles.length:', requestBody.roles.length);
-      console.log('   forceRefresh:', requestBody.forceRefresh);
+      // El body debe estar vacío o simplemente con roles
+      // Intentemos primero sin roles en el body
+      const url = `${API_BASE}/admin-actions/permissions/by-user/${userId}`;
+      console.log('URL:', url);
 
-      const response = await fetch(`${API_BASE}/admin-actions/permissions/by-user/${userId}`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -79,28 +70,39 @@ export const AdminAPI = {
           'X-User-Role': 'admin',
           'X-User-Permission': 'view.permissions'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          roles: Array.isArray(roles) ? roles : [],
+          forceRefresh: true
+        })
       });
 
-      console.log('📥 Response status:', response.status);
+      console.log('STATUS:', response.status);
 
-      // Detectar error de autenticación
       if (response.status === 401) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ 401 Error details:', errorData);
+        console.error('401 ERROR:', errorData);
         handleAuthError(401);
-        throw new Error('No autenticado - sesión expirada o sin permisos');
+        throw new Error('Sesión expirada');
+      }
+
+      if (response.status === 422) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌❌❌ 422 VALIDATION ERROR:');
+        console.error(JSON.stringify(errorData, null, 2));
+        throw new Error(errorData.message || 'Errores de validación');
       }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Error response:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}: Error al cargar permisos`);
+        console.error('OTRA ERROR:', response.status, errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ SUCCESS:', result);
+      return result;
     } catch (err) {
-      console.error('❌ AdminAPI.getPermissionsByUser:', err);
+      console.error('❌ AdminAPI.getPermissionsByUser ERROR:', err);
       throw err;
     }
   },
