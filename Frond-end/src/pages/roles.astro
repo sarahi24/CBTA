@@ -3650,7 +3650,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const maxAttempts = 200; // 200 * 100ms = 20 segundos
                     
                     while (!adminAPIReady && waitAttempts < maxAttempts) {
-                        if (window.__adminAPILoaded && window.AdminAPI && typeof window.AdminAPI.getPermissionsByUser === 'function') {
+                        if (window.__adminAPILoaded && window.AdminAPI && typeof window.AdminAPI.getPermissionsByRole === 'function') {
                             adminAPIReady = true;
                             console.log('✅ AdminAPI lista después de', waitAttempts * 100, 'ms');
                             break;
@@ -3666,16 +3666,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         console.warn('⚠️ AdminAPI no disponible después de 20 segundos');
                     }
 
-                    // Obtener los roles de los usuarios seleccionados
-                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
-                    const userRoles = new Set();
-                    selectedUsersData.forEach(user => {
-                        if (Array.isArray(user.roles)) {
-                            user.roles.forEach(r => userRoles.add(r));
-                        }
-                    });
-
-                    // Usar AdminAPI para obtener permisos por usuario
+                    // Usar AdminAPI para obtener todos los permisos disponibles
                     let response = null;
                     if (adminAPIReady) {
                         console.log('🔐 Token a enviar:');
@@ -3685,12 +3676,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const tokenToUse = this.token || token;
                         console.log('   Token final:', tokenToUse ? tokenToUse.substring(0, 20) + '...' : 'SIN TOKEN');
                         
-                        response = await window.AdminAPI.getPermissionsByUser(
-                            this.selectedUsers[0],
-                            tokenToUse,
-                            Array.from(userRoles)
+                        // Usar getPermissionsByRole que no requiere roles en el body
+                        response = await window.AdminAPI.getPermissionsByRole(
+                            tokenToUse
                         ).catch(e => {
-                            console.warn('⚠️ No se pudo obtener permisos por usuario:', e);
+                            console.warn('⚠️ No se pudo obtener permisos por rol:', e);
                             return null;
                         });
                     } else {
