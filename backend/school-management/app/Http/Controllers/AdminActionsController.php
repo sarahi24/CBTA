@@ -693,39 +693,9 @@ class AdminActionsController extends Controller
                 $query->where('status', $status);
             }
 
-            // Get all results first, THEN paginate to ensure roles are loaded
-            $allUsers = $query->get();
-            
-            // Paginate the collection manually
-            $page = max(1, $page);
-            $perPage = max(1, min(100, $perPage));
-            $total = $allUsers->count();
-            $lastPage = ceil($total / $perPage);
-            $offset = ($page - 1) * $perPage;
-            
-            $users = $allUsers->slice($offset, $perPage)->values();
-            
-            // Ensure roles and permissions are accessible
-            $users = $users->map(function($user) {
-                // Force load relations if not already loaded
-                if (!$user->relationLoaded('roles')) {
-                    $user->load('roles');
-                }
-                if (!$user->relationLoaded('permissions')) {
-                    $user->load('permissions');
-                }
-                
-                // Debug logging
-                \Log::info('🔍 DEBUG User roles after load:', [
-                    'user_id' => $user->id,
-                    'user_email' => $user->email,
-                    'relationLoaded_roles' => $user->relationLoaded('roles'),
-                    'roles_relation' => $user->roles ? $user->roles->pluck('name')->toArray() : 'NULL',
-                    'roles_count' => $user->roles ? $user->roles->count() : 0,
-                ]);
-                
-                return $user;
-            });
+            // Use paginate() directly
+            $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+            $users = $paginated->items();
             
             $formattedUsers = $users->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
@@ -774,12 +744,12 @@ class AdminActionsController extends Controller
                 'data' => [
                     'users' => [
                         'items' => $formattedUsers,
-                        'currentPage' => $page,
-                        'lastPage' => $lastPage,
-                        'perPage' => $perPage,
-                        'total' => $total,
-                        'hasMorePages' => $page < $lastPage,
-                        'nextPage' => $page < $lastPage ? $page + 1 : null,
+                        'currentPage' => $paginated->currentPage(),
+                        'lastPage' => $paginated->lastPage(),
+                        'perPage' => $paginated->perPage(),
+                        'total' => $paginated->total(),
+                        'hasMorePages' => $paginated->hasMorePages(),
+                        'nextPage' => $paginated->hasMorePages() ? $paginated->currentPage() + 1 : null,
                     ]
                 ]
             ]);
