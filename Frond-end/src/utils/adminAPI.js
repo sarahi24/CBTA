@@ -719,5 +719,35 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.eliminateConcept:', err);
       throw err;
     }
+  },
+
+  /**
+   * POST /api/v1/concepts/{concept}/eliminateLogical
+   * Eliminar un concepto de pago lógicamente (soft delete)
+   */
+  async eliminateLogicalConcept(conceptId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/${conceptId}/eliminateLogical`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'eliminate.logical.concepts'
+        }
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al eliminar concepto lógicamente');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.eliminateLogicalConcept:', err);
+      throw err;
+    }
   }
 };
