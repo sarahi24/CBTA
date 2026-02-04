@@ -702,6 +702,17 @@ class AdminActionsController extends Controller
             $formattedUsers = collect($users)->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                 
+                // Debug: Check if roles are loaded
+                $rolesArray = $user->roles ? $user->roles->pluck('name')->toArray() : [];
+                if (empty($rolesArray)) {
+                    \Log::warning('⚠️ User has no roles', [
+                        'user_id' => $user->id,
+                        'user_email' => $user->email,
+                        'has_roles_relation' => $user->relationLoaded('roles'),
+                        'roles_count' => $user->roles_count ?? 'N/A'
+                    ]);
+                }
+                
                 return [
                     'id' => $user->id,
                     'fullName' => $fullName ?: 'Sin nombre',
