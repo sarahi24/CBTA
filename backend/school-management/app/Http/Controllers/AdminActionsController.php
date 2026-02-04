@@ -740,7 +740,7 @@ class AdminActionsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Usuarios encontrados.',
+                'message' => 'Usuarios encontrados correctamente con roles y permisos.',
                 'data' => [
                     'users' => [
                         'items' => $formattedUsers,
