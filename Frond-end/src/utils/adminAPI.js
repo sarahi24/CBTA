@@ -538,5 +538,35 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.updateConcept:', err);
       throw err;
     }
+  },
+
+  /**
+   * GET /api/v1/concepts/relations/{id}
+   * Obtener relaciones de un concepto de pago (usuarios, carreras, semestres, etc.)
+   */
+  async getConceptRelations(conceptId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/relations/${conceptId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.concepts'
+        }
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al obtener relaciones del concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.getConceptRelations:', err);
+      throw err;
+    }
   }
 };
