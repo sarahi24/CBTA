@@ -705,7 +705,19 @@ class AdminActionsController extends Controller
             
             $users = $allUsers->slice($offset, $perPage)->values();
             
-            $formattedUsers = collect($users)->map(function($user) {
+            // Ensure roles and permissions are accessible
+            $users = $users->map(function($user) {
+                // Force load relations if not already loaded
+                if (!$user->relationLoaded('roles')) {
+                    $user->load('roles');
+                }
+                if (!$user->relationLoaded('permissions')) {
+                    $user->load('permissions');
+                }
+                return $user;
+            });
+            
+            $formattedUsers = $users->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                 
                 // Debug: Check if roles are loaded
