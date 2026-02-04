@@ -1681,6 +1681,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             }
                             
                             this.users = result.data.users.items.map(u => this.mapUser(u));
+                            
+                            // ⚠️ Si el backend no devuelve roles en el listado, obtenerlos del endpoint de detalle
+                            if (this.users.length > 0 && (!this.users[0].roles || this.users[0].roles.length === 0)) {
+                                console.log('🔄 El listado no incluye roles, cargando roles desde endpoint de detalle...');
+                                
+                                // Cargar roles para cada usuario en paralelo (máximo 5 simultáneos)
+                                const rolesPromises = this.users.map(user => 
+                                    this.authenticatedFetch(
+                                        `${this.apiBaseUrl}/v1/admin-actions/show-users/${user.id}`,
+                                        { method: 'GET' }
+                                    )
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success && data.data && data.data.user && data.data.user.roles) {
+                                            user.roles = data.data.user.roles;
+                                            console.log(`✅ Roles cargados para ${user.name}:`, user.roles);
+                                        }
+                                        return user;
+                                    })
+                                    .catch(err => {
+                                        console.error(`❌ Error cargando roles para ${user.name}:`, err);
+                                        return user;
+                                    })
+                                );
+                                
+                                await Promise.all(rolesPromises);
+                                console.log('✅ Todos los roles cargados desde endpoint de detalle');
+                            }
                         } else if (Array.isArray(result)) {
                             console.log('🔍 RAW USERS desde backend (primeros 2):');
                             console.log(JSON.stringify(result.slice(0, 2), null, 2));
