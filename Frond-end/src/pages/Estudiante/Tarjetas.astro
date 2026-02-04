@@ -44,6 +44,7 @@ const title = "Mis Métodos de Pago";
               if (forceRefresh) endpoint += '?forceRefresh=true';
               
               console.log('🔍 Cargando tarjetas con token:', this.token ? `${this.token.substring(0, 20)}...` : 'VACÍO');
+              if (forceRefresh) console.log('🔄 Forzando actualización de tarjetas (POST de pago completado)');
               
               const response = await fetch(endpoint, {
                 method: 'GET',
@@ -63,6 +64,8 @@ const title = "Mis Métodos de Pago";
               const data = await response.json();
               const cardsArray = Array.isArray(data.data) ? data.data : 
                                  data.data?.cards ? data.data.cards : [];
+              
+              console.log(`✅ ${cardsArray.length} tarjeta(s) cargada(s) del servidor`);
               
               this.tarjetas = cardsArray.map(card => ({
                 id: card.id,
@@ -95,6 +98,7 @@ const title = "Mis Métodos de Pago";
         async agregarNuevaTarjeta() {
           this.error = '';
           this.isLoading = true;
+          console.log('🔄 Iniciando proceso de vincular tarjeta con Stripe...');
 
           try {
             const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards', {
@@ -121,6 +125,8 @@ const title = "Mis Métodos de Pago";
 
             if (checkoutUrl) {
               console.log('✅ Redirigiendo a Stripe:', checkoutUrl);
+              console.log('⏱️ Hora de redirección:', new Date().toLocaleTimeString());
+              // Aquí el usuario completa el pago en Stripe
               window.location.href = checkoutUrl;
             } else {
               console.error('❌ Estructura de respuesta:', JSON.stringify(data, null, 2));
