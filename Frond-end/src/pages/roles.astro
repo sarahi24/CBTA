@@ -1411,6 +1411,35 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 return 'bg-slate-100 text-slate-600';
             },
 
+            getRoleLabel(rolesArray) {
+                const rolesTranslation = {
+                    'admin': 'Administrador',
+                    'administrador': 'Administrador',
+                    'caja': 'Caja',
+                    'financial-staff': 'Caja',
+                    'financial staff': 'Caja',
+                    'maestro': 'Maestro',
+                    'teacher': 'Maestro',
+                    'docente': 'Maestro',
+                    'student': 'Estudiante',
+                    'estudiante': 'Estudiante',
+                    'parent': 'Padre/Tutor',
+                    'padre': 'Padre/Tutor',
+                    'supervisor': 'Supervisor',
+                    'unverified': 'Sin Verificar',
+                    'applicant': 'Solicitante'
+                };
+                
+                if (!rolesArray || rolesArray.length === 0) return 'Sin rol';
+                
+                const translatedRoles = rolesArray.map(r => {
+                    const key = r.toString().toLowerCase();
+                    return rolesTranslation[key] || r;
+                });
+                
+                return translatedRoles.join(', ');
+            },
+
             mapUser(raw) {
                 if (!raw) return null;
                 
@@ -1519,7 +1548,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     fullName: raw.fullName || `${name} ${last_name}`.trim(),
                     roles: roles, // Array de roles
                     role: roleLabel,
-                    roleLabel,
+                    roleLabel: () => this.getRoleLabel(this.roles || roles), // Función para recalcular dinámicamente
                     roleKey,
                     // Campos de estudiante (si existen)
                     n_control: raw.n_control || '',
@@ -1708,6 +1737,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 
                                 await Promise.all(rolesPromises);
                                 console.log('✅ Todos los roles cargados desde endpoint de detalle');
+                                
+                                // Recalcular roleLabel para cada usuario con roles actualizado
+                                this.users.forEach(user => {
+                                    user.roleLabel = this.getRoleLabel(user.roles);
+                                    user.role = user.roleLabel;
+                                    console.log(`♻️ roleLabel actualizado para ${user.name}:`, user.roleLabel);
+                                });
                             }
                         } else if (Array.isArray(result)) {
                             console.log('🔍 RAW USERS desde backend (primeros 2):');
