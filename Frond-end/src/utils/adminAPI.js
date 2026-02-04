@@ -568,5 +568,36 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.getConceptRelations:', err);
       throw err;
     }
+  },
+
+  /**
+   * PATCH /api/v1/concepts/update-relations/{id}
+   * Actualizar relaciones de un concepto de pago
+   */
+  async updateConceptRelations(conceptId, token, relationsData) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/update-relations/${conceptId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'update.concepts'
+        },
+        body: JSON.stringify(relationsData)
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al actualizar relaciones del concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.updateConceptRelations:', err);
+      throw err;
+    }
   }
 };
