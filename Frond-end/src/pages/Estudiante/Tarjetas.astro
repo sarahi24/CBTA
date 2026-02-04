@@ -114,11 +114,16 @@ const title = "Mis Métodos de Pago";
             }
 
             const data = await response.json();
+            console.log('📦 Respuesta del backend:', data);
+            
             const checkoutUrl = data.checkout_url || data.data?.checkout_url;
+            console.log('🔗 Checkout URL extraída:', checkoutUrl);
 
             if (checkoutUrl) {
+              console.log('✅ Redirigiendo a Stripe:', checkoutUrl);
               window.location.href = checkoutUrl;
             } else {
+              console.error('❌ Estructura de respuesta:', JSON.stringify(data, null, 2));
               throw new Error('No se recibió URL de Stripe del backend');
             }
           } catch (err) {
