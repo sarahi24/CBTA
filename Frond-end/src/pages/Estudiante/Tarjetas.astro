@@ -1,68 +1,54 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
-import { StudentAPI } from '../../utils/studentAPI.js';
 
-let tarjetasIniciales = [];
 const title = "Mis Métodos de Pago";
-// No intentar acceder a localStorage en el servidor - se hará todo en el cliente
 ---
 
 <StudentLayout title={title}>
-  <script is:inline>
-    // Esperar a que el DOM esté listo y luego cargar StudentAPI dinámicamente
-    async function initTarjetas() {
-      const { StudentAPI } = await import('/src/utils/studentAPI.js');
-      window.StudentAPI = StudentAPI;
-      
-      // Crear la función tarjetasInit después de que StudentAPI esté disponible
-      window.tarjetasInit = function() {
-        return {
-          showModal: false,
-          alumno: 'Usuario',
-          tarjetas: [],
-          isLoading: false,
-          error: '',
-          success: '',
-          form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
-          token: null,
-          userId: null,
-          cardType: 'Tarjeta',
+  <script type="module">
+    import { StudentAPI } from '/src/utils/studentAPI.js';
+    
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('tarjetas', () => ({
+        showModal: false,
+        alumno: 'Usuario',
+        tarjetas: [],
+        isLoading: false,
+        error: '',
+        success: '',
+        form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
+        token: null,
+        userId: null,
 
-          async init() {
-            const userName = localStorage.getItem('userName');
-            const userDataStr = localStorage.getItem('user_data');
-            this.token = localStorage.getItem('access_token');
-            this.userId = localStorage.getItem('userId');
+        async init() {
+          this.token = localStorage.getItem('access_token');
+          this.userId = localStorage.getItem('userId');
+          const userName = localStorage.getItem('userName');
+          
+          if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+            this.alumno = userName;
+          }
+          
+          console.log('🔍 [Tarjetas] Init:', { usuario: this.alumno, userId: this.userId });
+          await this.cargarTarjetas();
+        },
+
+        async cargarTarjetas(forceRefresh = false) {
+          if (!this.token || !this.userId) {
+            this.error = 'Por favor inicia sesión';
+            return;
+          }
+
+          this.isLoading = true;
+          this.error = '';
+
+          try {
+            const data = await StudentAPI.getPaymentMethods(this.userId, this.token, forceRefresh);
+            const cardsArray = Array.isArray(data.data) ? data.data : 
+                               data.data?.cards ? data.data.cards : [];
             
-            if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-              this.alumno = userName;
-            } else if (userDataStr) {
-              try {
-                const userData = JSON.parse(userDataStr);
-                this.alumno = userData.fullName || userData.name || 'Usuario';
-              } catch (e) {
-                this.alumno = 'Usuario';
-              }
-            }
-            
-            console.log('🔍 [Tarjetas] Nombre:', this.alumno);
-            console.log('🔍 [Tarjetas] Token:', !!this.token);
-            console.log('🔍 [Tarjetas] UserId:', this.userId);
-            console.log('🔍 [Tarjetas] StudentAPI disponible:', !!window.StudentAPI);
-            
-            await this.cargarTarjetas();
-          },
-
-          async cargarTarjetas(forceRefresh = false) {
-            if (!this.token) {
-              this.error = 'Por favor inicia sesión';
-              return;
-            }
-
-            this.isLoading = true;
-            this.error = '';
-
-            try {
+            this.tarjetas = cardsArray.map(card => ({
+              id: card.id,
               tipo: card.brand || 'Tarjeta',
               masked_card: card.masked_card || ('**** **** **** ' + (card.last4 || '****')),
               vencimiento: card.expiration_date || (card.exp_month + '/' + card.exp_year),
@@ -74,14 +60,6 @@ const title = "Mis Métodos de Pago";
           } catch (err) {
             console.error('❌ Error al cargar tarjetas:', err);
             this.error = err.message || 'Error al cargar tarjetas';
-            
-            // Fallback a localStorage
-            const guardadas = localStorage.getItem('mis_tarjetas');
-            if (guardadas) {
-              try {
-                this.tarjetas = JSON.parse(guardadas);
-              } catch (e) {}
-            }
           } finally {
             this.isLoading = false;
           }
@@ -98,11 +76,11 @@ const title = "Mis Métodos de Pago";
         },
 
         formatCardNumber(value) {
-          return value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+          return value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
         },
 
-        get cardType() {
-          const num = this.form.numero.replace(/\\s/g, '');
+        getCardType() {
+          const num = this.form.numero.replace(/\s/g, '');
           if (num.startsWith('4')) return 'Visa';
           if (num.startsWith('5')) return 'Mastercard';
           if (num.startsWith('3')) return 'Amex';
@@ -221,20 +199,13 @@ const title = "Mis Métodos de Pago";
             this.isLoading = false;
           }
         }
-      };
-      };
-      
-      // Inicializar cuando el DOM esté listo
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTarjetas);
-      } else {
-        initTarjetas();
-      }
-    </script>
+      }));
+    });
+  </script>
     
     <div 
       class="page-wrapper"
-      x-data="tarjetasInit()"
+      x-data="tarjetas()"
       @load="init()"
     >
       <header class="main-header">
@@ -314,7 +285,7 @@ const title = "Mis Métodos de Pago";
               <label for="card-numero">Número de Tarjeta</label>
               <div class="input-wrapper">
                 <input id="card-numero" name="cardNumero" type="text" x-model="form.numero" @input="form.numero = formatCardNumber($event.target.value)" maxlength="19" inputmode="numeric" placeholder="0000 0000 0000 0000">
-                <span class="card-hint" x-text="cardType"></span>
+                <span class="card-hint" x-text="getCardType()"></span>
               </div>
             </div>
             <div class="input-field">
