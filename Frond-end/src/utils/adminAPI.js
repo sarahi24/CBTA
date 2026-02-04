@@ -409,5 +409,42 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.getPermissionById:', err);
       throw err;
     }
+  },
+
+  /**
+   * GET /api/v1/concepts
+   * Obtener lista paginada de conceptos de pago
+   */
+  async getConcepts(token, { status = 'activo', perPage = 15, page = 1, forceRefresh = false } = {}) {
+    try {
+      const params = new URLSearchParams({
+        status,
+        perPage: perPage.toString(),
+        page: page.toString(),
+        forceRefresh: forceRefresh.toString()
+      });
+
+      const response = await fetch(`${API_BASE}/concepts?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.concepts'
+        }
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al obtener conceptos');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.getConcepts:', err);
+      throw err;
+    }
   }
 };
