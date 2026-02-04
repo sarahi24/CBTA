@@ -682,9 +682,11 @@ class AdminActionsController extends Controller
             $perPage = max(1, min(100, (int)$perPage));
             $page = max(1, (int)$page);
 
-            // Build query
-            // Note: Explicitly load roles from ALL guards to ensure they're included
-            $query = User::query()->with('roles', 'permissions');
+            // Build query with eager loading for roles and permissions
+            // CRITICAL: Must use with('roles', 'permissions') to load relationships BEFORE pagination
+            $query = User::query()
+                ->with('roles')
+                ->with('permissions');
 
             // Filter by status
             if ($status && $status !== 'all') {
