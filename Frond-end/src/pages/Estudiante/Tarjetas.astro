@@ -8,19 +8,14 @@ const title = "Mis Métodos de Pago";
 ---
 
 <StudentLayout title={title}>
-  <script type="module">
-    // Importar StudentAPI en el contexto global para Alpine
-    import { StudentAPI } from '/src/utils/studentAPI.js';
-    window.StudentAPI = StudentAPI;
-  </script>
-  
-  <div 
-    class="page-wrapper"
-    x-data="tarjetasInit()"
-    @load="init()"
-  >
-    <script is:inline>
-      function tarjetasInit() {
+  <script is:inline>
+    // Esperar a que el DOM esté listo y luego cargar StudentAPI dinámicamente
+    async function initTarjetas() {
+      const { StudentAPI } = await import('/src/utils/studentAPI.js');
+      window.StudentAPI = StudentAPI;
+      
+      // Crear la función tarjetasInit después de que StudentAPI esté disponible
+      window.tarjetasInit = function() {
         return {
           showModal: false,
           alumno: 'Usuario',
@@ -58,26 +53,16 @@ const title = "Mis Métodos de Pago";
             await this.cargarTarjetas();
           },
 
-        async cargarTarjetas(forceRefresh = false) {
-          if (!this.token) {
-            this.error = 'Por favor inicia sesión';
-            return;
-          }
+          async cargarTarjetas(forceRefresh = false) {
+            if (!this.token) {
+              this.error = 'Por favor inicia sesión';
+              return;
+            }
 
-          this.isLoading = true;
-          this.error = '';
+            this.isLoading = true;
+            this.error = '';
 
-          try {
-            console.log('📥 Cargando tarjetas desde StudentAPI...', { forceRefresh });
-            const data = await window.StudentAPI.getPaymentMethods(this.userId, this.token, forceRefresh);
-            
-            console.log('✅ Cards data received from StudentAPI:', data);
-            const cardsArray = Array.isArray(data.data) ? data.data : 
-                               data.data?.cards ? data.data.cards : 
-                               Array.isArray(data) ? data : [];
-            
-            this.tarjetas = cardsArray.map(card => ({
-              id: card.id,
+            try {
               tipo: card.brand || 'Tarjeta',
               masked_card: card.masked_card || ('**** **** **** ' + (card.last4 || '****')),
               vencimiento: card.expiration_date || (card.exp_month + '/' + card.exp_year),
@@ -237,28 +222,41 @@ const title = "Mis Métodos de Pago";
           }
         }
       };
+      };
+      
+      // Inicializar cuando el DOM esté listo
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTarjetas);
+      } else {
+        initTarjetas();
       }
     </script>
-    <header class="main-header">
-      <div class="header-content">
-        <div class="user-profile">
-          <div class="avatar">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+    
+    <div 
+      class="page-wrapper"
+      x-data="tarjetasInit()"
+      @load="init()"
+    >
+      <header class="main-header">
+        <div class="header-content">
+          <div class="user-profile">
+            <div class="avatar">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="welcome-text">
+              <span class="greeting">Métodos de Pago</span>
+              <h1 x-text="`Hola, ${alumno.split(' ')[0]}`"></h1>
+            </div>
           </div>
-          <div class="welcome-text">
-            <span class="greeting">Métodos de Pago</span>
-            <h1 x-text="`Hola, ${alumno.split(' ')[0]}`"></h1>
+          <div class="balance-summary">
+            <span class="label">Tarjetas Vinculadas</span>
+            <span class="amount" x-text="tarjetas.length"></span>
           </div>
         </div>
-        <div class="balance-summary">
-          <span class="label">Tarjetas Vinculadas</span>
-          <span class="amount" x-text="tarjetas.length"></span>
-        </div>
-      </div>
-    </header>
+      </header>
 
 
 
