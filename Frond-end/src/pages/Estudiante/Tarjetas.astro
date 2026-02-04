@@ -31,6 +31,7 @@ const title = "Mis Métodos de Pago";
 
           async cargarTarjetas(forceRefresh = false) {
             if (!this.token || !this.userId) {
+              console.error('❌ Token o userId vacíos:', { token: !!this.token, userId: this.userId });
               this.error = 'Por favor inicia sesión';
               return;
             }
@@ -41,6 +42,8 @@ const title = "Mis Métodos de Pago";
             try {
               let endpoint = `https://nginx-production-728f.up.railway.app/api/v1/cards/${this.userId}`;
               if (forceRefresh) endpoint += '?forceRefresh=true';
+              
+              console.log('🔍 Cargando tarjetas con token:', this.token ? `${this.token.substring(0, 20)}...` : 'VACÍO');
               
               const response = await fetch(endpoint, {
                 method: 'GET',
