@@ -1416,13 +1416,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 // Log para debugging
                 console.log('🔍 mapUser recibió:', raw);
-                console.log('🔍 raw.roles:', raw.roles);
+                console.log('🔍 raw.roles_count:', raw.roles_count);
                 console.log('🔍 raw.role:', raw.role);
                 
-                // Extraer roles como array
+                // Extraer roles como array - USAR roles_count según indicación de Angel
                 let roles = [];
-                if (Array.isArray(raw.roles)) {
-                    roles = raw.roles.map(r => {
+                if (Array.isArray(raw.roles_count)) {
+                    roles = raw.roles_count.map(r => {
                         if (typeof r === 'string') return r;
                         if (r && r.name) return r.name;
                         return String(r);
