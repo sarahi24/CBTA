@@ -161,6 +161,13 @@ class ConceptsController extends Controller
      */
     public function finalize(PaymentConcept $concept)
     {
+        // Validar que el concepto haya iniciado
+        if ($concept->start_date > now()) {
+            return response()->json([
+                'message' => 'El concepto no ha iniciado, no puede ser finalizado.'
+            ], 422);
+        }
+
         $finalized = $this->conceptsService->finalizePaymentConcept($concept);
 
         return response()->json([
