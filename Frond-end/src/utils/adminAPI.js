@@ -507,5 +507,36 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.getConceptById:', err);
       throw err;
     }
+  },
+
+  /**
+   * PUT /api/v1/concepts/{id}
+   * Actualizar un concepto de pago existente
+   */
+  async updateConcept(conceptId, token, updateData) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts/${conceptId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'update.concepts'
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al actualizar concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.updateConcept:', err);
+      throw err;
+    }
   }
 };
