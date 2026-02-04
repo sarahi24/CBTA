@@ -693,11 +693,17 @@ class AdminActionsController extends Controller
                 $query->where('status', $status);
             }
 
-            // Get paginated results
-            $paginated = $query->paginate($perPage, ['*'], 'page', $page);
-
-            // Format users
-            $users = $paginated->items();
+            // Get all results first, THEN paginate to ensure roles are loaded
+            $allUsers = $query->get();
+            
+            // Paginate the collection manually
+            $page = max(1, $page);
+            $perPage = max(1, min(100, $perPage));
+            $total = $allUsers->count();
+            $lastPage = ceil($total / $perPage);
+            $offset = ($page - 1) * $perPage;
+            
+            $users = $allUsers->slice($offset, $perPage)->values();
             
             $formattedUsers = collect($users)->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
@@ -746,12 +752,12 @@ class AdminActionsController extends Controller
                 'data' => [
                     'users' => [
                         'items' => $formattedUsers,
-                        'currentPage' => $paginated->currentPage(),
-                        'lastPage' => $paginated->lastPage(),
-                        'perPage' => $paginated->perPage(),
-                        'total' => $paginated->total(),
-                        'hasMorePages' => $paginated->hasMorePages(),
-                        'nextPage' => $paginated->hasMorePages() ? $paginated->currentPage() + 1 : null,
+                        'currentPage' => $page,
+                        'lastPage' => $lastPage,
+                        'perPage' => $perPage,
+                        'total' => $total,
+                        'hasMorePages' => $page < $lastPage,
+                        'nextPage' => $page < $lastPage ? $page + 1 : null,
                     ]
                 ]
             ]);
