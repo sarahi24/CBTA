@@ -194,7 +194,7 @@ async function mutateConcept(id, action){
     finalize: `${API_BASE}/v1/concepts/${id}/finalize`,
     activate: `${API_BASE}/v1/concepts/${id}/activate`,
     disable: `${API_BASE}/v1/concepts/${id}/disable`,
-    delete: `${API_BASE}/v1/concepts/${id}/logical`
+    delete: `${API_BASE}/v1/concepts/${id}/eliminateLogical`
   };
   const perms = {
     finalize: 'finalize.concepts',
