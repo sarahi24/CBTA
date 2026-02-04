@@ -5,11 +5,9 @@ const title = "Mis Métodos de Pago";
 ---
 
 <StudentLayout title={title}>
-  <script>
-    // Registro de Alpine.data ANTES de que Alpine se inicialice
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.Alpine) {
-        window.Alpine.data('tarjetas', () => ({
+  <script is:inline>
+    // Crear la definición del componente
+    const tarjetasComponent = () => ({
           showModal: false,
           alumno: 'Usuario',
           tarjetas: [],
@@ -217,15 +215,31 @@ const title = "Mis Métodos de Pago";
             this.isLoading = false;
           }
         }
-      }));
-      }
     });
+
+    // Registrar con Alpine.js
+    const registerTarjetas = () => {
+      if (window.Alpine) {
+        window.Alpine.data('tarjetas', tarjetasComponent);
+      }
+    };
+
+    // Intentar registrar inmediatamente
+    registerTarjetas();
+
+    // Fallback: esperar a que Alpine cargue si no estaba disponible
+    document.addEventListener('alpine:init', registerTarjetas);
+    
+    // Otro fallback: cuando DOM está listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', registerTarjetas);
+    }
   </script>
     
     <div 
       class="page-wrapper"
       x-data="tarjetas()"
-      @load="init()"
+      x-init="init()"
     >
       <header class="main-header">
         <div class="header-content">
