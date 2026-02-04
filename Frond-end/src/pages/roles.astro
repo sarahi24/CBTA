@@ -3612,26 +3612,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                 // Traducir nombres de permisos al español
                 const permissionsTranslation = {
-                    'view.students': 'Ver Estudiantes',
-                    'create.user': 'Crear Usuario',
-                    'view.concepts': 'Ver Conceptos',
-                    'create.concepts': 'Crear Conceptos',
-                    'update.concepts': 'Actualizar Conceptos',
-                    'view.payments': 'Ver Pagos',
-                    'view.roles': 'Ver Roles',
-                    'view.permissions': 'Ver Permisos',
-                    'attach.student': 'Asociar Estudiante',
-                    'update.student': 'Actualizar Estudiante',
-                    'view.student': 'Ver Estudiante',
-                    'import.users': 'Importar Usuarios',
+                    // Admin permissions
                     'promote.student': 'Promover Estudiante',
+                    'attach.student': 'Asociar Estudiante',
+                    'view.student': 'Ver Estudiante',
+                    'update.student': 'Actualizar Estudiante',
                     'sync.permissions': 'Sincronizar Permisos',
+                    'view.users': 'Ver Usuarios',
                     'sync.roles': 'Sincronizar Roles',
-                    'finalize.concepts': 'Finalizar Conceptos',
-                    'disable.concepts': 'Deshabilitar Conceptos',
-                    'activate.concepts': 'Activar Conceptos',
-                    'eliminate.concepts': 'Eliminar Conceptos',
-                    'eliminate.logical.concepts': 'Eliminar Lógicamente Conceptos'
+                    'delete.users': 'Eliminar Usuarios',
+                    'disable.users': 'Deshabilitar Usuarios',
+                    'view.permissions': 'Ver Permisos',
+                    'view.roles': 'Ver Roles',
+                    // Financial Staff permissions
+                    'view all financial overview': 'Ver Resumen Financiero',
+                    'view all pending concepts summary': 'Ver Resumen de Conceptos Pendientes',
+                    'view all students summary': 'Ver Resumen de Estudiantes',
+                    'view all paid concepts summary': 'Ver Resumen de Conceptos Pagados',
+                    'view concepts history': 'Ver Historial de Conceptos',
+                    'view concepts': 'Ver Conceptos',
+                    'create concepts': 'Crear Conceptos',
+                    'update concepts': 'Actualizar Conceptos',
+                    'finalize concepts': 'Finalizar Conceptos',
+                    'disable concepts': 'Deshabilitar Conceptos',
+                    'eliminate concepts': 'Eliminar Conceptos',
+                    'view debts': 'Ver Deudas',
+                    'validate debt': 'Validar Deuda',
+                    'view payments': 'Ver Pagos',
+                    'view students': 'Ver Estudiantes'
                 };
 
                 const fallbackPermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
