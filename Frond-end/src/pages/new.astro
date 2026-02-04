@@ -6,6 +6,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
 <Layout title="Crear Concepto - CBTA 71">
+  <script is:inline src="/js/adminAPI.js"></script>
   <script is:inline define:vars={{ API_BASE_URL }}>
     window.__API_BASE_URL__ = API_BASE_URL;
   </script>
@@ -338,47 +339,28 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
 
           this.isSaving = true;
-          const endpoint = this.formData.id
-            ? `${this.apiBaseUrl}/v1/concepts/${this.formData.id}`
-            : `${this.apiBaseUrl}/v1/concepts`;
-
-          fetch(endpoint, {
-            method: this.formData.id ? 'PUT' : 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'X-User-Role': 'financial-staff',
-              'X-User-Permission': this.formData.id ? 'update.concepts' : 'create.concepts'
-            },
-            body: JSON.stringify(payload)
-          })
-          .then(async (res) => {
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-              console.error('Backend error:', data);
-              console.error('Validation errors:', data.errors);
-              
-              // Mostrar errores detallados
-              if (data.errors && typeof data.errors === 'object') {
-                const errorList = Object.entries(data.errors)
-                  .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-                  .join(' | ');
-                throw new Error(`Validación: ${errorList}`);
-              }
-              
-              const errorMsg = data.message || data.error || 'Error al guardar';
-              throw new Error(errorMsg);
+          
+          // Usar AdminAPI para crear/actualizar conceptos
+          try {
+            let result;
+            if (this.formData.id) {
+              // Actualizar concepto existente
+              result = await window.AdminAPI.updateConcept(this.formData.id, token, payload);
+            } else {
+              // Crear nuevo concepto
+              result = await window.AdminAPI.createConcept(token, payload);
             }
+            
+            console.log('✅ Resultado:', result);
             localStorage.removeItem('editingConcept');
-            this.errorMessage = '✓ Concepto guardado en el servidor. Redirigiendo...';
+            this.errorMessage = '✓ Concepto guardado exitosamente. Redirigiendo...';
             setTimeout(() => { window.location.href = '/concepts'; }, 1200);
-          })
-          .catch(err => {
-            console.error('Full error:', err);
-            this.errorMessage = `❌ ${err.message}`;
-          })
-          .finally(() => { this.isSaving = false; });
+          } catch (err) {
+            console.error('❌ Error completo:', err);
+            this.errorMessage = `❌ ${err.message || 'Error desconocido'}`;
+          } finally {
+            this.isSaving = false;
+          }
         },
         
         cancel() {
