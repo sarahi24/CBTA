@@ -5,87 +5,105 @@ const title = "Mis Métodos de Pago";
 ---
 
 <StudentLayout title={title}>
-  <script type="module">
-    import { StudentAPI } from '/src/utils/studentAPI.js';
-    
-    document.addEventListener('alpine:init', () => {
-      Alpine.data('tarjetas', () => ({
-        showModal: false,
-        alumno: 'Usuario',
-        tarjetas: [],
-        isLoading: false,
-        error: '',
-        success: '',
-        form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
-        token: null,
-        userId: null,
+  <script>
+    // Registro de Alpine.data ANTES de que Alpine se inicialice
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.Alpine) {
+        window.Alpine.data('tarjetas', () => ({
+          showModal: false,
+          alumno: 'Usuario',
+          tarjetas: [],
+          isLoading: false,
+          error: '',
+          success: '',
+          form: { numero: '', titular: '', mes: '', anio: '', cvv: '' },
+          token: null,
+          userId: null,
 
-        async init() {
-          this.token = localStorage.getItem('access_token');
-          this.userId = localStorage.getItem('userId');
-          const userName = localStorage.getItem('userName');
-          
-          if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-            this.alumno = userName;
-          }
-          
-          console.log('🔍 [Tarjetas] Init:', { usuario: this.alumno, userId: this.userId });
-          await this.cargarTarjetas();
-        },
-
-        async cargarTarjetas(forceRefresh = false) {
-          if (!this.token || !this.userId) {
-            this.error = 'Por favor inicia sesión';
-            return;
-          }
-
-          this.isLoading = true;
-          this.error = '';
-
-          try {
-            const data = await StudentAPI.getPaymentMethods(this.userId, this.token, forceRefresh);
-            const cardsArray = Array.isArray(data.data) ? data.data : 
-                               data.data?.cards ? data.data.cards : [];
+          async init() {
+            this.token = localStorage.getItem('access_token');
+            this.userId = localStorage.getItem('userId');
+            const userName = localStorage.getItem('userName');
             
-            this.tarjetas = cardsArray.map(card => ({
-              id: card.id,
-              tipo: card.brand || 'Tarjeta',
-              masked_card: card.masked_card || ('**** **** **** ' + (card.last4 || '****')),
-              vencimiento: card.expiration_date || (card.exp_month + '/' + card.exp_year),
-              status: card.status || 'active',
-              logo: this.getCardLogo(card.brand)
-            }));
+            if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+              this.alumno = userName;
+            }
+            
+            console.log('✅ [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
+            await this.cargarTarjetas();
+          },
 
-            localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
-          } catch (err) {
-            console.error('❌ Error al cargar tarjetas:', err);
-            this.error = err.message || 'Error al cargar tarjetas';
-          } finally {
-            this.isLoading = false;
-          }
-        },
+          async cargarTarjetas(forceRefresh = false) {
+            if (!this.token || !this.userId) {
+              this.error = 'Por favor inicia sesión';
+              return;
+            }
 
-        getCardLogo(brand) {
-          const brandLower = (brand || '').toLowerCase();
-          if (brandLower === 'visa') {
-            return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
-          } else if (brandLower === 'mastercard') {
-            return 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
-          }
-          return 'https://via.placeholder.com/50?text=Card';
-        },
+            this.isLoading = true;
+            this.error = '';
 
-        formatCardNumber(value) {
-          return value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
-        },
+            try {
+              let endpoint = `https://nginx-production-728f.up.railway.app/api/v1/cards/${this.userId}`;
+              if (forceRefresh) endpoint += '?forceRefresh=true';
+              
+              const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${this.token}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'X-User-Role': 'student',
+                  'X-User-Permission': 'delete.card'
+                }
+              });
 
-        getCardType() {
-          const num = this.form.numero.replace(/\s/g, '');
-          if (num.startsWith('4')) return 'Visa';
-          if (num.startsWith('5')) return 'Mastercard';
-          if (num.startsWith('3')) return 'Amex';
-          return '';
-        },
+              if (!response.ok) {
+                throw new Error('Error al cargar tarjetas');
+              }
+
+              const data = await response.json();
+              const cardsArray = Array.isArray(data.data) ? data.data : 
+                                 data.data?.cards ? data.data.cards : [];
+              
+              this.tarjetas = cardsArray.map(card => ({
+                id: card.id,
+                tipo: card.brand || 'Tarjeta',
+                masked_card: card.masked_card || ('**** **** **** ' + (card.last4 || '****')),
+                vencimiento: card.expiration_date || (card.exp_month + '/' + card.exp_year),
+                status: card.status || 'active',
+                logo: this.getCardLogo(card.brand)
+              }));
+
+              localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
+            } catch (err) {
+              console.error('❌ Error al cargar tarjetas:', err);
+              this.error = err.message || 'Error al cargar tarjetas';
+            } finally {
+              this.isLoading = false;
+            }
+          },
+
+          getCardLogo(brand) {
+            const brandLower = (brand || '').toLowerCase();
+            if (brandLower === 'visa') {
+              return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
+            } else if (brandLower === 'mastercard') {
+              return 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
+            }
+            return 'https://via.placeholder.com/50?text=Card';
+          },
+
+          formatCardNumber(value) {
+            return value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+          },
+
+          getCardType() {
+            const num = this.form.numero.replace(/\s/g, '');
+            if (num.startsWith('4')) return 'Visa';
+            if (num.startsWith('5')) return 'Mastercard';
+            if (num.startsWith('3')) return 'Amex';
+            return '';
+          },
 
         async agregarNuevaTarjeta() {
           this.error = '';
@@ -200,6 +218,7 @@ const title = "Mis Métodos de Pago";
           }
         }
       }));
+      }
     });
   </script>
     
