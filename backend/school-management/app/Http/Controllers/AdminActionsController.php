@@ -700,14 +700,6 @@ class AdminActionsController extends Controller
             $formattedUsers = collect($users)->map(function($user) {
                 $fullName = trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''));
                 
-                // Debug: Log roles info
-                \Log::info('User roles for ' . $user->email, [
-                    'user_id' => $user->id,
-                    'roles_relation' => $user->roles ?? 'null',
-                    'roles_count' => $user->roles ? $user->roles->count() : 0,
-                    'roles_array' => $user->roles ? $user->roles->pluck('name')->toArray() : []
-                ]);
-                
                 return [
                     'id' => $user->id,
                     'fullName' => $fullName ?: 'Sin nombre',
