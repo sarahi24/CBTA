@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Permission;
 
+// Last updated: 2026-02-03 20:00:00 - Force Railway redeploy with getRoleNames() fix
+
 class AdminActionsController extends Controller
 {
     /**
