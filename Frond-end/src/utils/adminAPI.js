@@ -446,5 +446,36 @@ export const AdminAPI = {
       console.error('❌ AdminAPI.getConcepts:', err);
       throw err;
     }
+  },
+
+  /**
+   * POST /api/v1/concepts
+   * Crear un nuevo concepto de pago
+   */
+  async createConcept(token, conceptData) {
+    try {
+      const response = await fetch(`${API_BASE}/concepts`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'create.concepts'
+        },
+        body: JSON.stringify(conceptData)
+      });
+
+      if (!response.ok) {
+        handleAuthError(response.status);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al crear concepto');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.createConcept:', err);
+      throw err;
+    }
   }
 };
