@@ -68,8 +68,8 @@ const title = "Mis Métodos de Pago";
           this.error = '';
 
           try {
-            console.log('📥 Cargando tarjetas desde StudentAPI...');
-            const data = await window.StudentAPI.getPaymentMethods(this.userId, this.token);
+            console.log('📥 Cargando tarjetas desde StudentAPI...', { forceRefresh });
+            const data = await window.StudentAPI.getPaymentMethods(this.userId, this.token, forceRefresh);
             
             console.log('✅ Cards data received from StudentAPI:', data);
             const cardsArray = Array.isArray(data.data) ? data.data : 

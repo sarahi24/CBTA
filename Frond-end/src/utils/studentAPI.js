@@ -331,15 +331,20 @@ export const StudentAPI = {
    * TARJETAS - GET /api/v1/cards/{studentId?}
    * Listar métodos de pago del usuario autenticado
    */
-  async getPaymentMethods(studentId, token) {
+  async getPaymentMethods(studentId, token, forceRefresh = false) {
     try {
-      const endpoint = studentId ? `${API_BASE}/cards/${studentId}` : `${API_BASE}/cards`;
+      let endpoint = studentId ? `${API_BASE}/cards/${studentId}` : `${API_BASE}/cards`;
+      if (forceRefresh) {
+        endpoint += (studentId ? '?' : '?') + 'forceRefresh=true';
+      }
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': 'student',
+          'X-User-Permission': 'delete.card'
         }
       });
 
