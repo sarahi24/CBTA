@@ -3672,7 +3672,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'view debts': 'Ver Deudas',
                     'validate debt': 'Validar Deuda',
                     'view payments': 'Ver Pagos',
-                    'view students': 'Ver Estudiantes'
+                    'view students': 'Ver Estudiantes',
+                    // Payment methods permissions
+                    'create.setup': 'Crear Método de Pago (Stripe)',
+                    'view.cards': 'Ver Tarjetas',
+                    'delete.card': 'Eliminar Tarjeta'
                 };
 
                 const fallbackPermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
