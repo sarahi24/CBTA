@@ -104,6 +104,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.allStudents.forEach(s => {
             if (s.semester) semesterSet.add(String(s.semester));
           });
+          // Si no hay semestres en los estudiantes, usar 1-12 como respaldo
+          if (semesterSet.size === 0) {
+            for (let i = 1; i <= 12; i++) {
+              semesterSet.add(String(i));
+            }
+          }
           this.semesters = Array.from(semesterSet)
             .sort((a, b) => Number(a) - Number(b))
             .map(id => ({ id, name: id + '°' }));
