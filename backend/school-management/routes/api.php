@@ -115,7 +115,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     });
 
     // Careers Management - All operations use 'careers' per API documentation
-    Route::prefix('careers')->middleware('role:admin|supervisor')->group(function(){
+    Route::prefix('careers')->middleware('role:admin|financial staff')->group(function(){
         Route::get('/', [CareersController::class, 'index']);
         Route::post('/', [CareersController::class, 'store']);
         Route::get('/{career}', [CareersController::class, 'show']);
