@@ -223,11 +223,12 @@ async function mutateConcept(id, action){
       finalize: 'Concepto finalizado exitosamente',
       activate: 'Concepto activado exitosamente',
       disable: 'Concepto deshabilitado exitosamente',
-      delete: 'Concepto eliminado exitosamente'
+      delete: 'Concepto marcado como eliminado'
     };
     alert(`✓ ${successMessages[action]}`);
     
     await loadConcepts();
+    return true;
   } catch (err) {
     console.error(`Error en ${action}:`, err);
     
@@ -237,8 +238,10 @@ async function mutateConcept(id, action){
         err.message.includes('elimina')) {
       alert(`⚠️ ${err.message}\n\nActualizando lista...`);
       await loadConcepts(); // Recargar para mostrar estado actualizado
+      return false;
     } else {
       alert(`❌ Error: ${err.message}`);
+      return false;
     }
   }
 }
@@ -266,7 +269,7 @@ window.editConcept = (id) => {
 window.finalizeConcept = (id) => mutateConcept(id, 'finalize');
 window.activateConcept = (id) => mutateConcept(id, 'activate');
 window.deleteConcept = (id) => {
-  if(!confirm('⚠️ ¿ELIMINAR concepto definitivamente?')) return;
+  if(!confirm('⚠️ ¿Marcar concepto como eliminado (borrado lógico)?')) return;
   mutateConcept(id, 'delete');
 };
 
