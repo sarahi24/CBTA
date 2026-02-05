@@ -13,6 +13,62 @@ use Spatie\Permission\Models\Permission;
 class AdminActionsController extends Controller
 {
     /**
+     * Get all permissions from database
+     */
+    public function getPermissions(Request $request)
+    {
+        try {
+            $permissions = Permission::all(['id', 'name', 'guard_name', 'description'])->toArray();
+            $total = count($permissions);
+            
+            Log::info("📋 Total de permisos cargados: {$total}");
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Permisos obtenidos correctamente ({$total} total)",
+                'data' => [
+                    'permissions' => $permissions,
+                    'total' => $total,
+                    'count' => $total
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener permisos:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener permisos',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Debug endpoint para verificar cantidad de permisos
+     */
+    public function debugPermissionsCount(Request $request)
+    {
+        try {
+            $total = Permission::count();
+            $permissions = Permission::all(['id', 'name'])->pluck('name')->toArray();
+            
+            return response()->json([
+                'success' => true,
+                'debug' => [
+                    'total_permissions' => $total,
+                    'expected_permissions' => 40,
+                    'status' => $total >= 40 ? '✅ Correcto' : '⚠️ Incompleto',
+                ],
+                'permissions' => $permissions
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Simple test endpoint
      */
     public function testPromotion(Request $request)

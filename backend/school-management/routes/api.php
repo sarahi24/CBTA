@@ -115,18 +115,27 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     });
 
     // Careers Management - All operations use 'careers' per API documentation
-    Route::prefix('careers')->middleware('role:admin|financial staff')->group(function(){
+    Route::prefix('careers')->middleware('auth:sanctum')->group(function(){
+        // GET operations accessible to all authenticated users
         Route::get('/', [CareersController::class, 'index']);
-        Route::post('/', [CareersController::class, 'store']);
         Route::get('/{career}', [CareersController::class, 'show']);
-        Route::patch('/{career}', [CareersController::class, 'update']);
-        Route::delete('/{career}', [CareersController::class, 'destroy']);
+        
+        // POST, PATCH, DELETE restricted to admin and financial staff
+        Route::post('/', [CareersController::class, 'store'])->middleware('role:admin|financial staff');
+        Route::patch('/{career}', [CareersController::class, 'update'])->middleware('role:admin|financial staff');
+        Route::delete('/{career}', [CareersController::class, 'destroy'])->middleware('role:admin|financial staff');
     });
 
     // Admin Actions - User Management
     // Allow both 'admin' and 'financial staff' roles to access
     
     Route::prefix('admin-actions')->middleware('auth:sanctum')->group(function(){
+        // Endpoint para obtener permisos disponibles (accesible a todos los autenticados)
+        Route::get('/permissions', [AdminActionsController::class, 'getPermissions']);
+        
+        // Debug endpoint para verificar cantidad de permisos
+        Route::get('/debug/permissions-count', [AdminActionsController::class, 'debugPermissionsCount']);
+        
         // Debug endpoint without role requirement
         Route::put('/update-user-debug/{id}', function (Request $request, $id) {
             try {
@@ -157,7 +166,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::post('/find-permissions', [AdminActionsController::class, 'findPermissions']);
         Route::get('/find-roles', [AdminActionsController::class, 'findRoles']);
         Route::get('/roles/{id}', [AdminActionsController::class, 'getRoleById']);
-        Route::get('/permissions/{id}', [AdminActionsController::class, 'getPermissionById']);
+        Route::get('/permissions/{id}', [AdminActionsController::class, 'getPermissionById'])->middleware('permission:view.permissions');
 
         Route::post('/register', function (Request $request) {
             try {
