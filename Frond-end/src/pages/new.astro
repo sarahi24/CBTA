@@ -362,8 +362,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       x-data="window.conceptFormData"
       x-init="$nextTick(() => {
         window.conceptFormData.apiBaseUrl = window.__API_BASE_URL__ || '';
-        window.conceptFormData.loadCareers();
-        window.conceptFormData.loadStudents();
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          window.conceptFormData.loadCareers();
+          window.conceptFormData.loadStudents();
+        } else {
+          // Use fallback data if no token
+          window.conceptFormData.careers = window.conceptFormData.CAREERS.map(c => ({ id: c.code, name: c.name }));
+        }
         const urlParams = new URLSearchParams(window.location.search);
         const rawConcept = localStorage.getItem('editingConcept');
         if (urlParams.has('edit') && rawConcept) {

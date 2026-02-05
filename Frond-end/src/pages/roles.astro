@@ -3643,12 +3643,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return;
                 }
 
-                // Traducir nombres de permisos al español
+                // Traducir nombres de permisos al español (mapeados correctamente de la API)
                 const permissionsTranslation = {
-                    // Admin permissions
+                    // ==================== PERMISOS DE ADMIN ====================
                     'promote.student': 'Promover Estudiante',
                     'attach.student': 'Asociar Estudiante',
-                    'view.student': 'Ver Estudiante',
+                    'view.student': 'Ver Detalles del Estudiante',
                     'update.student': 'Actualizar Estudiante',
                     'sync.permissions': 'Sincronizar Permisos',
                     'view.users': 'Ver Usuarios',
@@ -3657,26 +3657,39 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'disable.users': 'Deshabilitar Usuarios',
                     'view.permissions': 'Ver Permisos',
                     'view.roles': 'Ver Roles',
-                    // Financial Staff permissions
-                    'view all financial overview': 'Ver Resumen Financiero',
+
+                    // ==================== PERMISOS DE FINANCIAL STAFF ====================
+                    'view all financial overview': 'Ver Resumen Financiero General',
                     'view all pending concepts summary': 'Ver Resumen de Conceptos Pendientes',
-                    'view all students summary': 'Ver Resumen de Estudiantes',
+                    'view all students summary': 'Ver Resumen General de Estudiantes',
                     'view all paid concepts summary': 'Ver Resumen de Conceptos Pagados',
                     'view concepts history': 'Ver Historial de Conceptos',
-                    'view concepts': 'Ver Conceptos',
-                    'create concepts': 'Crear Conceptos',
-                    'update concepts': 'Actualizar Conceptos',
-                    'finalize concepts': 'Finalizar Conceptos',
-                    'disable concepts': 'Deshabilitar Conceptos',
-                    'eliminate concepts': 'Eliminar Conceptos',
-                    'view debts': 'Ver Deudas',
-                    'validate debt': 'Validar Deuda',
-                    'view payments': 'Ver Pagos',
-                    'view students': 'Ver Estudiantes',
-                    // Payment methods permissions
-                    'create.setup': 'Crear Método de Pago (Stripe)',
-                    'view.cards': 'Ver Tarjetas',
-                    'delete.card': 'Eliminar Tarjeta'
+                    'view concepts': 'Ver Conceptos de Cobro',
+                    'create concepts': 'Crear Conceptos de Cobro',
+                    'update concepts': 'Actualizar Conceptos de Cobro',
+                    'finalize concepts': 'Finalizar Conceptos de Cobro',
+                    'disable concepts': 'Deshabilitar Conceptos de Cobro',
+                    'eliminate concepts': 'Eliminar Conceptos de Cobro',
+                    'eliminate.logical.concepts': 'Eliminar Conceptos (Borrado Lógico)',
+                    'view debts': 'Ver Deudas de Estudiantes',
+                    'validate debt': 'Validar Deudas',
+                    'view payments': 'Ver Pagos Realizados',
+                    'view students': 'Ver Lista de Estudiantes',
+
+                    // ==================== PERMISOS DE ESTUDIANTE ====================
+                    'view own financial overview': 'Ver Mi Resumen Financiero',
+                    'view own pending concepts summary': 'Ver Mis Conceptos Pendientes',
+                    'view own paid concepts summary': 'Ver Mis Conceptos Pagados',
+                    'view own overdue concepts summary': 'Ver Mis Conceptos Vencidos',
+                    'view payments history': 'Ver Historial de Pagos',
+                    'view cards': 'Ver Tarjetas Guardadas',
+                    'create setup': 'Crear Nuevo Método de Pago',
+                    'create and view card': 'Crear y Ver Tarjetas',
+                    'delete card': 'Eliminar Tarjeta',
+                    'view payment history': 'Ver Historial de Pagos',
+                    'view pending concepts': 'Ver Conceptos Pendientes',
+                    'create payment': 'Realizar Pago',
+                    'view overdue concepts': 'Ver Conceptos Vencidos',
                 };
 
                 const fallbackPermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
