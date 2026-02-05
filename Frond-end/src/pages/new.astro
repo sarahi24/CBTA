@@ -68,6 +68,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   <div class="p-4 sm:p-6 min-h-screen font-sans"> 
     <div
       x-data="{ 
+        /* Carreras existentes en CBTA 71 */
+        CAREERS: [
+          { code: 'TAG-E', name: 'Técnico Agropecuario' },
+          { code: 'TOF', name: 'Técnico en Ofimática' },
+          { code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
+          { code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
+          { code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+        ],
+        
         /* Variables de estado y datos */
         careers: [],
         semesters: [],
@@ -95,6 +104,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         
         // Funciones
         async initPage() {
+          // Cargar carreras desde API
+          await this.loadCareers();
           await this.loadStudents();
           const urlParams = new URLSearchParams(window.location.search);
           const rawConcept = localStorage.getItem('editingConcept');
@@ -108,6 +119,48 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               }
           } else {
               localStorage.removeItem('editingConcept');
+          }
+        },
+
+        async loadCareers() {
+          try {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+              // Fallback a carreras hardcodeadas si no hay token
+              this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+              return;
+            }
+
+            const url = new URL(this.apiBaseUrl + '/v1/careers');
+            url.searchParams.set('forceRefresh', 'false');
+            
+            const res = await fetch(url.toString(), {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-User-Role': 'financial-staff'
+              }
+            });
+
+            if (res.ok) {
+              const json = await res.json();
+              if (json.success && json.data?.careers) {
+                this.careers = json.data.careers.map(c => ({
+                  id: c.id,
+                  name: c.career_name
+                }));
+                return;
+              }
+            }
+            
+            // Fallback si falla la API
+            this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          } catch (err) {
+            console.warn('⚠️ Error cargando carreras del API:', err);
+            // Fallback a carreras hardcodeadas
+            this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
           }
         },
 
@@ -153,11 +206,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             const careersMap = new Map();
             this.allStudents.forEach(s => {
-              const key = s.careerId || s.careerName;
+              const key = s.careerId || s.careerCode || s.careerName;
               if (!key) return;
-              careersMap.set(key, { id: s.careerId || s.careerName, name: s.careerName || ('Carrera ' + s.careerId) });
+              careersMap.set(key, { id: key, name: s.careerName || ('Carrera ' + key) });
             });
-            this.careers = Array.from(careersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Las carreras ya se cargan desde API en loadCareers(), así que no necesitamos agregar nada aquí
 
             const semesterSet = new Set();
             this.allStudents.forEach(s => {
@@ -298,7 +352,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               }
           }
           
-          // Payload base con campos obligatorios según backend
+          // Payload mapeado según API docs
           const payload = {
             concept_name: this.formData.title,
             description: this.formData.description || '',
@@ -306,27 +360,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             amount: parseFloat(this.formData.amount),
             start_date: this.formData.startDate,
             end_date: this.formData.endDate,
-            is_global: Boolean(this.formData.allStudents), // Asegurar boolean
-            applies_to: 'todos',
-            semestre: null,
-            career: null,
+            applies_to: this.formData.allStudents ? 'todos' : 'estudiantes',
+            semestres: [],
+            careers: [],
             students: []
           };
 
-          // Si NO es para todos, configurar alcance específico
-          if (!this.formData.allStudents) {
-            const studentsStr = this.formData.selectedSpecificStudents.map(s => String(s.id));
-
-            // Backend espera valores en español: 'carrera', 'semestre', 'estudiantes'
-            if (studentsStr.length > 0) {
-              payload.applies_to = 'estudiantes'; // NO 'students'
-              payload.students = studentsStr;
-            } else if (this.formData.selectedSemesters.length > 0) {
-              payload.applies_to = 'semestre'; // NO 'semester'
-              payload.semestre = parseInt(this.formData.selectedSemesters[0]);
-            } else if (this.formData.selectedCareers.length > 0) {
-              payload.applies_to = 'carrera'; // NO 'career'
-              payload.career = String(this.formData.selectedCareers[0]);
+          // Mapear según selección del usuario
+          if (this.formData.allStudents) {
+            // Para todos: solo el applies_to = 'todos'
+            payload.applies_to = 'todos';
+          } else {
+            // Si seleccionó estudiantes específicos
+            if (this.formData.selectedSpecificStudents.length > 0) {
+              payload.applies_to = 'estudiantes';
+              payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
+            } 
+            // Si seleccionó por semestres
+            else if (this.formData.selectedSemesters.length > 0) {
+              payload.applies_to = 'semestres';
+              payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+            } 
+            // Si seleccionó por carreras
+            else if (this.formData.selectedCareers.length > 0) {
+              payload.applies_to = 'careers';
+              payload.careers = this.formData.selectedCareers.map(c => parseInt(c) || c);
             }
           }
 
