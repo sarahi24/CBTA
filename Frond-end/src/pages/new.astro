@@ -35,7 +35,260 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         selectedSpecificStudents: []
       },
       searchTerm: '',
-      errorMessage: ''
+      errorMessage: '',
+      
+      apiBaseUrl: window.__API_BASE_URL__ || '',
+      
+      loadCareers() {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          return;
+        }
+        const url = new URL(this.apiBaseUrl + '/v1/careers');
+        url.searchParams.set('forceRefresh', 'false');
+        fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-User-Role': 'financial-staff'
+          }
+        })
+        .then(res => res.ok ? res.json() : Promise.reject('Error'))
+        .then(json => {
+          if (json.success && json.data?.careers) {
+            this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
+          } else {
+            this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          }
+        })
+        .catch(() => {
+          this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+        });
+      },
+
+      loadStudents() {
+        const token = localStorage.getItem('access_token');
+        const mapStudents = (items = []) => {
+          this.allStudents = items.map(item => {
+            const fullName = (
+              item.fullName || item.nombre || [
+                String(item.nombre ?? '').trim(),
+                String(item.apellidoP ?? item.apellidoPaterno ?? '').trim(),
+                String(item.apellidoM ?? item.apellidoMaterno ?? '').trim()
+              ].filter(n => n).join(' ')
+            ).trim();
+            const userId = item.userId ?? item.id ?? item.user_id ?? null;
+            const control = item.numControl ?? item.num_control ?? item.n_control ?? '';
+            const careerId = item.career_id ?? item.careerId ?? null;
+            const careerName = item.career_name ?? item.carrera ?? item.career ?? '';
+            const normalizedCareerId = careerId !== null && careerId !== undefined ? String(careerId) : (careerName ? String(careerName) : '');
+            const semester = item.semestre ?? item.semester ?? '';
+            return {
+              id: userId ? String(userId) : '',
+              control: String(control || ''),
+              name: fullName || 'Sin nombre',
+              careerId: normalizedCareerId,
+              careerName: String(careerName || ''),
+              semester: String(semester || '')
+            };
+          }).filter(s => s.id);
+          const semesterSet = new Set();
+          this.allStudents.forEach(s => {
+            if (s.semester) semesterSet.add(String(s.semester));
+          });
+          this.semesters = Array.from(semesterSet)
+            .sort((a, b) => Number(a) - Number(b))
+            .map(id => ({ id, name: id + '°' }));
+        };
+        if (!token) {
+          mapStudents([]);
+          return;
+        }
+        const url = new URL(this.apiBaseUrl + '/v1/students');
+        fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-User-Role': 'financial-staff',
+            'X-User-Permission': 'view.students'
+          }
+        })
+        .then(res => res.ok ? res.json() : Promise.reject('Error'))
+        .then(json => {
+          const items = json.data?.payments?.items || json.data?.items || json.data || [];
+          if (Array.isArray(items) && items.length) {
+            mapStudents(items);
+          } else {
+            const raw = localStorage.getItem('studentsList');
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length) {
+                  mapStudents(parsed);
+                } else {
+                  mapStudents([]);
+                }
+              } catch (e) {
+                mapStudents([]);
+              }
+            } else {
+              mapStudents([]);
+            }
+          }
+        })
+        .catch(() => {
+          const raw = localStorage.getItem('studentsList');
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed) && parsed.length) mapStudents(parsed);
+            } catch (e) {}
+          }
+        });
+      },
+
+      populateForm(concept) {
+        this.formData.id = concept.id;
+        this.formData.title = concept.title;
+        this.formData.amount = concept.amount;
+        this.formData.description = concept.description || '';
+        this.formData.status = concept.status;
+        this.formData.startDate = concept.start_date || concept.startDate || '';
+        this.formData.endDate = concept.end_date || concept.endDate || '';
+        if (concept.scopeRules) {
+          this.formData.allStudents = concept.scopeRules.allStudents;
+          this.formData.selectedCareers = concept.scopeRules.careers || [];
+          this.formData.selectedSemesters = concept.scopeRules.semesters || [];
+          if (Array.isArray(concept.scopeRules.specificStudents)) {
+            this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => {
+              const student = this.allStudents.find(s => String(s.id) === String(id));
+              return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
+            });
+          }
+        }
+      },
+
+      toggleSpecificStudent(student) {
+        const index = this.formData.selectedSpecificStudents.findIndex(s => s.id === student.id);
+        if (index === -1) {
+          this.formData.selectedSpecificStudents.push({
+            id: student.id,
+            name: student.name,
+            control: student.control
+          });
+        } else {
+          this.formData.selectedSpecificStudents.splice(index, 1);
+        }
+        this.searchTerm = '';
+      },
+
+      get filteredStudents() {
+        if (!this.searchTerm) return [];
+        const searchLower = this.searchTerm.toLowerCase();
+        const careerFilter = this.formData.selectedCareers;
+        const semesterFilter = this.formData.selectedSemesters;
+        return this.allStudents.filter(student => {
+          const matchesSearch =
+            student.name.toLowerCase().includes(searchLower) ||
+            String(student.control || '').includes(searchLower) ||
+            String(student.id || '').includes(searchLower);
+          const matchesCareer = !careerFilter.length || careerFilter.includes(student.careerId);
+          const matchesSemester = !semesterFilter.length || semesterFilter.includes(student.semester);
+          return matchesSearch && matchesCareer && matchesSemester;
+        }).slice(0, 8);
+      },
+
+      removeSpecificStudent(studentId) {
+        this.formData.selectedSpecificStudents = this.formData.selectedSpecificStudents.filter(s => s.id !== studentId);
+      },
+
+      submitForm() {
+        this.errorMessage = '';
+        if (this.isSaving) return;
+        if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) <= 0) {
+          this.errorMessage = '⚠️ Rellene Título y Monto (mayor a $0).';
+          return;
+        }
+        if (!this.formData.startDate || !this.formData.endDate) {
+          this.errorMessage = '⚠️ Las fechas de inicio y fin son obligatorias.';
+          return;
+        }
+        if (!this.formData.allStudents) {
+          const hasCareer = this.formData.selectedCareers.length > 0;
+          const hasSemester = this.formData.selectedSemesters.length > 0;
+          const hasSpecific = this.formData.selectedSpecificStudents.length > 0;
+          if (!hasCareer && !hasSemester && !hasSpecific) {
+            this.errorMessage = '⚠️ Seleccione al menos una Carrera, Semestre o Alumno.';
+            return;
+          }
+        }
+        const payload = {
+          concept_name: this.formData.title,
+          description: this.formData.description || '',
+          status: this.formData.status === 'active' ? 'activo' : 'inactivo',
+          amount: parseFloat(this.formData.amount),
+          start_date: this.formData.startDate,
+          end_date: this.formData.endDate,
+          applies_to: this.formData.allStudents ? 'todos' : 'estudiantes',
+          semestres: [],
+          careers: [],
+          students: []
+        };
+        if (this.formData.allStudents) {
+          payload.applies_to = 'todos';
+        } else {
+          if (this.formData.selectedSpecificStudents.length > 0) {
+            payload.applies_to = 'estudiantes';
+            payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
+          } else if (this.formData.selectedSemesters.length > 0) {
+            payload.applies_to = 'semestres';
+            payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+          } else if (this.formData.selectedCareers.length > 0) {
+            payload.applies_to = 'careers';
+            payload.careers = this.formData.selectedCareers.map(c => parseInt(c) || c);
+          }
+        }
+        console.log('Sending payload:', payload);
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          this.errorMessage = '❌ No hay token, inicia sesión.';
+          return;
+        }
+        this.isSaving = true;
+        const self = this;
+        const executeSubmit = () => {
+          if (self.formData.id) {
+            return window.AdminAPI.updateConcept(self.formData.id, token, payload);
+          } else {
+            return window.AdminAPI.createConcept(token, payload);
+          }
+        };
+        executeSubmit()
+          .then(result => {
+            console.log('✅ Resultado:', result);
+            localStorage.removeItem('editingConcept');
+            self.errorMessage = '✓ Concepto guardado exitosamente. Redirigiendo...';
+            setTimeout(() => { window.location.href = '/concepts'; }, 1200);
+          })
+          .catch(err => {
+            console.error('❌ Error completo:', err);
+            self.errorMessage = `❌ ${err.message || 'Error desconocido'}`;
+            self.isSaving = false;
+          })
+          .finally(() => {
+            self.isSaving = false;
+          });
+      },
+
+      cancel() {
+        localStorage.removeItem('editingConcept');
+        window.location.href = '/concepts';
+      }
     };
   </script>
   <style>
@@ -336,260 +589,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   </div>
 
   <script type="module" client:load>
-    // Añadir métodos a window.conceptFormData para Alpine.js
-    window.conceptFormData.loadCareers = function() {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-        return;
-      }
-      const url = new URL(this.apiBaseUrl + '/v1/careers');
-      url.searchParams.set('forceRefresh', 'false');
-      fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'X-User-Role': 'financial-staff'
-        }
-      })
-      .then(res => res.ok ? res.json() : Promise.reject('Error'))
-      .then(json => {
-        if (json.success && json.data?.careers) {
-          this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
-        } else {
-          this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-        }
-      })
-      .catch(() => {
-        this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-      });
-    };
-
-    window.conceptFormData.loadStudents = function() {
-      const token = localStorage.getItem('access_token');
-      const mapStudents = (items = []) => {
-        this.allStudents = items.map(item => {
-          const fullName = (
-            item.fullName || item.nombre || [
-              String(item.nombre ?? '').trim(),
-              String(item.apellidoP ?? item.apellidoPaterno ?? '').trim(),
-              String(item.apellidoM ?? item.apellidoMaterno ?? '').trim()
-            ].filter(n => n).join(' ')
-          ).trim();
-          const userId = item.userId ?? item.id ?? item.user_id ?? null;
-          const control = item.numControl ?? item.num_control ?? item.n_control ?? '';
-          const careerId = item.career_id ?? item.careerId ?? null;
-          const careerName = item.career_name ?? item.carrera ?? item.career ?? '';
-          const normalizedCareerId = careerId !== null && careerId !== undefined ? String(careerId) : (careerName ? String(careerName) : '');
-          const semester = item.semestre ?? item.semester ?? '';
-          return {
-            id: userId ? String(userId) : '',
-            control: String(control || ''),
-            name: fullName || 'Sin nombre',
-            careerId: normalizedCareerId,
-            careerName: String(careerName || ''),
-            semester: String(semester || '')
-          };
-        }).filter(s => s.id);
-        const semesterSet = new Set();
-        this.allStudents.forEach(s => {
-          if (s.semester) semesterSet.add(String(s.semester));
-        });
-        this.semesters = Array.from(semesterSet)
-          .sort((a, b) => Number(a) - Number(b))
-          .map(id => ({ id, name: id + '°' }));
-      };
-      if (!token) {
-        mapStudents([]);
-        return;
-      }
-      const url = new URL(this.apiBaseUrl + '/v1/students');
-      fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.students'
-        }
-      })
-      .then(res => res.ok ? res.json() : Promise.reject('Error'))
-      .then(json => {
-        const items = json.data?.payments?.items || json.data?.items || json.data || [];
-        if (Array.isArray(items) && items.length) {
-          mapStudents(items);
-        } else {
-          const raw = localStorage.getItem('studentsList');
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed) && parsed.length) {
-                mapStudents(parsed);
-              } else {
-                mapStudents([]);
-              }
-            } catch (e) {
-              mapStudents([]);
-            }
-          } else {
-            mapStudents([]);
-          }
-        }
-      })
-      .catch(() => {
-        const raw = localStorage.getItem('studentsList');
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length) mapStudents(parsed);
-          } catch (e) {}
-        }
-      });
-    };
-
-    window.conceptFormData.populateForm = function(concept) {
-      this.formData.id = concept.id;
-      this.formData.title = concept.title;
-      this.formData.amount = concept.amount;
-      this.formData.description = concept.description || '';
-      this.formData.status = concept.status;
-      this.formData.startDate = concept.start_date || concept.startDate || '';
-      this.formData.endDate = concept.end_date || concept.endDate || '';
-      if (concept.scopeRules) {
-        this.formData.allStudents = concept.scopeRules.allStudents;
-        this.formData.selectedCareers = concept.scopeRules.careers || [];
-        this.formData.selectedSemesters = concept.scopeRules.semesters || [];
-        if (Array.isArray(concept.scopeRules.specificStudents)) {
-          this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => {
-            const student = this.allStudents.find(s => String(s.id) === String(id));
-            return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
-          });
-        }
-      }
-    };
-
-    window.conceptFormData.toggleSpecificStudent = function(student) {
-      const index = this.formData.selectedSpecificStudents.findIndex(s => s.id === student.id);
-      if (index === -1) {
-        this.formData.selectedSpecificStudents.push({
-          id: student.id,
-          name: student.name,
-          control: student.control
-        });
-      } else {
-        this.formData.selectedSpecificStudents.splice(index, 1);
-      }
-      this.searchTerm = '';
-    };
-
-    Object.defineProperty(window.conceptFormData, 'filteredStudents', {
-      get: function() {
-        if (!this.searchTerm) return [];
-        const searchLower = this.searchTerm.toLowerCase();
-        const careerFilter = this.formData.selectedCareers;
-        const semesterFilter = this.formData.selectedSemesters;
-        return this.allStudents.filter(student => {
-          const matchesSearch =
-            student.name.toLowerCase().includes(searchLower) ||
-            String(student.control || '').includes(searchLower) ||
-            String(student.id || '').includes(searchLower);
-          const matchesCareer = !careerFilter.length || careerFilter.includes(student.careerId);
-          const matchesSemester = !semesterFilter.length || semesterFilter.includes(student.semester);
-          return matchesSearch && matchesCareer && matchesSemester;
-        }).slice(0, 8);
-      }
-    });
-
-    window.conceptFormData.removeSpecificStudent = function(studentId) {
-      this.formData.selectedSpecificStudents = this.formData.selectedSpecificStudents.filter(s => s.id !== studentId);
-    };
-
-    window.conceptFormData.submitForm = function() {
-      this.errorMessage = '';
-      if (this.isSaving) return;
-      if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) <= 0) {
-        this.errorMessage = '⚠️ Rellene Título y Monto (mayor a $0).';
-        return;
-      }
-      if (!this.formData.startDate || !this.formData.endDate) {
-        this.errorMessage = '⚠️ Las fechas de inicio y fin son obligatorias.';
-        return;
-      }
-      if (!this.formData.allStudents) {
-        const hasCareer = this.formData.selectedCareers.length > 0;
-        const hasSemester = this.formData.selectedSemesters.length > 0;
-        const hasSpecific = this.formData.selectedSpecificStudents.length > 0;
-        if (!hasCareer && !hasSemester && !hasSpecific) {
-          this.errorMessage = '⚠️ Seleccione al menos una Carrera, Semestre o Alumno.';
-          return;
-        }
-      }
-      const payload = {
-        concept_name: this.formData.title,
-        description: this.formData.description || '',
-        status: this.formData.status === 'active' ? 'activo' : 'inactivo',
-        amount: parseFloat(this.formData.amount),
-        start_date: this.formData.startDate,
-        end_date: this.formData.endDate,
-        applies_to: this.formData.allStudents ? 'todos' : 'estudiantes',
-        semestres: [],
-        careers: [],
-        students: []
-      };
-      if (this.formData.allStudents) {
-        payload.applies_to = 'todos';
-      } else {
-        if (this.formData.selectedSpecificStudents.length > 0) {
-          payload.applies_to = 'estudiantes';
-          payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
-        } else if (this.formData.selectedSemesters.length > 0) {
-          payload.applies_to = 'semestres';
-          payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
-        } else if (this.formData.selectedCareers.length > 0) {
-          payload.applies_to = 'careers';
-          payload.careers = this.formData.selectedCareers.map(c => parseInt(c) || c);
-        }
-      }
-      console.log('Sending payload:', payload);
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        this.errorMessage = '❌ No hay token, inicia sesión.';
-        return;
-      }
-      this.isSaving = true;
-      const self = this;
-      const executeSubmit = () => {
-        if (self.formData.id) {
-          return window.AdminAPI.updateConcept(self.formData.id, token, payload);
-        } else {
-          return window.AdminAPI.createConcept(token, payload);
-        }
-      };
-      executeSubmit()
-        .then(result => {
-          console.log('✅ Resultado:', result);
-          localStorage.removeItem('editingConcept');
-          self.errorMessage = '✓ Concepto guardado exitosamente. Redirigiendo...';
-          setTimeout(() => { window.location.href = '/concepts'; }, 1200);
-        })
-        .catch(err => {
-          console.error('❌ Error completo:', err);
-          self.errorMessage = `❌ ${err.message || 'Error desconocido'}`;
-          self.isSaving = false;
-        })
-        .finally(() => {
-          self.isSaving = false;
-        });
-    };
-
-    window.conceptFormData.cancel = function() {
-      localStorage.removeItem('editingConcept');
-      window.location.href = '/concepts';
-    };
-
     // Inicialización y utilidades de almacenamiento local (simulación de base de datos)
     (function () {
       
