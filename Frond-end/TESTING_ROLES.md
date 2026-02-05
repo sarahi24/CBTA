@@ -74,7 +74,7 @@ Deberías ver:
 **Causa:** El endpoint `/v1/admin-actions/showUsers` no existe en el backend
 
 **Soluciones:**
-1. Verifica en la documentación de la API: https://nginx-production-728f.up.railway.app/api/documentation
+1. Verifica en la API: https://nginx-production-728f.up.railway.app/api/documentation
 2. El endpoint correcto podría ser diferente (por ejemplo: `/v1/users`, `/v1/admin/users`, etc.)
 3. Consulta con Angel (el desarrollador del backend) cuál es el endpoint correcto
 

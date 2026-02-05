@@ -347,7 +347,7 @@ const { data, error } = await fetchAPI(API_ENDPOINTS.students.list);
 ## 📚 Recursos
 
 - API Base URL: `https://nginx-production-728f.up.railway.app/api`
-- Documentación API: `/api/documentation`
+- API: `https://nginx-production-728f.up.railway.app/api/documentation`
 - Archivo de configuración: `src/config/api.js`
 - Helpers: `src/utils/apiHelpers.js`
 

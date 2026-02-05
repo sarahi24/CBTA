@@ -60,7 +60,12 @@ const title = "Mis Métodos de Pago";
               if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 console.error('❌ Response no OK:', response.status, response.statusText, errorData);
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                
+                if (response.status === 429) {
+                  throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+                }
+                
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
               }
 
               const data = await response.json();
@@ -118,6 +123,11 @@ const title = "Mis Métodos de Pago";
 
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
+              
+              if (response.status === 429) {
+                throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+              }
+              
               throw new Error(errorData.message || 'Error al obtener URL de Stripe');
             }
 

@@ -343,7 +343,7 @@ El sistema está completamente adaptado para:
 Para problemas o dudas:
 1. Revisar logs en la consola del navegador (F12)
 2. Verificar respuestas de la API en Network tab
-3. Revisar documentación de la API en: `https://nginx-production-728f.up.railway.app/api/documentation`
+3. Revisar API: `https://nginx-production-728f.up.railway.app/api/documentation`
 
 ---
 

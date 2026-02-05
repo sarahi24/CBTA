@@ -89,7 +89,7 @@ localStorage.getItem('access_token')
 
 **Solución:**
 1. Verifica que la URL del backend esté correcta: `https://nginx-production-728f.up.railway.app/api`
-2. Verifica que el backend esté en línea (visita: https://nginx-production-728f.up.railway.app/api/documentation)
+2. Verifica que el backend esté en línea (API: https://nginx-production-728f.up.railway.app/api/documentation)
 3. Verifica tu conexión a internet
 
 ## 🔍 Debugging

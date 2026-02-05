@@ -378,4 +378,4 @@ No necesitas preocuparte por los tokens, solo usa `AuthService.authenticatedFetc
 
 ---
 
-**Documentación API completa**: https://nginx-production-728f.up.railway.app/docs
+**API**: https://nginx-production-728f.up.railway.app/api/documentation
