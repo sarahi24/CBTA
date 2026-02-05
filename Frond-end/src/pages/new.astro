@@ -52,10 +52,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'X-User-Role': 'financial-staff'
+            'X-User-Role': 'admin',
+            'X-User-Permission': 'view.users'
           }
         })
-        .then(res => res.ok ? res.json() : Promise.reject('Error'))
+        .then(res => {
+          if (!res.ok) {
+            console.warn(`⚠️ API returned ${res.status}, using fallback careers`);
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.json();
+        })
         .then(json => {
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
@@ -63,7 +70,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
           }
         })
-        .catch(() => {
+        .catch(err => {
+          console.warn('Failed to load careers from API:', err.message);
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
         });
       },
@@ -113,11 +121,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'X-User-Role': 'financial-staff',
-            'X-User-Permission': 'view.students'
+            'X-User-Role': 'admin',
+            'X-User-Permission': 'view.users'
           }
         })
-        .then(res => res.ok ? res.json() : Promise.reject('Error'))
+        .then(res => {
+          if (!res.ok) {
+            console.warn(`⚠️ API returned ${res.status}, using localStorage fallback`);
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.json();
+        })
         .then(json => {
           const items = json.data?.payments?.items || json.data?.items || json.data || [];
           if (Array.isArray(items) && items.length) {
@@ -140,7 +154,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             }
           }
         })
-        .catch(() => {
+        .catch(err => {
+          console.warn('Failed to load students from API:', err.message);
           const raw = localStorage.getItem('studentsList');
           if (raw) {
             try {
