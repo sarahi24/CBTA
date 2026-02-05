@@ -3643,111 +3643,109 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return;
                 }
 
-                // Traducir nombres de permisos al español (mapeados correctamente de la API)
                 try {
-                    console.log('🔎 Cargando permisos desde la API...');
+                    console.log('🔎 Cargando permisos filtrados por rol desde la API de Angel...');
 
                     // Obtener datos de los usuarios seleccionados
                     const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
                     
-                    // Cargar permisos desde la API
+                    // Determinar el rol común de los usuarios seleccionados
+                    const userRoles = selectedUsersData.map(u => u.roles?.[0] || u.role).filter(Boolean);
+                    const mostCommonRole = userRoles.length > 0 ? userRoles[0] : 'student';
+                    
+                    console.log('👥 Rol detectado:', mostCommonRole);
+                    console.log('👥 Usuarios seleccionados:', selectedUsersData.length);
+
+                    // Obtener CURPs de los usuarios seleccionados
+                    const curps = selectedUsersData.map(u => u.curp).filter(Boolean);
+
+                    // Llamar al endpoint de Angel que filtra permisos por rol
                     let allPermissions = [];
+                    let currentPermissions = new Set();
+
                     try {
-                        const token = localStorage.getItem('access_token');
-                        const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/permissions`, {
-                            method: 'GET',
+                        // Usar el endpoint correcto de Angel: POST /api/v1/admin-actions/permissions/by-role
+                        const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/permissions/by-role`, {
+                            method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            }
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`,
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'view.permissions'
+                            },
+                            body: JSON.stringify({
+                                curps: curps.length > 0 ? curps : []
+                            })
                         });
                         
                         if (response.ok) {
                             const result = await response.json();
-                            if (result.success && result.data?.permissions) {
-                                allPermissions = result.data.permissions.map((p, idx) => ({
+                            if (result.success && result.data?.permissions?.permissions) {
+                                // Los permisos ya vienen filtrados por el rol
+                                allPermissions = result.data.permissions.permissions.map((p, idx) => ({
                                     id: p.id || idx + 1,
                                     name: p.name,
-                                    displayName: p.name // Usar el nombre del permiso como display
+                                    displayName: p.label || p.name,
+                                    type: p.type,
+                                    group: p.group
                                 }));
-                                console.log('✅ Permisos cargados desde API:', allPermissions.length);
+                                console.log(`✅ Permisos cargados desde API (${mostCommonRole}):`, allPermissions.length);
                             }
+                        } else {
+                            console.warn('⚠️ Error en respuesta de API:', response.status);
                         }
-                    } catch (error) {
-                        console.warn('⚠️ Error cargando permisos desde API, usando fallback...', error);
+                    } catch (apiError) {
+                        console.warn('⚠️ Error llamando a API de permisos por rol:', apiError);
                     }
                     
-                    // Si no se pudo cargar de la API, usar fallback
+                    // Si no se pudo cargar de la API, usar fallback filtrado por rol
                     if (allPermissions.length === 0) {
-                        const permissionsTranslation = {
-                            // ==================== PERMISOS DE ADMIN ====================
-                            'promote.student': 'Promover Estudiante',
-                            'attach.student': 'Asociar Estudiante',
-                            'view.student': 'Ver Detalles del Estudiante',
-                            'update.student': 'Actualizar Estudiante',
-                            'sync.permissions': 'Sincronizar Permisos',
-                            'view.users': 'Ver Usuarios',
-                            'sync.roles': 'Sincronizar Roles',
-                            'delete.users': 'Eliminar Usuarios',
-                            'disable.users': 'Deshabilitar Usuarios',
-                            'view.permissions': 'Ver Permisos',
-                            'view.roles': 'Ver Roles',
-
-                            // ==================== PERMISOS DE FINANCIAL STAFF ====================
-                            'view all financial overview': 'Ver Resumen Financiero General',
-                            'view all pending concepts summary': 'Ver Resumen de Conceptos Pendientes',
-                            'view all students summary': 'Ver Resumen General de Estudiantes',
-                            'view all paid concepts summary': 'Ver Resumen de Conceptos Pagados',
-                            'view concepts history': 'Ver Historial de Conceptos',
-                            'view concepts': 'Ver Conceptos de Cobro',
-                            'create concepts': 'Crear Conceptos de Cobro',
-                            'update concepts': 'Actualizar Conceptos de Cobro',
-                            'finalize concepts': 'Finalizar Conceptos de Cobro',
-                            'disable concepts': 'Deshabilitar Conceptos de Cobro',
-                            'eliminate concepts': 'Eliminar Conceptos de Cobro',
-                            'eliminate.logical.concepts': 'Eliminar Conceptos (Borrado Lógico)',
-                            'view debts': 'Ver Deudas de Estudiantes',
-                            'validate debt': 'Validar Deudas',
-                            'view payments': 'Ver Pagos Realizados',
-                            'view students': 'Ver Lista de Estudiantes',
-
-                            // ==================== PERMISOS DE ESTUDIANTE ====================
-                            'view own financial overview': 'Ver Mi Resumen Financiero',
-                            'view own pending concepts summary': 'Ver Mis Conceptos Pendientes',
-                            'view own paid concepts summary': 'Ver Mis Conceptos Pagados',
-                            'view own overdue concepts summary': 'Ver Mis Conceptos Vencidos',
-                            'view payments history': 'Ver Historial de Pagos',
-                            'view cards': 'Ver Tarjetas Guardadas',
-                            'create setup': 'Crear Nuevo Método de Pago',
-                            'create and view card': 'Crear y Ver Tarjetas',
-                            'delete card': 'Eliminar Tarjeta',
-                            'view payment history': 'Ver Historial de Pagos',
-                            'view pending concepts': 'Ver Conceptos Pendientes',
-                            'create payment': 'Realizar Pago',
-                            'view overdue concepts': 'Ver Conceptos Vencidos',
+                        console.log('📋 Usando permisos de fallback filtrados por rol');
+                        
+                        const permissionsByRole = {
+                            'admin': [
+                                'promote.student', 'attach.student', 'view.student', 'update.student',
+                                'sync.permissions', 'view.users', 'sync.roles', 'delete.users',
+                                'disable.users', 'view.permissions', 'view.roles'
+                            ],
+                            'financial staff': [
+                                'view all financial overview', 'view all pending concepts summary',
+                                'view all students summary', 'view all paid concepts summary',
+                                'view concepts history', 'view concepts', 'create concepts',
+                                'update concepts', 'finalize concepts', 'disable concepts',
+                                'eliminate concepts', 'eliminate.logical.concepts', 'view debts',
+                                'validate debt', 'view payments', 'view students'
+                            ],
+                            'student': [
+                                'view own financial overview', 'view own pending concepts summary',
+                                'view own paid concepts summary', 'view own overdue concepts summary',
+                                'view payments history', 'view cards', 'create setup',
+                                'create and view card', 'delete card', 'view payment history',
+                                'view pending concepts', 'create payment', 'view overdue concepts'
+                            ]
                         };
 
-                        allPermissions = Object.keys(permissionsTranslation).map((key, idx) => ({
+                        const rolePermissions = permissionsByRole[mostCommonRole] || permissionsByRole['student'];
+                        allPermissions = rolePermissions.map((name, idx) => ({
                             id: idx + 1,
-                            name: key,
-                            displayName: permissionsTranslation[key]
+                            name: name,
+                            displayName: name
                         }));
-                        console.log('📋 Usando permisos de fallback:', allPermissions.length);
+                        console.log(`📋 Fallback: ${allPermissions.length} permisos para rol ${mostCommonRole}`);
                     }
                     
                     // Obtener permisos actuales de los usuarios seleccionados
-                    const currentPermissions = new Set();
-                    
                     selectedUsersData.forEach(user => {
                         if (Array.isArray(user.permissions)) {
                             user.permissions.forEach(p => currentPermissions.add(p));
                         }
                     });
 
-                    console.log('👤 Permisos actuales de usuarios seleccionados:', Array.from(currentPermissions));
+                    console.log('👤 Permisos actuales de usuarios:', Array.from(currentPermissions).length);
 
                     // Separar permisos en "disponibles para agregar" y "disponibles para eliminar"
-                    this.availablePermissions = allPermissions; // Guardar todos para referencia
+                    this.availablePermissions = allPermissions;
                     this.permissionsAvailableToAdd = allPermissions.filter(p => !currentPermissions.has(p.name));
                     this.permissionsAvailableToRemove = allPermissions.filter(p => currentPermissions.has(p.name));
 
@@ -3759,10 +3757,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.showPermissionsModal = true;
                 } catch (error) {
                     console.error('❌ Error al cargar permisos:', error);
-                    // Ya se están usando permisos predefinidos en la rama exitosa
+                    this.showNotify('Error al cargar permisos', 'error');
                     this.permissionsToAdd = [];
                     this.permissionsToRemove = [];
-                    this.showPermissionsModal = true;
+                    this.showPermissionsModal = false;
                 }
             },
 
