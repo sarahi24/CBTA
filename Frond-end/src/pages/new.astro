@@ -6,7 +6,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
 <Layout title="Crear Concepto - CBTA 71">
-  <script is:inline src="/js/adminAPI.js"></script>
   <script is:inline define:vars={{ API_BASE_URL }}>
     window.__API_BASE_URL__ = API_BASE_URL;
     window.conceptFormData = {
@@ -262,10 +261,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.isSaving = true;
         const self = this;
         const executeSubmit = () => {
-          if (self.formData.id) {
-            return window.AdminAPI.updateConcept(self.formData.id, token, payload);
+          if (window.AdminAPI && window.AdminAPI.createConcept) {
+            if (self.formData.id) {
+              return window.AdminAPI.updateConcept(self.formData.id, token, payload);
+            } else {
+              return window.AdminAPI.createConcept(token, payload);
+            }
           } else {
-            return window.AdminAPI.createConcept(token, payload);
+            return fetch(self.apiBaseUrl + '/v1/concepts', {
+              method: self.formData.id ? 'PUT' : 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(payload)
+            }).then(res => res.ok ? res.json() : Promise.reject(new Error(res.statusText)));
           }
         };
         executeSubmit()
@@ -349,23 +360,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   <div class="p-4 sm:p-6 min-h-screen font-sans"> 
     <div
       x-data="window.conceptFormData"
-      x-init="(() => {
-        this.apiBaseUrl = window.__API_BASE_URL__ || '';
-        this.loadCareers();
-        this.loadStudents();
+      x-init="$nextTick(() => {
+        window.conceptFormData.apiBaseUrl = window.__API_BASE_URL__ || '';
+        window.conceptFormData.loadCareers();
+        window.conceptFormData.loadStudents();
         const urlParams = new URLSearchParams(window.location.search);
         const rawConcept = localStorage.getItem('editingConcept');
         if (urlParams.has('edit') && rawConcept) {
           try {
             const concept = JSON.parse(rawConcept);
-            this.populateForm(concept);
+            window.conceptFormData.populateForm(concept);
           } catch (e) {
             console.error('Error:', e);
           }
         } else {
           localStorage.removeItem('editingConcept');
         }
-      })()"
+      })"
       class="space-y-5 max-w-4xl mx-auto"
     >
       
