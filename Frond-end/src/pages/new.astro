@@ -51,14 +51,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-User-Role': 'admin',
-            'X-User-Permission': 'view.users'
+            'Authorization': `Bearer ${token}`
           }
         })
         .then(res => {
           if (!res.ok) {
-            console.warn(`⚠️ API returned ${res.status}, using fallback careers`);
+            console.warn(`⚠️ Careers API returned ${res.status}, using fallback`);
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
@@ -120,14 +118,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-User-Role': 'admin',
-            'X-User-Permission': 'view.users'
+            'Authorization': `Bearer ${token}`
           }
         })
         .then(res => {
           if (!res.ok) {
-            console.warn(`⚠️ API returned ${res.status}, using localStorage fallback`);
+            console.warn(`⚠️ Students API returned ${res.status}, using localStorage fallback`);
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
