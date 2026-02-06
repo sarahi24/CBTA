@@ -271,23 +271,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           amount: parseFloat(this.formData.amount),
           start_date: this.formData.startDate,
           end_date: this.formData.endDate,
-          applies_to: this.formData.allStudents ? 'todos' : 'estudiantes',
-          semestres: [],
-          careers: [],
-          students: []
+          is_global: Boolean(this.formData.allStudents)
         };
+        
+        // Construir applies_to y campos relacionados según alcance
         if (this.formData.allStudents) {
+          // Para todos - NO incluir campos de filtro
           payload.applies_to = 'todos';
         } else {
+          // Alcance restringido - incluir solo los filtros especificados
           if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
           } else if (this.formData.selectedSemesters.length > 0) {
-            payload.applies_to = 'semestres';
-            payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+            payload.applies_to = 'semestre';
+            payload.semestre = parseInt(this.formData.selectedSemesters[0]);
           } else if (this.formData.selectedCareers.length > 0) {
-            payload.applies_to = 'careers';
-            payload.careers = this.formData.selectedCareers.map(c => parseInt(c) || c);
+            payload.applies_to = 'carrera';
+            payload.career = String(this.formData.selectedCareers[0]);
+          } else {
+            // Sin filtros seleccionados - aplicar a todos por defecto
+            payload.applies_to = 'todos';
           }
         }
         console.log('Sending payload:', payload);
