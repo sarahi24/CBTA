@@ -54,16 +54,20 @@ const title = "Finanzas Estudiantiles";
         if (token && userId) {
           try {
             console.log('📥 Cargando adeudos desde StudentAPI...');
-            const paymentsData = await window.StudentAPI.getPendingPayments(userId, token);
-            const paymentsArray = Array.isArray(paymentsData.data) ? paymentsData.data : 
+            const paymentsData = await window.StudentAPI.getPendingPayments(userId, token, false, 'student');
+            
+            // Extraer pending_payments del response
+            const paymentsArray = paymentsData?.data?.pending_payments || 
+                                  Array.isArray(paymentsData.data) ? paymentsData.data : 
                                   Array.isArray(paymentsData) ? paymentsData : [];
             
             this.adeudos = paymentsArray.map(payment => ({
               id: payment.id,
               concepto: payment.concept_name || payment.concepto || 'Pago',
               monto: payment.amount?.toString() || payment.monto || '0.00',
-              fecha: payment.due_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
-              status: payment.status || 'Pendiente'
+              fecha: payment.end_date || payment.due_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              status: payment.status || 'Pendiente',
+              description: payment.description || ''
             }));
             console.log('✅ Adeudos cargados:', this.adeudos.length);
           } catch (err) {

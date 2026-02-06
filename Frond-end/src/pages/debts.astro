@@ -1,28 +1,11 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { API_ENDPOINTS } from "../config/api.js";
 
 const pageTitle = "Estado de Adeudos - CBTA 71";
 
-// Cargar adeudos desde la API
-let debts = [];
-let students = [];
-try {
-  const [debtsRes, studentsRes] = await Promise.all([
-    fetch(API_ENDPOINTS.debts.list),
-    fetch(API_ENDPOINTS.students.list)
-  ]);
-  
-  if (debtsRes.ok) {
-    const json = await debtsRes.json();
-    debts = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-  }
-  
-  if (studentsRes.ok) {
-    const json = await studentsRes.json();
-    students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-  }
-} catch (e) {}
+// Note: Data will be loaded client-side with authentication
+const debts = [];
+const students = [];
 
 const debtsJSON = JSON.stringify(debts);
 const studentsJSON = JSON.stringify(students);
@@ -58,6 +41,12 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         <div class="relative w-full lg:w-[300px]">
            <input type="text" id="search-input" placeholder="Buscar alumno..." class="w-full pl-4 h-[46px] border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-[#2D584C] bg-white shadow-sm" />
         </div>
+        <button id="refresh-debts-btn" class="h-[46px] px-5 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition-all flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-2 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          Actualizar
+        </button>
         <button id="open-pay-modal-btn" class="h-[46px] px-5 bg-[#2D584C] text-white rounded-xl shadow-md hover:brightness-110 transition-all flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-2 shrink-0">
           Registrar Pago
         </button>
@@ -146,11 +135,15 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
   </script>
 
   <script type="module">
+    import { StudentAPI } from '../utils/studentAPI.js';
+    
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
+    let pendingPayments = [];
+    let isLoading = false;
 
     // Cargar datos de la API o fallback a localStorage
-    const getCharges = () => window.__DEBTS_DATA.length > 0 ? window.__DEBTS_DATA : JSON.parse(localStorage.getItem('chargesList') || '[]');
+    const getCharges = () => pendingPayments.length > 0 ? pendingPayments : JSON.parse(localStorage.getItem('chargesList') || '[]');
     const getStudents = () => window.__STUDENTS_DATA.length > 0 ? window.__STUDENTS_DATA : JSON.parse(localStorage.getItem('studentsList') || '[]');
     const getConcepts = () => JSON.parse(localStorage.getItem('conceptsList') || '[]');
     const saveCharges = (data) => localStorage.setItem('chargesList', JSON.stringify(data));
@@ -160,6 +153,71 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const searchInput = document.getElementById('search-input');
     const paginationInfo = document.getElementById('pagination-info');
     const paginationButtons = document.getElementById('pagination-buttons');
+    const refreshBtn = document.getElementById('refresh-debts-btn');
+
+    // Cargar pagos pendientes desde la API
+    async function loadPendingPayments(forceRefresh = false) {
+      if (isLoading) return;
+      
+      try {
+        isLoading = true;
+        if (refreshBtn) {
+          refreshBtn.disabled = true;
+          refreshBtn.innerHTML = `
+            <svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Cargando...
+          `;
+        }
+
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No hay token de autenticación');
+          renderTable();
+          return;
+        }
+
+        // Obtener role del usuario
+        const userRole = localStorage.getItem('user_role') || 'student';
+        
+        const response = await StudentAPI.getPendingPayments(null, token, forceRefresh, userRole);
+        
+        if (response.success && response.data?.pending_payments) {
+          pendingPayments = response.data.pending_payments.map(payment => ({
+            id: payment.id,
+            studentId: payment.student_id || payment.studentId,
+            conceptId: payment.concept_id || payment.conceptId,
+            conceptTitle: payment.concept_name,
+            concept: payment.concept_name,
+            description: payment.description,
+            amount: payment.amount,
+            status: 'pending',
+            startDate: payment.start_date,
+            endDate: payment.end_date
+          }));
+          
+          console.log('✅ Pagos pendientes cargados:', pendingPayments.length);
+          renderTable();
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar pagos pendientes:', error);
+        // Fallback a datos locales si hay error
+        renderTable();
+      } finally {
+        isLoading = false;
+        if (refreshBtn) {
+          refreshBtn.disabled = false;
+          refreshBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            Actualizar
+          `;
+        }
+      }
+    }
 
     function renderTable() {
         const term = searchInput.value.toLowerCase();
@@ -346,6 +404,13 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     };
 
     searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
-    renderTable();
+    
+    // Event listener para el botón de actualizar
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => loadPendingPayments(true));
+    }
+    
+    // Cargar datos inicialmente
+    loadPendingPayments();
   </script>
 </Layout>
