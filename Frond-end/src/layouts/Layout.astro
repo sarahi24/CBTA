@@ -213,7 +213,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 		// Función para obtener el rol del usuario desde localStorage
 		function getUserRole() {
-			const userData = localStorage.getItem('userData');
+			const userData = localStorage.getItem('user_data'); // Corregido: era 'userData', debe ser 'user_data'
 			if (!userData) return null;
 			try {
 				const parsed = JSON.parse(userData);
@@ -251,7 +251,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 			
 			console.log('🔐 Rol del usuario:', userRole);
 			console.log('🔄 Rol normalizado:', normalizedRole);
-			console.log('📦 localStorage userData:', localStorage.getItem('userData'));
+			console.log('📦 localStorage user_data:', localStorage.getItem('user_data'));
 			
 			const navigationItems = document.querySelectorAll('#main-navigation li[data-role]');
 			console.log('📋 Items de navegación encontrados:', navigationItems.length);
