@@ -3644,28 +3644,49 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 try {
-                    console.log('🔎 Cargando permisos filtrados por rol desde la API de Angel...');
+                    console.log('🔎 Cargando permisos desde endpoints de Angel...');
 
                     // Obtener datos de los usuarios seleccionados
                     const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
-                    
-                    // Determinar el rol común de los usuarios seleccionados
-                    const userRoles = selectedUsersData.map(u => u.roles?.[0] || u.role).filter(Boolean);
-                    const mostCommonRole = userRoles.length > 0 ? userRoles[0] : 'student';
-                    
-                    console.log('👥 Rol detectado:', mostCommonRole);
-                    console.log('👥 Usuarios seleccionados:', selectedUsersData.length);
-
-                    // Obtener CURPs de los usuarios seleccionados
                     const curps = selectedUsersData.map(u => u.curp).filter(Boolean);
-
-                    // Llamar al endpoint de Angel que filtra permisos por rol
+                    
                     let allPermissions = [];
                     let currentPermissions = new Set();
+                    let endpoint = '';
+                    let requestBody = {};
 
+                    // ESCENARIO 1: Un solo usuario seleccionado (más controlado)
+                    if (selectedUsersData.length === 1) {
+                        const userId = selectedUsersData[0].id;
+                        const userRoles = selectedUsersData[0].roles || [selectedUsersData[0].role];
+                        
+                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-user/${userId}`;
+                        requestBody = {
+                            roles: userRoles,
+                            forceRefresh: false
+                        };
+                        console.log('📌 Escenario: Usuario individual (ID:', userId, ')');
+                    }
+                    // ESCENARIO 2: Múltiples usuarios seleccionados (masivo por CURPs)
+                    else if (selectedUsersData.length > 1) {
+                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-curps`;
+                        requestBody = {
+                            curps: curps
+                        };
+                        console.log('📌 Escenario: Múltiples usuarios por CURPs (', curps.length, 'usuarios)');
+                    }
+                    // ESCENARIO 3: Por rol (masivo por rol)
+                    else if (this.permissionTargetRole) {
+                        endpoint = `${this.apiBaseUrl}/v1/admin-actions/permissions/by-role`;
+                        requestBody = {
+                            curps: [] // Vacío para obtener todos del rol
+                        };
+                        console.log('📌 Escenario: Por rol (', this.permissionTargetRole, ')');
+                    }
+
+                    // Llamar al endpoint correspondiente
                     try {
-                        // Usar el endpoint correcto de Angel: POST /api/v1/admin-actions/permissions/by-role
-                        const response = await fetch(`${this.apiBaseUrl}/v1/admin-actions/permissions/by-role`, {
+                        const response = await fetch(endpoint, {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
@@ -3674,34 +3695,55 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 'X-User-Role': 'admin',
                                 'X-User-Permission': 'view.permissions'
                             },
-                            body: JSON.stringify({
-                                curps: curps.length > 0 ? curps : []
-                            })
+                            body: JSON.stringify(requestBody)
                         });
                         
                         if (response.ok) {
                             const result = await response.json();
-                            if (result.success && result.data?.permissions?.permissions) {
-                                // Los permisos ya vienen filtrados por el rol
-                                allPermissions = result.data.permissions.permissions.map((p, idx) => ({
+                            console.log('✅ Respuesta de API:', result);
+
+                            // Procesar según el tipo de respuesta
+                            let permissionsData = null;
+                            
+                            // Respuesta de by-curps
+                            if (result.data?.permissions?.permissions && Array.isArray(result.data.permissions.permissions)) {
+                                permissionsData = result.data.permissions.permissions;
+                            }
+                            // Respuesta de by-role
+                            else if (result.data?.permissions?.permissions && Array.isArray(result.data.permissions.permissions)) {
+                                permissionsData = result.data.permissions.permissions;
+                            }
+                            // Respuesta de by-user
+                            else if (result.data?.permissions?.permissions && Array.isArray(result.data.permissions.permissions)) {
+                                permissionsData = result.data.permissions.permissions;
+                            }
+
+                            if (permissionsData && permissionsData.length > 0) {
+                                allPermissions = permissionsData.map((p, idx) => ({
                                     id: p.id || idx + 1,
                                     name: p.name,
                                     displayName: p.label || p.name,
                                     type: p.type,
                                     group: p.group
                                 }));
-                                console.log(`✅ Permisos cargados desde API (${mostCommonRole}):`, allPermissions.length);
+                                console.log(`✅ ${allPermissions.length} permisos cargados desde endpoint de Angel`);
+                            } else {
+                                console.warn('⚠️ No se encontraron permisos en la respuesta');
                             }
                         } else {
                             console.warn('⚠️ Error en respuesta de API:', response.status);
                         }
                     } catch (apiError) {
-                        console.warn('⚠️ Error llamando a API de permisos por rol:', apiError);
+                        console.warn('⚠️ Error llamando a endpoint de permisos:', apiError);
                     }
                     
                     // Si no se pudo cargar de la API, usar fallback filtrado por rol
                     if (allPermissions.length === 0) {
                         console.log('📋 Usando permisos de fallback filtrados por rol');
+                        
+                        // Determinar el rol común
+                        const userRoles = selectedUsersData.map(u => u.roles?.[0] || u.role).filter(Boolean);
+                        const mostCommonRole = userRoles.length > 0 ? userRoles[0] : 'student';
                         
                         const permissionsByRole = {
                             'admin': [
@@ -3758,9 +3800,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 } catch (error) {
                     console.error('❌ Error al cargar permisos:', error);
                     this.showNotify('Error al cargar permisos', 'error');
-                    this.permissionsToAdd = [];
-                    this.permissionsToRemove = [];
-                    this.showPermissionsModal = false;
                 }
             },
 
