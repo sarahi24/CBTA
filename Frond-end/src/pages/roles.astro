@@ -8,7 +8,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 <Layout title="Gestión de Personal | CBTA 71">
     <script is:inline src="/js/xlsx.min.js"></script>
     <script is:inline define:vars={{ API_BASE_URL }}>
+        // Declarar tipos para propiedades personalizadas
         window.__API_BASE_URL__ = API_BASE_URL;
+        window.__adminAPILoaded = false;
+        window.AdminAPI = null;
     </script>
     
     <style is:global>
@@ -3835,71 +3838,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.showNotify('Error al cargar permisos: ' + error.message, 'error');
                 }
             },
-                    if (allPermissions.length === 0) {
-                        console.log('📋 Usando permisos de fallback filtrados por rol');
-                        
-                        // Determinar el rol común
-                        const userRoles = selectedUsersData.map(u => u.roles?.[0] || u.role).filter(Boolean);
-                        const mostCommonRole = userRoles.length > 0 ? userRoles[0] : 'student';
-                        
-                        const permissionsByRole = {
-                            'admin': [
-                                'promote.student', 'attach.student', 'view.student', 'update.student',
-                                'sync.permissions', 'view.users', 'sync.roles', 'delete.users',
-                                'disable.users', 'view.permissions', 'view.roles'
-                            ],
-                            'financial staff': [
-                                'view all financial overview', 'view all pending concepts summary',
-                                'view all students summary', 'view all paid concepts summary',
-                                'view concepts history', 'view concepts', 'create concepts',
-                                'update concepts', 'finalize concepts', 'disable concepts',
-                                'eliminate concepts', 'eliminate.logical.concepts', 'view debts',
-                                'validate debt', 'view payments', 'view students'
-                            ],
-                            'student': [
-                                'view own financial overview', 'view own pending concepts summary',
-                                'view own paid concepts summary', 'view own overdue concepts summary',
-                                'view payments history', 'view cards', 'create setup',
-                                'create and view card', 'delete card', 'view payment history',
-                                'view pending concepts', 'create payment', 'view overdue concepts'
-                            ]
-                        };
-
-                        const rolePermissions = permissionsByRole[mostCommonRole] || permissionsByRole['student'];
-                        allPermissions = rolePermissions.map((name, idx) => ({
-                            id: idx + 1,
-                            name: name,
-                            displayName: name
-                        }));
-                        console.log(`📋 Fallback: ${allPermissions.length} permisos para rol ${mostCommonRole}`);
-                    }
-                    
-                    // Obtener permisos actuales de los usuarios seleccionados
-                    selectedUsersData.forEach(user => {
-                        if (Array.isArray(user.permissions)) {
-                            user.permissions.forEach(p => currentPermissions.add(p));
-                        }
-                    });
-
-                    console.log('👤 Permisos actuales de usuarios:', Array.from(currentPermissions).length);
-
-                    // Separar permisos en "disponibles para agregar" y "disponibles para eliminar"
-                    this.availablePermissions = allPermissions;
-                    this.permissionsAvailableToAdd = allPermissions.filter(p => !currentPermissions.has(p.name));
-                    this.permissionsAvailableToRemove = allPermissions.filter(p => currentPermissions.has(p.name));
-
-                    console.log('➕ Permisos disponibles para agregar:', this.permissionsAvailableToAdd.length);
-                    console.log('➖ Permisos disponibles para eliminar:', this.permissionsAvailableToRemove.length);
-
-                    this.permissionsToAdd = [];
-                    this.permissionsToRemove = [];
-                    this.showPermissionsModal = true;
-                } catch (error) {
-                    console.error('❌ Error al cargar permisos:', error);
-                    this.showNotify('Error al cargar permisos', 'error');
-                }
-            },
-
 
             async updatePermissions() {
                 const token = localStorage.getItem('access_token');
