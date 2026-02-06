@@ -278,6 +278,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         if (this.formData.allStudents) {
           // Para todos - NO incluir campos de filtro
           payload.applies_to = 'todos';
+          // Explícitamente NO incluir campos de filtro
+          delete payload.students;
+          delete payload.student;
+          delete payload.semestre;
+          delete payload.semestres;
+          delete payload.career;
+          delete payload.carrera;
+          delete payload.careers;
+          delete payload.carreras;
         } else {
           // Alcance restringido - incluir solo los filtros especificados
           if (this.formData.selectedSpecificStudents.length > 0) {
@@ -292,6 +301,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else {
             // Sin filtros seleccionados - aplicar a todos por defecto
             payload.applies_to = 'todos';
+            // Explícitamente NO incluir campos de filtro
+            delete payload.students;
+            delete payload.student;
+            delete payload.semestre;
+            delete payload.semestres;
+            delete payload.career;
+            delete payload.carrera;
+            delete payload.careers;
+            delete payload.carreras;
           }
         }
         console.log('Sending payload:', payload);
@@ -540,7 +558,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div @click="formData.allStudents = true"
+            <div @click="formData.allStudents = true; formData.selectedCareers = []; formData.selectedSemesters = []; formData.selectedSpecificStudents = [];"
               :class="formData.allStudents ? 'check-active' : 'border-gray-300 hover:border-gray-400'"
               class="border-2 rounded-xl p-4 cursor-pointer transition flex items-center gap-4 shadow-sm">
               <div :class="formData.allStudents ? 'bg-active' : 'bg-gray-200 text-gray-500'" class="p-3 rounded-full transition">
