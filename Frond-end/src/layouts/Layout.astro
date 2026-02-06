@@ -251,25 +251,37 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 			
 			console.log('🔐 Rol del usuario:', userRole);
 			console.log('🔄 Rol normalizado:', normalizedRole);
+			console.log('📦 localStorage userData:', localStorage.getItem('userData'));
 			
 			const navigationItems = document.querySelectorAll('#main-navigation li[data-role]');
+			console.log('📋 Items de navegación encontrados:', navigationItems.length);
 			
-			navigationItems.forEach(item => {
-				const allowedRoles = item.getAttribute('data-role').split(',');
+			let itemsShown = 0;
+			navigationItems.forEach((item, index) => {
+				const allowedRoles = item.getAttribute('data-role').split(',').map(r => r.trim());
+				const linkText = item.querySelector('a')?.textContent?.trim() || 'Unknown';
 				
-				// Si el usuario no tiene rol, ocultar todo excepto Dashboard por defecto
+				console.log(`Item ${index}: "${linkText}" - Roles permitidos:`, allowedRoles);
+				
+				// Si el usuario no tiene rol, ocultar todo
 				if (!normalizedRole) {
 					item.style.display = 'none';
+					console.log(`  ❌ Oculto (sin rol)`);
 					return;
 				}
 				
 				// Mostrar u ocultar basado en el rol permitido
 				if (allowedRoles.includes(normalizedRole)) {
 					item.style.display = 'block';
+					itemsShown++;
+					console.log(`  ✅ Mostrado (rol coincide: ${normalizedRole})`);
 				} else {
 					item.style.display = 'none';
+					console.log(`  ❌ Oculto (rol no coincide)`);
 				}
 			});
+			
+			console.log(`✨ Total de items mostrados: ${itemsShown}`);
 		}
 
 		function setActiveLink() {
@@ -348,12 +360,19 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		window.addEventListener('load', () => { 
 			handleResize(); 
 			setActiveLink(); 
+			console.log('🚀 Ejecutando filterNavigationByRole en load...');
 			filterNavigationByRole(); // Filtrar navegación por rol al cargar
 		});
 		document.addEventListener("astro:after-swap", () => {
 			setActiveLink();
+			console.log('🔄 Ejecutando filterNavigationByRole en astro:after-swap...');
 			filterNavigationByRole(); // Filtrar navegación por rol en cambio de página
 		});
+		
+		// Exponer función globalmente para debugging
+		window.filterNavigationByRole = filterNavigationByRole;
+		window.getUserRole = getUserRole;
+		window.normalizeRole = normalizeRole;
 	</script>
 </body>
 </html>
