@@ -95,78 +95,7 @@ const pageTitle = "Dashboard - SIGE";
 <script>
   import { DashboardAPI } from '../utils/dashboardAPI.js';
 
-  // Función para verificar roles del usuario
-  function checkUserRole() {
-    const userData = localStorage.getItem('user_data');
-    if (!userData) {
-      console.error('❌ No user data found');
-      return null;
-    }
-
-    try {
-      const user = JSON.parse(userData);
-      const firstUser = Array.isArray(user) ? user[0] : user;
-      
-      // Extraer roles del usuario
-      let userRoles = [];
-      if (Array.isArray(firstUser?.roles)) {
-        userRoles = firstUser.roles.map(r => typeof r === 'string' ? r.toLowerCase() : (r.name || '').toLowerCase());
-      } else if (firstUser?.role) {
-        userRoles = [String(firstUser.role).toLowerCase()];
-      }
-
-      console.log('🔍 User roles detected:', userRoles);
-      return userRoles;
-    } catch (error) {
-      console.error('❌ Error parsing user data:', error);
-      return null;
-    }
-  }
-
-  // Función para mostrar modal de error de permisos
-  function showPermissionError(userRoles) {
-    const roleText = userRoles && userRoles.length > 0 ? userRoles.join(', ') : 'ninguno';
-    const message = `
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md mx-4">
-          <div class="flex items-center gap-3 mb-4">
-            <svg class="w-12 h-12 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-            </svg>
-            <h2 class="text-2xl font-bold text-gray-900">Acceso Denegado</h2>
-          </div>
-          <p class="text-gray-700 mb-2">
-            No tienes permisos para acceder al Dashboard del Personal Financiero.
-          </p>
-          <p class="text-sm text-gray-600 mb-4">
-            <strong>Rol requerido:</strong> financial staff<br>
-            <strong>Tu rol actual:</strong> ${roleText}
-          </p>
-          <p class="text-sm text-gray-500 mb-6">
-            Por favor, contacta al administrador del sistema para solicitar los permisos necesarios.
-          </p>
-          <button onclick="window.location.href='/'" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-            Ir al Inicio
-          </button>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', message);
-  }
-
   document.addEventListener('DOMContentLoaded', () => {
-    // Verificar rol del usuario
-    const userRoles = checkUserRole();
-    const hasFinancialStaffRole = userRoles?.includes('financial staff') || userRoles?.includes('financialstaff');
-    
-    if (!hasFinancialStaffRole) {
-      console.warn('⚠️ User does not have "financial staff" role');
-      showPermissionError(userRoles);
-      return; // Detener ejecución del resto del código
-    }
-
-    console.log('✅ User has financial staff role, loading dashboard...');
-
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
     const payoutBtn = document.getElementById('createPayoutBtn') as HTMLButtonElement | null;
     
