@@ -11,7 +11,8 @@ let dashboardData = {
   history: [],
   overdue: null,
   paid: null,
-  pending: null
+  pending: null,
+  porcentajeProgreso: 0
 };
 let error = null;
 
@@ -28,9 +29,9 @@ try {
       // Fetch all dashboard data in parallel using StudentAPI
       const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all([
         StudentAPI.getPaymentHistory(userId, token).catch(e => ({ error: e.message })),
-        StudentAPI.getOverdueTotal(userId, token).catch(e => ({ error: e.message })),
-        StudentAPI.getPaidTotal(userId, token).catch(e => ({ error: e.message })),
-        StudentAPI.getPendingTotal(userId, token).catch(e => ({ error: e.message }))
+        StudentAPI.getOverdueTotal(userId ? parseInt(userId) : null, token, false, 'student').catch(e => ({ error: e.message })),
+        StudentAPI.getPaidTotal(userId ? parseInt(userId) : null, token, false, 'student').catch(e => ({ error: e.message })),
+        StudentAPI.getPendingTotal(userId ? parseInt(userId) : null, token, false, 'student').catch(e => ({ error: e.message }))
       ]);
 
       // Process payment history
@@ -61,6 +62,12 @@ try {
         dashboardData.pending = pendingRes.data?.total_pending || { totalAmount: '0.00', totalCount: 0 };
       }
 
+      // Calculate progress percentage
+      const paidAmount = parseFloat(dashboardData.paid?.totalPayments || '0');
+      const pendingAmount = parseFloat(dashboardData.pending?.totalAmount || '0');
+      const totalAmount = paidAmount + pendingAmount;
+      dashboardData.porcentajeProgreso = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+
       console.log('✅ Dashboard data loaded successfully');
     } catch (err) {
       console.error('❌ Error loading dashboard data:', err);
@@ -89,8 +96,18 @@ try {
           <h1 class="student-name">Hola, {dashboardData.alumnoNombre?.split(' ')[0] || "Estudiante"}</h1>
         </div>
       </div>
-      <div class="header-right mobile-hide">
-        <span class="current-date">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+      <div class="header-right">
+        <button 
+          id="refreshCacheBtn"
+          class="refresh-cache-btn"
+          title="Limpiar caché del dashboard"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          <span class="btn-text">Actualizar</span>
+        </button>
+        <span class="current-date mobile-hide">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
       </div>
     </header>
 
@@ -99,29 +116,29 @@ try {
     <section class="stats-scroll-container">
       <StatCard 
         title="Pendientes" 
-        amount={dashboardData?.pagosPendientes?.monto || "$0.00"} 
-        subtitle={dashboardData?.pagosPendientes?.info || "Sin adeudos"} 
+        amount={dashboardData?.pending?.totalAmount ? `$${parseFloat(dashboardData.pending.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"} 
+        subtitle={dashboardData?.pending?.totalCount ? `${dashboardData.pending.totalCount} ${dashboardData.pending.totalCount === 1 ? 'Adeudo' : 'Adeudos'}` : "Sin adeudos"} 
         type="danger"
       >
         <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
       </StatCard>
 
       <StatCard 
-        title="Realizados" 
-        amount={dashboardData?.pagosRealizados?.monto || "$0.00"} 
-        subtitle={dashboardData?.pagosRealizados?.info || "0 Pagos"} 
-        type="default"
+        title="Vencidos" 
+        amount={dashboardData?.overdue?.totalAmount ? `$${parseFloat(dashboardData.overdue.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"} 
+        subtitle={dashboardData?.overdue?.totalCount ? `${dashboardData.overdue.totalCount} ${dashboardData.overdue.totalCount === 1 ? 'Pago vencido' : 'Pagos vencidos'}` : "Sin pagos vencidos"} 
+        type="warning"
       >
-        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
       </StatCard>
 
       <StatCard 
-        title="Total Inversión" 
-        amount={dashboardData?.totalPagado || "$0.00"} 
-        subtitle="Monto acumulado" 
-        type="info"
+        title="Realizados" 
+        amount={dashboardData?.paid?.totalPayments ? `$${parseFloat(dashboardData.paid.totalPayments).toFixed(2)} MXN` : "$0.00 MXN"} 
+        subtitle="Total pagado" 
+        type="success"
       >
-        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
       </StatCard>
     </section>
 
@@ -136,14 +153,21 @@ try {
             <div class="dot green"></div>
             <span class="summary-label">Monto Liquidado</span>
           </div>
-          <span class="val-ok">{dashboardData?.totalPagado}</span>
+          <span class="val-ok">{dashboardData?.paid?.totalPayments ? `$${parseFloat(dashboardData.paid.totalPayments).toFixed(2)} MXN` : "$0.00 MXN"}</span>
+        </div>
+        <div class="summary-row">
+          <div class="label-group">
+            <div class="dot orange"></div>
+            <span class="summary-label">Monto Vencido</span>
+          </div>
+          <span class="val-warning">{dashboardData?.overdue?.totalAmount ? `$${parseFloat(dashboardData.overdue.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"}</span>
         </div>
         <div class="summary-row no-border">
           <div class="label-group">
             <div class="dot red"></div>
             <span class="summary-label">Monto por Pagar</span>
           </div>
-          <span class="val-alert">{dashboardData?.totalPendiente}</span>
+          <span class="val-alert">{dashboardData?.pending?.totalAmount ? `$${parseFloat(dashboardData.pending.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"}</span>
         </div>
       </div>
 
@@ -158,7 +182,7 @@ try {
       <div class="table-header">
         <h3 class="summary-title">Historial Reciente</h3>
       </div>
-      <PaymentsTable pagos={dashboardData?.pagos} />
+      <PaymentsTable pagos={dashboardData?.history} />
     </div>
   </div>
 </StudentLayout>
@@ -242,11 +266,13 @@ try {
   .label-group { display: flex; align-items: center; gap: 0.75rem; }
   .dot { width: 8px; height: 8px; border-radius: 50%; }
   .dot.green { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+  .dot.orange { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
   .dot.red { background: var(--danger); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
   
   .summary-label { font-weight: 600; color: var(--text-muted); font-size: 1rem; }
-  .val-ok, .val-alert { color: var(--text-main); font-weight: 800; font-size: 1.35rem; }
+  .val-ok, .val-alert, .val-warning { color: var(--text-main); font-weight: 800; font-size: 1.35rem; }
   .val-alert { color: var(--danger); }
+  .val-warning { color: #f59e0b; }
   .no-border { border: none; }
 
   .progress-inner { display: flex; justify-content: center; align-items: center; height: 100%; }
@@ -294,4 +320,221 @@ try {
     .table-header { margin-bottom: 1rem; }
     .payments-title { font-size: 1rem; }
   }
+
+  /* Refresh Cache Button */
+  .refresh-cache-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+  }
+
+  .refresh-cache-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .refresh-cache-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .refresh-cache-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .refresh-cache-btn svg {
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .refresh-cache-btn .btn-text {
+      display: none;
+    }
+    .refresh-cache-btn {
+      padding: 0.6rem;
+    }
+  }
+
+  /* Toast Notification */
+  .toast-notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 300px;
+    max-width: 400px;
+    border-left: 4px solid;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+  }
+
+  .toast-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .toast-notification.success {
+    border-color: #10b981;
+  }
+
+  .toast-notification.error {
+    border-color: var(--danger);
+  }
+
+  .toast-notification.success .toast-icon {
+    color: #10b981;
+  }
+
+  .toast-notification.error .toast-icon {
+    color: var(--danger);
+  }
+
+  .toast-message {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .toast-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .toast-close:hover {
+    color: var(--text-main);
+  }
 </style>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast-notification">
+  <svg class="toast-icon" width="24" height="24" fill="currentColor" viewBox="0 0 20 20">
+    <path id="toastIconPath" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+  </svg>
+  <span id="toastMessage" class="toast-message"></span>
+  <button class="toast-close" onclick="document.getElementById('toast').classList.remove('show')">
+    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+  import { StudentAPI } from '../../utils/studentAPI.js';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        try {
+          // Disable button and show loading state
+          refreshBtn.disabled = true;
+          const originalHTML = refreshBtn.innerHTML;
+          refreshBtn.innerHTML = `
+            <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="btn-text">Actualizando...</span>
+          `;
+
+          // Get token and user ID from localStorage
+          const token = localStorage.getItem('access_token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token) {
+            showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
+            return;
+          }
+
+          // Call API to refresh cache
+          const response = await StudentAPI.refreshDashboardCache(userId ? parseInt(userId) : null, token, 'student');
+          
+          if (response.success) {
+            showToast('success', response.message || 'Caché actualizado correctamente');
+            
+            // Reload page after 1.5 seconds to show updated data
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showToast('error', response.message || 'Error al actualizar el caché');
+          }
+        } catch (error) {
+          console.error('Error al actualizar caché:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Error al actualizar el caché del dashboard';
+          showToast('error', errorMessage);
+        } finally {
+          // Restore button (only if page is not reloading)
+          setTimeout(() => {
+            if (refreshBtn) {
+              refreshBtn.disabled = false;
+              refreshBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                <span class="btn-text">Actualizar</span>
+              `;
+            }
+          }, 100);
+        }
+      });
+    }
+  });
+
+  function showToast(type: 'success' | 'error', message: string) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastIconPath = document.getElementById('toastIconPath');
+    
+    if (!toast || !toastMessage || !toastIconPath) return;
+    
+    // Remove previous classes
+    toast.classList.remove('success', 'error');
+    
+    // Add new class
+    toast.classList.add(type);
+    
+    // Update icon based on type
+    if (type === 'success') {
+      toastIconPath.setAttribute('d', 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z');
+    } else if (type === 'error') {
+      toastIconPath.setAttribute('d', 'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z');
+    }
+    
+    // Set message
+    toastMessage.textContent = message;
+    
+    // Show toast
+    toast.classList.add('show');
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      toast?.classList.remove('show');
+    }, 5000);
+  }
+</script>

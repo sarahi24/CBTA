@@ -79,16 +79,26 @@ export const StudentAPI = {
   /**
    * DASHBOARD - GET /api/v1/dashboard/pending/{studentId?}
    * Obtener total de pagos pendientes del usuario
+   * @param {number|null} studentId - ID del estudiante (opcional para padres)
+   * @param {string} token - Token de autenticación
+   * @param {boolean} forceRefresh - Forzar actualización del caché
+   * @param {string} role - Rol del usuario (student|parent)
    */
-  async getPendingTotal(studentId, token) {
+  async getPendingTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const endpoint = studentId ? `${API_BASE}/dashboard/pending/${studentId}` : `${API_BASE}/dashboard/pending`;
-      const response = await fetch(endpoint, {
+      const url = new URL(studentId ? `${API_BASE}/dashboard/pending/${studentId}` : `${API_BASE}/dashboard/pending`);
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.own.pending.concepts.summary'
         }
       });
 
@@ -107,16 +117,26 @@ export const StudentAPI = {
   /**
    * DASHBOARD - GET /api/v1/dashboard/paid/{studentId?}
    * Obtener total de pagos realizados por el usuario
+   * @param {number|null} studentId - ID del estudiante (opcional para padres)
+   * @param {string} token - Token de autenticación
+   * @param {boolean} forceRefresh - Forzar actualización del caché
+   * @param {string} role - Rol del usuario (student|parent)
    */
-  async getPaidTotal(studentId, token) {
+  async getPaidTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const endpoint = studentId ? `${API_BASE}/dashboard/paid/${studentId}` : `${API_BASE}/dashboard/paid`;
-      const response = await fetch(endpoint, {
+      const url = new URL(studentId ? `${API_BASE}/dashboard/paid/${studentId}` : `${API_BASE}/dashboard/paid`);
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.own.paid.concepts.summary'
         }
       });
 
@@ -135,16 +155,26 @@ export const StudentAPI = {
   /**
    * DASHBOARD - GET /api/v1/dashboard/overdue/{studentId?}
    * Obtener total de pagos vencidos del usuario
+   * @param {number|null} studentId - ID del estudiante (opcional para padres)
+   * @param {string} token - Token de autenticación
+   * @param {boolean} forceRefresh - Forzar actualización del caché
+   * @param {string} role - Rol del usuario (student|parent)
    */
-  async getOverdueTotal(studentId, token) {
+  async getOverdueTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const endpoint = studentId ? `${API_BASE}/dashboard/overdue/${studentId}` : `${API_BASE}/dashboard/overdue`;
-      const response = await fetch(endpoint, {
+      const url = new URL(studentId ? `${API_BASE}/dashboard/overdue/${studentId}` : `${API_BASE}/dashboard/overdue`);
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.own.overdue.concepts.summary'
         }
       });
 
@@ -163,8 +193,11 @@ export const StudentAPI = {
   /**
    * DASHBOARD - POST /api/v1/dashboard/refresh/{studentId?}
    * Limpiar caché del dashboard
+   * @param {number|null} studentId - ID del estudiante (opcional para padres)
+   * @param {string} token - Token de autenticación
+   * @param {string} role - Rol del usuario (student|parent)
    */
-  async refreshDashboardCache(studentId, token) {
+  async refreshDashboardCache(studentId, token, role = 'student') {
     try {
       const endpoint = studentId ? `${API_BASE}/dashboard/refresh/${studentId}` : `${API_BASE}/dashboard/refresh`;
       const response = await fetch(endpoint, {
@@ -172,7 +205,9 @@ export const StudentAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'refresh.all.dashboard'
         }
       });
 
