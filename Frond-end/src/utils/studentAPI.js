@@ -606,5 +606,141 @@ export const StudentAPI = {
       console.error('❌ StudentAPI.getPaymentsByConcept:', err);
       throw err;
     }
+  },
+
+  /**
+   * DEBTS - GET /api/v1/debts/stripe-payments
+   * Obtener pagos desde Stripe
+   * @param {string} token - Token de autenticación
+   * @param {string} search - Email, CURP o n_control (opcional)
+   * @param {number} year - Año específico de los pagos (opcional)
+   * @param {boolean} forceRefresh - Forzar actualización del caché (opcional)
+   */
+  async getStripePayments(token, search = '', year = null, forceRefresh = false) {
+    try {
+      const url = new URL(`${API_BASE}/debts/stripe-payments`);
+      
+      // Agregar query parameters
+      if (search) {
+        url.searchParams.append('search', search);
+      }
+      if (year) {
+        url.searchParams.append('year', year);
+      }
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+      
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.stripe.payments'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al cargar pagos de Stripe');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getStripePayments:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * DEBTS - POST /api/v1/debts/validate
+   * Validar un pago de Stripe
+   * @param {string} search - Email, CURP o n_control del estudiante
+   * @param {string} paymentIntentId - Payment Intent ID de Stripe
+   * @param {string} token - Token de autenticación
+   */
+  async validateStripePayment(search, paymentIntentId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/debts/validate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'validate.debt'
+        },
+        body: JSON.stringify({
+          search,
+          payment_intent_id: paymentIntentId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al validar pago');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.validateStripePayment:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * DEBTS - GET /api/v1/debts
+   * Listar todos los pagos pendientes con paginación
+   * @param {string} token - Token de autenticación
+   * @param {object} options - Opciones de búsqueda y paginación
+   * @param {string} options.search - Búsqueda por CURP, email o n_control
+   * @param {number} options.page - Página número (default: 1)
+   * @param {number} options.perPage - Items por página (default: 15)
+   * @param {boolean} options.forceRefresh - Forzar actualización del caché
+   */
+  async getAllPendingDebts(token, options = {}) {
+    try {
+      const {
+        search = '',
+        page = 1,
+        perPage = 15,
+        forceRefresh = false
+      } = options;
+
+      const params = new URL(`${API_BASE}/debts`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.debts'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('No autenticado. Por favor inicia sesión.');
+        }
+        if (response.status === 403) {
+          throw new Error('No tienes permiso para ver los adeudos.');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al obtener adeudos');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getAllPendingDebts:', err);
+      throw err;
+    }
   }
 };
