@@ -311,10 +311,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'X-User-Role': 'financial-staff',
+                'X-User-Permission': self.formData.id ? 'update.concepts' : 'create.concepts'
               },
               body: JSON.stringify(payload)
-            }).then(res => res.ok ? res.json() : Promise.reject(new Error(res.statusText)));
+            }).then(async res => {
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                // Construir mensaje de error con detalles de validación
+                let errorMsg = data.message || res.statusText || 'Error desconocido';
+                if (data.errors && typeof data.errors === 'object') {
+                  const errorList = Object.entries(data.errors)
+                    .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                    .join(' | ');
+                  errorMsg = `${errorMsg} - ${errorList}`;
+                }
+                console.error('Backend validation errors:', data.errors);
+                return Promise.reject(new Error(errorMsg));
+              }
+              return data;
+            });
           }
         };
         executeSubmit()

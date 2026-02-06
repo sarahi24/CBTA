@@ -469,7 +469,18 @@ export const AdminAPI = {
       if (!response.ok) {
         handleAuthError(response.status);
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al crear concepto');
+        
+        // Construir mensaje con errores de validación si existen
+        let errorMsg = errorData.message || 'Error al crear concepto';
+        if (errorData.errors && typeof errorData.errors === 'object') {
+          const errorList = Object.entries(errorData.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join(' | ');
+          errorMsg = `${errorMsg} - ${errorList}`;
+        }
+        
+        console.error('❌ AdminAPI.createConcept - Validation errors:', errorData.errors);
+        throw new Error(errorMsg);
       }
 
       return await response.json();
@@ -530,7 +541,18 @@ export const AdminAPI = {
       if (!response.ok) {
         handleAuthError(response.status);
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al actualizar concepto');
+        
+        // Construir mensaje con errores de validación si existen
+        let errorMsg = errorData.message || 'Error al actualizar concepto';
+        if (errorData.errors && typeof errorData.errors === 'object') {
+          const errorList = Object.entries(errorData.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join(' | ');
+          errorMsg = `${errorMsg} - ${errorList}`;
+        }
+        
+        console.error('❌ AdminAPI.updateConcept - Validation errors:', errorData.errors);
+        throw new Error(errorMsg);
       }
 
       return await response.json();
