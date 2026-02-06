@@ -979,14 +979,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                     Los usuarios seleccionados ya tienen todos los permisos disponibles.
                                 </div>
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
-                                    <template x-for="(permission, idx) in (permissionsAvailableToAdd || [])" :key="permission.id || permission.name || idx">
-                                        <label class="flex items-center gap-2 p-2 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors">
-                                            <input type="checkbox" 
-                                                   :checked="permissionsToAdd.includes(permission.name)"
-                                                   @change="$event.target.checked ? permissionsToAdd.push(permission.name) : permissionsToAdd.splice(permissionsToAdd.indexOf(permission.name), 1)"
-                                                   class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                                            <span class="text-sm font-medium text-blue-800" x-text="permission.displayName || permission.name"></span>
-                                        </label>
+                                    <template x-if="permissionsAvailableToAdd && permissionsAvailableToAdd.length > 0">
+                                        <template x-for="permission in permissionsAvailableToAdd" :key="permission.name">
+                                            <label class="flex items-center gap-2 p-2 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors">
+                                                <input type="checkbox" 
+                                                       :value="permission.name"
+                                                       x-model="permissionsToAdd"
+                                                       class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                                                <span class="text-sm font-medium text-blue-800">
+                                                    <span x-show="permission.displayName" x-text="permission.displayName"></span>
+                                                    <span x-show="!permission.displayName" x-text="permission.name"></span>
+                                                </span>
+                                            </label>
+                                        </template>
                                     </template>
                                 </div>
                             </div>
@@ -998,14 +1003,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                     Los usuarios seleccionados no tienen permisos para eliminar.
                                 </div>
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
-                                    <template x-for="(permission, idx) in (permissionsAvailableToRemove || [])" :key="permission.id || permission.name || idx">
-                                        <label class="flex items-center gap-2 p-2 hover:bg-orange-100 rounded-lg cursor-pointer transition-colors">
-                                            <input type="checkbox"
-                                                   :checked="permissionsToRemove.includes(permission.name)"
-                                                   @change="$event.target.checked ? permissionsToRemove.push(permission.name) : permissionsToRemove.splice(permissionsToRemove.indexOf(permission.name), 1)"
-                                                   class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
-                                            <span class="text-sm font-medium text-orange-800" x-text="permission.displayName || permission.name"></span>
-                                        </label>
+                                    <template x-if="permissionsAvailableToRemove && permissionsAvailableToRemove.length > 0">
+                                        <template x-for="permission in permissionsAvailableToRemove" :key="permission.name">
+                                            <label class="flex items-center gap-2 p-2 hover:bg-orange-100 rounded-lg cursor-pointer transition-colors">
+                                                <input type="checkbox"
+                                                       :value="permission.name"
+                                                       x-model="permissionsToRemove"
+                                                       class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
+                                                <span class="text-sm font-medium text-orange-800">
+                                                    <span x-show="permission.displayName" x-text="permission.displayName"></span>
+                                                    <span x-show="!permission.displayName" x-text="permission.name"></span>
+                                                </span>
+                                            </label>
+                                        </template>
                                     </template>
                                 </div>
                             </div>
@@ -3828,11 +3838,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.permissionsAvailableToRemove = allPermissions.filter(p => currentPermissions.has(p.name));
 
                     console.log('➕ Permisos disponibles para agregar:', this.permissionsAvailableToAdd.length);
+                    console.log('🔍 Detalle de permisos para agregar:', this.permissionsAvailableToAdd);
+                    this.permissionsAvailableToAdd.forEach((p, idx) => {
+                        console.log(`   [${idx}] id:`, p.id, 'name:', p.name, 'displayName:', p.displayName);
+                    });
                     console.log('➖ Permisos disponibles para eliminar:', this.permissionsAvailableToRemove.length);
 
                     this.permissionsToAdd = [];
                     this.permissionsToRemove = [];
-                    this.showPermissionsModal = true;
+                    
+                    // Forzar reactividad en Alpine
+                    this.$nextTick(() => {
+                        this.showPermissionsModal = true;
+                    });
                 } catch (error) {
                     console.error('❌ Error al cargar permisos:', error);
                     this.showNotify('Error al cargar permisos: ' + error.message, 'error');
