@@ -3801,6 +3801,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         // Lista de roles válidos del sistema - EXPANDIR para incluir variaciones comunes
                         const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor', 'financial', 'staff', 'director', 'financial-staff'];
                         
+                        // Guardar roles originales ANTES de normalizar (para enviar al backend)
+                        const originalRoles = [...userRoles];
+                        
                         // Filtrar solo roles válidos y eliminar valores inválidos
                         userRoles = userRoles.filter(r => {
                             // Permitir también variaciones (ej: "financial staff" o solo "financial" o "financial-staff")
@@ -3815,10 +3818,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             return isValid;
                         });
                         
-                        // Normalizar roles (convertir guiones a espacios)
-                        userRoles = userRoles.map(r => r.toLowerCase().replace('-', ' ').trim());
-                        
-                        console.log('📋 Roles después de filtrado:', userRoles);
+                        // ⚠️ NO normalizar aquí - mantener roles en formato original para enviar al backend
+                        console.log('📋 Roles después de filtrado (SIN NORMALIZAR para backend):', userRoles);
                         
                         if (userRoles.length === 0) {
                             this.showNotify('El usuario no tiene roles válidos asignados. Asigna un rol primero.', 'error');
@@ -3896,9 +3897,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             // Procesar según el tipo de respuesta
                             let permissionsData = null;
                             
-                            // Respuesta de by-curps, by-role, by-user (todos usan la misma estructura)
+                            console.log('🔍 ANALIZANDO ESTRUCTURA DE RESPUESTA:');
+                            console.log('   result.data:', result.data);
+                            console.log('   result.data?.permissions:', result.data?.permissions);
+                            console.log('   result.data?.permissions?.permissions:', result.data?.permissions?.permissions);
+                            
+                            // Intentar múltiples estructuras
                             if (result.data?.permissions?.permissions && Array.isArray(result.data.permissions.permissions)) {
                                 permissionsData = result.data.permissions.permissions;
+                                console.log('✅ Permisos encontrados en: result.data.permissions.permissions');
+                            } else if (result.data?.permissions && Array.isArray(result.data.permissions)) {
+                                permissionsData = result.data.permissions;
+                                console.log('✅ Permisos encontrados en: result.data.permissions');
+                            } else if (result.permissions && Array.isArray(result.permissions)) {
+                                permissionsData = result.permissions;
+                                console.log('✅ Permisos encontrados en: result.permissions');
+                            } else if (Array.isArray(result.data)) {
+                                permissionsData = result.data;
+                                console.log('✅ Permisos encontrados en: result.data (como array)');
                             }
 
                             if (permissionsData && permissionsData.length > 0) {
@@ -3911,8 +3927,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 }));
                                 apiSuccess = true; // Marcar como éxito
                                 console.log(`✅ ${allPermissions.length} permisos cargados desde API de Angel (YA FILTRADOS POR ROL)`);
+                                console.log('📋 Primeros 3 permisos:', allPermissions.slice(0, 3));
                             } else {
                                 console.warn('⚠️ API retornó 0 permisos - El rol puede no tener permisos asignados');
+                                console.warn('   Estructura recibida:', JSON.stringify(result, null, 2));
                                 apiSuccess = true; // Es válido tener 0 permisos
                             }
                         } else if (response.status === 422) {
