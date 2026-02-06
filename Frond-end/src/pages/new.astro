@@ -292,12 +292,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
+          } else if (this.formData.selectedSemesters.length > 0 && this.formData.selectedCareers.length > 0) {
+            // Ambas carreras y semestres seleccionados
+            payload.applies_to = 'carrera_semestre';
+            payload.careers = this.formData.selectedCareers.map(c => String(c));
+            payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
           } else if (this.formData.selectedSemesters.length > 0) {
             payload.applies_to = 'semestre';
-            payload.semestre = parseInt(this.formData.selectedSemesters[0]);
+            payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
           } else if (this.formData.selectedCareers.length > 0) {
             payload.applies_to = 'carrera';
-            payload.career = String(this.formData.selectedCareers[0]);
+            payload.careers = this.formData.selectedCareers.map(c => String(c));
           } else {
             // Sin filtros seleccionados - aplicar a todos por defecto
             payload.applies_to = 'todos';
