@@ -115,7 +115,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 				{/* Dashboard: Gráfico de Barras (Estadísticas) */}
-				<li>
+				<li data-role="financiero">
 					<a href="/Dashboard" data-path="/Dashboard" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all duration-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 3v18h18"/><path d="M18 17v-4"/><path d="M12 17v-8"/><path d="M6 17v-2"/></svg>
 						Dashboard
@@ -124,7 +124,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 				{/* Conceptos: Lápiz y Regla (Configuración de Ítems) */}
-				<li>
+				<li data-role="financiero">
 					<a href="/concepts" data-path="/concepts" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all duration-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/><path d="M19 16v3h-3"/></svg>
 						Conceptos
@@ -133,7 +133,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 				{/* Estudiantes: Grupo de Usuarios (Lista de Personas) */}
-				<li>
+				<li data-role="financiero">
 					<a href="/students" data-path="/students" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all duration-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.125a4 4 0 1 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>
 						Estudiantes
@@ -142,7 +142,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 				{/* Pagos: Stack de Monedas (Transacciones completadas) */}
-				<li>
+				<li data-role="financiero">
 					<a href="/payments" data-path="/payments" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all duration-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14h-2a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-2"/><path d="M12 17v-1h-3a1 1 0 0 0 -1 1v2a1 1 0 0 0 1 1h3v1"/></svg>
 						Pagos
@@ -151,7 +151,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 				{/* Adeudos: Lista de Documentos con Alerta (Cuentas Pendientes) */}
-				<li>
+				<li data-role="financiero">
 					<a href="/debts" data-path="/debts" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all duration-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M10 12l4 4m0 -4l-4 4"/></svg>
 						Adeudos
@@ -160,7 +160,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 				{/* Roles y Usuarios: Engranajes (Administración de Permisos) */}
-				<li>
+			<li data-role="administrador">
 					<a href="/roles" data-path="/roles" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all duration-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 10a2 2 0 0 1 2 2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2a2 2 0 0 1 2 -2a2 2 0 0 1 2 -2z"/></svg>
 						Roles y Usuarios
@@ -211,6 +211,66 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		const activeClass = 'nav-active';
 		const inactiveClass = 'nav-inactive';
 
+		// Función para obtener el rol del usuario desde localStorage
+		function getUserRole() {
+			const userData = localStorage.getItem('userData');
+			if (!userData) return null;
+			try {
+				const parsed = JSON.parse(userData);
+				// roles es un array: ["admin"]
+				if (parsed.roles && Array.isArray(parsed.roles) && parsed.roles.length > 0) {
+					return parsed.roles[0]; // Devolver primer rol
+				}
+				return parsed.role || parsed.type || null;
+			} catch {
+				return null;
+			}
+		}
+
+		// Función para normalizar el rol a un formato estándar
+		function normalizeRole(role) {
+			if (!role) return null;
+			const roleLower = role.toLowerCase().trim();
+			
+			// Mapeo de roles
+			if (roleLower === 'admin' || roleLower === 'administrador') {
+				return 'administrador';
+			}
+			if (roleLower === 'financial-staff' || roleLower === 'financial staff' || 
+				roleLower === 'financiero' || roleLower === 'caja') {
+				return 'financiero';
+			}
+			
+			return roleLower;
+		}
+
+		// Función para filtrar elementos de navegación basados en el rol
+		function filterNavigationByRole() {
+			const userRole = getUserRole();
+			const normalizedRole = normalizeRole(userRole);
+			
+			console.log('🔐 Rol del usuario:', userRole);
+			console.log('🔄 Rol normalizado:', normalizedRole);
+			
+			const navigationItems = document.querySelectorAll('#main-navigation li[data-role]');
+			
+			navigationItems.forEach(item => {
+				const allowedRoles = item.getAttribute('data-role').split(',');
+				
+				// Si el usuario no tiene rol, ocultar todo excepto Dashboard por defecto
+				if (!normalizedRole) {
+					item.style.display = 'none';
+					return;
+				}
+				
+				// Mostrar u ocultar basado en el rol permitido
+				if (allowedRoles.includes(normalizedRole)) {
+					item.style.display = 'block';
+				} else {
+					item.style.display = 'none';
+				}
+			});
+		}
 
 		function setActiveLink() {
 			// Normaliza la ruta actual: / o /Dashboard
@@ -285,8 +345,15 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 
 		window.addEventListener('resize', handleResize);
-		window.addEventListener('load', () => { handleResize(); setActiveLink(); });
-		document.addEventListener("astro:after-swap", setActiveLink);
+		window.addEventListener('load', () => { 
+			handleResize(); 
+			setActiveLink(); 
+			filterNavigationByRole(); // Filtrar navegación por rol al cargar
+		});
+		document.addEventListener("astro:after-swap", () => {
+			setActiveLink();
+			filterNavigationByRole(); // Filtrar navegación por rol en cambio de página
+		});
 	</script>
 </body>
 </html>
