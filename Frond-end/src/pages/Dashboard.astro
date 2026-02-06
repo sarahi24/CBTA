@@ -20,16 +20,29 @@ const pageTitle = "Dashboard - SIGE";
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Resumen General</h1>
       </div>
       
-      <button 
-        id="refreshCacheBtn"
-        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Limpiar caché del dashboard"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-        </svg>
-        <span class="hidden sm:inline">Limpiar Caché</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <button 
+          id="createPayoutBtn"
+          class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Crear payout con balance disponible"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <span class="hidden sm:inline">Crear Payout</span>
+        </button>
+        
+        <button 
+          id="refreshCacheBtn"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Limpiar caché del dashboard"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          <span class="hidden sm:inline">Limpiar Caché</span>
+        </button>
+      </div>
     </header>
 
     {/* TARJETAS */}
@@ -84,6 +97,10 @@ const pageTitle = "Dashboard - SIGE";
 
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
+    const payoutBtn = document.getElementById('createPayoutBtn') as HTMLButtonElement | null;
+    
+    // Variable para almacenar el balance disponible
+    let availableBalance = 0;
     
     // Función para cargar datos de pagos pendientes
     const loadPendingData = async () => {
@@ -176,6 +193,9 @@ const pageTitle = "Dashboard - SIGE";
             recaudadoDesc.textContent = `Balance disponible: ${formatMX(paymentsData.totalBalanceAvailable)}`;
           }
           
+          // Guardar balance disponible para validación de payout
+          availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
+          
           console.log('✅ Datos de pagos cargados:', paymentsData);
         }
       } catch (error) {
@@ -233,6 +253,70 @@ const pageTitle = "Dashboard - SIGE";
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
             </svg>
             <span class="hidden sm:inline">Limpiar Caché</span>
+          `;
+        }
+      });
+    }
+
+    // Event listener para crear payout
+    if (payoutBtn) {
+      payoutBtn.addEventListener('click', async () => {
+        try {
+          // Validar balance mínimo
+          if (availableBalance < 100) {
+            showToast('error', `Balance insuficiente. Se requiere un mínimo de $100.00 MXN. Balance actual: $${availableBalance.toFixed(2)} MXN`);
+            return;
+          }
+
+          // Confirmar acción
+          const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+          const confirmed = confirm(`¿Deseas crear un payout por ${formatMX(availableBalance)}?\n\nEsto transferirá todo el balance disponible a la cuenta bancaria registrada.`);
+          
+          if (!confirmed) return;
+
+          // Deshabilitar botón
+          payoutBtn.disabled = true;
+          payoutBtn.innerHTML = `
+            <svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="hidden sm:inline">Procesando...</span>
+          `;
+
+          // Obtener token
+          const token = localStorage.getItem('access_token');
+          if (!token) {
+            showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
+            return;
+          }
+
+          // Llamar a la API
+          const response = await DashboardAPI.createPayout(token);
+          
+          if (response.success && response.data?.payout) {
+            const payout = response.data.payout;
+            showToast('success', `Payout creado exitosamente por ${formatMX(payout.amount)}. Estado: ${payout.status}. Fecha estimada de llegada: ${payout.arrival_date}`);
+            
+            // Recargar datos después de 2 segundos
+            setTimeout(() => {
+              loadPaymentsData();
+            }, 2000);
+          } else {
+            showToast('error', response.message || 'Error al crear el payout');
+          }
+        } catch (error) {
+          console.error('Error al crear payout:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Error al crear el payout';
+          showToast('error', errorMessage);
+        } finally {
+          // Restaurar botón
+          payoutBtn.disabled = false;
+          payoutBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            <span class="hidden sm:inline">Crear Payout</span>
           `;
         }
       });
