@@ -16,8 +16,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         { code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
         { code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
       ],
-      careers: [],
-      semesters: [],
+      // Inicializar con datos de fallback para asegurar que siempre haya carreras
+      careers: [
+        { id: 'TAG-E', name: 'Técnico Agropecuario' },
+        { id: 'TOF', name: 'Técnico en Ofimática' },
+        { id: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
+        { id: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
+        { id: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+      ],
+      // Inicializar con semestres 1-12
+      semesters: [
+        { id: '1', name: '1°' }, { id: '2', name: '2°' }, { id: '3', name: '3°' },
+        { id: '4', name: '4°' }, { id: '5', name: '5°' }, { id: '6', name: '6°' },
+        { id: '7', name: '7°' }, { id: '8', name: '8°' }, { id: '9', name: '9°' },
+        { id: '10', name: '10°' }, { id: '11', name: '11°' }, { id: '12', name: '12°' }
+      ],
       allStudents: [],
       isSaving: false,
       formData: {
@@ -39,9 +52,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       apiBaseUrl: window.__API_BASE_URL__ || '',
       
       loadCareers() {
+        console.log('🔄 Cargando carreras...');
         const token = localStorage.getItem('access_token');
         if (!token) {
+          console.log('⚠️ No hay token, usando datos por defecto');
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          console.log('✅ Carreras cargadas (fallback):', this.careers.length);
           return;
         }
         const url = new URL(this.apiBaseUrl + '/v1/careers');
@@ -62,15 +78,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return res.json();
         })
         .then(json => {
+          console.log('📦 Respuesta API carreras:', json);
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
+            console.log('✅ Carreras cargadas desde API:', this.careers.length);
           } else {
+            console.log('⚠️ Respuesta API sin estructura esperada, usando fallback');
             this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+            console.log('✅ Carreras cargadas (fallback):', this.careers.length);
           }
         })
         .catch(err => {
-          console.warn('Failed to load careers from API:', err.message);
+          console.warn('❌ Error al cargar carreras desde API:', err.message);
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          console.log('✅ Carreras cargadas (fallback):', this.careers.length);
         });
       },
 
@@ -378,21 +399,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     <div
       x-data="window.conceptFormData"
       x-init="$nextTick(() => {
-        window.conceptFormData.apiBaseUrl = window.__API_BASE_URL__ || '';
+        apiBaseUrl = window.__API_BASE_URL__ || '';
         const token = localStorage.getItem('access_token');
         if (token) {
-          window.conceptFormData.loadCareers();
-          window.conceptFormData.loadStudents();
+          loadCareers();
+          loadStudents();
         } else {
           // Use fallback data if no token
-          window.conceptFormData.careers = window.conceptFormData.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          careers = CAREERS.map(c => ({ id: c.code, name: c.name }));
         }
         const urlParams = new URLSearchParams(window.location.search);
         const rawConcept = localStorage.getItem('editingConcept');
         if (urlParams.has('edit') && rawConcept) {
           try {
             const concept = JSON.parse(rawConcept);
-            window.conceptFormData.populateForm(concept);
+            populateForm(concept);
           } catch (e) {
             console.error('Error:', e);
           }
@@ -526,6 +547,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               
               <div>
                 <label class="block text-xs font-bold text-gray-800 mb-2">1. Filtrar por Programa(s)</label>
+                <div x-show="careers.length === 0" class="text-sm text-red-600 mb-2 p-2 bg-red-50 rounded">
+                  ⚠️ No se cargaron carreras. Revisa la consola del navegador.
+                </div>
+                <div x-show="careers.length > 0" class="text-xs text-green-600 mb-2">
+                  ✓ <span x-text="careers.length"></span> carreras disponibles
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                   <template x-for="career in careers" :key="career.id">
                     <label class="cursor-pointer">
