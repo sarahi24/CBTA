@@ -22,8 +22,10 @@ const title = "Finanzas Estudiantiles";
       selectedItem: null,
       selectedCard: null,
       adeudos: [],
+      overdueAdeudos: [],
       tarjetas: [],
       alumnoNombre: 'Usuario',
+      showOverdueAlert: false,
 
       async init() {
         // Obtener datos del usuario desde localStorage de forma más robusta
@@ -49,6 +51,29 @@ const title = "Finanzas Estudiantiles";
         console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
         console.log('🔍 [Adeudos] Token disponible:', !!token);
         console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
+        
+        // Cargar adeudos vencidos desde API
+        if (token && userId) {
+          try {
+            console.log('📥 Cargando pagos vencidos desde StudentAPI...');
+            const overdueData = await window.StudentAPI.getOverduePayments(userId, token, false, 'student');
+            
+            const overdueArray = overdueData?.data?.pending_payments || [];
+            this.overdueAdeudos = overdueArray.map(payment => ({
+              id: payment.id,
+              concepto: payment.concept_name || 'Pago',
+              monto: payment.amount?.toString() || '0.00',
+              fecha: payment.end_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              description: payment.description || ''
+            }));
+            
+            this.showOverdueAlert = this.overdueAdeudos.length > 0;
+            console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
+          } catch (err) {
+            console.error('⚠️  Error al cargar pagos vencidos:', err);
+            this.overdueAdeudos = [];
+          }
+        }
         
         // Cargar adeudos desde API usando StudentAPI
         if (token && userId) {
@@ -152,6 +177,17 @@ const title = "Finanzas Estudiantiles";
     }`}
   >
     <header class="main-header">
+      <template x-if="showOverdueAlert && overdueAdeudos.length > 0">
+        <div class="overdue-alert-banner">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-content">
+            <h3>¡Tienes pagos vencidos!</h3>
+            <p x-text="`Tienes ${overdueAdeudos.length} pago(s) vencido(s) que requieren atención inmediata.`"></p>
+          </div>
+          <button @click="showOverdueAlert = false" class="alert-close">✕</button>
+        </div>
+      </template>
+      
       <div class="header-content">
         <div class="user-profile">
           <div class="avatar">PG</div>
@@ -208,83 +244,42 @@ const title = "Finanzas Estudiantiles";
         <div class="sheet-handle"></div>
         <div class="sheet-body">
           
-          <div x-show="step === 'select-method'">
-            <div class="payment-header-visual">
-              <h2 class="grand-total-display" x-text="'$' + selectedItem?.monto"></h2>
-              <span class="concept-tag" x-text="selectedItem?.concepto"></span>
+          <template x-if="loading">
+            <div style="padding: 2rem 0;">
+              <div class="custom-loader"></div>
+              <p><strong>Generando pago seguro...</strong></p>
+              <p style="font-size: 0.9rem; color: var(--text-muted);">Serás redirigido a Stripe Checkout</p>
             </div>
-            <div class="modern-options-list">
-              <button @click="step = 'card-list'" class="modern-option-item">
-                <div class="m-option-icon blue-grad">💳</div>
-                <div class="m-option-info"><strong>Tarjetas Guardadas</strong><span>Usa tus tarjetas registradas</span></div>
-              </button>
-              <button @click="step = 'reference'" class="modern-option-item">
-                <div class="m-option-icon gold-grad">🏦</div>
-                <div class="m-option-info"><strong>Referencia Bancaria</strong><span>Pago en efectivo / OXXO</span></div>
-              </button>
-            </div>
-          </div>
-
-          <div x-show="step === 'card-list'">
-            <div class="modal-step-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
-              <button @click="step = 'select-method'" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer;">←</button>
-              <h3 style="margin: 0;">Selecciona tarjeta</h3>
-            </div>
-            <div class="cards-scroller" style="max-height: 300px; overflow-y: auto;">
-              <template x-for="tarjeta in tarjetas" :key="tarjeta.id">
-                <div @click="selectedCard = tarjeta; step = 'confirm'" class="modern-card-pill">
-                  <img :src="tarjeta.logo" style="width: 40px;">
-                  <div style="text-align: left; margin-left: 1rem;">
-                    <strong x-text="'•••• ' + tarjeta.terminacion" style="font-size: 1.1rem; color: var(--primary);"></strong>
-                  </div>
+          </template>
+          
+          <template x-if="!loading">
+            <div class="confirm-payment-ui">
+              <div class="payment-icon-circle">💳</div>
+              <h2 style="margin: 1rem 0 0.5rem; color: var(--primary);">Confirmar Pago</h2>
+              <p style="color: var(--text-muted); margin-bottom: 2rem;">Serás redirigido a Stripe para completar el pago de forma segura</p>
+              
+              <div class="payment-details-card">
+                <div class="detail-row">
+                  <span style="color: var(--text-muted);">Concepto:</span>
+                  <strong x-text="selectedItem?.concepto" style="color: var(--primary);"></strong>
                 </div>
-              </template>
-            </div>
-          </div>
-
-          <div x-show="step === 'confirm' || (loading && selectedCard)">
-             <template x-if="loading">
-               <div style="padding: 2rem 0;">
-                 <div class="custom-loader"></div>
-                 <p>Procesando pago seguro...</p>
-               </div>
-             </template>
-             <template x-if="!loading">
-               <div class="confirm-summary-ui">
-                 <div class="check-icon-ring">✓</div>
-                 <h3>Confirmar pago</h3>
-                 <div class="summary-box">
-                    <div class="summary-row"><span>Total:</span><strong x-text="'$' + selectedItem?.monto"></strong></div>
-                    <div class="summary-row"><span>Método:</span><span x-text="selectedCard?.tipo + ' •' + selectedCard?.terminacion"></span></div>
-                 </div>
-                 <button @click="processPayment(false)" class="btn-primary-action">CONFIRMAR</button>
-                 <button @click="step = 'card-list'" class="btn-link-action">Regresar</button>
-               </div>
-             </template>
-          </div>
-
-          <div x-show="step === 'reference' || (loading && !selectedCard)">
-             <template x-if="loading">
-                <div style="padding: 2rem 0;"><div class="custom-loader"></div><p>Generando registro...</p></div>
-             </template>
-             <template x-if="!loading">
-               <div>
-                <div class="reference-visual-card">
-                   <p class="ref-label">REFERENCIA DE PAGO</p>
-                   <div class="ref-number-box">
-                     <span>0123 4567 8910 1112</span>
-                     <div class="barcode-sim"></div>
-                   </div>
-                   <div class="ref-footer">
-                     <span>Convenio: <strong>CIE 163721</strong></span>
-                     <span>Banco: <strong>BBVA</strong></span>
-                   </div>
+                <div class="detail-row">
+                  <span style="color: var(--text-muted);">Vencimiento:</span>
+                  <strong x-text="selectedItem?.fecha"></strong>
                 </div>
-                <button @click="processPayment(true)" class="btn-primary-action">GUARDAR Y FINALIZAR</button>
-                <button @click="step = 'select-method'" class="btn-link-action">Volver</button>
-               </div>
-             </template>
-          </div>
+                <div class="detail-row total-row">
+                  <span>Total a Pagar:</span>
+                  <strong x-text="'$' + selectedItem?.monto" style="font-size: 1.5rem; color: var(--primary);"></strong>
+                </div>
+              </div>
+              
+              <button @click="processPayment()" class="btn-primary-action">
+                <span>Proceder al Pago</span>
+                <span style="margin-left: 8px;">→</span>
+              </button>
+              <button @click="showModal = false" class="btn-link-action">Cancelar</button>
+            </div>
+          </template>
 
         </div>
       </div>
@@ -310,23 +305,80 @@ const title = "Finanzas Estudiantiles";
   .modal-backdrop { position: absolute; inset: 0; background: rgba(17, 45, 38, 0.6); backdrop-filter: blur(8px); }
   .modal-sheet { position: relative; background: white; width: 100%; max-width: 450px; border-radius: 30px; overflow: hidden; }
   .sheet-body { padding: 2rem; text-align: center; }
+  .payment-icon-circle { width: 80px; height: 80px; background: linear-gradient(135deg, #112d26, #1a4337); border-radius: 50%; display: grid; place-items: center; font-size: 2.5rem; margin: 0 auto; }
+  .payment-details-card { background: #f8fafc; border-radius: 20px; padding: 1.5rem; margin: 1.5rem 0; text-align: left; }
+  .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row.total-row { padding-top: 1rem; margin-top: 0.5rem; border-top: 2px solid var(--primary); }
   .grand-total-display { font-size: 3rem; font-weight: 800; color: var(--primary); margin: 0; }
   .modern-option-item { display: flex; align-items: center; padding: 1.2rem; border: 2px solid #f1f5f9; border-radius: 20px; background: white; cursor: pointer; text-align: left; width: 100%; margin-bottom: 1rem; }
   .m-option-icon { width: 45px; height: 45px; border-radius: 14px; display: grid; place-items: center; margin-right: 1rem; font-size: 1.3rem; }
   .blue-grad { background: #e0f2fe; }
   .gold-grad { background: #fef3c7; }
-  .btn-primary-action { width: 100%; background: var(--primary); color: white; padding: 1.1rem; border-radius: 15px; border: none; font-weight: 800; cursor: pointer; }
-  .btn-link-action { width: 100%; background: transparent; color: var(--text-muted); border: none; cursor: pointer; text-decoration: underline; margin-top: 10px; }
+  .btn-primary-action { width: 100%; background: var(--primary); color: white; padding: 1.1rem; border-radius: 15px; border: none; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+  .btn-primary-action:hover { transform: translateY(-2px); }
+  .btn-link-action { width: 100%; background: transparent; color: var(--text-muted); border: none; cursor: pointer; text-decoration: underline; margin-top: 10px; padding: 0.5rem; }
   .modern-card-pill { display: flex; align-items: center; padding: 1rem; border: 2px solid #f1f5f9; border-radius: 18px; margin-bottom: 0.8rem; cursor: pointer; }
   .custom-loader { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
   .reference-visual-card { background: #112d26; color: white; padding: 1.5rem; border-radius: 20px; margin-bottom: 1.5rem; text-align: left; }
   .ref-number-box { background: white; color: black; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center; }
   .barcode-sim { height: 30px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px); margin-top: 5px; }
+  
+  /* Overdue Alert Banner */
+  .overdue-alert-banner { 
+    display: flex; 
+    align-items: center; 
+    gap: 1rem; 
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .alert-icon { 
+    font-size: 2rem; 
+    flex-shrink: 0;
+  }
+  .alert-content { 
+    flex: 1;
+  }
+  .alert-content h3 { 
+    margin: 0 0 0.5rem; 
+    color: #7f1d1d;
+    font-weight: 700;
+  }
+  .alert-content p { 
+    margin: 0;
+    color: #991b1b;
+    font-size: 0.95rem;
+  }
+  .alert-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #991b1b;
+    flex-shrink: 0;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+  }
+  .alert-close:hover {
+    opacity: 0.7;
+  }
+  
   @keyframes spin { 100% { transform: rotate(360deg); } }
   [x-cloak] { display: none !important; }
   @media (max-width: 768px) {
     .modal-overlay { align-items: flex-end; }
     .modal-sheet { border-radius: 28px 28px 0 0; max-width: 100%; }
     .modern-card { flex-direction: column; text-align: center; gap: 1rem; }
+    .overdue-alert-banner {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+    }
   }
 </style>

@@ -231,16 +231,28 @@ export const StudentAPI = {
   /**
    * ADEUDOS - GET /api/v1/pending-payments/overdue/{studentId?}
    * Obtener pagos vencidos del usuario autenticado
+   * @param {number|null} studentId - ID del estudiante (opcional para padres con múltiples hijos)
+   * @param {string} token - Token de autenticación
+   * @param {boolean} forceRefresh - Forzar actualización del caché
+   * @param {string} role - Rol del usuario (student|parent)
    */
-  async getOverduePayments(studentId, token) {
+  async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const endpoint = studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
-      const response = await fetch(endpoint, {
+      const url = new URL(studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`);
+      
+      // Agregar query parameters
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.overdue.concepts'
         }
       });
 
