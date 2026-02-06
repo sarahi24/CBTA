@@ -3685,30 +3685,76 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const userId = selectedUsersData[0].id;
                         let userRoles = [];
                         
-                        // Extraer roles correctamente (puede venir como array o string)
+                        // DEBUG: Mostrar toda la estructura del usuario
+                        console.log('🔍 ESTRUCTURA COMPLETA DEL USUARIO:', {
+                            ...selectedUsersData[0],
+                            roles: selectedUsersData[0].roles,
+                            role: selectedUsersData[0].role,
+                            user_roles: selectedUsersData[0].user_roles,
+                            permissions: selectedUsersData[0].permissions,
+                            allKeys: Object.keys(selectedUsersData[0])
+                        });
+                        
+                        // Extraer roles correctamente (puede venir como array, string, o en diferentes propiedades)
                         if (Array.isArray(selectedUsersData[0].roles)) {
-                            userRoles = selectedUsersData[0].roles.map(r => String(r).toLowerCase().trim());
+                            // Si roles es un array de objetos, extraer los nombres
+                            userRoles = selectedUsersData[0].roles.map(r => {
+                                if (typeof r === 'string') return String(r).toLowerCase().trim();
+                                if (typeof r === 'object' && r.name) return String(r.name).toLowerCase().trim();
+                                return String(r).toLowerCase().trim();
+                            });
+                            console.log('✅ Roles encontrados como array:', userRoles);
                         } else if (selectedUsersData[0].role) {
-                            userRoles = [String(selectedUsersData[0].role).toLowerCase().trim()];
+                            if (Array.isArray(selectedUsersData[0].role)) {
+                                userRoles = selectedUsersData[0].role.map(r => {
+                                    if (typeof r === 'object' && r.name) return String(r.name).toLowerCase().trim();
+                                    return String(r).toLowerCase().trim();
+                                });
+                                console.log('✅ Roles encontrados en .role (array):', userRoles);
+                            } else {
+                                userRoles = [String(selectedUsersData[0].role).toLowerCase().trim()];
+                                console.log('✅ Roles encontrados en .role (string):', userRoles);
+                            }
                         } else if (typeof selectedUsersData[0].roles === 'string') {
                             userRoles = [selectedUsersData[0].roles.toLowerCase().trim()];
+                            console.log('✅ Roles encontrados como string:', userRoles);
+                        } else if (selectedUsersData[0].user_roles) {
+                            if (Array.isArray(selectedUsersData[0].user_roles)) {
+                                userRoles = selectedUsersData[0].user_roles.map(r => {
+                                    if (typeof r === 'object' && r.name) return String(r.name).toLowerCase().trim();
+                                    return String(r).toLowerCase().trim();
+                                });
+                            }
+                            console.log('✅ Roles encontrados en .user_roles:', userRoles);
                         }
                         
-                        // Lista de roles válidos del sistema
-                        const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor'];
+                        // Lista de roles válidos del sistema - EXPANDIR para incluir variaciones comunes
+                        const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor', 'financial', 'staff', 'director'];
                         
                         // Filtrar solo roles válidos y eliminar valores inválidos
                         userRoles = userRoles.filter(r => {
-                            const isValid = r && r !== 'n/a' && r !== 'sin rol' && validRoles.includes(r);
+                            // Permitir también variaciones (ej: "financial staff" o solo "financial")
+                            const isValid = r && r !== 'n/a' && r !== 'sin rol' && r !== '' && 
+                                           (validRoles.includes(r) || 
+                                            validRoles.some(vr => vr.includes(r) || r.includes(vr)));
                             if (!isValid && r) {
                                 console.warn(`⚠️ Rol inválido filtrado: "${r}"`);
                             }
                             return isValid;
                         });
                         
+                        console.log('📋 Roles después de filtrado:', userRoles);
+                        
                         if (userRoles.length === 0) {
                             this.showNotify('El usuario no tiene roles válidos asignados. Asigna un rol primero.', 'error');
-                            console.error('❌ No hay roles válidos para el usuario:', selectedUsersData[0]);
+                            console.error('❌ No hay roles válidos para el usuario. Datos disponibles:', {
+                                id: selectedUsersData[0].id,
+                                name: selectedUsersData[0].name,
+                                roles: selectedUsersData[0].roles,
+                                role: selectedUsersData[0].role,
+                                user_roles: selectedUsersData[0].user_roles,
+                                rolesType: typeof selectedUsersData[0].roles
+                            });
                             return; // NO abrir modal si no hay rol válido
                         }
                         
