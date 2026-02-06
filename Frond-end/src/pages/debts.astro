@@ -256,40 +256,59 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
         const token = localStorage.getItem('access_token');
         if (!token) {
-          console.warn('No hay token de autenticación');
+          console.warn('⚠️ No hay token de autenticación');
           renderTable();
           return;
         }
 
-        // Obtener todos los adeudos usando el nuevo endpoint
-        const response = await StudentAPI.getAllPendingDebts(token, {
-          search: searchInput.value.trim(),
-          page: 1,
-          perPage: 1000, // Obtener muchos para mostrar en la tabla con paginación local
-          forceRefresh: forceRefresh
-        });
+        try {
+          // Intentar usar el nuevo endpoint GET /api/v1/debts
+          const response = await StudentAPI.getAllPendingDebts(token, {
+            search: searchInput.value.trim(),
+            page: 1,
+            perPage: 1000,
+            forceRefresh: forceRefresh
+          });
+          
+          if (response.success && response.data?.pending_payments?.items) {
+            pendingPayments = response.data.pending_payments.items.map(payment => ({
+              id: payment.id || `debt-${Date.now()}`,
+              userName: payment.user_name,
+              concept: payment.concept_name,
+              conceptTitle: payment.concept_name,
+              amount: payment.amount,
+              status: 'pending'
+            }));
+            
+            console.log('✅ Pagos pendientes cargados (GET /api/v1/debts):', pendingPayments.length);
+            renderTable();
+            return;
+          }
+        } catch (error) {
+          console.warn('⚠️ No se pudo cargar con GET /api/v1/debts, usando fallback:', error.message);
+        }
+
+        // Fallback: Si el endpoint nuevo no existe, usar getPendingPayments antiguo
+        const userRole = localStorage.getItem('user_role') || 'student';
+        const response = await StudentAPI.getPendingPayments(null, token, forceRefresh, userRole);
         
-        if (response.success && response.data?.pending_payments?.items) {
-          pendingPayments = response.data.pending_payments.items.map(payment => ({
-            id: payment.id || `debt-${Date.now()}`,
-            userName: payment.user_name,
+        if (response.success && response.data?.pending_payments) {
+          pendingPayments = response.data.pending_payments.map(payment => ({
+            id: payment.id,
+            studentId: payment.student_id || payment.studentId,
+            conceptId: payment.concept_id || payment.conceptId,
+            userName: payment.student_name || 'N/A',
             concept: payment.concept_name,
             conceptTitle: payment.concept_name,
             amount: payment.amount,
             status: 'pending'
           }));
           
-          console.log('✅ Pagos pendientes cargados:', pendingPayments.length);
-          console.log('📊 Info paginación:', {
-            total: response.data.pending_payments.total,
-            page: response.data.pending_payments.currentPage,
-            lastPage: response.data.pending_payments.lastPage
-          });
+          console.log('✅ Pagos pendientes cargados (GET /api/v1/pending-payments):', pendingPayments.length);
           renderTable();
         }
       } catch (error) {
         console.error('❌ Error al cargar pagos pendientes:', error);
-        // Fallback a datos locales si hay error
         renderTable();
       } finally {
         isLoading = false;
