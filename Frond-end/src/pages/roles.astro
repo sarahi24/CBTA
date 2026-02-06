@@ -1460,12 +1460,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             mapUser(raw) {
                 if (!raw) return null;
                 
-                // Log para debugging
-                console.log('🔍 mapUser recibió:', raw);
-                console.log('🔍 raw.roles (tipo):', Array.isArray(raw.roles) ? 'array' : typeof raw.roles);
+                // Log para debugging - EXPANDIDO
+                console.log('========================================');
+                console.log('🔍 mapUser - INICIO');
+                console.log('========================================');
+                console.log('📦 raw completo:', raw);
+                console.log('🔍 raw.roles (tipo):', Array.isArray(raw.roles) ? `array[${raw.roles.length}]` : typeof raw.roles);
                 console.log('🔍 raw.roles (valor):', raw.roles);
+                console.log('🔍 raw.roles[0]:', raw.roles?.[0]);
                 console.log('🔍 raw.roles_count:', raw.roles_count);
                 console.log('🔍 raw.role:', raw.role);
+                console.log('🔍 JSON.stringify(raw.roles):', JSON.stringify(raw.roles));
                 
                 // Extraer roles como array
                 let roles = [];
@@ -1724,6 +1729,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (result.success && result.data && result.data.users && result.data.users.items) {
                             console.log('🔍 RAW USERS desde backend (primeros 2):');
                             console.log(JSON.stringify(result.data.users.items.slice(0, 2), null, 2));
+                            
+                            // ⚠️ VERIFICAR SI LOS ROLES VIENEN DESDE EL BACKEND
+                            const firstUser = result.data.users.items[0];
+                            if (firstUser) {
+                                console.log('========================================');
+                                console.log('🔬 ANÁLISIS DEL PRIMER USUARIO DEL BACKEND:');
+                                console.log('========================================');
+                                console.log('📧 Email:', firstUser.email);
+                                console.log('🆔 ID:', firstUser.id);
+                                console.log('🔍 Tiene propiedad roles?', 'roles' in firstUser);
+                                console.log('🔍 Valor de roles:', firstUser.roles);
+                                console.log('🔍 Tipo de roles:', Array.isArray(firstUser.roles) ? `array[${firstUser.roles.length}]` : typeof firstUser.roles);
+                                console.log('🔍 roles_count:', firstUser.roles_count);
+                                console.log('🔍 JSON.stringify de roles:', JSON.stringify(firstUser.roles));
+                                console.log('========================================');
+                            }
                             
                             // ⚠️ ADVERTENCIA: Backend no incluye roles
                             if (result.data.users.items.length > 0 && !result.data.users.items[0].roles) {
@@ -3712,6 +3733,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             permissions: selectedUsersData[0].permissions,
                             allKeys: Object.keys(selectedUsersData[0])
                         });
+                        
+                        // SOLUCIÓN TEMPORAL: Si no hay roles en la lista, obtenerlos del endpoint de detalles
+                        let detailedUserData = null;
+                        if (!selectedUsersData[0].roles || selectedUsersData[0].roles.length === 0) {
+                            console.log('⚠️ No hay roles en la lista, obteniendo del endpoint de detalles...');
+                            try {
+                                const detailsResponse = await this.authenticatedFetch(
+                                    `${this.apiBaseUrl}/v1/admin-actions/show-user/${userId}`,
+                                    { method: 'GET' }
+                                );
+                                if (detailsResponse.ok) {
+                                    const detailsResult = await detailsResponse.json();
+                                    console.log('📦 Detalles del usuario:', detailsResult);
+                                    if (detailsResult.success && detailsResult.data) {
+                                        detailedUserData = detailsResult.data;
+                                        if (detailedUserData.roles && detailedUserData.roles.length > 0) {
+                                            console.log('✅ Roles obtenidos de detalles:', detailedUserData.roles);
+                                            selectedUsersData[0].roles = detailedUserData.roles;
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('❌ Error obteniendo detalles del usuario:', error);
+                            }
+                        }
                         
                         // Extraer roles correctamente (puede venir como array, string, o en diferentes propiedades)
                         if (Array.isArray(selectedUsersData[0].roles)) {
