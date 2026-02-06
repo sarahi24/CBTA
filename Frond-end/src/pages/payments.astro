@@ -152,10 +152,13 @@ window.__CAREER_MAP = JSON.parse(careerMapJSON);
 </script>
 
 <script type="module">
+import { StudentAPI } from '../utils/studentAPI.js';
+
 (function() {
     let currentPage = 1;
     const itemsPerPage = 50;
     let filteredData = [];
+    let isLoading = false;
 
     const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
@@ -166,54 +169,97 @@ window.__CAREER_MAP = JSON.parse(careerMapJSON);
     document.onclick = () => filterMenu.classList.remove('show');
     filterMenu.onclick = (e) => e.stopPropagation();
 
+    // Cargar pagos desde API
+    async function loadPayments() {
+        if (isLoading) return;
+        isLoading = true;
+
+        try {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                console.warn('⚠️ No hay token de autenticación');
+                render();
+                return;
+            }
+
+            try {
+                // Intentar usar el nuevo endpoint GET /api/v1/payments
+                const response = await StudentAPI.getAllPayments(token, {
+                    search: searchInput.value.trim(),
+                    page: 1,
+                    perPage: 1000, // Obtener muchos para paginación local
+                    forceRefresh: false
+                });
+
+                if (response.success && response.data?.payments?.items) {
+                    const allPayments = response.data.payments.items.map(payment => ({
+                        id: payment.id,
+                        date: payment.date,
+                        concept: payment.concept,
+                        amount: payment.amount,
+                        amount_received: payment.amount_received,
+                        method: payment.method,
+                        fullName: payment.fullName,
+                        paidAt: payment.date
+                    }));
+
+                    localStorage.setItem('paymentsList', JSON.stringify(allPayments));
+                    console.log('✅ Pagos cargados (GET /api/v1/payments):', allPayments.length);
+                    render();
+                    return;
+                }
+            } catch (error) {
+                console.warn('⚠️ No se pudo cargar con GET /api/v1/payments:', error.message);
+            }
+
+            // Fallback: Usar datos de localStorage si el endpoint falla
+            render();
+        } finally {
+            isLoading = false;
+        }
+    }
+
     const render = () => {
+        const allPayments = JSON.parse(localStorage.getItem('paymentsList') || '[]') || [];
         const students = JSON.parse(localStorage.getItem('studentsList') || '[]') || window.__INITIAL_STUDENTS_PAYMENTS;
-        const allCharges = JSON.parse(localStorage.getItem('chargesList') || '[]').filter(c => 
-            ['paid', 'pagado'].includes(String(c.status || '').toLowerCase())
-        );
 
         const term = searchInput.value.toLowerCase();
         const semesterSel = document.getElementById('semester-filter').value;
         const methodSel = document.getElementById('method-filter').value;
 
-        filteredData = allCharges.filter(p => {
-            const s = students.find(x => String(x.id) === String(p.studentId) || String(x.numControl) === String(p.studentId));
-            if(!s) return false;
+        filteredData = allPayments.filter(p => {
+            const matchesSearch = 
+                (p.fullName || '').toLowerCase().includes(term) || 
+                (p.concept || '').toLowerCase().includes(term);
             
-            const conceptoReal = p.conceptTitle || p.conceptName || p.conceptText || p.concept || p.title || 'PAGO GENERAL';
-            const fullName = `${s.nombre} ${s.apellidoP} ${s.apellidoM}`.toLowerCase();
+            const matchesMethod = methodSel === 'all' || (p.method || '').includes(methodSel);
             
-            const matchesSearch = fullName.includes(term) || String(s.numControl).includes(term) || conceptoReal.toLowerCase().includes(term);
-            const matchesSemester = semesterSel === 'all' || String(s.semestre) === semesterSel;
-            const matchesMethod = methodSel === 'all' || p.paymentMethod === methodSel;
-            
-            return matchesSearch && matchesSemester && matchesMethod;
+            return matchesSearch && matchesMethod;
         });
 
         const startIdx = (currentPage - 1) * itemsPerPage;
         const pageItems = filteredData.slice(startIdx, startIdx + itemsPerPage);
 
         tableBody.innerHTML = pageItems.map(p => {
-            const s = students.find(x => String(x.id) === String(p.studentId) || String(x.numControl) === String(p.studentId));
-            const displayConcept = p.conceptTitle || p.conceptName || p.conceptText || p.concept || p.title || 'PAGO REGISTRADO';
+            const dateStr = p.date || p.paidAt || new Date().toISOString();
+            const displayDate = new Date(dateStr).toLocaleDateString('es-MX');
 
             return `
                 <tr class="hover:bg-gray-50/50 transition-colors">
-                    <td class="px-6 py-5 text-gray-500 font-mono text-xs">${new Date(p.paidAt || p.date).toLocaleDateString('es-MX')}</td>
+                    <td class="px-6 py-5 text-gray-500 font-mono text-xs">${displayDate}</td>
                     <td class="px-6 py-5">
                         <span class="text-gray-900 font-extrabold text-xs uppercase block" style="letter-spacing: -0.01em;">
-                            ${displayConcept}
+                            ${p.concept || 'PAGO REGISTRADO'}
                         </span>
                     </td>
                     <td class="px-6 py-5">
                         <div class="flex flex-col">
-                            <span class="text-gray-800 font-bold text-xs uppercase leading-tight">${s.nombre} ${s.apellidoP} ${s.apellidoM}</span>
-                            <span class="text-[9px] text-gray-400 font-mono">${s.numControl}</span>
+                            <span class="text-gray-800 font-bold text-xs uppercase leading-tight">${p.fullName || 'N/A'}</span>
                         </div>
                     </td>
-                    <td class="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase">${p.paymentMethod || 'EFECTIVO'}</td>
+                    <td class="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase">${p.method || 'N/A'}</td>
                     <td class="px-6 py-5 text-right font-black text-[#2E594D] text-sm">
-                        $${Number(p.amount).toLocaleString('es-MX', {minimumFractionDigits:2})}
+                        $${Number(p.amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}
                     </td>
                 </tr>
             `;
@@ -236,59 +282,23 @@ window.__CAREER_MAP = JSON.parse(careerMapJSON);
         });
     };
 
-    // --- NUEVA LÓGICA DE EXPORTACIÓN POR CARRERAS ---
+    // Exportación a Excel
     btnExport.onclick = () => {
         if(filteredData.length === 0) return alert("No hay datos para exportar");
         
-        const students = JSON.parse(localStorage.getItem('studentsList') || '[]') || window.__INITIAL_STUDENTS_PAYMENTS;
-        const CAREER_MAP = window.__CAREER_MAP;
         const wb = XLSX.utils.book_new();
+        const exportData = filteredData.map((p, idx) => ({
+            'No.': idx + 1,
+            'Fecha': p.date || 'N/A',
+            'Estudiante': p.fullName || 'N/A',
+            'Concepto': p.concept || 'PAGO',
+            'Monto': Number(p.amount || 0),
+            'Monto Recibido': Number(p.amount_received || 0),
+            'Método': p.method || 'N/A'
+        }));
 
-        // 1. Identificar las carreras únicas presentes en los resultados filtrados
-        const uniqueCareers = [...new Set(filteredData.map(p => {
-            const s = students.find(x => String(x.id) === String(p.studentId) || String(x.numControl) === String(p.studentId));
-            return s ? s.carrera : '';
-        }))];
-
-        // 2. Crear una pestaña por cada carrera
-        uniqueCareers.forEach(careerCode => {
-            const paymentsInCareer = filteredData.filter(p => {
-                const s = students.find(x => String(x.id) === String(p.studentId) || String(x.numControl) === String(p.studentId));
-                return s && s.carrera === careerCode;
-            });
-
-            // Ordenar por semestre y luego por nombre
-            const sortedPayments = paymentsInCareer.sort((a, b) => {
-                const sA = students.find(x => String(x.id) === String(a.studentId) || String(x.numControl) === String(a.studentId));
-                const sB = students.find(x => String(x.id) === String(b.studentId) || String(x.numControl) === String(b.studentId));
-                return (sA.semestre - sB.semestre) || `${sA.nombre}`.localeCompare(`${sB.nombre}`);
-            });
-
-            const exportData = sortedPayments.map(p => {
-                const s = students.find(x => String(x.id) === String(p.studentId) || String(x.numControl) === String(p.studentId));
-                return {
-                    'Fecha': new Date(p.paidAt || p.date).toLocaleDateString('es-MX'),
-                    'Semestre': s.semestre + 'º',
-                    'Matrícula': s.numControl,
-                    'Estudiante': `${s.nombre} ${s.apellidoP} ${s.apellidoM}`,
-                    'Concepto': p.conceptTitle || p.conceptName || p.concept || p.title || 'PAGO',
-                    'Método': p.paymentMethod || 'Efectivo',
-                    'Monto ($)': Number(p.amount)
-                };
-            });
-
-            if (exportData.length > 0) {
-                const ws = XLSX.utils.json_to_sheet(exportData);
-                
-                // Nombre de la hoja limpio y corto (Máx 31 caracteres para Excel)
-                let sheetName = (CAREER_MAP[careerCode] || careerCode || 'General')
-                    .replace(/[\\*?:/\[\]]/g, '')
-                    .substring(0, 31);
-                
-                XLSX.utils.book_append_sheet(wb, ws, sheetName);
-            }
-        });
-
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Pagos");
         XLSX.writeFile(wb, `Reporte_Pagos_CBTA71_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
     };
 
@@ -302,7 +312,8 @@ window.__CAREER_MAP = JSON.parse(careerMapJSON);
         render(); 
     };
 
-    render();
+    // Cargar pagos al iniciar
+    loadPayments();
 })();
 </script>
 </Layout>
