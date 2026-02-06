@@ -259,17 +259,22 @@ export const StudentAPI = {
   /**
    * ADEUDOS - POST /api/v1/pending-payments
    * Generar intento de pago para un concepto pendiente
+   * @param {number} conceptId - ID del concepto a pagar
+   * @param {string} token - Token de autenticación
+   * @param {string} role - Rol del usuario (student|parent)
    */
-  async createPaymentAttempt(paymentData, token) {
+  async createPaymentAttempt(conceptId, token, role = 'student') {
     try {
       const response = await fetch(`${API_BASE}/pending-payments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'create.payment'
         },
-        body: JSON.stringify(paymentData)
+        body: JSON.stringify({ concept_id: conceptId })
       });
 
       if (!response.ok) {

@@ -119,47 +119,35 @@ const title = "Finanzas Estudiantiles";
         this.showModal = true;
       },
 
-      processPayment(isReference = false) {
+      async processPayment(isReference = false) {
         this.loading = true;
-        const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('access_token');
+        const userRole = localStorage.getItem('user_role') || 'student';
         
-        // Prepare payment payload
-        const paymentPayload = {
-          pending_payment_id: this.selectedItem.id,
-          amount: parseFloat(this.selectedItem.monto.replace(',', '')),
-          payment_method: isReference ? 'bank_transfer' : 'card',
-          card_id: isReference ? null : this.selectedCard.id
-        };
-
-        // Send payment to API
-        fetch('https://nginx-production-728f.up.railway.app/api/v1/pending-payments', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(paymentPayload)
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success || data.id) {
-            // Payment created successfully, redirect to history
-            this.loading = false;
-            setTimeout(() => {
-              window.location.href = '/Estudiante/Historial';
-            }, 1000);
+        try {
+          console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
+          
+          // Usar StudentAPI para crear el intento de pago
+          const response = await window.StudentAPI.createPaymentAttempt(
+            this.selectedItem.id,
+            token,
+            userRole
+          );
+          
+          console.log('✅ Respuesta del servidor:', response);
+          
+          if (response.success && response.data?.url_checkout) {
+            // Redirigir al checkout de Stripe
+            console.log('🔗 Redirigiendo a checkout:', response.data.url_checkout);
+            window.location.href = response.data.url_checkout;
           } else {
-            alert('Error al procesar el pago. Intenta de nuevo.');
-            this.loading = false;
+            throw new Error(response.message || 'No se recibió URL de checkout');
           }
-        })
-        .catch(err => {
-          console.error('Error processing payment:', err);
-          alert('Error al conectar con el servidor');
+        } catch (err) {
+          console.error('❌ Error al procesar el pago:', err);
+          alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
           this.loading = false;
-        });
+        }
       }
     }`}
   >
