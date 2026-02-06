@@ -85,6 +85,37 @@ const pageTitle = "Dashboard - SIGE";
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
     
+    // Función para cargar datos de estudiantes
+    const loadStudentsData = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token available for students data');
+          return;
+        }
+
+        const data = await DashboardAPI.getStudentsCount(token, true, false);
+        if (data.success && data.data?.total_students !== undefined) {
+          const totalStudents = data.data.total_students;
+          
+          const estudiantesEl = document.getElementById('count-students');
+          const estudiantesDesc = document.getElementById('desc-students');
+          
+          if (estudiantesEl) {
+            estudiantesEl.textContent = String(totalStudents);
+          }
+          if (estudiantesDesc) {
+            const today = new Date().toLocaleDateString('es-MX');
+            estudiantesDesc.textContent = `Actualizado: ${today}`;
+          }
+          
+          console.log('✅ Datos de estudiantes cargados:', totalStudents);
+        }
+      } catch (error) {
+        console.error('❌ Error cargando datos de estudiantes:', error);
+      }
+    };
+
     // Función para cargar datos de pagos
     const loadPaymentsData = async () => {
       try {
@@ -118,7 +149,8 @@ const pageTitle = "Dashboard - SIGE";
       }
     };
 
-    // Cargar datos de pagos al iniciar
+    // Cargar datos de estudiantes y pagos al iniciar
+    loadStudentsData();
     loadPaymentsData();
     
     if (refreshBtn) {
