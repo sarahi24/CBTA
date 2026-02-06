@@ -1462,8 +1462,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 // Log para debugging
                 console.log('🔍 mapUser recibió:', raw);
-                console.log('🔍 raw.roles:', raw.roles);
+                console.log('🔍 raw.roles (tipo):', Array.isArray(raw.roles) ? 'array' : typeof raw.roles);
+                console.log('🔍 raw.roles (valor):', raw.roles);
                 console.log('🔍 raw.roles_count:', raw.roles_count);
+                console.log('🔍 raw.role:', raw.role);
                 
                 // Extraer roles como array
                 let roles = [];
@@ -1473,10 +1475,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (r && r.name) return r.name;
                         return String(r);
                     });
-                } else if (raw.role) {
-                    roles = [raw.role];
-                } else if (raw.role_name) {
+                    console.log('✅ Roles encontrados en raw.roles (array):', roles);
+                } else if (raw.role && raw.role !== 'Sin rol') {
+                    if (Array.isArray(raw.role)) {
+                        roles = raw.role.map(r => {
+                            if (typeof r === 'object' && r.name) return r.name;
+                            return String(r);
+                        });
+                    } else {
+                        roles = [raw.role];
+                    }
+                    console.log('✅ Roles encontrados en raw.role:', roles);
+                } else if (raw.role_name && raw.role_name !== 'Sin rol') {
                     roles = [raw.role_name];
+                    console.log('✅ Roles encontrados en raw.role_name:', roles);
                 }
                 
                 console.log('🔍 roles extraídos:', roles);
@@ -1505,19 +1517,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 if (roles.length > 0) {
                     // Traducir todos los roles al español
+                    // IMPORTANTE: Normalizar guiones a espacios
                     const translatedRoles = roles.map(r => {
-                        const key = r.toString().toLowerCase();
+                        const normalized = r.toString().toLowerCase().replace('-', ' ').trim();
+                        const key = normalized;
                         return rolesTranslation[key] || r;
                     });
                     
                     roleLabel = translatedRoles.join(', ');
-                    roleKey = roles[0].toString().toLowerCase();
+                    roleKey = roles[0].toString().toLowerCase().replace('-', ' ').trim();
+                    console.log('✅ Rol traducido:', roleLabel, '| roleKey:', roleKey);
                 } else {
                     // Intentar con campos individuales si no hay array de roles
                     const roleValue = raw.role || raw.role_name || '';
-                    if (roleValue) {
-                        roleKey = roleValue.toString().toLowerCase();
+                    if (roleValue && roleValue !== 'Sin rol') {
+                        roleKey = roleValue.toString().toLowerCase().replace('-', ' ').trim();
                         roleLabel = rolesTranslation[roleKey] || roleValue;
+                        console.log('✅ Rol desde raw.role:', roleLabel);
+                    } else {
+                        console.warn('⚠️ No hay roles encontrados para este usuario');
                     }
                 }
 
@@ -3729,19 +3747,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
                         
                         // Lista de roles válidos del sistema - EXPANDIR para incluir variaciones comunes
-                        const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor', 'financial', 'staff', 'director'];
+                        const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor', 'financial', 'staff', 'director', 'financial-staff'];
                         
                         // Filtrar solo roles válidos y eliminar valores inválidos
                         userRoles = userRoles.filter(r => {
-                            // Permitir también variaciones (ej: "financial staff" o solo "financial")
+                            // Permitir también variaciones (ej: "financial staff" o solo "financial" o "financial-staff")
+                            const normalizedRole = r.toLowerCase().replace('-', ' ').trim();
                             const isValid = r && r !== 'n/a' && r !== 'sin rol' && r !== '' && 
                                            (validRoles.includes(r) || 
-                                            validRoles.some(vr => vr.includes(r) || r.includes(vr)));
+                                            validRoles.includes(normalizedRole) ||
+                                            validRoles.some(vr => vr.includes(normalizedRole) || normalizedRole.includes(vr)));
                             if (!isValid && r) {
                                 console.warn(`⚠️ Rol inválido filtrado: "${r}"`);
                             }
                             return isValid;
                         });
+                        
+                        // Normalizar roles (convertir guiones a espacios)
+                        userRoles = userRoles.map(r => r.toLowerCase().replace('-', ' ').trim());
                         
                         console.log('📋 Roles después de filtrado:', userRoles);
                         

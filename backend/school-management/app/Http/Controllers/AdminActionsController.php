@@ -760,12 +760,24 @@ class AdminActionsController extends Controller
                 
                 // Debug: Check if roles are loaded
                 $rolesArray = $user->roles ? $user->roles->pluck('name')->toArray() : [];
-                if (empty($rolesArray)) {
+                $roleNamesFromMethod = $user->getRoleNames()->toArray();
+                
+                \Log::info('🔍 DEBUG showUsers - User roles', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'roleNames_from_getRoleNames' => $roleNamesFromMethod,
+                    'rolesArray_from_relation' => $rolesArray,
+                    'has_roles_relation' => $user->relationLoaded('roles'),
+                    'roles_count' => $user->roles_count ?? 'N/A'
+                ]);
+                
+                // Usar getRoleNames() que es más confiable
+                $finalRoles = !empty($roleNamesFromMethod) ? $roleNamesFromMethod : $rolesArray;
+                
+                if (empty($finalRoles)) {
                     \Log::warning('⚠️ User has no roles', [
                         'user_id' => $user->id,
                         'user_email' => $user->email,
-                        'has_roles_relation' => $user->relationLoaded('roles'),
-                        'roles_count' => $user->roles_count ?? 'N/A'
                     ]);
                 }
                 
@@ -783,8 +795,8 @@ class AdminActionsController extends Controller
                     'address' => $user->address ?? '',
                     'registration_date' => $user->registration_date ?? null,
                     'status' => $user->status,
-                    'roles' => $user->getRoleNames()->toArray(),
-                    'roles_count' => $user->getRoleNames()->count(),
+                    'roles' => $finalRoles,
+                    'roles_count' => count($finalRoles),
                     'permissions' => $user->getPermissionNames()->toArray(),
                     'n_control' => $user->n_control ?? '',
                     'career_id' => $user->career_id ?? null,
