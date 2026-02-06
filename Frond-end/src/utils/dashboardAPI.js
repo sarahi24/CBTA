@@ -16,9 +16,7 @@ export const DashboardAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'refresh.all.dashboard'
+          'Accept': 'application/json'
         }
       });
 
@@ -50,9 +48,7 @@ export const DashboardAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.concepts.history'
+          'Accept': 'application/json'
         }
       });
 
@@ -82,9 +78,7 @@ export const DashboardAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.all.paid.concepts.summary'
+          'Accept': 'application/json'
         }
       });
 
@@ -114,9 +108,7 @@ export const DashboardAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.all.students.summary'
+          'Accept': 'application/json'
         }
       });
 
@@ -146,9 +138,7 @@ export const DashboardAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.all.pending.concepts.summary'
+          'Accept': 'application/json'
         }
       });
 
@@ -174,9 +164,7 @@ export const DashboardAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'create.payout'
+          'Accept': 'application/json'
         }
       });
 

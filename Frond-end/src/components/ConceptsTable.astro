@@ -121,6 +121,9 @@
 
     } catch (error) {
       console.error('Error loading dashboard concepts:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isPermissionError = errorMsg.includes('permisos') || errorMsg.includes('403');
+      
       tbody.innerHTML = `
         <tr>
           <td colspan="5" class="px-6 py-8 text-center text-red-500">
@@ -128,8 +131,9 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p class="text-sm font-medium">Error al cargar conceptos</p>
-              <button onclick="window.location.reload()" class="text-xs text-blue-600 hover:text-blue-800 underline">Reintentar</button>
+              <p class="text-sm font-medium">${isPermissionError ? 'No tienes permisos para ver conceptos' : 'Error al cargar conceptos'}</p>
+              <p class="text-xs text-gray-500 mt-1">${isPermissionError ? 'Se requiere el rol "financial staff"' : errorMsg}</p>
+              ${!isPermissionError ? '<button onclick="window.location.reload()" class="text-xs text-blue-600 hover:text-blue-800 underline mt-2">Reintentar</button>' : ''}
             </div>
           </td>
         </tr>
