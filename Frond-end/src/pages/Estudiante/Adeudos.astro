@@ -9,194 +9,199 @@ const title = "Finanzas Estudiantiles";
 <StudentLayout title={title}>
   <!-- Load StudentAPI globally before Alpine initializes -->
   <script src="/studentAPI.js" is:inline></script>
+  <script is:inline>
+    function studentAdeudos() {
+      return {
+        showModal: false,
+        step: 'select-method',
+        loading: false,
+        loadingTab: false,
+        selectedItem: null,
+        selectedCard: null,
+        adeudos: [],
+        overdueAdeudos: [],
+        tarjetas: [],
+        alumnoNombre: 'Usuario',
+        showOverdueAlert: false,
+        activeTab: 'pending',
+
+        async init() {
+          // Obtener datos del usuario desde localStorage de forma más robusta
+          const userName = localStorage.getItem('userName');
+          const userDataStr = localStorage.getItem('userData');
+
+          if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+            this.alumnoNombre = userName;
+          } else if (userDataStr) {
+            try {
+              const userData = JSON.parse(userDataStr);
+              this.alumnoNombre = userData.fullName || userData.name || 'Usuario';
+            } catch (e) {
+              this.alumnoNombre = 'Usuario';
+            }
+          } else {
+            this.alumnoNombre = 'Usuario';
+          }
+
+          const token = localStorage.getItem('access_token');
+          const userId = localStorage.getItem('userId');
+
+          console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
+          console.log('🔍 [Adeudos] Token disponible:', !!token);
+          console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
+
+          // Cargar solo adeudos pendientes inicialmente (tab por defecto)
+          if (token) {
+            await this.loadPendingPayments();
+          }
+
+          // Fallback a localStorage si no hay datos de API
+          if (this.adeudos.length === 0) {
+            console.log('⚠️ Usando fallback de localStorage para adeudos');
+            const adeudosGuardados = localStorage.getItem('mis_adeudos');
+            if (adeudosGuardados) {
+              this.adeudos = JSON.parse(adeudosGuardados);
+            }
+          }
+
+          if (this.tarjetas.length === 0) {
+            console.log('⚠️ Usando fallback de localStorage para tarjetas');
+            const guardadas = localStorage.getItem('mis_tarjetas');
+            if (guardadas) {
+              this.tarjetas = JSON.parse(guardadas);
+            }
+          }
+        },
+
+        async loadPendingPayments() {
+          const token = localStorage.getItem('access_token');
+          if (!token) return;
+
+          this.loadingTab = true;
+          try {
+            console.log('📥 Cargando adeudos pendientes desde StudentAPI...');
+            const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
+
+            console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
+
+            let paymentsArray = [];
+            if (paymentsData?.data) {
+              if (Array.isArray(paymentsData.data)) {
+                paymentsArray = paymentsData.data;
+              } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
+                paymentsArray = paymentsData.data.pending_payments;
+              }
+            }
+
+            console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
+
+            this.adeudos = paymentsArray.map(payment => ({
+              id: payment.id,
+              concepto: payment.concept_name || payment.concepto || 'Pago',
+              monto: payment.amount?.toString() || payment.monto || '0.00',
+              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              status: payment.status || 'Pendiente',
+              description: payment.description || payment.descripcion || ''
+            }));
+            console.log('✅ Adeudos pendientes cargados:', this.adeudos.length);
+          } catch (err) {
+            console.error('❌ Error al cargar adeudos pendientes:', err);
+            this.adeudos = [];
+          } finally {
+            this.loadingTab = false;
+          }
+        },
+
+        async loadOverduePayments() {
+          const token = localStorage.getItem('access_token');
+          if (!token) return;
+
+          this.loadingTab = true;
+          try {
+            console.log('📥 Cargando pagos vencidos desde StudentAPI...');
+            const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
+
+            console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
+
+            let overdueArray = [];
+            if (overdueData?.data) {
+              if (Array.isArray(overdueData.data)) {
+                overdueArray = overdueData.data;
+              } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
+                overdueArray = overdueData.data.pending_payments;
+              }
+            }
+
+            console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
+
+            this.overdueAdeudos = overdueArray.map(payment => ({
+              id: payment.id,
+              concepto: payment.concept_name || payment.concepto || 'Pago',
+              monto: payment.amount?.toString() || payment.monto || '0.00',
+              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              description: payment.description || payment.descripcion || ''
+            }));
+
+            this.showOverdueAlert = this.overdueAdeudos.length > 0;
+            console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
+          } catch (err) {
+            console.error('⚠️  Error al cargar pagos vencidos:', err);
+            this.overdueAdeudos = [];
+          } finally {
+            this.loadingTab = false;
+          }
+        },
+
+        switchTab(tab) {
+          this.activeTab = tab;
+          if (tab === 'pending' && this.adeudos.length === 0) {
+            this.loadPendingPayments();
+          } else if (tab === 'overdue' && this.overdueAdeudos.length === 0) {
+            this.loadOverduePayments();
+          }
+        },
+
+        openPayment(item) {
+          this.selectedItem = item;
+          this.step = 'select-method';
+          this.showModal = true;
+        },
+
+        async processPayment(isReference = false) {
+          this.loading = true;
+          const token = localStorage.getItem('access_token');
+
+          try {
+            console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
+
+            // Usar StudentAPI para crear el intento de pago
+            const response = await window.StudentAPI.createPaymentIntent(
+              this.selectedItem.id,
+              token
+            );
+
+            console.log('✅ Respuesta del servidor:', response);
+
+            if (response.success && response.data?.url_checkout) {
+              // Redirigir al checkout de Stripe
+              console.log('🔗 Redirigiendo a checkout:', response.data.url_checkout);
+              window.location.href = response.data.url_checkout;
+            } else {
+              throw new Error(response.message || 'No se recibió URL de checkout');
+            }
+          } catch (err) {
+            console.error('❌ Error al procesar el pago:', err);
+            alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
+            this.loading = false;
+          }
+        }
+      };
+    }
+  </script>
   
   <div 
     class="page-wrapper"
-    x-data={`{ 
-      showModal: false,
-      step: 'select-method', 
-      loading: false,
-      loadingTab: false,
-      selectedItem: null,
-      selectedCard: null,
-      adeudos: [],
-      overdueAdeudos: [],
-      tarjetas: [],
-      alumnoNombre: 'Usuario',
-      showOverdueAlert: false,
-      activeTab: 'pending',
-
-      async init() {
-        // Obtener datos del usuario desde localStorage de forma más robusta
-        const userName = localStorage.getItem('userName');
-        const userDataStr = localStorage.getItem('userData');
-        
-        if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-          this.alumnoNombre = userName;
-        } else if (userDataStr) {
-          try {
-            const userData = JSON.parse(userDataStr);
-            this.alumnoNombre = userData.fullName || userData.name || 'Usuario';
-          } catch (e) {
-            this.alumnoNombre = 'Usuario';
-          }
-        } else {
-          this.alumnoNombre = 'Usuario';
-        }
-        
-        const token = localStorage.getItem('access_token');
-        const userId = localStorage.getItem('userId');
-        
-        console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
-        console.log('🔍 [Adeudos] Token disponible:', !!token);
-        console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
-        
-        // Cargar solo adeudos pendientes inicialmente (tab por defecto)
-        if (token) {
-          await this.loadPendingPayments();
-        }
-
-        // Fallback a localStorage si no hay datos de API
-        if (this.adeudos.length === 0) {
-          console.log('⚠️ Usando fallback de localStorage para adeudos');
-          const adeudosGuardados = localStorage.getItem('mis_adeudos');
-          if (adeudosGuardados) {
-            this.adeudos = JSON.parse(adeudosGuardados);
-          }
-        }
-        
-        if (this.tarjetas.length === 0) {
-          console.log('⚠️ Usando fallback de localStorage para tarjetas');
-          const guardadas = localStorage.getItem('mis_tarjetas');
-          if (guardadas) {
-            this.tarjetas = JSON.parse(guardadas);
-          }
-        }
-      },
-
-      async loadPendingPayments() {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
-        
-        this.loadingTab = true;
-        try {
-          console.log('📥 Cargando adeudos pendientes desde StudentAPI...');
-          const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
-          
-          console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
-          
-          let paymentsArray = [];
-          if (paymentsData?.data) {
-            if (Array.isArray(paymentsData.data)) {
-              paymentsArray = paymentsData.data;
-            } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
-              paymentsArray = paymentsData.data.pending_payments;
-            }
-          }
-          
-          console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
-          
-          this.adeudos = paymentsArray.map(payment => ({
-            id: payment.id,
-            concepto: payment.concept_name || payment.concepto || 'Pago',
-            monto: payment.amount?.toString() || payment.monto || '0.00',
-            fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-            status: payment.status || 'Pendiente',
-            description: payment.description || payment.descripcion || ''
-          }));
-          console.log('✅ Adeudos pendientes cargados:', this.adeudos.length);
-        } catch (err) {
-          console.error('❌ Error al cargar adeudos pendientes:', err);
-          this.adeudos = [];
-        } finally {
-          this.loadingTab = false;
-        }
-      },
-
-      async loadOverduePayments() {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
-        
-        this.loadingTab = true;
-        try {
-          console.log('📥 Cargando pagos vencidos desde StudentAPI...');
-          const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
-          
-          console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
-          
-          let overdueArray = [];
-          if (overdueData?.data) {
-            if (Array.isArray(overdueData.data)) {
-              overdueArray = overdueData.data;
-            } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
-              overdueArray = overdueData.data.pending_payments;
-            }
-          }
-          
-          console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
-          
-          this.overdueAdeudos = overdueArray.map(payment => ({
-            id: payment.id,
-            concepto: payment.concept_name || payment.concepto || 'Pago',
-            monto: payment.amount?.toString() || payment.monto || '0.00',
-            fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-            description: payment.description || payment.descripcion || ''
-          }));
-          
-          this.showOverdueAlert = this.overdueAdeudos.length > 0;
-          console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
-        } catch (err) {
-          console.error('⚠️  Error al cargar pagos vencidos:', err);
-          this.overdueAdeudos = [];
-        } finally {
-          this.loadingTab = false;
-        }
-      },
-
-      switchTab(tab) {
-        this.activeTab = tab;
-        if (tab === 'pending' && this.adeudos.length === 0) {
-          this.loadPendingPayments();
-        } else if (tab === 'overdue' && this.overdueAdeudos.length === 0) {
-          this.loadOverduePayments();
-        }
-      },
-
-      openPayment(item) {
-        this.selectedItem = item;
-        this.step = 'select-method';
-        this.showModal = true;
-      },
-
-      async processPayment(isReference = false) {
-        this.loading = true;
-        const token = localStorage.getItem('access_token');
-        
-        try {
-          console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
-          
-          // Usar StudentAPI para crear el intento de pago
-          const response = await window.StudentAPI.createPaymentIntent(
-            this.selectedItem.id,
-            token
-          );
-          
-          console.log('✅ Respuesta del servidor:', response);
-          
-          if (response.success && response.data?.url_checkout) {
-            // Redirigir al checkout de Stripe
-            console.log('🔗 Redirigiendo a checkout:', response.data.url_checkout);
-            window.location.href = response.data.url_checkout;
-          } else {
-            throw new Error(response.message || 'No se recibió URL de checkout');
-          }
-        } catch (err) {
-          console.error('❌ Error al procesar el pago:', err);
-          alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
-          this.loading = false;
-        }
-      }
-    }`}
+    x-data="studentAdeudos()"
   >
     <header class="main-header">
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0">
