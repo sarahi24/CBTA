@@ -153,41 +153,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return false;
         };
 
-        // Si hay datos en localStorage, usarlos
+        // Si hay datos en localStorage, usarlos y NO hacer petición API
         if (loadFromLocalStorage()) {
-          // Intentar actualizar en segundo plano sin bloquear
-          if (token) {
-            const url = new URL(this.apiBaseUrl + '/v1/admin-actions/show-users');
-            url.searchParams.append('page', '1');
-            url.searchParams.append('perPage', '1000');
-            url.searchParams.append('status', 'activo');
-            fetch(url.toString(), {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              }
-            })
-            .then(res => res.ok ? res.json() : null)
-            .then(json => {
-              if (json?.data?.users?.items?.length) {
-                localStorage.setItem('studentsList', JSON.stringify(json.data.users.items));
-                console.log('🔄 Cache actualizado en segundo plano');
-              }
-            })
-            .catch(() => {}); // Silencioso
-          }
+          console.log('💡 Tip: Visita /roles para actualizar la lista de usuarios');
           return;
         }
 
-        // Si no hay localStorage, intentar API como último recurso
+        // Si no hay localStorage NI token, mostrar lista vacía
         if (!token) {
-          console.warn('⚠️ Sin token y sin datos en localStorage');
+          console.warn('⚠️ Sin token y sin datos en localStorage. Visita /roles primero.');
           mapStudents([]);
           return;
         }
 
+        // Solo si NO hay localStorage, intentar cargar desde API
+        console.log('🔍 No hay datos en cache, intentando cargar desde API...');
         const url = new URL(this.apiBaseUrl + '/v1/admin-actions/show-users');
         url.searchParams.append('page', '1');
         url.searchParams.append('perPage', '1000');
@@ -203,7 +183,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         .then(res => {
           if (!res.ok) {
             if (res.status === 403) {
-              console.info('ℹ️ Sin permisos para cargar usuarios desde API. Visita /roles primero para cachear datos.');
+              console.info('ℹ️ Sin permisos para cargar usuarios. Ve a /roles para cachear la lista primero.');
             }
             throw new Error(`HTTP ${res.status}`);
           }
@@ -216,11 +196,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             mapStudents(items);
             localStorage.setItem('studentsList', JSON.stringify(items));
           } else {
+            console.warn('⚠️ API devolvió lista vacía');
             mapStudents([]);
           }
         })
         .catch(() => {
-          console.warn('⚠️ No se pudieron cargar usuarios. Lista vacía.');
+          console.warn('⚠️ No se pudo cargar desde API. Ve a /roles primero.');
           mapStudents([]);
         });
       },
