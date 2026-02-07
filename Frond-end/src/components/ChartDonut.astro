@@ -18,17 +18,16 @@ import { Fragment } from 'astro/jsx-runtime';
         Meta Total: <span id="meta-monto-dinamico" class="text-[#3b7666] font-bold">$0.00</span>
       </p>
     </div>
-
-    <div id="donut-empty" class="hidden text-gray-400 italic py-10">
-      Sin datos de cargos registrados
-    </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script is:inline>
     window.updateChartDonut = function() {
       const ctx = document.getElementById('chartDonut');
       const metaEl = document.getElementById('meta-monto-dinamico');
       if (!ctx) return;
+      if (typeof Chart === 'undefined') return;
 
       try {
         // 1. Obtener la lista de cargos (la misma fuente que tus tarjetas)
@@ -53,23 +52,8 @@ import { Fragment } from 'astro/jsx-runtime';
         }
 
         // 4. Manejo de estados visuales
-        const container = document.getElementById('donut-container');
-        const empty = document.getElementById('donut-empty');
-        const metaContainer = document.getElementById('meta-total-container');
-
-        if (totalMeta === 0) {
-          container.classList.add('hidden');
-          metaContainer.classList.add('hidden');
-          empty.classList.remove('hidden');
-          return;
-        } else {
-          container.classList.remove('hidden');
-          metaContainer.classList.remove('hidden');
-          empty.classList.add('hidden');
-        }
-
         // 5. Actualizar porcentaje central
-        const pct = ((paid / totalMeta) * 100).toFixed(1);
+        const pct = totalMeta > 0 ? ((paid / totalMeta) * 100).toFixed(1) : '0.0';
         document.getElementById('donut-pct').textContent = pct + '%';
 
         // 6. Dibujar o refrescar la gráfica

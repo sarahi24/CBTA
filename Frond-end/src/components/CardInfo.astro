@@ -31,21 +31,39 @@ const getIconSvg = (iconName, sizeClass) => {
 };
 ---
 
-<a href={href} class="bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-lg flex flex-col items-center justify-between h-auto w-full text-center transition-all duration-200 hover:shadow-xl focus:outline-none cursor-pointer">
-    <div class="flex justify-between items-start w-full mb-1">
-        <h3 class="text-sm font-medium text-gray-700">{title}</h3>
-        <span class="flex-shrink-0" class:list={[iconColors[icon]]} set:html={getIconSvg(icon, 'w-5 h-5')}></span>
+{href ? (
+    <a href={href} class="bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-lg flex flex-col items-center justify-between h-auto w-full text-center transition-all duration-200 hover:shadow-xl focus:outline-none cursor-pointer">
+        <div class="flex justify-between items-start w-full mb-1">
+            <h3 class="text-sm font-medium text-gray-700">{title}</h3>
+            <span class="flex-shrink-0" class:list={[iconColors[icon]]} set:html={getIconSvg(icon, 'w-5 h-5')}></span>
+        </div>
+        
+        <div class="flex flex-col items-center justify-center w-full my-2">
+            <p class:list={['text-2xl md:text-3xl font-bold', iconColors[icon]]} id={`count-${icon}`}>
+                {displayValue}
+            </p> 
+            <p class="text-xs text-gray-500 mt-1" id={`desc-${icon}`}>
+               {description}
+            </p> 
+        </div>
+    </a>
+) : (
+    <div class="bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-lg flex flex-col items-center justify-between h-auto w-full text-center transition-all duration-200 hover:shadow-xl focus:outline-none cursor-default">
+        <div class="flex justify-between items-start w-full mb-1">
+            <h3 class="text-sm font-medium text-gray-700">{title}</h3>
+            <span class="flex-shrink-0" class:list={[iconColors[icon]]} set:html={getIconSvg(icon, 'w-5 h-5')}></span>
+        </div>
+        
+        <div class="flex flex-col items-center justify-center w-full my-2">
+            <p class:list={['text-2xl md:text-3xl font-bold', iconColors[icon]]} id={`count-${icon}`}>
+                {displayValue}
+            </p> 
+            <p class="text-xs text-gray-500 mt-1" id={`desc-${icon}`}>
+               {description}
+            </p> 
+        </div>
     </div>
-    
-    <div class="flex flex-col items-center justify-center w-full my-2">
-        <p class:list={['text-2xl md:text-3xl font-bold', iconColors[icon]]} id={`count-${icon}`}>
-            {displayValue}
-        </p> 
-        <p class="text-xs text-gray-500 mt-1" id={`desc-${icon}`}>
-           {description}
-        </p> 
-    </div>
-</a>
+)}
 
 <script define:vars={{ icon }}>
     const updateCard = () => {
