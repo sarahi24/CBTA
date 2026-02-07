@@ -54,7 +54,7 @@ try {
 
       // Process paid total
       if (paidRes && !paidRes.error) {
-        dashboardData.paid = paidRes.paid_data || { totalPayments: '0.00' };
+        dashboardData.paid = paidRes.data?.paid_data || { totalPayments: '0.00', paymentsByMonth: {} };
       }
 
       // Process pending total
