@@ -204,7 +204,7 @@ const title = "Finanzas Estudiantiles";
           <div class="alert-icon">⚠️</div>
           <div class="alert-content">
             <h3>¡Tienes pagos vencidos!</h3>
-            <p x-text="`Tienes ${overdueAdeudos.length} pago(s) vencido(s) que requieren atención inmediata.`"></p>
+            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atención inmediata.'"></p>
           </div>
           <button @click="showOverdueAlert = false" class="alert-close">✕</button>
         </div>
@@ -215,12 +215,12 @@ const title = "Finanzas Estudiantiles";
           <div class="avatar">PG</div>
           <div class="welcome-text">
             <span class="greeting">Estado de Cuenta</span>
-            <h1 x-text="'Hola, ' + alumnoNombre.split(' ')[0]"></h1>
+            <h1 x-text="'Hola, ' + (alumnoNombre ? alumnoNombre.split(' ')[0] : '')"></h1>
           </div>
         </div>
         <div class="balance-summary">
           <span class="label">Total por Pagar</span>
-          <span class="amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)"></span>
+          <span class="amount" x-text="'$' + (adeudos && adeudos.length ? adeudos.reduce(function(acc, item) { return acc + parseFloat(item.monto.replace(',','')); }, 0).toFixed(2) : '0.00')"></span>
         </div>
       </div>
     </header>
