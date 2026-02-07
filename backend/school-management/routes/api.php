@@ -80,6 +80,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:view own paid concepts summary')->get('/paid',[DashboardController::class,'paid']);
         Route::middleware('permission:view own overdue concepts summary')->get('/overdue',[DashboardController::class,'overdue']);
         Route::middleware('permission:view payments history')->get('/history',[DashboardController::class,'history']);
+        Route::middleware('permission:refresh.all.dashboard')->post('/refresh/{studentId?}',[DashboardController::class,'refresh']);
 
     });
     Route::prefix('cards')->middleware('role:student')->group(function(){
