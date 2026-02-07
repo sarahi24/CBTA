@@ -232,8 +232,7 @@ const title = "Finanzas Estudiantiles";
       <div class="tabs-navigation">
         <button 
           @click="switchTab('pending')"
-          :class="{ 'tab-btn': true, 'active': activeTab === 'pending' }"
-          class="tab-btn"
+          :class="activeTab === 'pending' ? 'tab-btn active' : 'tab-btn'"
         >
           <span class="tab-icon">📋</span>
           <span class="tab-label">Pendientes</span>
@@ -242,8 +241,7 @@ const title = "Finanzas Estudiantiles";
         
         <button 
           @click="switchTab('overdue')"
-          :class="{ 'tab-btn': true, 'active': activeTab === 'overdue' }"
-          class="tab-btn"
+          :class="activeTab === 'overdue' ? 'tab-btn active' : 'tab-btn'"
         >
           <span class="tab-icon">🔴</span>
           <span class="tab-label">Vencidos</span>
