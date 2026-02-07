@@ -101,20 +101,6 @@ const pageTitle = "Dashboard - SIGE";
     
     // Variable para almacenar el balance disponible
     let availableBalance = 0;
-    let dashboardTotals = {
-      pendingAmount: 0,
-      pendingCount: 0,
-      paidAmount: 0
-    };
-
-    const saveDashboardTotals = () => {
-      localStorage.setItem('dashboardTotals', JSON.stringify(dashboardTotals));
-      window.dispatchEvent(new Event('dashboardTotalsUpdated'));
-    };
-
-    const notifyCardsTotals = () => {
-      window.dispatchEvent(new Event('cardsTotalsUpdated'));
-    };
     
     // Función para cargar datos de pagos pendientes
     const loadPendingData = async () => {
@@ -142,11 +128,6 @@ const pageTitle = "Dashboard - SIGE";
             const count = pendingData.totalCount || 0;
             pendingDesc.textContent = count === 1 ? '1 Adeudo' : `${count} Adeudos`;
           }
-
-          dashboardTotals.pendingAmount = parseFloat(pendingData.totalAmount || 0);
-          dashboardTotals.pendingCount = parseInt(pendingData.totalCount || 0, 10);
-          saveDashboardTotals();
-          notifyCardsTotals();
           
           console.log('✅ Datos de pagos pendientes cargados:', pendingData);
         }
@@ -222,10 +203,6 @@ const pageTitle = "Dashboard - SIGE";
           
           // Guardar balance disponible para validación de payout
           availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
-
-          dashboardTotals.paidAmount = parseFloat(paymentsData.totalPayouts || 0);
-          saveDashboardTotals();
-          notifyCardsTotals();
           
           console.log('✅ Datos de pagos cargados:', paymentsData);
         }

@@ -30,39 +30,17 @@ import { Fragment } from 'astro/jsx-runtime';
       if (typeof Chart === 'undefined') return;
 
       try {
-        const parseCurrencyText = (value) => {
-          if (!value) return 0;
-          const cleaned = String(value).replace(/[^0-9.-]+/g, '');
-          return Number(cleaned || 0);
-        };
+        // Obtener la lista de cargos desde localStorage
+        const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+        
+        // Calcular totales
+        const totalMeta = charges.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+        
+        const paid = charges
+          .filter(c => ['paid', 'pagado'].includes(String(c.status).toLowerCase()))
+          .reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
 
-        const cardPaidEl = document.getElementById('count-recaudado');
-        const cardPendingEl = document.getElementById('count-pending');
-        const cardPaid = parseCurrencyText(cardPaidEl?.textContent);
-        const cardPending = parseCurrencyText(cardPendingEl?.textContent);
-
-        const totals = JSON.parse(localStorage.getItem('dashboardTotals') || 'null');
-        let totalMeta = 0;
-        let paid = 0;
-        let pending = 0;
-
-        if (cardPaidEl || cardPendingEl) {
-          paid = cardPaid;
-          pending = cardPending;
-          totalMeta = paid + pending;
-        } else if (totals && typeof totals === 'object') {
-          paid = parseFloat(totals.paidAmount || 0);
-          pending = parseFloat(totals.pendingAmount || 0);
-          totalMeta = paid + pending;
-        } else {
-          // Fallback a lista de cargos
-          const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
-          totalMeta = charges.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-          paid = charges
-            .filter(c => ['paid', 'pagado'].includes(String(c.status).toLowerCase()))
-            .reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-          pending = totalMeta - paid;
-        }
+        const pending = totalMeta - paid;
 
         // 3. Actualizar el texto de Meta Total con formato de moneda
         if (metaEl) {
@@ -116,7 +94,5 @@ import { Fragment } from 'astro/jsx-runtime';
     document.addEventListener('DOMContentLoaded', () => setTimeout(window.updateChartDonut, 150));
     window.addEventListener('storage', window.updateChartDonut);
     window.addEventListener('chargesUpdated', window.updateChartDonut);
-    window.addEventListener('dashboardTotalsUpdated', window.updateChartDonut);
-    window.addEventListener('cardsTotalsUpdated', window.updateChartDonut);
   </script>
 </Fragment>
