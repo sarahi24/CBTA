@@ -9,120 +9,56 @@ const title = "Finanzas Estudiantiles";
 <StudentLayout title={title}>
   <!-- Load StudentAPI globally before Alpine initializes -->
   <script src="/studentAPI.js" is:inline></script>
-  <script is:inline>
-    function studentAdeudos() {
-      return {
-        showModal: false,
-        step: 'select-method',
-        loading: false,
-        loadingTab: false,
-        selectedItem: null,
-        selectedCard: null,
-        adeudos: [],
-        overdueAdeudos: [],
-        tarjetas: [],
-        alumnoNombre: 'Usuario',
-        showOverdueAlert: false,
-        activeTab: 'pending',
+  
+  <div 
+    class="page-wrapper"
+    x-data={`{ 
+      showModal: false,
+      step: 'select-method', 
+      loading: false,
+      selectedItem: null,
+      selectedCard: null,
+      adeudos: [],
+      overdueAdeudos: [],
+      tarjetas: [],
+      alumnoNombre: 'Usuario',
+      showOverdueAlert: false,
 
-        async init() {
-          // Obtener datos del usuario desde localStorage de forma más robusta
-          const userName = localStorage.getItem('userName');
-          const userDataStr = localStorage.getItem('userData');
-
-          if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-            this.alumnoNombre = userName;
-          } else if (userDataStr) {
-            try {
-              const userData = JSON.parse(userDataStr);
-              this.alumnoNombre = userData.fullName || userData.name || 'Usuario';
-            } catch (e) {
-              this.alumnoNombre = 'Usuario';
-            }
-          } else {
+      async init() {
+        // Obtener datos del usuario desde localStorage de forma más robusta
+        const userName = localStorage.getItem('userName');
+        const userDataStr = localStorage.getItem('userData');
+        
+        if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+          this.alumnoNombre = userName;
+        } else if (userDataStr) {
+          try {
+            const userData = JSON.parse(userDataStr);
+            this.alumnoNombre = userData.fullName || userData.name || 'Usuario';
+          } catch (e) {
             this.alumnoNombre = 'Usuario';
           }
-
-          const token = localStorage.getItem('access_token');
-          const userId = localStorage.getItem('userId');
-
-          console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
-          console.log('🔍 [Adeudos] Token disponible:', !!token);
-          console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
-
-          // Cargar solo adeudos pendientes inicialmente (tab por defecto)
-          if (token) {
-            await this.loadPendingPayments();
-          }
-
-          // Fallback a localStorage si no hay datos de API
-          if (this.adeudos.length === 0) {
-            console.log('⚠️ Usando fallback de localStorage para adeudos');
-            const adeudosGuardados = localStorage.getItem('mis_adeudos');
-            if (adeudosGuardados) {
-              this.adeudos = JSON.parse(adeudosGuardados);
-            }
-          }
-
-          if (this.tarjetas.length === 0) {
-            console.log('⚠️ Usando fallback de localStorage para tarjetas');
-            const guardadas = localStorage.getItem('mis_tarjetas');
-            if (guardadas) {
-              this.tarjetas = JSON.parse(guardadas);
-            }
-          }
-        },
-
-        async loadPendingPayments() {
-          const token = localStorage.getItem('access_token');
-          if (!token) return;
-
-          this.loadingTab = true;
-          try {
-            console.log('📥 Cargando adeudos pendientes desde StudentAPI...');
-            const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
-
-            console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
-
-            let paymentsArray = [];
-            if (paymentsData?.data) {
-              if (Array.isArray(paymentsData.data)) {
-                paymentsArray = paymentsData.data;
-              } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
-                paymentsArray = paymentsData.data.pending_payments;
-              }
-            }
-
-            console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
-
-            this.adeudos = paymentsArray.map(payment => ({
-              id: payment.id,
-              concepto: payment.concept_name || payment.concepto || 'Pago',
-              monto: payment.amount?.toString() || payment.monto || '0.00',
-              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-              status: payment.status || 'Pendiente',
-              description: payment.description || payment.descripcion || ''
-            }));
-            console.log('✅ Adeudos pendientes cargados:', this.adeudos.length);
-          } catch (err) {
-            console.error('❌ Error al cargar adeudos pendientes:', err);
-            this.adeudos = [];
-          } finally {
-            this.loadingTab = false;
-          }
-        },
-
-        async loadOverduePayments() {
-          const token = localStorage.getItem('access_token');
-          if (!token) return;
-
-          this.loadingTab = true;
+        } else {
+          this.alumnoNombre = 'Usuario';
+        }
+        
+        const token = localStorage.getItem('access_token');
+        const userId = localStorage.getItem('userId');
+        
+        console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
+        console.log('🔍 [Adeudos] Token disponible:', !!token);
+        console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
+        
+        // Cargar adeudos vencidos desde API
+        if (token) {
           try {
             console.log('📥 Cargando pagos vencidos desde StudentAPI...');
+            // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
             const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
-
+            
             console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
-
+            
+            // El backend retorna: { success: true, data: [...] } donde data es un array
             let overdueArray = [];
             if (overdueData?.data) {
               if (Array.isArray(overdueData.data)) {
@@ -131,9 +67,9 @@ const title = "Finanzas Estudiantiles";
                 overdueArray = overdueData.data.pending_payments;
               }
             }
-
+            
             console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
-
+            
             this.overdueAdeudos = overdueArray.map(payment => ({
               id: payment.id,
               concepto: payment.concept_name || payment.concepto || 'Pago',
@@ -141,67 +77,124 @@ const title = "Finanzas Estudiantiles";
               fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
               description: payment.description || payment.descripcion || ''
             }));
-
+            
             this.showOverdueAlert = this.overdueAdeudos.length > 0;
             console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
           } catch (err) {
             console.error('⚠️  Error al cargar pagos vencidos:', err);
             this.overdueAdeudos = [];
-          } finally {
-            this.loadingTab = false;
-          }
-        },
-
-        switchTab(tab) {
-          this.activeTab = tab;
-          if (tab === 'pending' && this.adeudos.length === 0) {
-            this.loadPendingPayments();
-          } else if (tab === 'overdue' && this.overdueAdeudos.length === 0) {
-            this.loadOverduePayments();
-          }
-        },
-
-        openPayment(item) {
-          this.selectedItem = item;
-          this.step = 'select-method';
-          this.showModal = true;
-        },
-
-        async processPayment(isReference = false) {
-          this.loading = true;
-          const token = localStorage.getItem('access_token');
-
-          try {
-            console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
-
-            // Usar StudentAPI para crear el intento de pago
-            const response = await window.StudentAPI.createPaymentIntent(
-              this.selectedItem.id,
-              token
-            );
-
-            console.log('✅ Respuesta del servidor:', response);
-
-            if (response.success && response.data?.url_checkout) {
-              // Redirigir al checkout de Stripe
-              console.log('🔗 Redirigiendo a checkout:', response.data.url_checkout);
-              window.location.href = response.data.url_checkout;
-            } else {
-              throw new Error(response.message || 'No se recibió URL de checkout');
-            }
-          } catch (err) {
-            console.error('❌ Error al procesar el pago:', err);
-            alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
-            this.loading = false;
           }
         }
-      };
-    }
-  </script>
-  
-  <div 
-    class="page-wrapper"
-    x-data="studentAdeudos()"
+        
+        // Cargar adeudos desde API usando StudentAPI
+        if (token) {
+          try {
+            console.log('📥 Cargando adeudos desde StudentAPI...');
+            // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
+            const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
+            
+            console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
+            
+            // El backend retorna: { success: true, data: [...] } donde data es un array
+            let paymentsArray = [];
+            if (paymentsData?.data) {
+              if (Array.isArray(paymentsData.data)) {
+                paymentsArray = paymentsData.data;
+              } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
+                paymentsArray = paymentsData.data.pending_payments;
+              }
+            }
+            
+            console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
+            
+            this.adeudos = paymentsArray.map(payment => ({
+              id: payment.id,
+              concepto: payment.concept_name || payment.concepto || 'Pago',
+              monto: payment.amount?.toString() || payment.monto || '0.00',
+              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              status: payment.status || 'Pendiente',
+              description: payment.description || payment.descripcion || ''
+            }));
+            console.log('✅ Adeudos cargados:', this.adeudos.length);
+          } catch (err) {
+            console.error('❌ Error al cargar adeudos:', err);
+            this.adeudos = [];
+          }
+          
+          // Cargar tarjetas desde API usando StudentAPI
+          try {
+            console.log('📥 Cargando tarjetas desde StudentAPI...');
+            // Pasar null para obtener métodos de pago del usuario autenticado
+            const cardsData = await window.StudentAPI.getPaymentMethods(null, token);
+            const cardsArray = Array.isArray(cardsData.data) ? cardsData.data : 
+                               Array.isArray(cardsData) ? cardsData : [];
+            
+            this.tarjetas = cardsArray.map(card => ({
+              id: card.id,
+              tipo: card.brand || 'Tarjeta',
+              terminacion: card.last4 || card.terminacion || '****',
+              logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+            }));
+            console.log('✅ Tarjetas cargadas:', this.tarjetas.length);
+          } catch (err) {
+            console.error('❌ Error al cargar tarjetas:', err);
+            this.tarjetas = [];
+          }
+        }
+        
+        // Fallback a localStorage si no hay datos de API
+        if (this.adeudos.length === 0) {
+          console.log('⚠️ Usando fallback de localStorage para adeudos');
+          const adeudosGuardados = localStorage.getItem('mis_adeudos');
+          if (adeudosGuardados) {
+            this.adeudos = JSON.parse(adeudosGuardados);
+          }
+        }
+        
+        if (this.tarjetas.length === 0) {
+          console.log('⚠️ Usando fallback de localStorage para tarjetas');
+          const guardadas = localStorage.getItem('mis_tarjetas');
+          if (guardadas) {
+            this.tarjetas = JSON.parse(guardadas);
+          }
+        }
+      },
+
+      openPayment(item) {
+        this.selectedItem = item;
+        this.step = 'select-method';
+        this.showModal = true;
+      },
+
+      async processPayment(isReference = false) {
+        this.loading = true;
+        const token = localStorage.getItem('access_token');
+        
+        try {
+          console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
+          
+          // Usar StudentAPI para crear el intento de pago
+          const response = await window.StudentAPI.createPaymentIntent(
+            this.selectedItem.id,
+            token
+          );
+          
+          console.log('✅ Respuesta del servidor:', response);
+          
+          if (response.success && response.data?.url_checkout) {
+            // Redirigir al checkout de Stripe
+            console.log('🔗 Redirigiendo a checkout:', response.data.url_checkout);
+            window.location.href = response.data.url_checkout;
+          } else {
+            throw new Error(response.message || 'No se recibió URL de checkout');
+          }
+        } catch (err) {
+          console.error('❌ Error al procesar el pago:', err);
+          alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
+          this.loading = false;
+        }
+      }
+    }`}
   >
     <header class="main-header">
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0">
@@ -209,7 +202,7 @@ const title = "Finanzas Estudiantiles";
           <div class="alert-icon">⚠️</div>
           <div class="alert-content">
             <h3>¡Tienes pagos vencidos!</h3>
-            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atención inmediata.'"></p>
+            <p x-text="`Tienes ${overdueAdeudos.length} pago(s) vencido(s) que requieren atención inmediata.`"></p>
           </div>
           <button @click="showOverdueAlert = false" class="alert-close">✕</button>
         </div>
@@ -220,12 +213,12 @@ const title = "Finanzas Estudiantiles";
           <div class="avatar">PG</div>
           <div class="welcome-text">
             <span class="greeting">Estado de Cuenta</span>
-            <h1 x-text="'Hola, ' + alumnoNombre.split(' ')[0]"></h1>
+            <h1 x-text="`Hola, ${alumnoNombre.split(' ')[0]}`"></h1>
           </div>
         </div>
         <div class="balance-summary">
           <span class="label">Total por Pagar</span>
-          <span class="amount" x-text="'$' + adeudos.reduce(function(acc, item) { return acc + parseFloat(item.monto.replace(',','')); }, 0).toFixed(2)"></span>
+          <span class="amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
         </div>
       </div>
     </header>
@@ -233,31 +226,8 @@ const title = "Finanzas Estudiantiles";
 
 
     <main class="content-grid">
-      <!-- TAB NAVIGATION -->
-      <div class="tabs-navigation">
-        <button 
-          @click="switchTab('pending')"
-          class="tab-btn"
-          x-bind:class="activeTab === 'pending' && 'active'"
-        >
-          <span class="tab-icon">📋</span>
-          <span class="tab-label">Pendientes</span>
-          <span class="tab-count" x-text="adeudos.length"></span>
-        </button>
-        
-        <button 
-          @click="switchTab('overdue')"
-          class="tab-btn"
-          x-bind:class="activeTab === 'overdue' && 'active'"
-        >
-          <span class="tab-icon">🔴</span>
-          <span class="tab-label">Vencidos</span>
-          <span class="tab-count" x-text="overdueAdeudos.length"></span>
-        </button>
-      </div>
-
-      <!-- ALERTA DE PAGOS VENCIDOS (solo cuando está cargado el tab de vencidos) -->
-      <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
+      <!-- Alerta de pagos vencidos -->
+      <template x-if="showOverdueAlert && overdueAdeudos.length > 0">
         <div class="overdue-alert-banner" x-transition>
           <div class="alert-icon">⚠️</div>
           <div class="alert-content">
@@ -268,101 +238,15 @@ const title = "Finanzas Estudiantiles";
         </div>
       </template>
 
-      <!-- CONTENIDO: PAGOS PENDIENTES -->
-      <template x-if="activeTab === 'pending'">
-        <section class="section-container">
+      <!-- SECCIÓN: PAGOS VENCIDOS -->
+      <template x-if="overdueAdeudos.length > 0">
+        <section class="section-container overdue-section">
           <div class="section-header">
-            <h2 class="section-title">Pagos Pendientes</h2>
+            <h2 class="section-title">🔴 Pagos Vencidos</h2>
+            <span class="badge-danger" x-text="overdueAdeudos.length"></span>
           </div>
           
-          <!-- LOADING STATE -->
-          <template x-if="loadingTab">
-            <div class="loading-container">
-              <div class="custom-loader"></div>
-              <p>Cargando pagos pendientes...</p>
-            </div>
-          </template>
-
-          <!-- EMPTY STATE -->
-          <template x-if="!loadingTab && adeudos.length === 0">
-            <div class="empty-state">
-              <div class="empty-icon">✨</div>
-              <h3>No tienes pagos pendientes</h3>
-              <p>Todos tus pagos están al día.</p>
-            </div>
-          </template>
-
-          <!-- PAYMENTS LIST -->
-          <div class="cards-stack" x-show="!loadingTab && adeudos.length > 0">
-            <template x-for="item in adeudos" :key="item.id">
-              <div class="payment-card pending-card">
-                <div class="card-left">
-                  <div class="status-dot yellow"></div>
-                  <div class="card-info">
-                    <h3 x-text="item.concepto"></h3>
-                    <p class="card-description" x-text="item.description"></p>
-                    <div class="payment-meta">
-                      <span class="meta-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <span>Vence el <strong x-text="item.fecha"></strong></span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="card-right">
-                  <div class="amount-block">
-                    <span class="currency">$</span>
-                    <span class="amount" x-text="item.monto"></span>
-                  </div>
-                  <button @click="openPayment(item)" class="action-btn secondary">Pagar</button>
-                </div>
-              </div>
-            </template>
-          </div>
-        </section>
-
-        <!-- RESUMEN SOLO PARA PENDIENTES -->
-        <section class="summary-section">
-          <div class="summary-card">
-            <div class="summary-item">
-              <span class="summary-label">Total de adeudos</span>
-              <span class="summary-amount" x-text="'$' + adeudos.reduce(function(acc, item) { return acc + parseFloat(item.monto.replace(',','')); }, 0).toFixed(2)"></span>
-            </div>
-            <div class="summary-divider"></div>
-            <div class="summary-item">
-              <span class="summary-label">Cantidad de pagos</span>
-              <span class="summary-count" x-text="adeudos.length"></span>
-            </div>
-          </div>
-        </section>
-      </template>
-
-      <!-- CONTENIDO: PAGOS VENCIDOS -->
-      <template x-if="activeTab === 'overdue'">
-        <section class="section-container">
-          <div class="section-header">
-            <h2 class="section-title">Pagos Vencidos</h2>
-          </div>
-
-          <!-- LOADING STATE -->
-          <template x-if="loadingTab">
-            <div class="loading-container">
-              <div class="custom-loader"></div>
-              <p>Cargando pagos vencidos...</p>
-            </div>
-          </template>
-
-          <!-- EMPTY STATE -->
-          <template x-if="!loadingTab && overdueAdeudos.length === 0">
-            <div class="empty-state">
-              <div class="empty-icon">🎉</div>
-              <h3>¡Excelente! No tienes pagos vencidos</h3>
-              <p>Mantén tus pagos al día para evitar intereses.</p>
-            </div>
-          </template>
-
-          <!-- PAYMENTS LIST -->
-          <div class="cards-stack" x-show="!loadingTab && overdueAdeudos.length > 0">
+          <div class="cards-stack">
             <template x-for="item in overdueAdeudos" :key="item.id">
               <div class="payment-card overdue-card">
                 <div class="card-left">
@@ -389,22 +273,70 @@ const title = "Finanzas Estudiantiles";
             </template>
           </div>
         </section>
-
-        <!-- RESUMEN SOLO PARA VENCIDOS -->
-        <section class="summary-section">
-          <div class="summary-card">
-            <div class="summary-item">
-              <span class="summary-label">Total vencido</span>
-              <span class="summary-amount danger" x-text="'$' + overdueAdeudos.reduce(function(acc, item) { return acc + parseFloat(item.monto.replace(',','')); }, 0).toFixed(2)"></span>
-            </div>
-            <div class="summary-divider"></div>
-            <div class="summary-item">
-              <span class="summary-label">Cantidad de pagos</span>
-              <span class="summary-count danger" x-text="overdueAdeudos.length"></span>
-            </div>
-          </div>
-        </section>
       </template>
+
+      <!-- SECCIÓN: PAGOS PENDIENTES -->
+      <section class="section-container">
+        <div class="section-header">
+          <h2 class="section-title">Pagos Pendientes</h2>
+          <span class="badge-info" x-text="adeudos.length"></span>
+        </div>
+        
+        <template x-if="adeudos.length === 0">
+          <div class="empty-state">
+            <div class="empty-icon">✨</div>
+            <h3>No tienes pagos pendientes</h3>
+            <p>Todos tus pagos están al día.</p>
+          </div>
+        </template>
+
+        <div class="cards-stack" x-show="adeudos.length > 0">
+          <template x-for="item in adeudos" :key="item.id">
+            <div class="payment-card pending-card">
+              <div class="card-left">
+                <div class="status-dot yellow"></div>
+                <div class="card-info">
+                  <h3 x-text="item.concepto"></h3>
+                  <p class="card-description" x-text="item.description"></p>
+                  <div class="payment-meta">
+                    <span class="meta-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      <span>Vence el <strong x-text="item.fecha"></strong></span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="card-right">
+                <div class="amount-block">
+                  <span class="currency">$</span>
+                  <span class="amount" x-text="item.monto"></span>
+                </div>
+                <button @click="openPayment(item)" class="action-btn secondary">Pagar</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- RESUMEN GENERAL -->
+      <section class="summary-section">
+        <div class="summary-card">
+          <div class="summary-item">
+            <span class="summary-label">Total de adeudos</span>
+            <span class="summary-amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-item">
+            <span class="summary-label">Pendientes</span>
+            <span class="summary-count" x-text="adeudos.length"></span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-item">
+            <span class="summary-label">Vencidos</span>
+            <span class="summary-count danger" x-text="overdueAdeudos.length"></span>
+          </div>
+        </div>
+      </section>
     </main>
 
     <div x-show="showModal" x-cloak class="modal-overlay">
@@ -460,54 +392,33 @@ const title = "Finanzas Estudiantiles";
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   
   :root {
-    --primary: #0f2818;
-    --secondary: #1a4d3e;
-    --accent: #d4af37;
-    --accent-light: #e8c547;
-    --bg: #f5f7fa;
-    --bg-light: #fafbfc;
+    --primary: #112d26;
+    --accent: #c4a47c;
+    --bg: #f8fafc;
     --white: #ffffff;
-    --text-primary: #1a202c;
-    --text-muted: #718096;
-    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-    --card-shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.12);
+    --text-muted: #64748b;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
-    --danger-light: #fecaca;
-    --pending: #fbbf24;
-    --pending-light: #fef3c7;
   }
 
   .page-wrapper {
-    max-width: 1100px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg) 100%);
+    background-color: var(--bg);
     min-height: 100vh;
   }
 
   .main-header {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-    border-radius: 28px;
-    padding: 3rem;
+    background: linear-gradient(135deg, var(--primary) 0%, rgba(17, 45, 38, 0.9) 100%);
+    border-radius: 24px;
+    padding: 2.5rem;
     color: white;
-    margin-bottom: 3rem;
+    margin-bottom: 2.5rem;
     box-shadow: var(--card-shadow);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .main-header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
-    border-radius: 50%;
   }
 
   .header-content {
@@ -515,52 +426,44 @@ const title = "Finanzas Estudiantiles";
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 2rem;
-    position: relative;
-    z-index: 1;
-  }
-
-  .user-profile {
-    display: flex;
-    align-items: center;
     gap: 1.5rem;
   }
 
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
   .avatar {
-    width: 70px;
-    height: 70px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
-    border-radius: 18px;
+    width: 55px;
+    height: 55px;
+    background: var(--accent);
+    border-radius: 15px;
     display: grid;
     place-items: center;
     color: var(--primary);
     font-weight: 800;
-    font-size: 1.4rem;
-    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+    font-size: 1.2rem;
   }
 
-  .welcome-text .greeting {
-    display: block;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-  }
-
-  .welcome-text h1 {
+  .header-text h1 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 800;
     color: white;
+  }
+
+  .header-text p {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
   }
 
   .balance-summary {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    text-align: right;
   }
 
   .balance-summary .label {
@@ -568,728 +471,21 @@ const title = "Finanzas Estudiantiles";
     color: rgba(255, 255, 255, 0.75);
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 8px;
+    letter-spacing: 0.5px;
   }
 
   .balance-summary .amount {
     display: block;
-    font-size: 2.8rem;
+    font-size: 2.5rem;
     font-weight: 800;
-    color: var(--accent-light);
-    margin: 0;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    color: var(--accent);
+    margin-top: 4px;
   }
 
   .content-grid {
     display: flex;
     flex-direction: column;
     gap: 2rem;
-  }
-
-  /* TAB NAVIGATION STYLES */
-  .tabs-navigation {
-    display: flex;
-    gap: 1rem;
-    background: var(--white);
-    padding: 0.75rem;
-    border-radius: 18px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid #e2e8f0;
-  }
-
-  .tab-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 1rem 1.75rem;
-    background: transparent;
-    border: 2px solid transparent;
-    border-radius: 14px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--text-muted);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    flex: 1;
-    position: relative;
-  }
-
-  .tab-btn:hover {
-    background: var(--bg-light);
-    color: var(--primary);
-    border-color: var(--accent);
-  }
-
-  .tab-btn.active {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-    color: white;
-    border-color: var(--primary);
-    box-shadow: 0 8px 24px rgba(15, 40, 24, 0.25);
-  }
-
-  .tab-btn.active .tab-count {
-    background: rgba(255, 255, 255, 0.3);
-    color: var(--accent-light);
-  }
-
-  .tab-icon {
-    font-size: 1.3rem;
-    display: flex;
-  }
-
-  .tab-label {
-    font-weight: 700;
-    min-width: 100px;
-    text-align: left;
-  }
-
-  .tab-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 28px;
-    height: 28px;
-    background: var(--bg-light);
-    color: var(--primary);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-left: auto;
-    transition: all 0.3s ease;
-  }
-
-  /* ALERT STYLES */
-  .overdue-alert-banner {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
-    border: 2px solid var(--danger-light);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .alert-icon {
-    font-size: 2rem;
-    flex-shrink: 0;
-  }
-
-  .alert-content {
-    flex: 1;
-  }
-
-  .alert-content h3 {
-    margin: 0 0 6px;
-    color: var(--danger);
-    font-size: 1.1rem;
-    font-weight: 700;
-  }
-
-  .alert-content p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.95rem;
-  }
-
-  .alert-close {
-    background: transparent;
-    border: none;
-    color: var(--danger);
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s;
-  }
-
-  .alert-close:hover {
-    color: var(--primary);
-    transform: scale(1.2);
-  }
-
-  /* SECTION STYLES */
-  .section-container {
-    background: var(--white);
-    border-radius: 20px;
-    padding: 2.5rem;
-    box-shadow: var(--card-shadow);
-    border: 1px solid #f1f5f9;
-    transition: all 0.3s ease;
-  }
-
-  .section-container:hover {
-    box-shadow: var(--card-shadow-hover);
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid var(--bg-light);
-  }
-
-  .section-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--primary);
-  }
-
-  /* PAYMENT CARDS */
-  .cards-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .payment-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.75rem;
-    background: linear-gradient(135deg, var(--white) 0%, var(--bg-light) 100%);
-    border-radius: 18px;
-    border: 2px solid #f1f5f9;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .payment-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, transparent, currentColor, transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .payment-card:hover {
-    border-color: #e2e8f0;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
-    transform: translateY(-4px);
-  }
-
-  .payment-card.overdue-card {
-    border-left: 5px solid var(--danger);
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.03) 0%, transparent 100%);
-  }
-
-  .payment-card.overdue-card:hover {
-    border-left-color: #dc2626;
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
-  }
-
-  .payment-card.pending-card {
-    border-left: 5px solid var(--pending);
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.03) 0%, transparent 100%);
-  }
-
-  .payment-card.pending-card:hover {
-    border-left-color: #d97706;
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, transparent 100%);
-  }
-
-  .card-left {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.75rem;
-    flex: 1;
-  }
-
-  .status-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 6px;
-    animation: pulse 2s infinite;
-  }
-
-  .status-dot.red {
-    background: var(--danger);
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
-  }
-
-  .status-dot.yellow {
-    background: var(--pending);
-    box-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.6;
-    }
-  }
-
-  .card-info {
-    flex: 1;
-  }
-
-  .card-info h3 {
-    margin: 0 0 8px;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.3px;
-  }
-
-  .card-description {
-    margin: 0 0 12px;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-
-  .payment-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .meta-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-
-  .meta-item svg {
-    color: var(--accent);
-    width: 16px;
-    height: 16px;
-  }
-
-  .meta-item strong {
-    color: var(--primary);
-    font-weight: 700;
-  }
-
-  .card-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 1rem;
-    margin-left: 2rem;
-  }
-
-  .amount-block {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-  }
-
-  .currency {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--accent);
-  }
-
-  .amount {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--primary);
-    letter-spacing: -0.5px;
-  }
-
-  /* EMPTY STATE */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    text-align: center;
-  }
-
-  .empty-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    animation: float 3s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-15px);
-    }
-  }
-
-  .empty-state h3 {
-    margin: 1rem 0 0.5rem;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--primary);
-  }
-
-  .empty-state p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 1rem;
-  }
-
-  /* ACTION BUTTONS */
-  .action-btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
-  }
-
-  .action-btn.primary {
-    background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
-  }
-
-  .action-btn.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
-  }
-
-  .action-btn.secondary {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
-    color: var(--primary);
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
-  }
-
-  .action-btn.secondary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.35);
-  }
-
-  /* SUMMARY SECTION */
-  .summary-section {
-    margin-top: 2rem;
-  }
-
-  .summary-card {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-    border-radius: 20px;
-    padding: 2rem;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    box-shadow: var(--card-shadow-hover);
-    color: white;
-  }
-
-  .summary-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .summary-label {
-    display: block;
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-  }
-
-  .summary-amount {
-    display: block;
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--accent-light);
-  }
-
-  .summary-amount.danger {
-    color: #fca5a5;
-  }
-
-  .summary-count {
-    display: block;
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--accent-light);
-  }
-
-  .summary-count.danger {
-    color: #fca5a5;
-  }
-
-  .summary-divider {
-    width: 1px;
-    height: 50px;
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  /* LOADING STATE */
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    gap: 1.5rem;
-  }
-
-  .loading-container p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  .custom-loader {
-    width: 52px;
-    height: 52px;
-    border: 4px solid var(--bg-light);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* MODAL STYLES */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: flex-end;
-    z-index: 1000;
-  }
-
-  .modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-  }
-
-  .modal-sheet {
-    position: relative;
-    background: white;
-    border-radius: 28px 28px 0 0;
-    width: 100%;
-    max-width: 600px;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.15);
-  }
-
-  .sheet-handle {
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 2px;
-    width: 40px;
-    margin: 16px auto;
-  }
-
-  .sheet-body {
-    padding: 2rem;
-  }
-
-  .confirm-payment-ui {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .payment-icon-circle {
-    font-size: 4rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .payment-details-card {
-    width: 100%;
-    background: var(--bg-light);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    border: 1px solid #f1f5f9;
-  }
-
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
-  }
-
-  .detail-row:last-child {
-    margin-bottom: 0;
-  }
-
-  .detail-row.total-row {
-    border-top: 2px solid #e2e8f0;
-    padding-top: 1rem;
-    font-size: 1.1rem;
-    font-weight: 700;
-  }
-
-  .detail-row.total-row strong {
-    font-size: 1.8rem;
-    color: var(--accent);
-  }
-
-  .btn-primary-action {
-    width: 100%;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-    color: white;
-    padding: 1.2rem;
-    border-radius: 14px;
-    border: none;
-    font-weight: 800;
-    font-size: 1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 8px 24px rgba(15, 40, 24, 0.25);
-    margin-top: 1.5rem;
-  }
-
-  .btn-primary-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(15, 40, 24, 0.35);
-  }
-
-  .btn-link-action {
-    width: 100%;
-    background: transparent;
-    color: var(--text-muted);
-    border: none;
-    cursor: pointer;
-    text-decoration: underline;
-    margin-top: 1rem;
-    padding: 0.75rem;
-    font-weight: 600;
-    transition: color 0.2s;
-    font-size: 0.95rem;
-  }
-
-  .btn-link-action:hover {
-    color: var(--primary);
-  }
-
-  [x-cloak] {
-    display: none !important;
-  }
-
-  @media (max-width: 768px) {
-    .page-wrapper {
-      padding: 1.25rem 1rem;
-    }
-
-    .main-header {
-      padding: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .header-content {
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .balance-summary {
-      align-items: flex-start;
-      width: 100%;
-    }
-
-    .section-container {
-      padding: 1.75rem;
-    }
-
-    .payment-card {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1.25rem;
-      padding: 1.5rem;
-    }
-
-    .card-right {
-      width: 100%;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      margin-left: 0;
-    }
-
-    .tabs-navigation {
-      flex-direction: column;
-      padding: 0.5rem;
-      gap: 0.5rem;
-    }
-
-    .tab-btn {
-      padding: 0.875rem 1rem;
-      font-size: 0.95rem;
-    }
-
-    .tab-label {
-      min-width: auto;
-    }
-
-    .tab-count {
-      font-size: 0.8rem;
-      min-width: 24px;
-      height: 24px;
-    }
-
-    .summary-card {
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .summary-divider {
-      width: 100%;
-      height: 1px;
-    }
-
-    .modal-overlay {
-      align-items: center;
-    }
-
-    .modal-sheet {
-      border-radius: 24px;
-      max-width: calc(100% - 2rem);
-      width: 100%;
-    }
-
-    .sheet-body {
-      padding: 1.5rem;
-    }
-  }
-</style>
   }
 
   .section-container {
@@ -1782,96 +978,6 @@ const title = "Finanzas Estudiantiles";
     color: var(--primary);
   }
 
-  /* TAB NAVIGATION STYLES */
-  .tabs-navigation {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    background: white;
-    padding: 1rem;
-    border-radius: 16px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid #f1f5f9;
-  }
-
-  .tab-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 1.5rem;
-    background: transparent;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--text-muted);
-    transition: all 0.3s ease;
-    flex: 1;
-  }
-
-  .tab-btn:hover {
-    border-color: var(--accent);
-    color: var(--primary);
-  }
-
-  .tab-btn.active {
-    background: linear-gradient(135deg, var(--primary) 0%, rgba(17, 45, 38, 0.9) 100%);
-    color: white;
-    border-color: var(--primary);
-    box-shadow: 0 4px 12px rgba(17, 45, 38, 0.2);
-  }
-
-  .tab-icon {
-    font-size: 1.2rem;
-  }
-
-  .tab-label {
-    font-weight: 700;
-  }
-
-  .tab-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    font-size: 0.85rem;
-    font-weight: 700;
-    margin-left: auto;
-  }
-
-  .tab-btn.active .tab-count {
-    background: rgba(255, 255, 255, 0.5);
-  }
-
-  /* LOADING STATE */
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-    gap: 1.5rem;
-  }
-
-  .loading-container p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  .custom-loader {
-    width: 48px;
-    height: 48px;
-    border: 4px solid #f1f5f9;
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -1941,20 +1047,6 @@ const title = "Finanzas Estudiantiles";
     .overdue-alert-banner {
       flex-direction: column;
       text-align: center;
-    }
-
-    .tabs-navigation {
-      flex-direction: column;
-      padding: 0.75rem;
-    }
-
-    .tab-btn {
-      padding: 0.75rem 1rem;
-      font-size: 0.95rem;
-    }
-
-    .tab-count {
-      font-size: 0.8rem;
     }
   }
 </style>
