@@ -5,7 +5,7 @@ import { Fragment } from 'astro/jsx-runtime';
 
 <Fragment>
   <div id="donut-wrapper" class="w-full flex flex-col items-center">
-    <div id="donut-container" class="relative w-full max-w-xs aspect-square">
+    <div id="donut-container" class="relative w-full max-w-sm aspect-square">
       <canvas id="chartDonut"></canvas>
       <div class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
         <span id="donut-pct" class="text-4xl font-extrabold text-[#2e594d]">0%</span>
@@ -71,9 +71,10 @@ import { Fragment } from 'astro/jsx-runtime';
             }]
           },
           options: {
-            cutout: '80%',
+            cutout: '78%',
+            layout: { padding: { top: 8, bottom: 8 } },
             plugins: { 
-              legend: { position: 'bottom', labels: { usePointStyle: true } },
+              legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 16 } },
               tooltip: {
                 callbacks: {
                   label: (context) => {
