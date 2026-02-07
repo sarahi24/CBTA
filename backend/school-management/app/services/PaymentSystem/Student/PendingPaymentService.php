@@ -37,13 +37,25 @@ class PendingPaymentService{
 
      public function showOverduePayments(User $user)
     {
+            if($user->status==='baja'){
+                throw ValidationException::withMessages(['student'=>"El usuario esta dado de baja"]);
+            }
+
             return PaymentConcept::where('status','finalizado')
             ->whereDoesntHave('payments', fn($q) => $q->where('user_id', $user->id))
             ->where(function($q) use ($user) {
                 $q->where('is_global', true)
-                  ->orWhereHas('users', fn($q) => $q->where('users.id', $user->id))
-                  ->orWhereHas('careers', fn($q) => $q->where('careers.id', $user->career_id))
-                  ->orWhereHas('paymentConceptSemesters', fn($q) => $q->where('semestre', $user->semestre));
+                  ->orWhereHas('users', fn($q) => $q->where('users.id', $user->id));
+                
+                // Solo aplicar filtro de carrera si existe
+                if ($user->career_id) {
+                    $q->orWhereHas('careers', fn($q) => $q->where('careers.id', $user->career_id));
+                }
+                
+                // Solo aplicar filtro de semestre si existe
+                if ($user->semestre) {
+                    $q->orWhereHas('paymentConceptSemesters', fn($q) => $q->where('semestre', $user->semestre));
+                }
             })
             ->get()
                 ->map(fn($concept) => [
