@@ -63,17 +63,87 @@ class DashboardController extends Controller
             ]);
     }
 
-    public function history()
+    /**
+     * Get payment history for authenticated user or specified student
+     * GET /api/v1/dashboard/history/{studentId?}
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @param int|null $studentId - Optional student ID (for parents)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function history(\Illuminate\Http\Request $request, $studentId = null)
     {
-         $user = Auth::user();
-            $data = $this->dashboardService->paymentHistory($user);
-
+        try {
+            $user = Auth::user();
+            $page = $request->query('page', 1);
+            $perPage = $request->query('perPage', 15);
+            $forceRefresh = $request->query('forceRefresh', false);
+            
+            // Get the student to query (current user or specified student)
+            $targetUserId = $studentId ?? $user->id;
+            
+            // For security, verify parent-student relationship if studentId is provided
+            if ($studentId && $studentId !== $user->id) {
+                // Verify that the authenticated user is a parent of this student
+                $isRelated = \DB::table('family_relationships')
+                    ->where('parent_id', $user->id)
+                    ->where('student_id', $studentId)
+                    ->exists();
+                
+                if (!$isRelated && !$user->hasRole('admin')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes permiso para acceder al historial de este estudiante',
+                        'error_code' => 'UNAUTHORIZED'
+                    ], 403);
+                }
+            }
+            
+            // Get data from service
+            $data = $this->dashboardService->paymentHistory($user, $forceRefresh);
+            
+            // Ensure data is a collection
+            if (is_object($data) && method_exists($data, 'paginate')) {
+                $paginated = $data->paginate($perPage, ['*'], 'page', $page);
+            } else {
+                // If data is already a collection/array, manually paginate
+                $items = collect($data)->forPage($page, $perPage);
+                $total = collect($data)->count();
+                
+                $paginated = [
+                    'items' => $items->values(),
+                    'currentPage' => (int)$page,
+                    'perPage' => (int)$perPage,
+                    'total' => $total,
+                    'lastPage' => ceil($total / $perPage),
+                    'hasMorePages' => $page < ceil($total / $perPage),
+                    'nextPage' => $page < ceil($total / $perPage) ? $page + 1 : null,
+                    'previousPage' => $page > 1 ? $page - 1 : null
+                ];
+            }
+            
             return response()->json([
                 'success' => true,
-                'data' => $data,
-                'message' => $data->isEmpty()?'No hay pagos registrados en el historial':null
-
+                'message' => 'Historial de pagos obtenido correctamente',
+                'data' => [
+                    'payment_history' => $paginated
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo historial de pagos', [
+                'user_id' => Auth::id(),
+                'student_id' => $studentId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el historial de pagos',
+                'error_code' => 'PAYMENT_HISTORY_ERROR'
+            ], 500);
+        }
     }
 
     /**
