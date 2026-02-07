@@ -2,10 +2,8 @@
 import StudentLayout from '../../../layouts/LayoutEstu.astro';
 import { StudentAPI } from '../../../utils/studentAPI.js';
 
-// Configurar para SSR (renderizado bajo demanda)
-export const prerender = false;
-
-const { id } = Astro.params;
+// Obtener ID del query parameter
+const paymentId = Astro.url.searchParams.get('id');
 
 let paymentDetail = null;
 let error = null;
@@ -17,10 +15,10 @@ try {
   const storedUserName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
   userName = storedUserName || 'Estudiante';
 
-  if (token && id) {
+  if (token && paymentId) {
     loading = true;
     try {
-      const response = await StudentAPI.getPaymentById(id, token);
+      const response = await StudentAPI.getPaymentById(paymentId, token);
       
       if (response.success && response.data?.payment) {
         const payment = response.data.payment;
@@ -51,8 +49,10 @@ try {
       error = 'Error al cargar la información del pago: ' + err.message;
     }
     loading = false;
+  } else if (!paymentId) {
+    error = 'ID de pago no proporcionado';
   } else {
-    error = token ? 'ID de pago inválido' : 'Usuario no autenticado';
+    error = 'Usuario no autenticado';
   }
 } catch (err) {
   console.error('❌ Error initializing payment detail:', err);
@@ -60,7 +60,7 @@ try {
 }
 ---
 
-<StudentLayout title={`Detalle de Pago #${id}`}>
+<StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper">
     <header class="detail-header">
       <a href="/estudiante/historial" class="back-button">
@@ -69,7 +69,7 @@ try {
       </a>
       <div class="header-title">
         <p class="pre-title">Detalle de Pago</p>
-        <h1>Pago #{id}</h1>
+        <h1>Pago {paymentId ? '#' + paymentId : 'No disponible'}</h1>
       </div>
     </header>
 
