@@ -354,7 +354,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               ? `${self.apiBaseUrl}/v1/concepts/${self.formData.id}` 
               : `${self.apiBaseUrl}/v1/concepts`;
             return fetch(endpoint, {
-              method: self.formData.id ? 'PATCH' : 'POST',
+              method: self.formData.id ? 'PUT' : 'POST',
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
