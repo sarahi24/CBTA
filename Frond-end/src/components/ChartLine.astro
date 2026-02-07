@@ -15,6 +15,7 @@ import { Fragment } from 'astro/jsx-runtime';
     window.updateChartLine = function() {
       const ctx = document.getElementById('chartLine');
       if (!ctx) return;
+      if (typeof Chart === 'undefined') return;
 
       const currentYear = new Date().getFullYear();
       const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -23,23 +24,48 @@ import { Fragment } from 'astro/jsx-runtime';
       const estudiantes = new Array(12).fill(0);
 
       try {
-        const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+        const parseCurrencyText = (value) => {
+          if (!value) return 0;
+          const cleaned = String(value).replace(/[^0-9.-]+/g, '');
+          return Number(cleaned || 0);
+        };
 
-        charges.forEach(c => {
-          const date = new Date(c.createdAt || c.date);
-          if (date.getFullYear() === currentYear) {
-            const m = date.getMonth();
-            const amount = parseFloat(c.amount) || 0;
-            const status = String(c.status).toLowerCase();
+        const cardPaidEl = document.getElementById('count-recaudado');
+        const cardPendingEl = document.getElementById('count-pending');
+        const cardPaid = parseCurrencyText(cardPaidEl?.textContent);
+        const cardPending = parseCurrencyText(cardPendingEl?.textContent);
 
-            if (['paid', 'pagado'].includes(status)) {
-              recaudado[m] += amount;
-            } else {
-              pendientes[m] += amount;
+        const totals = JSON.parse(localStorage.getItem('dashboardTotals') || 'null');
+
+        if (cardPaidEl || cardPendingEl) {
+          const currentMonth = new Date().getMonth();
+          recaudado[currentMonth] = cardPaid;
+          pendientes[currentMonth] = cardPending;
+        } else if (totals && typeof totals === 'object') {
+          const paidAmount = parseFloat(totals.paidAmount || 0);
+          const pendingAmount = parseFloat(totals.pendingAmount || 0);
+          const currentMonth = new Date().getMonth();
+          recaudado[currentMonth] = paidAmount;
+          pendientes[currentMonth] = pendingAmount;
+        } else {
+          const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+
+          charges.forEach(c => {
+            const date = new Date(c.createdAt || c.date);
+            if (date.getFullYear() === currentYear) {
+              const m = date.getMonth();
+              const amount = parseFloat(c.amount) || 0;
+              const status = String(c.status).toLowerCase();
+
+              if (['paid', 'pagado'].includes(status)) {
+                recaudado[m] += amount;
+              } else {
+                pendientes[m] += amount;
+              }
+              estudiantes[m] += 1;
             }
-            estudiantes[m] += 1;
-          }
-        });
+          });
+        }
 
         if (window.myLineChart) window.myLineChart.destroy();
 
@@ -101,5 +127,7 @@ import { Fragment } from 'astro/jsx-runtime';
     window.addEventListener('storage', window.updateChartLine);
     // Escuchar eventos personalizados de tus tarjetas
     window.addEventListener('chargesUpdated', window.updateChartLine);
+    window.addEventListener('dashboardTotalsUpdated', window.updateChartLine);
+    window.addEventListener('cardsTotalsUpdated', window.updateChartLine);
   </script>
 </Fragment>
