@@ -56,13 +56,26 @@ const title = "Finanzas Estudiantiles";
             // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
             const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
             
-            const overdueArray = overdueData?.data?.pending_payments || [];
+            console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
+            
+            // El backend retorna: { success: true, data: [...] } donde data es un array
+            let overdueArray = [];
+            if (overdueData?.data) {
+              if (Array.isArray(overdueData.data)) {
+                overdueArray = overdueData.data;
+              } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
+                overdueArray = overdueData.data.pending_payments;
+              }
+            }
+            
+            console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
+            
             this.overdueAdeudos = overdueArray.map(payment => ({
               id: payment.id,
-              concepto: payment.concept_name || 'Pago',
-              monto: payment.amount?.toString() || '0.00',
-              fecha: payment.end_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
-              description: payment.description || ''
+              concepto: payment.concept_name || payment.concepto || 'Pago',
+              monto: payment.amount?.toString() || payment.monto || '0.00',
+              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              description: payment.description || payment.descripcion || ''
             }));
             
             this.showOverdueAlert = this.overdueAdeudos.length > 0;
@@ -80,18 +93,27 @@ const title = "Finanzas Estudiantiles";
             // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
             const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
             
-            // Extraer pending_payments del response
-            const paymentsArray = paymentsData?.data?.pending_payments || 
-                                  Array.isArray(paymentsData.data) ? paymentsData.data : 
-                                  Array.isArray(paymentsData) ? paymentsData : [];
+            console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
+            
+            // El backend retorna: { success: true, data: [...] } donde data es un array
+            let paymentsArray = [];
+            if (paymentsData?.data) {
+              if (Array.isArray(paymentsData.data)) {
+                paymentsArray = paymentsData.data;
+              } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
+                paymentsArray = paymentsData.data.pending_payments;
+              }
+            }
+            
+            console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
             
             this.adeudos = paymentsArray.map(payment => ({
               id: payment.id,
               concepto: payment.concept_name || payment.concepto || 'Pago',
               monto: payment.amount?.toString() || payment.monto || '0.00',
-              fecha: payment.end_date || payment.due_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
               status: payment.status || 'Pendiente',
-              description: payment.description || ''
+              description: payment.description || payment.descripcion || ''
             }));
             console.log('✅ Adeudos cargados:', this.adeudos.length);
           } catch (err) {
