@@ -9,8 +9,9 @@ const title = "Finanzas Estudiantiles";
 <StudentLayout title={title}>
   <script type="module">
     // Importar StudentAPI en el contexto global para Alpine
-    import { StudentAPI } from '/src/utils/studentAPI.js';
+    import { StudentAPI } from '../../utils/studentAPI.js';
     window.StudentAPI = StudentAPI;
+    console.log('✅ StudentAPI importado globalmente:', !!window.StudentAPI);
   </script>
   
   <div 
