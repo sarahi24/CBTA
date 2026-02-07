@@ -215,12 +215,12 @@ const title = "Finanzas Estudiantiles";
           <div class="avatar">PG</div>
           <div class="welcome-text">
             <span class="greeting">Estado de Cuenta</span>
-            <h1 x-text="`Hola, ${alumnoNombre.split(' ')[0]}`"></h1>
+            <h1 x-text="'Hola, ' + alumnoNombre.split(' ')[0]"></h1>
           </div>
         </div>
         <div class="balance-summary">
           <span class="label">Total por Pagar</span>
-          <span class="amount" x-text="`$${adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)}`"></span>
+          <span class="amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)"></span>
         </div>
       </div>
     </header>
