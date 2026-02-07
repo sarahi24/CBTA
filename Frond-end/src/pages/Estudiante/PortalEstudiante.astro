@@ -35,25 +35,26 @@ const title = 'Panel de Estudiante';
           this.loading = true;
           try {
             const parsedUserId = parseInt(userId, 10);
-            const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-              window.StudentAPI.getPaymentHistory(parsedUserId, token).catch(function(e) { return { error: e.message }; }),
+            const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all([
+              window.StudentAPI.getPendingPayments(null, token, false, 'student').catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getOverdueTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getPaidTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getPendingTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; })
             ]);
 
-            if (historyRes && !historyRes.error) {
-              const items = historyRes.data && historyRes.data.payment_history && historyRes.data.payment_history.items ? historyRes.data.payment_history.items : [];
+            if (pendingPaymentsRes && !pendingPaymentsRes.error) {
+              const items = pendingPaymentsRes.data && pendingPaymentsRes.data.pending_payments ? pendingPaymentsRes.data.pending_payments : [];
               this.history = items.map(function(payment) {
                 return {
                   id: payment.id,
-                  concepto: payment.concept || 'Pago',
+                  concepto: payment.concept_name || payment.concepto || 'Pago',
                   monto: payment.amount || '0.00',
-                  fecha: payment.date || new Date().toLocaleDateString('es-MX'),
+                  fecha: payment.end_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
                   metodo: payment.method || 'Metodo desconocido',
                   status: payment.status || 'pending'
                 };
               });
+              console.log('✅ Pagos pendientes cargados:', this.history.length);
             }
 
             if (overdueRes && !overdueRes.error) {
