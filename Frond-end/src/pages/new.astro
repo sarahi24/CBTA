@@ -147,9 +147,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-User-Role': 'financial-staff',
-            'X-User-Permission': 'view.users'
+            'Authorization': `Bearer ${token}`
           }
         })
         .then(res => {
