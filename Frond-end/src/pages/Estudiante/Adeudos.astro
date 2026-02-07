@@ -232,7 +232,8 @@ const title = "Finanzas Estudiantiles";
       <div class="tabs-navigation">
         <button 
           @click="switchTab('pending')"
-          :class="activeTab === 'pending' ? 'tab-btn active' : 'tab-btn'"
+          class="tab-btn"
+          x-bind:class="activeTab === 'pending' && 'active'"
         >
           <span class="tab-icon">📋</span>
           <span class="tab-label">Pendientes</span>
@@ -241,7 +242,8 @@ const title = "Finanzas Estudiantiles";
         
         <button 
           @click="switchTab('overdue')"
-          :class="activeTab === 'overdue' ? 'tab-btn active' : 'tab-btn'"
+          class="tab-btn"
+          x-bind:class="activeTab === 'overdue' && 'active'"
         >
           <span class="tab-icon">🔴</span>
           <span class="tab-label">Vencidos</span>
@@ -319,7 +321,7 @@ const title = "Finanzas Estudiantiles";
           <div class="summary-card">
             <div class="summary-item">
               <span class="summary-label">Total de adeudos</span>
-              <span class="summary-amount" x-text="`$${adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)}`"></span>
+              <span class="summary-amount" x-text="'$' + adeudos.reduce(function(acc, item) { return acc + parseFloat(item.monto.replace(',','')); }, 0).toFixed(2)"></span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-item">
@@ -388,7 +390,7 @@ const title = "Finanzas Estudiantiles";
           <div class="summary-card">
             <div class="summary-item">
               <span class="summary-label">Total vencido</span>
-              <span class="summary-amount danger" x-text="`$${overdueAdeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)}`"></span>
+              <span class="summary-amount danger" x-text="'$' + overdueAdeudos.reduce(function(acc, item) { return acc + parseFloat(item.monto.replace(',','')); }, 0).toFixed(2)"></span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-item">
