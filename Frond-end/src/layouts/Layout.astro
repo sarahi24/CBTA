@@ -362,6 +362,16 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 			setActiveLink(); 
 			console.log('🚀 Ejecutando filterNavigationByRole en load...');
 			filterNavigationByRole(); // Filtrar navegación por rol al cargar
+			
+			// Redireccionar automáticamente a /roles si el usuario es admin y está en Dashboard
+			const userRole = getUserRole();
+			const normalizedRole = normalizeRole(userRole);
+			const currentPath = window.location.pathname.replace(/\/$/, "") || "/Dashboard";
+			
+			if (normalizedRole === 'administrador' && (currentPath === '/Dashboard' || currentPath === '/' || currentPath === '')) {
+				console.log('🔀 Usuario administrador detectado, redirigiendo a /roles');
+				window.location.href = '/roles';
+			}
 		});
 		document.addEventListener("astro:after-swap", () => {
 			setActiveLink();
