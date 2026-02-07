@@ -139,7 +139,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           mapStudents([]);
           return;
         }
-        const url = new URL(this.apiBaseUrl + '/v1/students');
+        const url = new URL(this.apiBaseUrl + '/v1/admin-actions/show-users');
         url.searchParams.append('page', '1');
         url.searchParams.append('perPage', '1000');
         fetch(url.toString(), {
@@ -147,18 +147,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'X-User-Role': 'financial-staff',
+            'X-User-Permission': 'view.users'
           }
         })
         .then(res => {
           if (!res.ok) {
-            console.warn(`⚠️ Students API returned ${res.status}, using localStorage fallback`);
+            console.warn(`⚠️ Users API returned ${res.status}, using localStorage fallback`);
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
         })
         .then(json => {
-          const items = json.data?.payments?.items || json.data?.items || json.data || [];
+          const items = json.data?.users?.items || json.data?.items || json.data || [];
           if (Array.isArray(items) && items.length) {
             mapStudents(items);
           } else {
@@ -335,8 +337,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               return window.AdminAPI.createConcept(token, payload);
             }
           } else {
-            return fetch(self.apiBaseUrl + '/v1/concepts', {
-              method: self.formData.id ? 'PUT' : 'POST',
+            const endpoint = self.formData.id 
+              ? `${self.apiBaseUrl}/v1/concepts/${self.formData.id}` 
+              : `${self.apiBaseUrl}/v1/concepts`;
+            return fetch(endpoint, {
+              method: self.formData.id ? 'PATCH' : 'POST',
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
