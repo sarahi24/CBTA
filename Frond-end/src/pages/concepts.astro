@@ -34,8 +34,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </header>
 
     <div id="concepts-grid"
-         class="grid gap-6"
-         style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+         class="grid gap-8"
+         style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));">
     </div>
 
   </div>
@@ -131,8 +131,8 @@ function renderConcepts(){
                           (c.metadata?.students_count) || 0;
 
     return `
-      <div class="bg-white rounded-xl shadow-lg border ${isInactive ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'} p-5 flex flex-col justify-between transition hover:shadow-2xl">
-        <div class="flex justify-between items-start mb-4">
+      <div class="bg-white rounded-xl shadow-lg border ${isInactive ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'} p-6 flex flex-col justify-between transition hover:shadow-2xl">
+        <div class="flex justify-between items-start mb-6">
           <div class="pr-2">
             <h3 class="font-bold text-lg text-gray-900 leading-tight line-clamp-2">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
             ${getStatusBadge(c.status)}
@@ -140,7 +140,7 @@ function renderConcepts(){
           <div class="text-xl font-black text-[${PRIMARY_TEXT_COLOR_HEX}] flex-shrink-0">${formatCurrency(amount)}</div>
         </div>
 
-        <div class="text-sm space-y-2 py-3 rounded-lg bg-white/50 border border-gray-100 px-3 mb-4">
+        <div class="text-sm space-y-3 py-4 rounded-lg bg-white/50 border border-gray-100 px-4 mb-6">
           <div class="flex justify-between items-center">
             <span class="text-gray-500 font-medium text-xs uppercase italic">Filtro:</span>
             <span class="font-semibold text-gray-800">${scopeText}</span>
@@ -151,32 +151,32 @@ function renderConcepts(){
           </div>
         </div>
 
-        <div class="space-y-3">
-          <div class="hidden text-xs text-gray-600 bg-gray-50 p-2 rounded border mb-2" id="details-${c.id}">
+        <div class="space-y-4">
+          <div class="hidden text-xs text-gray-600 bg-gray-50 p-3 rounded border mb-3" id="details-${c.id}">
               ${escapeHtml(c.description || 'Sin descripción.')}
           </div>
           
-          <div class="flex gap-2">
-            <button onclick="window.editConcept('${c.id}')" class="w-1/3 py-2 text-xs font-bold border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+          <div class="flex gap-3">
+            <button onclick="window.editConcept('${c.id}')" class="w-1/3 py-2.5 text-xs font-bold border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
               <i class="fas fa-edit mr-1"></i> Editar
             </button>
 
             ${!isInactive ? `
-              <button onclick="window.finalizeConcept('${c.id}')" class="w-1/3 py-2 text-xs font-bold bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 border border-amber-200 transition">
+              <button onclick="window.finalizeConcept('${c.id}')" class="w-1/3 py-2.5 text-xs font-bold bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 border border-amber-200 transition">
                 <i class="fas fa-check-double mr-1"></i> Finalizar
               </button>
             ` : `
-              <button onclick="window.activateConcept('${c.id}')" class="w-1/3 py-2 text-xs font-bold bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 border border-emerald-200 transition">
+              <button onclick="window.activateConcept('${c.id}')" class="w-1/3 py-2.5 text-xs font-bold bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 border border-emerald-200 transition">
                 <i class="fas fa-play mr-1"></i> Activar
               </button>
             `}
 
-            <button onclick="window.deleteConcept('${c.id}')" class="w-1/3 py-2 text-xs font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-200 transition">
+            <button onclick="window.deleteConcept('${c.id}')" class="w-1/3 py-2.5 text-xs font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-200 transition">
               <i class="fas fa-trash-alt mr-1"></i> Borrar
             </button>
           </div>
           
-          <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="w-full text-[10px] text-gray-400 hover:text-gray-600 uppercase font-bold tracking-widest transition">
+          <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="w-full text-[10px] text-gray-400 hover:text-gray-600 uppercase font-bold tracking-widest transition mt-2">
             Ver descripción <i class="fas fa-chevron-down ml-1"></i>
           </button>
         </div>
