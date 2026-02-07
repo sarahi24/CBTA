@@ -7,11 +7,8 @@ const title = "Finanzas Estudiantiles";
 ---
 
 <StudentLayout title={title}>
-  <script type="module" client:load>
-    import { StudentAPI } from '../../utils/studentAPI.js';
-    window.StudentAPI = StudentAPI;
-    console.log('✅ StudentAPI importado globalmente:', !!window.StudentAPI);
-  </script>
+  <!-- Load StudentAPI globally before Alpine initializes -->
+  <script src="/studentAPI.js" is:inline></script>
   
   <div 
     class="page-wrapper"
