@@ -60,4 +60,56 @@ class PendingPaymentController extends Controller
 
     }
 
+    public function getAllPending(Request $request, $studentId = null)
+    {
+        $user = Auth::user();
+        $targetUserId = $studentId ?? $user->id;
+
+        // Verify parent-student relationship if accessing different user's data
+        if ($targetUserId != $user->id) {
+            $isParent = $user->hasRole('parent') && 
+                       $user->children()
+                            ->where('children.id', $targetUserId)
+                            ->exists();
+            
+            if (!$isParent && !$user->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado',
+                    'error_code' => 'UNAUTHORIZED'
+                ], 403);
+            }
+        }
+
+        $targetUser = \App\Models\User::findOrFail($targetUserId);
+        
+        try {
+            $pendingPayments = \App\Models\PaymentConcept::pendingPaymentConcept($targetUser)
+                ->select('id', 'concept_name', 'description', 'amount', 'start_date', 'end_date')
+                ->get()
+                ->map(fn($concept) => [
+                    'id' => $concept->id,
+                    'concept_name' => $concept->concept_name,
+                    'description' => $concept->description,
+                    'amount' => $concept->amount,
+                    'start_date' => $concept->start_date,
+                    'end_date' => $concept->end_date,
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'pending_payments' => $pendingPayments
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener pagos pendientes',
+                'error_code' => 'FETCH_ERROR'
+            ], 500);
+        }
+    }
+
 }

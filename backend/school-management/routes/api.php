@@ -98,6 +98,9 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:view overdue concepts')->get('/overdue',[PendingPaymentController::class,'overdue']);
 
     });
+    Route::prefix('pending-payments')->middleware('role:student')->group(function(){
+        Route::middleware('permission:view pending concepts')->get('/{studentId?}',[PendingPaymentController::class,'getAllPending']);
+    });
 
     Route::prefix('dashboard-staff')->middleware('role:financial staff')->group(function(){
         Route::middleware('permission:view all financial overview')->get('/data',[StaffDashboardController::class,'getData']);
