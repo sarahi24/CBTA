@@ -8,16 +8,9 @@ const title = "Finanzas Estudiantiles";
 
 <StudentLayout title={title}>
   <script type="module" client:load>
-    // Importar StudentAPI en el contexto global para Alpine usando dynamic import
-    (async () => {
-      try {
-        const module = await import('../../utils/studentAPI.js');
-        window.StudentAPI = module.StudentAPI;
-        console.log('✅ StudentAPI importado globalmente:', !!window.StudentAPI);
-      } catch (err) {
-        console.error('❌ Error al importar StudentAPI:', err);
-      }
-    })();
+    import { StudentAPI } from '../../utils/studentAPI.js';
+    window.StudentAPI = StudentAPI;
+    console.log('✅ StudentAPI importado globalmente:', !!window.StudentAPI);
   </script>
   
   <div 
