@@ -220,7 +220,7 @@ const title = "Finanzas Estudiantiles";
         </div>
         <div class="balance-summary">
           <span class="label">Total por Pagar</span>
-          <span class="amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+          <span class="amount" x-text="`$${adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)}`"></span>
         </div>
       </div>
     </header>
@@ -321,7 +321,7 @@ const title = "Finanzas Estudiantiles";
           <div class="summary-card">
             <div class="summary-item">
               <span class="summary-label">Total de adeudos</span>
-              <span class="summary-amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+              <span class="summary-amount" x-text="`$${adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)}`"></span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-item">
@@ -390,7 +390,7 @@ const title = "Finanzas Estudiantiles";
           <div class="summary-card">
             <div class="summary-item">
               <span class="summary-label">Total vencido</span>
-              <span class="summary-amount danger" x-text="'$' + overdueAdeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+              <span class="summary-amount danger" x-text="`$${overdueAdeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toFixed(2)}`"></span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-item">
