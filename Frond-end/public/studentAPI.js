@@ -205,7 +205,7 @@ window.StudentAPI = {
     try {
       // Construir URL base SIN el parámetro studentId en el path
       // El backend identifica al usuario por el token JWT
-      const url = new URL(`${API_BASE}/pending-payments`);
+      const url = new URL(`${API_BASE}/pending-payment`);
       
       // Si se proporciona studentId (caso de padres), agregarlo como query parameter
       if (studentId) {
@@ -249,7 +249,7 @@ window.StudentAPI = {
   },
 
   /**
-   * ADEUDOS - GET /api/v1/pending-payments/overdue
+   * ADEUDOS - GET /api/v1/pending-payment/overdue
    * Obtener pagos vencidos del usuario autenticado
    * NOTA: NO se usa /{studentId} porque causa 400 en producción
    * @param {number|null} studentId - ID del estudiante (opcional para padres con múltiples hijos)
@@ -260,7 +260,7 @@ window.StudentAPI = {
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       // Construir URL base SIN el parámetro studentId en el path
-      const url = new URL(`${API_BASE}/pending-payments/overdue`);
+      const url = new URL(`${API_BASE}/pending-payment/overdue`);
       
       // Si se proporciona studentId (caso de padres), agregarlo como query parameter
       if (studentId) {
