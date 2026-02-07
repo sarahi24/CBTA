@@ -361,26 +361,6 @@ const title = "Finanzas Estudiantiles";
           </template>
         </div>
       </section>
-
-      <!-- RESUMEN GENERAL -->
-      <section class="summary-section">
-        <div class="summary-card">
-          <div class="summary-item">
-            <span class="summary-label">Total de adeudos</span>
-            <span class="summary-amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <span class="summary-label">Pendientes</span>
-            <span class="summary-count" x-text="adeudos.length"></span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <span class="summary-label">Vencidos</span>
-            <span class="summary-count danger" x-text="overdueAdeudos.length"></span>
-          </div>
-        </div>
-      </section>
     </main>
 
     <div x-show="showModal" x-cloak class="modal-overlay">
