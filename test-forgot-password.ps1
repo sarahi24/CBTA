@@ -21,7 +21,7 @@ $requestBody = @{
 } | ConvertTo-Json
 
 try {
-    $response = Invoke-RestMethod -Uri "$API_BASE/forgot-password" -Method Post -Body $requestBody -ContentType "application/json"
+    $response = Invoke-RestMethod -Uri "$API_BASE/v1/forgot-password" -Method Post -Body $requestBody -ContentType "application/json"
     
     if ($response.success) {
         Write-Host "   ✅ Solicitud procesada exitosamente!" -ForegroundColor Green
@@ -97,9 +97,13 @@ Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "   📊 INFORMACIÓN DEL ENDPOINT" -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "Endpoint: POST /api/v1/forgot-password" -ForegroundColor Gray
+Write-Host "Endpoint: POST /api/v1/forgot-password" -ForegroundColor Cyan
 Write-Host "Parámetros requeridos:" -ForegroundColor Gray
-Write-Host "  • email (string, debe existir en el sistema)" -ForegroundColor Gray
+Write-Host "  • email (string, válido y debe existir en el sistema)" -ForegroundColor Gray
+Write-Host "" -ForegroundColor Gray
+Write-Host "Respuestas esperadas:" -ForegroundColor Gray
+Write-Host "  • 200: Enlace enviado correctamente" -ForegroundColor Green
+Write-Host "  • 422: Email no válido o usuario no encontrado" -ForegroundColor Red
 Write-Host ""
 Write-Host "Flujo completo de recuperación:" -ForegroundColor Gray
 Write-Host "  1. Usuario solicita recuperación (este endpoint)" -ForegroundColor Gray

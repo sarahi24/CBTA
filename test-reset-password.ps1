@@ -8,7 +8,7 @@ param(
     [string]$PasswordConfirmation = "NewPassword123!"
 )
 
-$API_BASE = "https://nginx-production-728f.up.railway.app/api"
+$API_BASE = "https://nginx-production-728f.up.railway.app"
 
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "   TEST ENDPOINT - RESET PASSWORD" -ForegroundColor Cyan
@@ -42,7 +42,7 @@ $requestBody = @{
 } | ConvertTo-Json
 
 try {
-    $response = Invoke-RestMethod -Uri "$API_BASE/reset-password" -Method Post -Body $requestBody -ContentType "application/json"
+    $response = Invoke-RestMethod -Uri "$API_BASE/api/reset-password" -Method Post -Body $requestBody -ContentType "application/json"
     
     if ($response.success) {
         Write-Host "   ✅ Contraseña restablecida exitosamente!" -ForegroundColor Green
@@ -73,7 +73,7 @@ try {
         } | ConvertTo-Json
         
         try {
-            $loginResponse = Invoke-RestMethod -Uri "$API_BASE/v1/auth/login" -Method Post -Body $loginBody -ContentType "application/json"
+            $loginResponse = Invoke-RestMethod -Uri "$API_BASE/api/v1/auth/login" -Method Post -Body $loginBody -ContentType "application/json"
             
             if ($loginResponse.success) {
                 Write-Host "   ✅ Login exitoso con la nueva contraseña!" -ForegroundColor Green
@@ -139,12 +139,16 @@ Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "   📊 INFORMACIÓN DEL ENDPOINT" -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "Endpoint: POST /api/reset-password" -ForegroundColor Gray
+Write-Host "Endpoint: POST /api/reset-password" -ForegroundColor Cyan
 Write-Host "Parámetros requeridos:" -ForegroundColor Gray
-Write-Host "  • email (string)" -ForegroundColor Gray
-Write-Host "  • token (string, obtenido del correo)" -ForegroundColor Gray
+Write-Host "  • email (string, debe ser válido)" -ForegroundColor Gray
+Write-Host "  • token (string, obtenido del correo de recuperación)" -ForegroundColor Gray
 Write-Host "  • password (string, mínimo 8 caracteres)" -ForegroundColor Gray
-Write-Host "  • password_confirmation (string, debe coincidir)" -ForegroundColor Gray
+Write-Host "  • password_confirmation (string, debe coincidir exactamente)" -ForegroundColor Gray
+Write-Host "" -ForegroundColor Gray
+Write-Host "Respuestas esperadas:" -ForegroundColor Gray
+Write-Host "  • 200: Contraseña actualizada correctamente" -ForegroundColor Green
+Write-Host "  • 422: Validación fallida o token inválido" -ForegroundColor Red
 Write-Host ""
 Write-Host "Ejemplos de uso:" -ForegroundColor Yellow
 Write-Host '  .\test-reset-password.ps1 -Email "user@test.com" -Token "abc123token" -Password "NuevaClave123!" -PasswordConfirmation "NuevaClave123!"' -ForegroundColor Gray

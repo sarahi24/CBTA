@@ -3,6 +3,8 @@
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\CareersController;
 use App\Http\Controllers\AdminActionsController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Staff\ConceptsController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 use App\Http\Controllers\Staff\DebtsController;
@@ -53,7 +55,21 @@ Route::prefix('v1')->middleware('throttle:10,1')->group(function () {
     Route::put('/test', function (Request $request) {
         return response()->json(['success' => true, 'message' => 'PUT works']);
     });
+    
+    // ===== PASSWORD RESET ENDPOINTS =====
+    // Forgot Password - POST /api/v1/forgot-password
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('guest')
+        ->name('password.email');
 });
+
+// ===== PASSWORD RESET ENDPOINT (without v1 prefix) =====
+// Reset Password - POST /api/reset-password
+Route::post('/reset-password', [NewPasswordController::class, 'store'])
+    ->middleware('guest')
+    ->name('password.store');
+
+// ===== WEBHOOK ROUTES =====
 Route::post('/stripe/webhook', [WebhookController::class, 'handle']);
 
 
