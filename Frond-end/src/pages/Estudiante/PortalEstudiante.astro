@@ -1,89 +1,115 @@
 ---
-// Updated version - Feb 3, 2026 - Student API Service Integration
 import StudentLayout from '../../layouts/LayoutEstu.astro';
-import StatCard from './components/StatCard.astro';
-import ProgressCircle from './components/ProgressCircle.astro';
-import PaymentsTable from './components/PaymentsTable.astro'; 
-import { StudentAPI } from '../../utils/studentAPI.js';
 
-let dashboardData = {
-  alumnoNombre: 'Estudiante',
-  history: [],
-  overdue: null,
-  paid: null,
-  pending: null,
-  porcentajeProgreso: 0
-};
-let error = null;
-
-try {
-  // Get user ID from localStorage (set during login)
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
-  const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
-  const userName = typeof localStorage !== 'undefined' ? localStorage.getItem('userName') : 'Estudiante';
-
-  if (token && userId) {
-    dashboardData.alumnoNombre = userName;
-
-    try {
-      // Fetch all dashboard data in parallel using StudentAPI
-      const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-        StudentAPI.getPaymentHistory(userId, token).catch(e => ({ error: e.message })),
-        StudentAPI.getOverdueTotal(userId ? parseInt(userId) : null, token, false, 'student').catch(e => ({ error: e.message })),
-        StudentAPI.getPaidTotal(userId ? parseInt(userId) : null, token, false, 'student').catch(e => ({ error: e.message })),
-        StudentAPI.getPendingTotal(userId ? parseInt(userId) : null, token, false, 'student').catch(e => ({ error: e.message }))
-      ]);
-
-      // Process payment history
-      if (historyRes && !historyRes.error) {
-        const items = historyRes.data?.payment_history?.items || [];
-        dashboardData.history = items.map(payment => ({
-          id: payment.id,
-          concepto: payment.concept || 'Pago',
-          monto: payment.amount || '0.00',
-          fecha: payment.date || new Date().toLocaleDateString('es-MX'),
-          metodo: payment.method || 'Método desconocido',
-          status: payment.status || 'pending'
-        }));
-      }
-
-      // Process overdue total
-      if (overdueRes && !overdueRes.error) {
-        dashboardData.overdue = overdueRes.data?.total_overdue || { totalAmount: '0.00', totalCount: 0 };
-      }
-
-      // Process paid total
-      if (paidRes && !paidRes.error) {
-        dashboardData.paid = paidRes.data?.paid_data || { totalPayments: '0.00', paymentsByMonth: {} };
-      }
-
-      // Process pending total
-      if (pendingRes && !pendingRes.error) {
-        dashboardData.pending = pendingRes.data?.total_pending || { totalAmount: '0.00', totalCount: 0 };
-      }
-
-      // Calculate progress percentage
-      const paidAmount = parseFloat(dashboardData.paid?.totalPayments || '0');
-      const pendingAmount = parseFloat(dashboardData.pending?.totalAmount || '0');
-      const totalAmount = paidAmount + pendingAmount;
-      dashboardData.porcentajeProgreso = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
-
-      console.log('✅ Dashboard data loaded successfully');
-    } catch (err) {
-      console.error('❌ Error loading dashboard data:', err);
-      error = 'Error al cargar los datos del panel';
-    }
-  } else {
-    error = 'Usuario no autenticado';
-  }
-} catch (err) {
-  console.error('Error initializing dashboard:', err);
-  error = 'Error al conectar con el servidor';
-}
+const title = 'Panel de Estudiante';
 ---
 
-<StudentLayout title="Panel de Estudiante">
-  <div class="main-container">
+<StudentLayout title={title}>
+  <script src="/studentAPI.js" is:inline></script>
+  <script is:inline>
+    function studentDashboard() {
+      return {
+        alumnoNombre: 'Estudiante',
+        history: [],
+        overdue: { totalAmount: '0.00', totalCount: 0 },
+        paid: { totalPayments: '0.00', paymentsByMonth: {} },
+        pending: { totalAmount: '0.00', totalCount: 0 },
+        porcentajeProgreso: 0,
+        loading: false,
+        error: '',
+
+        async init() {
+          const token = localStorage.getItem('access_token');
+          const userId = localStorage.getItem('userId');
+          const userName = localStorage.getItem('userName');
+
+          if (userName) {
+            this.alumnoNombre = userName;
+          }
+
+          if (!token || !userId || !window.StudentAPI) {
+            this.error = 'Usuario no autenticado';
+            return;
+          }
+
+          this.loading = true;
+          try {
+            const parsedUserId = parseInt(userId, 10);
+            const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all([
+              window.StudentAPI.getPaymentHistory(parsedUserId, token).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getOverdueTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPaidTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPendingTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; })
+            ]);
+
+            if (historyRes && !historyRes.error) {
+              const items = historyRes.data && historyRes.data.payment_history && historyRes.data.payment_history.items ? historyRes.data.payment_history.items : [];
+              this.history = items.map(function(payment) {
+                return {
+                  id: payment.id,
+                  concepto: payment.concept || 'Pago',
+                  monto: payment.amount || '0.00',
+                  fecha: payment.date || new Date().toLocaleDateString('es-MX'),
+                  metodo: payment.method || 'Metodo desconocido',
+                  status: payment.status || 'pending'
+                };
+              });
+            }
+
+            if (overdueRes && !overdueRes.error) {
+              this.overdue = overdueRes.data && overdueRes.data.total_overdue ? overdueRes.data.total_overdue : { totalAmount: '0.00', totalCount: 0 };
+            }
+
+            if (paidRes && !paidRes.error) {
+              this.paid = paidRes.data && paidRes.data.paid_data ? paidRes.data.paid_data : { totalPayments: '0.00', paymentsByMonth: {} };
+            }
+
+            if (pendingRes && !pendingRes.error) {
+              this.pending = pendingRes.data && pendingRes.data.total_pending ? pendingRes.data.total_pending : { totalAmount: '0.00', totalCount: 0 };
+            }
+
+            const paidAmount = parseFloat(this.paid && this.paid.totalPayments ? this.paid.totalPayments : '0');
+            const pendingAmount = parseFloat(this.pending && this.pending.totalAmount ? this.pending.totalAmount : '0');
+            const totalAmount = paidAmount + pendingAmount;
+            this.porcentajeProgreso = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+          } catch (err) {
+            console.error('Error loading dashboard data:', err);
+            this.error = 'Error al cargar los datos del panel';
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        formatMoney(value) {
+          const parsed = parseFloat(value || '0');
+          return '$' + parsed.toFixed(2) + ' MXN';
+        },
+
+        pendingSubtitle() {
+          return this.pending && this.pending.totalCount
+            ? this.pending.totalCount + ' ' + (this.pending.totalCount === 1 ? 'Adeudo' : 'Adeudos')
+            : 'Sin adeudos';
+        },
+
+        overdueSubtitle() {
+          return this.overdue && this.overdue.totalCount
+            ? this.overdue.totalCount + ' ' + (this.overdue.totalCount === 1 ? 'Pago vencido' : 'Pagos vencidos')
+            : 'Sin pagos vencidos';
+        },
+
+        progressOffset() {
+          const radius = 60;
+          const circumference = 2 * Math.PI * radius;
+          return circumference - (circumference * this.porcentajeProgreso / 100);
+        },
+
+        circumference() {
+          return 2 * Math.PI * 60;
+        }
+      };
+    }
+  </script>
+  <div class="main-container" x-data="studentDashboard()">
     <header class="welcome-header">
       <div class="header-left">
         <div class="icon-box">
@@ -93,7 +119,7 @@ try {
         </div>
         <div>
           <p class="welcome-label">Dashboard Académico</p>
-          <h1 class="student-name">Hola, {dashboardData.alumnoNombre?.split(' ')[0] || "Estudiante"}</h1>
+          <h1 class="student-name" x-text="'Hola, ' + (alumnoNombre ? alumnoNombre.split(' ')[0] : 'Estudiante')"></h1>
         </div>
       </div>
       <div class="header-right">
@@ -114,32 +140,50 @@ try {
 
 
     <section class="stats-scroll-container">
-      <StatCard 
-        title="Pendientes" 
-        amount={dashboardData?.pending?.totalAmount ? `$${parseFloat(dashboardData.pending.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"} 
-        subtitle={dashboardData?.pending?.totalCount ? `${dashboardData.pending.totalCount} ${dashboardData.pending.totalCount === 1 ? 'Adeudo' : 'Adeudos'}` : "Sin adeudos"} 
-        type="danger"
-      >
-        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
-      </StatCard>
+      <div class="card-container danger">
+        <div class="card-header">
+          <span class="label">Pendientes</span>
+          <div class="icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <h2 class="amount" x-text="formatMoney(pending.totalAmount)"></h2>
+        </div>
+        <div class="card-footer">
+          <p class="subtitle" x-text="pendingSubtitle()"></p>
+        </div>
+      </div>
 
-      <StatCard 
-        title="Vencidos" 
-        amount={dashboardData?.overdue?.totalAmount ? `$${parseFloat(dashboardData.overdue.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"} 
-        subtitle={dashboardData?.overdue?.totalCount ? `${dashboardData.overdue.totalCount} ${dashboardData.overdue.totalCount === 1 ? 'Pago vencido' : 'Pagos vencidos'}` : "Sin pagos vencidos"} 
-        type="warning"
-      >
-        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-      </StatCard>
+      <div class="card-container warning">
+        <div class="card-header">
+          <span class="label">Vencidos</span>
+          <div class="icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <h2 class="amount" x-text="formatMoney(overdue.totalAmount)"></h2>
+        </div>
+        <div class="card-footer">
+          <p class="subtitle" x-text="overdueSubtitle()"></p>
+        </div>
+      </div>
 
-      <StatCard 
-        title="Realizados" 
-        amount={dashboardData?.paid?.totalPayments ? `$${parseFloat(dashboardData.paid.totalPayments).toFixed(2)} MXN` : "$0.00 MXN"} 
-        subtitle="Total pagado" 
-        type="success"
-      >
-        <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-      </StatCard>
+      <div class="card-container success">
+        <div class="card-header">
+          <span class="label">Realizados</span>
+          <div class="icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <h2 class="amount" x-text="formatMoney(paid.totalPayments)"></h2>
+        </div>
+        <div class="card-footer">
+          <p class="subtitle">Total pagado</p>
+        </div>
+      </div>
     </section>
 
     <div class="bottom-grid">
@@ -153,27 +197,43 @@ try {
             <div class="dot green"></div>
             <span class="summary-label">Monto Liquidado</span>
           </div>
-          <span class="val-ok">{dashboardData?.paid?.totalPayments ? `$${parseFloat(dashboardData.paid.totalPayments).toFixed(2)} MXN` : "$0.00 MXN"}</span>
+          <span class="val-ok" x-text="formatMoney(paid.totalPayments)"></span>
         </div>
         <div class="summary-row">
           <div class="label-group">
             <div class="dot orange"></div>
             <span class="summary-label">Monto Vencido</span>
           </div>
-          <span class="val-warning">{dashboardData?.overdue?.totalAmount ? `$${parseFloat(dashboardData.overdue.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"}</span>
+          <span class="val-warning" x-text="formatMoney(overdue.totalAmount)"></span>
         </div>
         <div class="summary-row no-border">
           <div class="label-group">
             <div class="dot red"></div>
             <span class="summary-label">Monto por Pagar</span>
           </div>
-          <span class="val-alert">{dashboardData?.pending?.totalAmount ? `$${parseFloat(dashboardData.pending.totalAmount).toFixed(2)} MXN` : "$0.00 MXN"}</span>
+          <span class="val-alert" x-text="formatMoney(pending.totalAmount)"></span>
         </div>
       </div>
 
       <div class="progress-card glass-effect">
         <div class="progress-inner">
-           <ProgressCircle percentage={dashboardData?.porcentajeProgreso} label="Logro" />
+          <div class="bg-white border border-gray-200 p-4 md:p-8 rounded-3xl flex flex-col items-center justify-center relative min-h-[200px] md:min-h-[250px]">
+            <p class="absolute top-4 md:top-6 left-4 md:left-6 text-gray-400 font-bold text-xs uppercase">Logro</p>
+            <div class="relative flex items-center justify-center h-24 md:h-36 w-24 md:w-36">
+              <svg class="h-full w-full transform -rotate-90">
+                <circle cx="48" cy="48" r="60" stroke="#f3f4f6" stroke-width="8" fill="transparent" />
+                <circle
+                  cx="48" cy="48" r="60" stroke="#2e594d" stroke-width="8" fill="transparent"
+                  x-bind:stroke-dasharray="circumference()"
+                  x-bind:stroke-dashoffset="progressOffset()"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <div class="absolute text-center">
+                <span class="text-2xl md:text-4xl font-black text-[#2e594d]" x-text="porcentajeProgreso + '%'">0%</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -182,7 +242,38 @@ try {
       <div class="table-header">
         <h3 class="summary-title">Historial Reciente</h3>
       </div>
-      <PaymentsTable pagos={dashboardData?.history} />
+      <div class="payments-section">
+        <h3 class="payments-title">Mis Pagos</h3>
+
+        <div class="payments-table-wrapper">
+          <table class="payments-table">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <template x-if="history.length">
+                <template x-for="pago in history" :key="pago.id">
+                  <tr>
+                    <td x-text="pago.concepto"></td>
+                    <td class="monto" x-text="pago.monto"></td>
+                    <td class="fecha-celda" x-text="pago.fecha || '—'"></td>
+                  </tr>
+                </template>
+              </template>
+              <template x-if="!history.length">
+                <tr>
+                  <td colspan="3" class="empty-row">No hay registros de pagos</td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </StudentLayout>
@@ -396,6 +487,141 @@ try {
   
   .stats-scroll-container > :nth-child(3) {
     animation: scaleIn 0.5s ease-out 0.5s both;
+  }
+
+  .stats-scroll-container .card-container {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 160px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+  }
+
+  .stats-scroll-container .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .stats-scroll-container .label {
+    font-size: 0.9rem;
+    color: #4b5563;
+    font-weight: 500;
+  }
+
+  .stats-scroll-container .icon-wrapper {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stats-scroll-container .card-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    margin: 0.5rem 0;
+  }
+
+  .stats-scroll-container .amount {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    text-align: center;
+  }
+
+  .stats-scroll-container .card-footer {
+    text-align: center;
+    width: 100%;
+  }
+
+  .stats-scroll-container .subtitle {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  .stats-scroll-container .default .amount { color: #2E594D; }
+  .stats-scroll-container .default .icon-wrapper { color: #2E594D; }
+  .stats-scroll-container .danger .amount { color: #ff0000; }
+  .stats-scroll-container .danger .icon-wrapper { color: #ff0000; }
+  .stats-scroll-container .warning .amount { color: #f59e0b; }
+  .stats-scroll-container .warning .icon-wrapper { color: #f59e0b; }
+  .stats-scroll-container .success .amount { color: #10b981; }
+  .stats-scroll-container .success .icon-wrapper { color: #10b981; }
+
+  .payments-section {
+    background: white;
+    border: 1px solid #f3f4f6;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .payments-title {
+    color: #2E594D;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .payments-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .payments-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .payments-table thead th {
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9ca3af;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f3f4f6;
+  }
+
+  .payments-table tbody tr {
+    border-top: 1px solid #f3f4f6;
+    transition: background-color 0.2s ease;
+  }
+
+  .payments-table tbody tr:hover {
+    background-color: #f9fafb;
+  }
+
+  .payments-table td {
+    padding: 1rem 0;
+    color: #374151;
+  }
+
+  .payments-table .monto {
+    color: #2E594D;
+    font-weight: 700;
+  }
+
+  .fecha-celda {
+    color: #6b7280;
+  }
+
+  .empty-row {
+    text-align: center;
+    padding: 2.5rem 0;
+    color: #9ca3af;
+    font-size: 0.85rem;
   }
 
   /* --- CARDS & GRID --- */
