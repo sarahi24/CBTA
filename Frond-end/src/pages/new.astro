@@ -155,19 +155,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         // Si hay datos en localStorage, usarlos y NO hacer petición API
         if (loadFromLocalStorage()) {
-          console.log('💡 Tip: Visita /roles para actualizar la lista de usuarios');
           return;
         }
 
         // Si no hay localStorage NI token, mostrar lista vacía
         if (!token) {
-          console.warn('⚠️ Sin token y sin datos en localStorage. Visita /roles primero.');
+          console.info('💡 Tip: Inicia sesión y visita /roles para cargar la lista de usuarios');
           mapStudents([]);
           return;
         }
 
         // Solo si NO hay localStorage, intentar cargar desde API
-        console.log('🔍 No hay datos en cache, intentando cargar desde API...');
         const url = new URL(this.apiBaseUrl + '/v1/admin-actions/show-users');
         url.searchParams.append('page', '1');
         url.searchParams.append('perPage', '1000');
@@ -182,9 +180,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         })
         .then(res => {
           if (!res.ok) {
-            if (res.status === 403) {
-              console.info('ℹ️ Sin permisos para cargar usuarios. Ve a /roles para cachear la lista primero.');
-            }
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
@@ -196,12 +191,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             mapStudents(items);
             localStorage.setItem('studentsList', JSON.stringify(items));
           } else {
-            console.warn('⚠️ API devolvió lista vacía');
+            console.info('💡 Tip: Visita /roles para cargar la lista de usuarios completa');
             mapStudents([]);
           }
         })
         .catch(() => {
-          console.warn('⚠️ No se pudo cargar desde API. Ve a /roles primero.');
+          console.info('💡 Tip: Visita /roles para cargar y cachear la lista de usuarios');
           mapStudents([]);
         });
       },
