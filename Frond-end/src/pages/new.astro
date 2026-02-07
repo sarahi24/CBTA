@@ -350,24 +350,63 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               return window.AdminAPI.createConcept(token, payload);
             }
           } else {
-            const endpoint = self.formData.id 
-              ? `${self.apiBaseUrl}/v1/concepts/${self.formData.id}` 
-              : `${self.apiBaseUrl}/v1/concepts`;
-            return fetch(endpoint, {
-              method: self.formData.id ? 'PUT' : 'POST',
+            // CREAR nuevo concepto: enviar todo junto en POST
+            if (!self.formData.id) {
+              return fetch(`${self.apiBaseUrl}/v1/concepts`, {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                  'X-User-Role': 'financial-staff',
+                  'X-User-Permission': 'create.concepts'
+                },
+                body: JSON.stringify(payload)
+              }).then(async res => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                  let errorMsg = data.message || res.statusText || 'Error desconocido';
+                  if (data.errors && typeof data.errors === 'object') {
+                    const errorList = Object.entries(data.errors)
+                      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                      .join(' | ');
+                    errorMsg = `${errorMsg} - ${errorList}`;
+                  }
+                  console.error('Backend validation errors:', data.errors);
+                  return Promise.reject(new Error(errorMsg));
+                }
+                return data;
+              });
+            }
+            
+            // ACTUALIZAR concepto existente: separar en dos peticiones
+            // 1. Actualizar datos básicos con PUT
+            const basicData = {
+              concept_name: payload.concept_name,
+              description: payload.description,
+              status: payload.status,
+              amount: payload.amount,
+              start_date: payload.start_date,
+              end_date: payload.end_date
+            };
+            
+            console.log('📤 Actualizando datos básicos:', basicData);
+            
+            return fetch(`${self.apiBaseUrl}/v1/concepts/${self.formData.id}`, {
+              method: 'PUT',
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'X-User-Role': 'financial-staff',
-                'X-User-Permission': self.formData.id ? 'update.concepts' : 'create.concepts'
+                'X-User-Permission': 'update.concepts'
               },
-              body: JSON.stringify(payload)
-            }).then(async res => {
+              body: JSON.stringify(basicData)
+            })
+            .then(async res => {
               const data = await res.json().catch(() => ({}));
               if (!res.ok) {
-                // Construir mensaje de error con detalles de validación
-                let errorMsg = data.message || res.statusText || 'Error desconocido';
+                let errorMsg = data.message || res.statusText || 'Error al actualizar datos básicos';
                 if (data.errors && typeof data.errors === 'object') {
                   const errorList = Object.entries(data.errors)
                     .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
@@ -377,7 +416,49 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.error('Backend validation errors:', data.errors);
                 return Promise.reject(new Error(errorMsg));
               }
+              console.log('✅ Datos básicos actualizados');
               return data;
+            })
+            .then(basicResult => {
+              // 2. Actualizar relaciones con PATCH
+              const relationsData = {
+                applies_to: payload.applies_to
+              };
+              
+              // Agregar campos de relaciones solo si existen
+              if (payload.students) relationsData.students = payload.students;
+              if (payload.careers) relationsData.careers = payload.careers;
+              if (payload.semestres) relationsData.semestres = payload.semestres;
+              
+              console.log('📤 Actualizando relaciones:', relationsData);
+              
+              return fetch(`${self.apiBaseUrl}/v1/concepts/update-relations/${self.formData.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                  'X-User-Role': 'financial-staff',
+                  'X-User-Permission': 'update.concepts'
+                },
+                body: JSON.stringify(relationsData)
+              })
+              .then(async res => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                  let errorMsg = data.message || res.statusText || 'Error al actualizar relaciones';
+                  if (data.errors && typeof data.errors === 'object') {
+                    const errorList = Object.entries(data.errors)
+                      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                      .join(' | ');
+                    errorMsg = `${errorMsg} - ${errorList}`;
+                  }
+                  console.error('Backend validation errors:', data.errors);
+                  return Promise.reject(new Error(errorMsg));
+                }
+                console.log('✅ Relaciones actualizadas');
+                return data;
+              });
             });
           }
         };
