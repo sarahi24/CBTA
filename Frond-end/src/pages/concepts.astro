@@ -149,10 +149,6 @@ function renderConcepts(){
             <span class="text-gray-500 font-medium text-xs uppercase italic">Vigencia:</span>
             <span class="font-semibold text-gray-800">${escapeHtml(c.start_date || '')} - ${escapeHtml(c.end_date || '')}</span>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-gray-500 font-medium text-xs uppercase italic">Estudiantes Afectados:</span>
-            <span class="font-bold ${affectedCount > 0 ? 'text-blue-600' : 'text-gray-400'}">${affectedCount}</span>
-          </div>
         </div>
 
         <div class="space-y-3">
