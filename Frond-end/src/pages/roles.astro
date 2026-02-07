@@ -1785,6 +1785,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             console.log(JSON.stringify(this.users[0], null, 2));
                         }
                         
+                        // Guardar en localStorage para que otras páginas puedan usar el cache
+                        try {
+                            localStorage.setItem('studentsList', JSON.stringify(this.users));
+                            console.log('💾 Lista de usuarios guardada en localStorage para otras páginas');
+                        } catch (e) {
+                            console.warn('⚠️ No se pudo guardar en localStorage:', e);
+                        }
+                        
                         // Mostrar roles de cada usuario
                         console.log('========================================');
                         console.log('👥 ROLES DE USUARIOS:');
