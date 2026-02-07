@@ -142,6 +142,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         const url = new URL(this.apiBaseUrl + '/v1/admin-actions/show-users');
         url.searchParams.append('page', '1');
         url.searchParams.append('perPage', '1000');
+        url.searchParams.append('status', 'activo');
         fetch(url.toString(), {
           method: 'GET',
           headers: {
@@ -158,37 +159,40 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return res.json();
         })
         .then(json => {
+          console.log('📦 Respuesta API usuarios:', json);
           const items = json.data?.users?.items || json.data?.items || json.data || [];
           if (Array.isArray(items) && items.length) {
+            console.log(`✅ Usuarios cargados desde API: ${items.length}`);
             mapStudents(items);
+            // Guardar en localStorage para futuras consultas
+            localStorage.setItem('studentsList', JSON.stringify(items));
           } else {
-            const raw = localStorage.getItem('studentsList');
-            if (raw) {
-              try {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length) {
-                  mapStudents(parsed);
-                } else {
-                  mapStudents([]);
-                }
-              } catch (e) {
-                mapStudents([]);
-              }
-            } else {
-              mapStudents([]);
-            }
+            console.warn('⚠️ API no devolvió usuarios, usando fallback');
+            loadFromLocalStorage();
           }
         })
         .catch(err => {
           console.warn('Failed to load students from API:', err.message);
+          loadFromLocalStorage();
+        });
+
+        function loadFromLocalStorage() {
           const raw = localStorage.getItem('studentsList');
           if (raw) {
             try {
               const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed) && parsed.length) mapStudents(parsed);
-            } catch (e) {}
+              if (Array.isArray(parsed) && parsed.length) {
+                console.log(`✅ Usuarios cargados desde localStorage: ${parsed.length}`);
+                mapStudents(parsed);
+                return;
+              }
+            } catch (e) {
+              console.error('Error parsing localStorage:', e);
+            }
           }
-        });
+          console.warn('⚠️ No hay usuarios en localStorage, lista vacía');
+          mapStudents([]);
+        }
       },
 
       populateForm(concept) {
