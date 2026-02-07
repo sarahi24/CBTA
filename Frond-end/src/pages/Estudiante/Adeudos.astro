@@ -50,10 +50,11 @@ const title = "Finanzas Estudiantiles";
         console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
         
         // Cargar adeudos vencidos desde API
-        if (token && userId) {
+        if (token) {
           try {
             console.log('📥 Cargando pagos vencidos desde StudentAPI...');
-            const overdueData = await window.StudentAPI.getOverduePayments(userId, token, false, 'student');
+            // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
+            const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
             
             const overdueArray = overdueData?.data?.pending_payments || [];
             this.overdueAdeudos = overdueArray.map(payment => ({
@@ -73,10 +74,11 @@ const title = "Finanzas Estudiantiles";
         }
         
         // Cargar adeudos desde API usando StudentAPI
-        if (token && userId) {
+        if (token) {
           try {
             console.log('📥 Cargando adeudos desde StudentAPI...');
-            const paymentsData = await window.StudentAPI.getPendingPayments(userId, token, false, 'student');
+            // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
+            const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
             
             // Extraer pending_payments del response
             const paymentsArray = paymentsData?.data?.pending_payments || 
@@ -100,7 +102,8 @@ const title = "Finanzas Estudiantiles";
           // Cargar tarjetas desde API usando StudentAPI
           try {
             console.log('📥 Cargando tarjetas desde StudentAPI...');
-            const cardsData = await window.StudentAPI.getPaymentMethods(userId, token);
+            // Pasar null para obtener métodos de pago del usuario autenticado
+            const cardsData = await window.StudentAPI.getPaymentMethods(null, token);
             const cardsArray = Array.isArray(cardsData.data) ? cardsData.data : 
                                Array.isArray(cardsData) ? cardsData : [];
             
