@@ -112,4 +112,42 @@ class PendingPaymentController extends Controller
         }
     }
 
+    public function createPaymentIntent(Request $request)
+    {
+        try {
+            // Validar concepto_id
+            $validated = $request->validate([
+                'concept_id' => 'required|integer|exists:payment_concepts,id'
+            ]);
+
+            $user = Auth::user();
+            $conceptId = $validated['concept_id'];
+
+            // Crear sesión de pago
+            $checkoutUrl = $this->pendingPaymentService->payConcept($user, $conceptId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Operación completada exitosamente',
+                'data' => [
+                    'url_checkout' => $checkoutUrl
+                ]
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'error_code' => 'VALIDATION_ERROR',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error creating payment intent: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el intento de pago',
+                'error_code' => 'STRIPE_ERROR'
+            ], 502);
+        }
+    }
+
 }

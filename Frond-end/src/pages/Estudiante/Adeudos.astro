@@ -147,16 +147,14 @@ const title = "Finanzas Estudiantiles";
       async processPayment(isReference = false) {
         this.loading = true;
         const token = localStorage.getItem('access_token');
-        const userRole = localStorage.getItem('user_role') || 'student';
         
         try {
           console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
           
           // Usar StudentAPI para crear el intento de pago
-          const response = await window.StudentAPI.createPaymentAttempt(
+          const response = await window.StudentAPI.createPaymentIntent(
             this.selectedItem.id,
-            token,
-            userRole
+            token
           );
           
           console.log('✅ Respuesta del servidor:', response);

@@ -885,5 +885,50 @@ export const StudentAPI = {
       console.error('❌ StudentAPI.getPaymentsByConcept:', err);
       throw err;
     }
+  },
+
+  /**
+   * CREAR INTENTO DE PAGO - POST /api/v1/pending-payments
+   * Generar intento de pago para un concepto pendiente
+   * @param {number} conceptId - ID del concepto a pagar
+   * @param {string} token - Token de autenticación
+   */
+  async createPaymentIntent(conceptId, token) {
+    try {
+      const url = `${API_BASE}/pending-payments`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'student',
+          'X-User-Permission': 'create.payment'
+        },
+        body: JSON.stringify({
+          concept_id: conceptId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          throw new Error('Demasiadas solicitudes. Intenta de nuevo en unos momentos.');
+        }
+        if (response.status === 422) {
+          throw new Error('Concepto inválido o no disponible');
+        }
+        if (response.status === 502) {
+          throw new Error('Error al procesar el pago. Por favor intenta de nuevo.');
+        }
+        throw new Error(errorData.message || 'Error al crear el intento de pago');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.createPaymentIntent:', err);
+      throw err;
+    }
   }
 };
