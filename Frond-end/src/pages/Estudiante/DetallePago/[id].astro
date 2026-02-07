@@ -2,6 +2,9 @@
 import StudentLayout from '../../../layouts/LayoutEstu.astro';
 import { StudentAPI } from '../../../utils/studentAPI.js';
 
+// Configurar para SSR (renderizado bajo demanda)
+export const prerender = false;
+
 const { id } = Astro.params;
 
 let paymentDetail = null;
