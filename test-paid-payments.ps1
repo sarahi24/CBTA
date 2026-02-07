@@ -1,5 +1,5 @@
-# Script para probar el endpoint de pagos pendientes
-# Ejecutar: powershell -ExecutionPolicy Bypass -File test-pending-payments.ps1
+# Script para probar el endpoint de pagos realizados
+# Ejecutar: powershell -ExecutionPolicy Bypass -File test-paid-payments.ps1
 
 param(
     [string]$TestEmail = "admin@example.com",
@@ -12,7 +12,7 @@ param(
 $API_BASE = "https://nginx-production-728f.up.railway.app/api/v1"
 
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "   TEST ENDPOINT - PENDING PAYMENTS / PAGOS PENDIENTES" -ForegroundColor Cyan
+Write-Host "   TEST ENDPOINT - PAID PAYMENTS / PAGOS REALIZADOS" -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
@@ -47,18 +47,17 @@ $headers = @{
     "Authorization" = "Bearer $token"
     "Content-Type" = "application/json"
     "X-User-Role" = $UserRole
-    "X-User-Permission" = "view.own.pending.concepts.summary"
+    "X-User-Permission" = "view.own.paid.concepts.summary"
 }
 
-# Paso 2: Obtener información de pagos pendientes
-Write-Host "⏳ PASO 2: Obteniendo información de pagos pendientes..." -ForegroundColor Yellow
+# Paso 2: Obtener información de pagos realizados
+Write-Host "💳 PASO 2: Obteniendo información de pagos realizados..." -ForegroundColor Yellow
 
 $endpoint = if ($StudentId) { 
-    "$API_BASE/dashboard/pending/$StudentId"
+    "$API_BASE/dashboard/paid/$StudentId"
 } else { 
-    "$API_BASE/dashboard/pending"
+    "$API_BASE/dashboard/paid"
 }
-
 
 $queryParams = @()
 if ($ForceRefresh) {
@@ -84,28 +83,42 @@ try {
         Write-Host "   💬 Mensaje: $($response.message)" -ForegroundColor Gray
         Write-Host ""
         
-        if ($response.data.total_pending) {
-            $pending = $response.data.total_pending
+        if ($response.data.paid_data) {
+            $paidData = $response.data.paid_data
             
-            Write-Host "   💳 TOTAL DE PAGOS PENDIENTES:" -ForegroundColor Cyan
+            Write-Host "   💰 TOTAL DE PAGOS REALIZADOS:" -ForegroundColor Cyan
             Write-Host "   ────────────────────────────────────────────" -ForegroundColor Gray
             
-            $totalAmount = [double]$pending.totalAmount
-            $totalCount = [int]$pending.totalCount
+            $totalPayments = [double]$paidData.totalPayments
             
-            # Determinar color basado en cantidad pendiente
-            if ($totalCount -eq 0) {
-                Write-Host "   ✅ Monto pendiente: `$$($pending.totalAmount) MXN" -ForegroundColor Green
-                Write-Host "   ✅ Cantidad de pagos pendientes: $totalCount" -ForegroundColor Green
+            if ($totalPayments -gt 0) {
+                Write-Host "   ✅ Monto total pagado: `$$($paidData.totalPayments) MXN" -ForegroundColor Green
                 Write-Host ""
-                Write-Host "   🎉 ¡No hay pagos pendientes!" -ForegroundColor Green
-            } else {
-                Write-Host "   ⚠️  Monto pendiente: `$$($pending.totalAmount) MXN" -ForegroundColor Yellow
-                Write-Host "   ⚠️  Cantidad de pagos pendientes: $totalCount" -ForegroundColor Yellow
                 
-                if ($totalCount -gt 1) {
-                    Write-Host "   📊 Promedio por pago: `$$([Math]::Round($totalAmount / $totalCount, 2)) MXN" -ForegroundColor Gray
+                if ($paidData.paymentsByMonth) {
+                    Write-Host "   📊 DESGLOSE POR MES:" -ForegroundColor Cyan
+                    Write-Host "   ────────────────────────────────────────────" -ForegroundColor Gray
+                    
+                    $totalByMonth = 0
+                    foreach ($month in $paidData.paymentsByMonth.PSObject.Properties | Sort-Object Name) {
+                        $monthName = $month.Name
+                        $monthAmount = [double]$month.Value
+                        $totalByMonth += $monthAmount
+                        
+                        # Format month as "YYYY-MM" to "Month Year"
+                        $dateObj = [DateTime]::ParseExact($monthName, "yyyy-MM", $null)
+                        $displayMonth = $dateObj.ToString("MMMM yyyy", [System.Globalization.CultureInfo]::GetCultureInfo("es-MX"))
+                        
+                        Write-Host "   📅 $displayMonth`: `$$($month.Value) MXN" -ForegroundColor Green
+                    }
+                    
+                    Write-Host ""
+                    Write-Host "   📈 Subtotal de desglose: `$$($totalByMonth.ToString('N2')) MXN" -ForegroundColor White
                 }
+            } else {
+                Write-Host "   ℹ️  Monto total pagado: `$0.00 MXN" -ForegroundColor White
+                Write-Host ""
+                Write-Host "   📝 No hay pagos realizados en el período" -ForegroundColor Gray
             }
         }
         
@@ -126,7 +139,7 @@ try {
         try {
             $errorJson = $errorDetails | ConvertFrom-Json
             
-            Write-Host "   ❌ Error al obtener pagos pendientes" -ForegroundColor Red
+            Write-Host "   ❌ Error al obtener pagos realizados" -ForegroundColor Red
             Write-Host "   💬 Mensaje: $($errorJson.message)" -ForegroundColor Red
             
             $statusCode = $_.Exception.Response.StatusCode.value__
@@ -180,15 +193,15 @@ Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "   📊 INFORMACIÓN DEL ENDPOINT" -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "Endpoint: GET /api/v1/dashboard/pending/{studentId?}" -ForegroundColor Gray
+Write-Host "Endpoint: GET /api/v1/dashboard/paid/{studentId?}" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Propósito:" -ForegroundColor Gray
-Write-Host "  Devuelve la cantidad y monto total de pagos pendientes" -ForegroundColor Gray
+Write-Host "  Devuelve el monto total de pagos completados organizados por mes" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Headers requeridos:" -ForegroundColor Gray
 Write-Host "  • Authorization: Bearer {token}" -ForegroundColor Gray
 Write-Host "  • X-User-Role: student|parent" -ForegroundColor Gray
-Write-Host "  • X-User-Permission: view.own.pending.concepts.summary" -ForegroundColor Gray
+Write-Host "  • X-User-Permission: view.own.paid.concepts.summary" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Query Parameters:" -ForegroundColor Gray
 Write-Host "  • forceRefresh (boolean): Forzar actualización de caché (default: false)" -ForegroundColor Gray
@@ -196,28 +209,43 @@ Write-Host ""
 Write-Host "Parámetros de ruta:" -ForegroundColor Gray
 Write-Host "  • studentId (integer): ID del estudiante - opcional, solo para padres" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Respuestas esperadas:" -ForegroundColor Gray
-Write-Host "  • 200: Información obtenida correctamente" -ForegroundColor Green
+Write-Host "Respuesta esperada (200 OK):" -ForegroundColor Gray
+Write-Host '  {' -ForegroundColor Gray
+Write-Host '    "success": true,' -ForegroundColor Gray
+Write-Host '    "message": "Monto total de pagos realizados obtenido correctamente",' -ForegroundColor Gray
+Write-Host '    "data": {' -ForegroundColor Gray
+Write-Host '      "paid_data": {' -ForegroundColor Gray
+Write-Host '        "totalPayments": "25000.00",' -ForegroundColor Gray
+Write-Host '        "paymentsByMonth": {' -ForegroundColor Gray
+Write-Host '          "2024-01": "15000.00",' -ForegroundColor Gray
+Write-Host '          "2024-02": "12000.00",' -ForegroundColor Gray
+Write-Host '          "2024-03": "18000.00"' -ForegroundColor Gray
+Write-Host '        }' -ForegroundColor Gray
+Write-Host '      }' -ForegroundColor Gray
+Write-Host '    }' -ForegroundColor Gray
+Write-Host '  }' -ForegroundColor Gray
+Write-Host ""
+Write-Host "Otros códigos de respuesta:" -ForegroundColor Gray
 Write-Host "  • 401: No autenticado" -ForegroundColor Red
 Write-Host "  • 403: No autorizado (usuario no relacionado con estudiante)" -ForegroundColor Red
 Write-Host "  • 404: Estudiante no encontrado" -ForegroundColor Red
 Write-Host "  • 429: Demasiadas solicitudes" -ForegroundColor Red
+Write-Host "  • 500: Error interno del servidor" -ForegroundColor Red
 Write-Host ""
 Write-Host "Ejemplos de uso:" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  # Obtener pagos pendientes del usuario autenticado" -ForegroundColor Gray
-Write-Host '  .\test-pending-payments.ps1' -ForegroundColor Yellow
+Write-Host "  # Obtener pagos realizados del usuario autenticado" -ForegroundColor Gray
+Write-Host '  .\test-paid-payments.ps1' -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  # Forzar actualización de caché" -ForegroundColor Gray
-Write-Host '  .\test-pending-payments.ps1 -ForceRefresh' -ForegroundColor Yellow
+Write-Host '  .\test-paid-payments.ps1 -ForceRefresh' -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  # Como padre, obtener pagos pendientes de un hijo" -ForegroundColor Gray
-Write-Host '  .\test-pending-payments.ps1 -StudentId 5 -UserRole "parent"' -ForegroundColor Yellow
+Write-Host "  # Como padre, obtener pagos realizados de un hijo" -ForegroundColor Gray
+Write-Host '  .\test-paid-payments.ps1 -StudentId 5 -UserRole "parent"' -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  # Combinado: hijo específico y forzar refresh" -ForegroundColor Gray
-Write-Host '  .\test-pending-payments.ps1 -StudentId 5 -UserRole "parent" -ForceRefresh' -ForegroundColor Yellow
+Write-Host '  .\test-paid-payments.ps1 -StudentId 5 -UserRole "parent" -ForceRefresh' -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  # Con credenciales personalizadas" -ForegroundColor Gray
-Write-Host '  .\test-pending-payments.ps1 -TestEmail "usuario@test.com" -TestPassword "clave123" -StudentId 3' -ForegroundColor Yellow
+Write-Host '  .\test-paid-payments.ps1 -TestEmail "usuario@test.com" -TestPassword "clave123" -StudentId 3' -ForegroundColor Yellow
 Write-Host ""
-Write-Host ".\test-pending-payments.ps1 -Token 'tu_token' -ForceRefresh" -ForegroundColor White

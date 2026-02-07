@@ -30,26 +30,136 @@ class DashboardController extends Controller
             ]);
     }
 
-    public function pending()
+    /**
+     * Get total pending payments for authenticated user or specified student
+     * GET /api/v1/dashboard/pending/{studentId?}
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @param int|null $studentId - Optional student ID (for parents)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function pending(\Illuminate\Http\Request $request, $studentId = null)
     {
-         $user = Auth::user();
-            $data = $this->dashboardService->pendingPaymentAmount($user);
-
+        try {
+            $user = Auth::user();
+            $forceRefresh = $request->query('forceRefresh', false);
+            
+            // Get the student to query (current user or specified student)
+            $targetUserId = $studentId ?? $user->id;
+            
+            // For security, verify parent-student relationship if studentId is provided
+            if ($studentId && $studentId !== $user->id) {
+                // Verify that the authenticated user is a parent of this student
+                $isRelated = \DB::table('family_relationships')
+                    ->where('parent_id', $user->id)
+                    ->where('student_id', $studentId)
+                    ->exists();
+                
+                if (!$isRelated && !$user->hasRole('admin')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes permiso para acceder a la información de este estudiante',
+                        'error_code' => 'UNAUTHORIZED'
+                    ], 403);
+                }
+            }
+            
+            // Get data from service
+            $data = $this->dashboardService->pendingPaymentAmount($user, $forceRefresh);
+            
             return response()->json([
                 'success' => true,
-                'data' => $data
+                'message' => 'Totales de pagos pendientes obtenidos correctamente',
+                'data' => [
+                    'total_pending' => [
+                        'totalAmount' => $data->totalAmount ?? '0.00',
+                        'totalCount' => $data->totalCount ?? 0
+                    ]
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo pagos pendientes', [
+                'user_id' => Auth::id(),
+                'student_id' => $studentId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener información de pagos pendientes',
+                'error_code' => 'PENDING_FETCH_ERROR'
+            ], 500);
+        }
     }
 
-    public function paid()
+    /**
+     * Get total paid payments for authenticated user or specified student
+     * GET /api/v1/dashboard/paid/{studentId?}
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @param int|null $studentId - Optional student ID (for parents)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function paid(\Illuminate\Http\Request $request, $studentId = null)
     {
-        $user = Auth::user();
-            $data = $this->dashboardService->paymentsMade($user);
-
+        try {
+            $user = Auth::user();
+            $forceRefresh = $request->query('forceRefresh', false);
+            
+            // Get the student to query (current user or specified student)
+            $targetUserId = $studentId ?? $user->id;
+            
+            // For security, verify parent-student relationship if studentId is provided
+            if ($studentId && $studentId !== $user->id) {
+                // Verify that the authenticated user is a parent of this student
+                $isRelated = \DB::table('family_relationships')
+                    ->where('parent_id', $user->id)
+                    ->where('student_id', $studentId)
+                    ->exists();
+                
+                if (!$isRelated && !$user->hasRole('admin')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes permiso para acceder a la información de este estudiante',
+                        'error_code' => 'UNAUTHORIZED'
+                    ], 403);
+                }
+            }
+            
+            // Get data from service
+            $data = $this->dashboardService->paymentsMade($user, $forceRefresh);
+            
+            // Extract payment data and organize by month
+            $totalPayments = $data->totalPayments ?? '0.00';
+            $paymentsByMonth = $data->paymentsByMonth ?? [];
+            
             return response()->json([
                 'success' => true,
-                'data' => $data
+                'message' => 'Monto total de pagos realizados obtenido correctamente',
+                'data' => [
+                    'paid_data' => [
+                        'totalPayments' => $totalPayments,
+                        'paymentsByMonth' => $paymentsByMonth
+                    ]
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo pagos realizados', [
+                'user_id' => Auth::id(),
+                'student_id' => $studentId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener información de pagos realizados',
+                'error_code' => 'PAID_FETCH_ERROR'
+            ], 500);
+        }
     }
 
     /**

@@ -76,8 +76,8 @@ Route::post('/stripe/webhook', [WebhookController::class, 'handle']);
 Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     Route::prefix('dashboard')->middleware('role:student')->group(function (){
         Route::middleware('permission:view own financial overview')->get('/data',[DashboardController::class,'index']);
-        Route::middleware('permission:view own pending concepts summary')->get('/pending',[DashboardController::class,'pending']);
-        Route::middleware('permission:view own paid concepts summary')->get('/paid',[DashboardController::class,'paid']);
+        Route::middleware('permission:view own pending concepts summary')->get('/pending/{studentId?}',[DashboardController::class,'pending']);
+        Route::middleware('permission:view own paid concepts summary')->get('/paid/{studentId?}',[DashboardController::class,'paid']);
         Route::middleware('permission:view own overdue concepts summary')->get('/overdue/{studentId?}',[DashboardController::class,'overdue']);
         Route::middleware('permission:view payments history')->get('/history/{studentId?}',[DashboardController::class,'history']);
         Route::middleware('permission:refresh.all.dashboard')->post('/refresh/{studentId?}',[DashboardController::class,'refresh']);
