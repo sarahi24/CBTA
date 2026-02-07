@@ -193,8 +193,9 @@ window.StudentAPI = {
   },
 
   /**
-   * ADEUDOS - GET /api/v1/pending-payments/{studentId?}
+   * ADEUDOS - GET /api/v1/pending-payments
    * Obtener pagos pendientes del usuario autenticado
+   * NOTA: NO se usa /{studentId} porque causa 400 en producción
    * @param {number|null} studentId - ID del estudiante (opcional para padres con múltiples hijos)
    * @param {string} token - Token de autenticación
    * @param {boolean} forceRefresh - Forzar actualización del caché
@@ -202,12 +203,21 @@ window.StudentAPI = {
    */
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(studentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`);
+      // Construir URL base SIN el parámetro studentId en el path
+      // El backend identifica al usuario por el token JWT
+      const url = new URL(`${API_BASE}/pending-payments`);
+      
+      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
+      if (studentId) {
+        url.searchParams.append('id', studentId);
+      }
       
       // Agregar query parameters
       if (forceRefresh) {
         url.searchParams.append('forceRefresh', 'true');
       }
+      
+      console.log(`🔍 [StudentAPI] getPendingPayments URL: ${url.toString()}`);
       
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -220,12 +230,18 @@ window.StudentAPI = {
         }
       });
 
+      console.log(`📡 [StudentAPI] getPendingPayments Response Status: ${response.status}`);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pagos pendientes');
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getPendingPayments Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || errorData.error || 'Error al cargar pagos pendientes');
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getPendingPayments Success:`, data);
+      return data;
     } catch (err) {
       console.error('❌ StudentAPI.getPendingPayments:', err);
       throw err;
@@ -233,8 +249,9 @@ window.StudentAPI = {
   },
 
   /**
-   * ADEUDOS - GET /api/v1/pending-payments/overdue/{studentId?}
+   * ADEUDOS - GET /api/v1/pending-payments/overdue
    * Obtener pagos vencidos del usuario autenticado
+   * NOTA: NO se usa /{studentId} porque causa 400 en producción
    * @param {number|null} studentId - ID del estudiante (opcional para padres con múltiples hijos)
    * @param {string} token - Token de autenticación
    * @param {boolean} forceRefresh - Forzar actualización del caché
@@ -242,12 +259,20 @@ window.StudentAPI = {
    */
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`);
+      // Construir URL base SIN el parámetro studentId en el path
+      const url = new URL(`${API_BASE}/pending-payments/overdue`);
+      
+      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
+      if (studentId) {
+        url.searchParams.append('id', studentId);
+      }
       
       // Agregar query parameters
       if (forceRefresh) {
         url.searchParams.append('forceRefresh', 'true');
       }
+      
+      console.log(`🔍 [StudentAPI] getOverduePayments URL: ${url.toString()}`);
       
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -260,12 +285,18 @@ window.StudentAPI = {
         }
       });
 
+      console.log(`📡 [StudentAPI] getOverduePayments Response Status: ${response.status}`);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pagos vencidos');
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getOverduePayments Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || errorData.error || 'Error al cargar pagos vencidos');
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getOverduePayments Success:`, data);
+      return data;
     } catch (err) {
       console.error('❌ StudentAPI.getOverduePayments:', err);
       throw err;
@@ -273,16 +304,27 @@ window.StudentAPI = {
   },
 
   /**
-   * TARJETAS - GET /api/v1/cards/{studentId?}
+   * TARJETAS - GET /api/v1/cards
    * Listar métodos de pago del usuario autenticado
+   * NOTA: NO se usa /{studentId} porque causa 400 en producción
    */
   async getPaymentMethods(studentId, token, forceRefresh = false) {
     try {
-      let endpoint = studentId ? `${API_BASE}/cards/${studentId}` : `${API_BASE}/cards`;
-      if (forceRefresh) {
-        endpoint += (studentId ? '?' : '?') + 'forceRefresh=true';
+      // Construir URL base SIN el parámetro studentId en el path
+      const url = new URL(`${API_BASE}/cards`);
+      
+      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
+      if (studentId) {
+        url.searchParams.append('id', studentId);
       }
-      const response = await fetch(endpoint, {
+      
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+      
+      console.log(`🔍 [StudentAPI] getPaymentMethods URL: ${url.toString()}`);
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -293,12 +335,18 @@ window.StudentAPI = {
         }
       });
 
+      console.log(`📡 [StudentAPI] getPaymentMethods Response Status: ${response.status}`);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar métodos de pago');
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getPaymentMethods Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || errorData.error || 'Error al cargar métodos de pago');
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getPaymentMethods Success:`, data);
+      return data;
     } catch (err) {
       console.error('❌ StudentAPI.getPaymentMethods:', err);
       throw err;
