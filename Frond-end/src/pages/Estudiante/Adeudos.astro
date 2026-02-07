@@ -16,6 +16,7 @@ const title = "Finanzas Estudiantiles";
       showModal: false,
       step: 'select-method', 
       loading: false,
+      loadingTab: false,
       selectedItem: null,
       selectedCard: null,
       adeudos: [],
@@ -23,6 +24,7 @@ const title = "Finanzas Estudiantiles";
       tarjetas: [],
       alumnoNombre: 'Usuario',
       showOverdueAlert: false,
+      activeTab: 'pending',
 
       async init() {
         // Obtener datos del usuario desde localStorage de forma más robusta
@@ -49,99 +51,11 @@ const title = "Finanzas Estudiantiles";
         console.log('🔍 [Adeudos] Token disponible:', !!token);
         console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
         
-        // Cargar adeudos vencidos desde API
+        // Cargar solo adeudos pendientes inicialmente (tab por defecto)
         if (token) {
-          try {
-            console.log('📥 Cargando pagos vencidos desde StudentAPI...');
-            // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
-            const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
-            
-            console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
-            
-            // El backend retorna: { success: true, data: [...] } donde data es un array
-            let overdueArray = [];
-            if (overdueData?.data) {
-              if (Array.isArray(overdueData.data)) {
-                overdueArray = overdueData.data;
-              } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
-                overdueArray = overdueData.data.pending_payments;
-              }
-            }
-            
-            console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
-            
-            this.overdueAdeudos = overdueArray.map(payment => ({
-              id: payment.id,
-              concepto: payment.concept_name || payment.concepto || 'Pago',
-              monto: payment.amount?.toString() || payment.monto || '0.00',
-              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-              description: payment.description || payment.descripcion || ''
-            }));
-            
-            this.showOverdueAlert = this.overdueAdeudos.length > 0;
-            console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
-          } catch (err) {
-            console.error('⚠️  Error al cargar pagos vencidos:', err);
-            this.overdueAdeudos = [];
-          }
+          await this.loadPendingPayments();
         }
-        
-        // Cargar adeudos desde API usando StudentAPI
-        if (token) {
-          try {
-            console.log('📥 Cargando adeudos desde StudentAPI...');
-            // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
-            const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
-            
-            console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
-            
-            // El backend retorna: { success: true, data: [...] } donde data es un array
-            let paymentsArray = [];
-            if (paymentsData?.data) {
-              if (Array.isArray(paymentsData.data)) {
-                paymentsArray = paymentsData.data;
-              } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
-                paymentsArray = paymentsData.data.pending_payments;
-              }
-            }
-            
-            console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
-            
-            this.adeudos = paymentsArray.map(payment => ({
-              id: payment.id,
-              concepto: payment.concept_name || payment.concepto || 'Pago',
-              monto: payment.amount?.toString() || payment.monto || '0.00',
-              fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-              status: payment.status || 'Pendiente',
-              description: payment.description || payment.descripcion || ''
-            }));
-            console.log('✅ Adeudos cargados:', this.adeudos.length);
-          } catch (err) {
-            console.error('❌ Error al cargar adeudos:', err);
-            this.adeudos = [];
-          }
-          
-          // Cargar tarjetas desde API usando StudentAPI
-          try {
-            console.log('📥 Cargando tarjetas desde StudentAPI...');
-            // Pasar null para obtener métodos de pago del usuario autenticado
-            const cardsData = await window.StudentAPI.getPaymentMethods(null, token);
-            const cardsArray = Array.isArray(cardsData.data) ? cardsData.data : 
-                               Array.isArray(cardsData) ? cardsData : [];
-            
-            this.tarjetas = cardsArray.map(card => ({
-              id: card.id,
-              tipo: card.brand || 'Tarjeta',
-              terminacion: card.last4 || card.terminacion || '****',
-              logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
-            }));
-            console.log('✅ Tarjetas cargadas:', this.tarjetas.length);
-          } catch (err) {
-            console.error('❌ Error al cargar tarjetas:', err);
-            this.tarjetas = [];
-          }
-        }
-        
+
         // Fallback a localStorage si no hay datos de API
         if (this.adeudos.length === 0) {
           console.log('⚠️ Usando fallback de localStorage para adeudos');
@@ -157,6 +71,94 @@ const title = "Finanzas Estudiantiles";
           if (guardadas) {
             this.tarjetas = JSON.parse(guardadas);
           }
+        }
+      },
+
+      async loadPendingPayments() {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        
+        this.loadingTab = true;
+        try {
+          console.log('📥 Cargando adeudos pendientes desde StudentAPI...');
+          const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
+          
+          console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
+          
+          let paymentsArray = [];
+          if (paymentsData?.data) {
+            if (Array.isArray(paymentsData.data)) {
+              paymentsArray = paymentsData.data;
+            } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
+              paymentsArray = paymentsData.data.pending_payments;
+            }
+          }
+          
+          console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
+          
+          this.adeudos = paymentsArray.map(payment => ({
+            id: payment.id,
+            concepto: payment.concept_name || payment.concepto || 'Pago',
+            monto: payment.amount?.toString() || payment.monto || '0.00',
+            fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
+            status: payment.status || 'Pendiente',
+            description: payment.description || payment.descripcion || ''
+          }));
+          console.log('✅ Adeudos pendientes cargados:', this.adeudos.length);
+        } catch (err) {
+          console.error('❌ Error al cargar adeudos pendientes:', err);
+          this.adeudos = [];
+        } finally {
+          this.loadingTab = false;
+        }
+      },
+
+      async loadOverduePayments() {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        
+        this.loadingTab = true;
+        try {
+          console.log('📥 Cargando pagos vencidos desde StudentAPI...');
+          const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
+          
+          console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
+          
+          let overdueArray = [];
+          if (overdueData?.data) {
+            if (Array.isArray(overdueData.data)) {
+              overdueArray = overdueData.data;
+            } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
+              overdueArray = overdueData.data.pending_payments;
+            }
+          }
+          
+          console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
+          
+          this.overdueAdeudos = overdueArray.map(payment => ({
+            id: payment.id,
+            concepto: payment.concept_name || payment.concepto || 'Pago',
+            monto: payment.amount?.toString() || payment.monto || '0.00',
+            fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
+            description: payment.description || payment.descripcion || ''
+          }));
+          
+          this.showOverdueAlert = this.overdueAdeudos.length > 0;
+          console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
+        } catch (err) {
+          console.error('⚠️  Error al cargar pagos vencidos:', err);
+          this.overdueAdeudos = [];
+        } finally {
+          this.loadingTab = false;
+        }
+      },
+
+      switchTab(tab) {
+        this.activeTab = tab;
+        if (tab === 'pending' && this.adeudos.length === 0) {
+          this.loadPendingPayments();
+        } else if (tab === 'overdue' && this.overdueAdeudos.length === 0) {
+          this.loadOverduePayments();
         }
       },
 
@@ -226,8 +228,31 @@ const title = "Finanzas Estudiantiles";
 
 
     <main class="content-grid">
-      <!-- Alerta de pagos vencidos -->
-      <template x-if="showOverdueAlert && overdueAdeudos.length > 0">
+      <!-- TAB NAVIGATION -->
+      <div class="tabs-navigation">
+        <button 
+          @click="switchTab('pending')"
+          :class="{ 'tab-btn': true, 'active': activeTab === 'pending' }"
+          class="tab-btn"
+        >
+          <span class="tab-icon">📋</span>
+          <span class="tab-label">Pendientes</span>
+          <span class="tab-count" x-text="adeudos.length"></span>
+        </button>
+        
+        <button 
+          @click="switchTab('overdue')"
+          :class="{ 'tab-btn': true, 'active': activeTab === 'overdue' }"
+          class="tab-btn"
+        >
+          <span class="tab-icon">🔴</span>
+          <span class="tab-label">Vencidos</span>
+          <span class="tab-count" x-text="overdueAdeudos.length"></span>
+        </button>
+      </div>
+
+      <!-- ALERTA DE PAGOS VENCIDOS (solo cuando está cargado el tab de vencidos) -->
+      <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
         <div class="overdue-alert-banner" x-transition>
           <div class="alert-icon">⚠️</div>
           <div class="alert-content">
@@ -238,15 +263,101 @@ const title = "Finanzas Estudiantiles";
         </div>
       </template>
 
-      <!-- SECCIÓN: PAGOS VENCIDOS -->
-      <template x-if="overdueAdeudos.length > 0">
-        <section class="section-container overdue-section">
+      <!-- CONTENIDO: PAGOS PENDIENTES -->
+      <template x-if="activeTab === 'pending'">
+        <section class="section-container">
           <div class="section-header">
-            <h2 class="section-title">🔴 Pagos Vencidos</h2>
-            <span class="badge-danger" x-text="overdueAdeudos.length"></span>
+            <h2 class="section-title">Pagos Pendientes</h2>
           </div>
           
-          <div class="cards-stack">
+          <!-- LOADING STATE -->
+          <template x-if="loadingTab">
+            <div class="loading-container">
+              <div class="custom-loader"></div>
+              <p>Cargando pagos pendientes...</p>
+            </div>
+          </template>
+
+          <!-- EMPTY STATE -->
+          <template x-if="!loadingTab && adeudos.length === 0">
+            <div class="empty-state">
+              <div class="empty-icon">✨</div>
+              <h3>No tienes pagos pendientes</h3>
+              <p>Todos tus pagos están al día.</p>
+            </div>
+          </template>
+
+          <!-- PAYMENTS LIST -->
+          <div class="cards-stack" x-show="!loadingTab && adeudos.length > 0">
+            <template x-for="item in adeudos" :key="item.id">
+              <div class="payment-card pending-card">
+                <div class="card-left">
+                  <div class="status-dot yellow"></div>
+                  <div class="card-info">
+                    <h3 x-text="item.concepto"></h3>
+                    <p class="card-description" x-text="item.description"></p>
+                    <div class="payment-meta">
+                      <span class="meta-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span>Vence el <strong x-text="item.fecha"></strong></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-right">
+                  <div class="amount-block">
+                    <span class="currency">$</span>
+                    <span class="amount" x-text="item.monto"></span>
+                  </div>
+                  <button @click="openPayment(item)" class="action-btn secondary">Pagar</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <!-- RESUMEN SOLO PARA PENDIENTES -->
+        <section class="summary-section">
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="summary-label">Total de adeudos</span>
+              <span class="summary-amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-item">
+              <span class="summary-label">Cantidad de pagos</span>
+              <span class="summary-count" x-text="adeudos.length"></span>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <!-- CONTENIDO: PAGOS VENCIDOS -->
+      <template x-if="activeTab === 'overdue'">
+        <section class="section-container">
+          <div class="section-header">
+            <h2 class="section-title">Pagos Vencidos</h2>
+          </div>
+
+          <!-- LOADING STATE -->
+          <template x-if="loadingTab">
+            <div class="loading-container">
+              <div class="custom-loader"></div>
+              <p>Cargando pagos vencidos...</p>
+            </div>
+          </template>
+
+          <!-- EMPTY STATE -->
+          <template x-if="!loadingTab && overdueAdeudos.length === 0">
+            <div class="empty-state">
+              <div class="empty-icon">🎉</div>
+              <h3>¡Excelente! No tienes pagos vencidos</h3>
+              <p>Mantén tus pagos al día para evitar intereses.</p>
+            </div>
+          </template>
+
+          <!-- PAYMENTS LIST -->
+          <div class="cards-stack" x-show="!loadingTab && overdueAdeudos.length > 0">
             <template x-for="item in overdueAdeudos" :key="item.id">
               <div class="payment-card overdue-card">
                 <div class="card-left">
@@ -273,70 +384,22 @@ const title = "Finanzas Estudiantiles";
             </template>
           </div>
         </section>
-      </template>
 
-      <!-- SECCIÓN: PAGOS PENDIENTES -->
-      <section class="section-container">
-        <div class="section-header">
-          <h2 class="section-title">Pagos Pendientes</h2>
-          <span class="badge-info" x-text="adeudos.length"></span>
-        </div>
-        
-        <template x-if="adeudos.length === 0">
-          <div class="empty-state">
-            <div class="empty-icon">✨</div>
-            <h3>No tienes pagos pendientes</h3>
-            <p>Todos tus pagos están al día.</p>
-          </div>
-        </template>
-
-        <div class="cards-stack" x-show="adeudos.length > 0">
-          <template x-for="item in adeudos" :key="item.id">
-            <div class="payment-card pending-card">
-              <div class="card-left">
-                <div class="status-dot yellow"></div>
-                <div class="card-info">
-                  <h3 x-text="item.concepto"></h3>
-                  <p class="card-description" x-text="item.description"></p>
-                  <div class="payment-meta">
-                    <span class="meta-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                      <span>Vence el <strong x-text="item.fecha"></strong></span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div class="card-right">
-                <div class="amount-block">
-                  <span class="currency">$</span>
-                  <span class="amount" x-text="item.monto"></span>
-                </div>
-                <button @click="openPayment(item)" class="action-btn secondary">Pagar</button>
-              </div>
+        <!-- RESUMEN SOLO PARA VENCIDOS -->
+        <section class="summary-section">
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="summary-label">Total vencido</span>
+              <span class="summary-amount danger" x-text="'$' + overdueAdeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
             </div>
-          </template>
-        </div>
-      </section>
-
-      <!-- RESUMEN GENERAL -->
-      <section class="summary-section">
-        <div class="summary-card">
-          <div class="summary-item">
-            <span class="summary-label">Total de adeudos</span>
-            <span class="summary-amount" x-text="'$' + adeudos.reduce((acc, item) => acc + parseFloat(item.monto.replace(',','')), 0).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
+            <div class="summary-divider"></div>
+            <div class="summary-item">
+              <span class="summary-label">Cantidad de pagos</span>
+              <span class="summary-count danger" x-text="overdueAdeudos.length"></span>
+            </div>
           </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <span class="summary-label">Pendientes</span>
-            <span class="summary-count" x-text="adeudos.length"></span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <span class="summary-label">Vencidos</span>
-            <span class="summary-count danger" x-text="overdueAdeudos.length"></span>
-          </div>
-        </div>
-      </section>
+        </section>
+      </template>
     </main>
 
     <div x-show="showModal" x-cloak class="modal-overlay">
@@ -978,6 +1041,96 @@ const title = "Finanzas Estudiantiles";
     color: var(--primary);
   }
 
+  /* TAB NAVIGATION STYLES */
+  .tabs-navigation {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #f1f5f9;
+  }
+
+  .tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.5rem;
+    background: transparent;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+    flex: 1;
+  }
+
+  .tab-btn:hover {
+    border-color: var(--accent);
+    color: var(--primary);
+  }
+
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--primary) 0%, rgba(17, 45, 38, 0.9) 100%);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(17, 45, 38, 0.2);
+  }
+
+  .tab-icon {
+    font-size: 1.2rem;
+  }
+
+  .tab-label {
+    font-weight: 700;
+  }
+
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-left: auto;
+  }
+
+  .tab-btn.active .tab-count {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  /* LOADING STATE */
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    gap: 1.5rem;
+  }
+
+  .loading-container p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .custom-loader {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #f1f5f9;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -1047,6 +1200,20 @@ const title = "Finanzas Estudiantiles";
     .overdue-alert-banner {
       flex-direction: column;
       text-align: center;
+    }
+
+    .tabs-navigation {
+      flex-direction: column;
+      padding: 0.75rem;
+    }
+
+    .tab-btn {
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    .tab-count {
+      font-size: 0.8rem;
     }
   }
 </style>

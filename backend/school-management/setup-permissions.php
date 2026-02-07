@@ -28,6 +28,7 @@ $studentPermissions = [
     'view pending concepts',
     'create payment',
     'view overdue concepts',
+    'refresh.all.dashboard',
 ];
 
 foreach ($studentPermissions as $perm) {

@@ -92,15 +92,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     Route::prefix('history')->middleware('role:student')->group(function(){
         Route::middleware('permission:view payment history')->get('/',[PaymentHistoryController::class,'index']);
     });
-    Route::prefix('pending-payment')->middleware('role:student')->group(function(){
-        Route::middleware('permission:view pending concepts')->get('/',[PendingPaymentController::class,'index']);
-        Route::middleware('permission:create payment','throttle:5,1')->post('/',[PendingPaymentController::class,'store']);
-        Route::middleware('permission:view overdue concepts')->get('/overdue',[PendingPaymentController::class,'overdue']);
-
-    });
     Route::prefix('pending-payments')->middleware('role:student')->group(function(){
+        Route::middleware('permission:view pending concepts')->get('/',[PendingPaymentController::class,'index']);
         Route::middleware('permission:view pending concepts')->get('/{studentId?}',[PendingPaymentController::class,'getAllPending']);
-        Route::middleware('permission:create payment','throttle:5,1')->post('/',[PendingPaymentController::class,'createPaymentIntent']);
+        Route::middleware('permission:create payment','throttle:5,1')->post('/',[PendingPaymentController::class,'store']);
+        Route::middleware('permission:create payment','throttle:5,1')->post('/{studentId?}',[PendingPaymentController::class,'createPaymentIntent']);
+        Route::middleware('permission:view overdue concepts')->get('/overdue',[PendingPaymentController::class,'overdue']);
         Route::middleware('permission:view overdue concepts')->get('/overdue/{studentId?}',[PendingPaymentController::class,'getOverduePayments']);
     });
 
