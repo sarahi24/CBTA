@@ -4,8 +4,18 @@ import { StudentAPI } from '../../utils/studentAPI.js';
 
 let alumnoBackend = "Estudiante";
 let title = "Historial de Pagos";
-let historialSemilla = [];
+let historialData = {
+  items: [],
+  currentPage: 1,
+  lastPage: 1,
+  perPage: 15,
+  total: 0,
+  hasMorePages: false,
+  nextPage: null,
+  previousPage: null
+};
 let error = null;
+let loading = false;
 
 try {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -14,28 +24,43 @@ try {
 
   if (token && userId) {
     alumnoBackend = userName;
+    loading = true;
 
-    // Fetch payment history using StudentAPI
+    // Fetch payment history using StudentAPI with pagination
     try {
-      const historyRes = await StudentAPI.getPaymentHistoryFull(userId, token);
+      const historyRes = await StudentAPI.getPaymentHistory(userId ? parseInt(userId) : null, token, false, 'student');
       
-      if (historyRes) {
-        const historyData = historyRes.data?.payment_history?.items || historyRes.data || [];
-        historialSemilla = Array.isArray(historyData) ? historyData.map(payment => ({
-          id: payment.id,
-          concepto: payment.concept_name || payment.concepto || 'Pago',
-          monto: payment.amount?.toString() || payment.monto || '0.00',
-          fecha: payment.payment_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
-          metodo: payment.payment_method || payment.metodo || 'Método desconocido',
-          folio: payment.reference_number || payment.folio || 'PAY-' + payment.id,
-          categoria: payment.category || payment.categoria || 'Pago'
-        })) : [];
-        console.log('✅ Historial cargado:', historialSemilla.length, 'pagos');
+      if (historyRes && historyRes.data) {
+        const paymentData = historyRes.data.payment_history;
+        historialData = {
+          items: Array.isArray(paymentData.items) ? paymentData.items.map(payment => ({
+            id: payment.id,
+            concept: payment.concept || 'Pago',
+            amount: payment.amount || '0.00',
+            amountReceived: payment.amount_received || payment.amount || '0.00',
+            balance: payment.balance || '0.00',
+            date: payment.date || new Date().toLocaleDateString('es-MX'),
+            status: payment.status || 'completed',
+            reference: payment.reference || 'REF-' + payment.id,
+            url: payment.url || null,
+            paymentMethod: payment.payment_method_details?.[0] || 'Método desconocido'
+          })) : [],
+          currentPage: paymentData.currentPage || 1,
+          lastPage: paymentData.lastPage || 1,
+          perPage: paymentData.perPage || 15,
+          total: paymentData.total || 0,
+          hasMorePages: paymentData.hasMorePages || false,
+          nextPage: paymentData.nextPage || null,
+          previousPage: paymentData.previousPage || null
+        };
+        console.log('✅ Historial cargado:', historialData.items.length, 'pagos, página', historialData.currentPage);
       }
     } catch (err) {
       console.error('❌ Error fetching payment history:', err);
-      historialSemilla = [];
+      error = 'Error al cargar el historial de pagos';
+      historialData.items = [];
     }
+    loading = false;
   } else {
     error = 'Usuario no autenticado';
   }
@@ -49,32 +74,31 @@ try {
   <div 
     class="page-wrapper"
     x-data={`{
+      currentPage: ${historialData.currentPage},
+      lastPage: ${historialData.lastPage},
+      total: ${historialData.total},
+      perPage: ${historialData.perPage},
+      hasMorePages: ${historialData.hasMorePages},
       search: '',
-      pagos: [],
-      
-      init() {
-        const guardados = localStorage.getItem('historial_pagos');
-        if (guardados) {
-          this.pagos = JSON.parse(guardados);
-        } else {
-          this.pagos = ${JSON.stringify(historialSemilla)};
-          localStorage.setItem('historial_pagos', JSON.stringify(this.pagos));
-        }
-      },
-
-      eliminarPago(id) {
-        if(confirm('¿Estás seguro de que deseas eliminar este registro del historial?')) {
-          this.pagos = this.pagos.filter(p => p.id !== id);
-          localStorage.setItem('historial_pagos', JSON.stringify(this.pagos));
-        }
-      },
+      pagos: ${JSON.stringify(historialData.items)},
+      loading: false,
 
       get pagosFiltrados() {
         if(!this.search) return this.pagos;
         return this.pagos.filter(p => 
-          p.concepto.toLowerCase().includes(this.search.toLowerCase()) || 
-          p.folio.toLowerCase().includes(this.search.toLowerCase())
+          p.concept.toLowerCase().includes(this.search.toLowerCase()) || 
+          p.reference.toLowerCase().includes(this.search.toLowerCase())
         );
+      },
+
+      getStatusBadge(status) {
+        const badges = {
+          'completed': { text: 'Completado', color: '#10b981', bg: '#ecfdf5' },
+          'pending': { text: 'Pendiente', color: '#f59e0b', bg: '#fffbeb' },
+          'failed': { text: 'Fallido', color: '#ef4444', bg: '#fef2f2' },
+          'refunded': { text: 'Reembolsado', color: '#6366f1', bg: '#eef2ff' }
+        };
+        return badges[status] || { text: status, color: '#6b7280', bg: '#f3f4f6' };
       }
     }`}
   >
@@ -83,7 +107,10 @@ try {
       <div class="header-main">
         <div class="title-group">
           <p class="pre-title">Gestión Financiera</p>
-          <h1>Mi Historial</h1>
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <h1>Mi Historial</h1>
+            <span class="total-badge" x-text="'(' + ${historialData.total} + ' pagos)'"></span>
+          </div>
         </div>
         <div class="user-pill">
           <div class="avatar-mini">PG</div>
@@ -94,10 +121,126 @@ try {
       <div class="filter-bar">
         <div class="search-box">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input id="search-payments" name="searchPayments" type="text" x-model="search" placeholder="Buscar por concepto o folio...">
+          <input id="search-payments" name="searchPayments" type="text" x-model="search" placeholder="Buscar por concepto o referencia...">
         </div>
       </div>
     </header>
+
+    <main class="history-content">
+      <template x-if="pagosFiltrados.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">📜</div>
+          <h3>Sin registros</h3>
+          <p>No se encontraron pagos.</p>
+        </div>
+      </template>
+
+      <template x-if="pagosFiltrados.length > 0">
+        <div class="timeline">
+          <template x-for="pago in pagosFiltrados" :key="pago.id">
+            <div class="timeline-item">
+              <div class="timeline-dot-wrapper">
+                <div class="timeline-dot" :style="`background: ${getStatusBadge(pago.status).color}`"></div>
+                <div class="timeline-line"></div>
+              </div>
+
+              <div class="payment-card">
+                <div class="payment-info">
+                  <div class="concept-header">
+                    <h3 x-text="pago.concept"></h3>
+                    <span class="status-badge" :style="`background: ${getStatusBadge(pago.status).bg}; color: ${getStatusBadge(pago.status).color}`" x-text="getStatusBadge(pago.status).text"></span>
+                  </div>
+                  
+                  <div class="payment-details">
+                    <div class="detail-row">
+                      <span class="label">Fecha</span>
+                      <span class="value" x-text="pago.date"></span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="label">Referencia</span>
+                      <span class="value reference" x-text="pago.reference"></span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="label">Método</span>
+                      <span class="value">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; margin-right: 4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                        <span x-text="pago.paymentMethod"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="payment-amounts">
+                  <div class="amount-section">
+                    <div class="label">Monto</div>
+                    <div class="amount-display">
+                      <span class="currency">$</span>
+                      <span class="amount" x-text="pago.amount"></span>
+                    </div>
+                  </div>
+                  
+                  <template x-if="pago.balance != '0.00'">
+                    <div class="amount-section balance">
+                      <div class="label">Saldo</div>
+                      <div class="amount-display">
+                        <span class="currency">$</span>
+                        <span class="amount" x-text="pago.balance"></span>
+                      </div>
+                    </div>
+                  </template>
+
+                  <template x-if="pago.url">
+                    <a :href="pago.url" target="_blank" class="view-receipt-btn" title="Ver recibo">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </a>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </main>
+
+    <!-- PAGINACIÓN -->
+    <div class="pagination-section">
+      <div class="pagination-info">
+        <span class="info-text">Página <strong x-text="currentPage"></strong> de <strong x-text="lastPage"></strong> • <strong x-text="total"></strong> registros total</span>
+      </div>
+
+      <div class="pagination-controls">
+        <button 
+          class="pagination-btn prev"
+          :disabled="currentPage === 1"
+          @click="if(currentPage > 1) { currentPage--; window.location.href = '?page=' + currentPage; }"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Anterior
+        </button>
+
+        <div class="page-buttons">
+          <template x-for="page in Array.from({length: lastPage}, (_, i) => i + 1)" :key="page">
+            <button 
+              class="page-btn"
+              :class="{ active: page === currentPage }"
+              @click="if(page !== currentPage) { currentPage = page; window.location.href = '?page=' + page; }"
+              x-text="page"
+            ></button>
+          </template>
+        </div>
+
+        <button 
+          class="pagination-btn next"
+          :disabled="!hasMorePages"
+          @click="if(hasMorePages) { currentPage = nextPage; window.location.href = '?page=' + nextPage; }"
+        >
+          Siguiente
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</StudentLayout>
 
 
 
@@ -154,45 +297,484 @@ try {
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-  :root { --primary: #112d26; --accent: #c4a47c; --text-muted: #64748b; --bg-page: #f8fafc; --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); --danger: #e53e3e; }
   
-  .page-wrapper { max-width: 750px; margin: 0 auto; padding: 2.5rem 1.25rem; font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-page); min-height: 100vh; }
+  :root {
+    --primary: #112d26;
+    --accent: #c4a47c;
+    --text-muted: #64748b;
+    --bg-page: #f8fafc;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    --danger: #e53e3e;
+    --success: #10b981;
+  }
   
-  .header-main { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }
-  .header-main h1 { margin: 0; font-size: 2rem; font-weight: 800; color: var(--primary); }
-  .pre-title { font-size: 0.8rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-  .user-pill { background: white; padding: 6px 12px; border-radius: 100px; display: flex; align-items: center; gap: 10px; box-shadow: var(--card-shadow); font-size: 0.85rem; font-weight: 700; color: var(--primary); }
-  .avatar-mini { width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: grid; place-items: center; font-size: 0.7rem; }
+  .page-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--bg-page);
+    min-height: 100vh;
+  }
   
-  .filter-bar { background: white; border-radius: 16px; padding: 6px; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; margin-bottom: 2rem; }
-  .search-box { display: flex; align-items: center; gap: 10px; padding: 8px 12px; color: var(--text-muted); }
-  .search-box input { border: none; width: 100%; outline: none; font-family: inherit; font-size: 0.95rem; }
+  .history-header {
+    margin-bottom: 2.5rem;
+  }
 
-  .timeline { position: relative; padding-left: 20px; }
-  .timeline-item { position: relative; display: flex; gap: 20px; margin-bottom: 25px; }
-  .timeline-dot { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; z-index: 2; margin-top: 25px; box-shadow: 0 0 0 4px #f1f5f9; }
-  .timeline-line { position: absolute; top: 30px; bottom: -30px; width: 2px; background: #e2e8f0; left: 26px; }
-  .timeline-item:last-child .timeline-line { display: none; }
+  .header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+  }
 
-  .payment-card { background: white; border-radius: 24px; padding: 20px; flex: 1; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--card-shadow); border: 1px solid transparent; transition: 0.3s; }
-  .payment-card:hover { border-color: #feb2b2; background: #fffafb; }
+  .header-main h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+
+  .total-badge {
+    font-size: 0.95rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .pre-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .user-pill {
+    background: white;
+    padding: 8px 14px;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--card-shadow);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .avatar-mini {
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
   
-  .category-tag { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--accent); letter-spacing: 0.5px; }
-  .method-pill { display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; color: var(--primary); font-weight: 700; border: 1px solid #f1f5f9; }
-  
-  .payment-action { text-align: right; display: flex; flex-direction: column; gap: 12px; min-width: 120px; }
-  .amount { font-size: 1.6rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
-  
-  /* ESTILO DEL BOTÓN ELIMINAR */
-  .delete-btn { background: #fee2e2; color: var(--danger); border: 1.5px solid #fecaca; padding: 8px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; transition: 0.2s; }
-  .delete-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
-  .delete-btn:active { transform: scale(0.95); }
+  .filter-bar {
+    background: white;
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #f1f5f9;
+    margin-bottom: 2rem;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    color: var(--text-muted);
+  }
+
+  .search-box input {
+    border: none;
+    width: 100%;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: transparent;
+  }
+
+  .search-box input::placeholder {
+    color: #cbd5e1;
+  }
+
+  .history-content {
+    margin-bottom: 3rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--text-muted);
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+  }
+
+  .empty-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+  }
+
+  .empty-state h3 {
+    margin: 0.5rem 0;
+    font-size: 1.3rem;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .empty-state p {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.95rem;
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+
+  .timeline-item {
+    position: relative;
+    display: flex;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .timeline-dot-wrapper {
+    position: relative;
+  }
+
+  .timeline-dot {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    z-index: 2;
+    margin-top: 28px;
+    box-shadow: 0 0 0 4px rgba(196, 164, 124, 0.15);
+    transition: 0.3s;
+  }
+
+  .timeline-line {
+    position: absolute;
+    top: 35px;
+    bottom: -35px;
+    width: 2px;
+    background: linear-gradient(180deg, #cbd5e1 0%, #e2e8f0 100%);
+    left: 7px;
+  }
+
+  .timeline-item:last-child .timeline-line {
+    display: none;
+  }
+
+  .payment-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    box-shadow: var(--card-shadow);
+    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 30px;
+  }
+
+  .payment-card:hover {
+    border-color: #e2e8f0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+  }
+
+  .payment-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .concept-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .concept-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  .payment-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    font-size: 0.85rem;
+  }
+
+  .detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .detail-row .label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .detail-row .value {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .reference {
+    font-family: 'Courier New', monospace;
+    background: #f8fafc;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+
+  .payment-amounts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 16px;
+    min-width: 140px;
+  }
+
+  .amount-section {
+    text-align: right;
+  }
+
+  .amount-section.balance {
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .amount-section .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+  }
+
+  .amount-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+
+  .currency {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .amount {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+  }
+
+  .view-receipt-btn {
+    background: linear-gradient(135deg, var(--primary) 0%, rgba(17, 45, 38, 0.8) 100%);
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(17, 45, 38, 0.2);
+  }
+
+  .view-receipt-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(17, 45, 38, 0.3);
+  }
+
+  .view-receipt-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* PAGINACIÓN */
+  .pagination-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #f1f5f9;
+  }
+
+  .pagination-info {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .info-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .pagination-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .pagination-btn:hover:not(:disabled) {
+    background: rgba(17, 45, 38, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(17, 45, 38, 0.2);
+  }
+
+  .pagination-btn:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .page-buttons {
+    display: flex;
+    gap: 6px;
+  }
+
+  .page-btn {
+    width: 36px;
+    height: 36px;
+    border: 2px solid #f1f5f9;
+    background: white;
+    color: var(--primary);
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+  }
+
+  .page-btn:hover {
+    border-color: var(--primary);
+    background: #f8fafc;
+  }
+
+  .page-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
 
   @media (max-width: 768px) {
-    .header-main { flex-direction: column; align-items: flex-start; gap: 1rem; }
-    .payment-card { flex-direction: column; align-items: flex-start; gap: 1.2rem; }
-    .payment-action { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 1.2rem; text-align: left; }
-    .timeline { padding-left: 10px; }
-    .timeline-line { left: 16px; }
+    .page-wrapper {
+      padding: 1.5rem 1rem;
+    }
+
+    .header-main {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .header-main h1 {
+      font-size: 1.6rem;
+    }
+
+    .payment-card {
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .payment-amounts {
+      align-items: flex-start;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 100%;;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 12px;
+    }
+
+    .amount-section {
+      text-align: left;
+    }
+
+    .amount-display {
+      justify-content: flex-start;
+    }
+
+    .timeline {
+      padding-left: 12px;
+    }
+
+    .timeline-line {
+      left: 3px;
+    }
+
+    .page-buttons {
+      max-width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .pagination-btn {
+      padding: 8px 12px;
+      font-size: 0.75rem;
+    }
+
+    .page-btn {
+      width: 32px;
+      height: 32px;
+      font-size: 0.75rem;
+    }
   }
 </style>
