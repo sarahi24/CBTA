@@ -109,7 +109,7 @@ const title = 'Panel de Estudiante';
       };
     }
   </script>
-  <div class="main-container" x-data="studentDashboard()">
+  <div class="main-container" x-data="studentDashboard()" x-init="init()">
     <header class="welcome-header">
       <div class="header-left">
         <div class="icon-box">
@@ -217,20 +217,18 @@ const title = 'Panel de Estudiante';
 
       <div class="progress-card glass-effect">
         <div class="progress-inner">
-          <div class="bg-white border border-gray-200 p-4 md:p-8 rounded-3xl flex flex-col items-center justify-center relative min-h-[200px] md:min-h-[250px]">
-            <p class="absolute top-4 md:top-6 left-4 md:left-6 text-gray-400 font-bold text-xs uppercase">Logro</p>
-            <div class="relative flex items-center justify-center h-24 md:h-36 w-24 md:w-36">
-              <svg class="h-full w-full transform -rotate-90">
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 2rem; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; min-height: 200px;">
+            <p style="position: absolute; top: 1rem; left: 1rem; color: #9ca3af; font-weight: bold; font-size: 0.75rem; text-transform: uppercase;">Logro</p>
+            <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 120px; height: 120px;">
+              <svg style="width: 100%; height: 100%; transform: rotate(-90deg);" viewBox="0 0 96 96">
                 <circle cx="48" cy="48" r="60" stroke="#f3f4f6" stroke-width="8" fill="transparent" />
                 <circle
                   cx="48" cy="48" r="60" stroke="#2e594d" stroke-width="8" fill="transparent"
-                  x-bind:stroke-dasharray="circumference()"
-                  x-bind:stroke-dashoffset="progressOffset()"
-                  stroke-linecap="round"
+                  x-bind:style="'stroke-dasharray: ' + circumference() + '; stroke-dashoffset: ' + progressOffset() + '; stroke-linecap: round;' + 'transition: stroke-dashoffset 0.3s ease;'"
                 />
               </svg>
-              <div class="absolute text-center">
-                <span class="text-2xl md:text-4xl font-black text-[#2e594d]" x-text="porcentajeProgreso + '%'">0%</span>
+              <div style="position: absolute; text-align: center;">
+                <span style="font-size: 2rem; font-weight: 900; color: #2e594d;" x-text="porcentajeProgreso + '%'">0%</span>
               </div>
             </div>
           </div>
@@ -256,7 +254,7 @@ const title = 'Panel de Estudiante';
             </thead>
 
             <tbody>
-              <template x-if="history.length">
+              <template x-if="history && history.length > 0">
                 <template x-for="pago in history" :key="pago.id">
                   <tr>
                     <td x-text="pago.concepto"></td>
@@ -265,7 +263,7 @@ const title = 'Panel de Estudiante';
                   </tr>
                 </template>
               </template>
-              <template x-if="!history.length">
+              <template x-if="!history || history.length === 0">
                 <tr>
                   <td colspan="3" class="empty-row">No hay registros de pagos</td>
                 </tr>
