@@ -1,168 +1,221 @@
-# Test script para obtener pagos vencidos
-# Este script prueba el endpoint GET /api/v1/pending-payments/overdue/{studentId?}
+# Script para probar el endpoint de pagos vencidos (overdue)
+# Ejecutar: powershell -ExecutionPolicy Bypass -File test-overdue-payments.ps1
 
 param(
-    [string]$BaseUrl = "http://localhost:8000/api/v1",
-    [string]$Token = "",
-    [string]$StudentId = "",
-    [string]$Role = "student",
-    [switch]$ForceRefresh
+    [string]$TestEmail = "admin@example.com",
+    [string]$TestPassword = "password",
+    [int]$StudentId = $null,
+    [switch]$ForceRefresh = $false,
+    [string]$UserRole = "student"
 )
 
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "TEST: Obtener Pagos Vencidos" -ForegroundColor Cyan
-Write-Host "==================================" -ForegroundColor Cyan
+$API_BASE = "https://nginx-production-728f.up.railway.app/api/v1"
+
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "   TEST ENDPOINT - OVERDUE PAYMENTS / PAGOS VENCIDOS" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
-# Si no se proporciona token, pedirlo
-if ([string]::IsNullOrWhiteSpace($Token)) {
-    Write-Host "No se proporcionó token. Por favor ingresa el access_token:" -ForegroundColor Yellow
-    $Token = Read-Host "Token"
-}
+# Paso 1: Login
+Write-Host "📝 PASO 1: Autenticación..." -ForegroundColor Yellow
+$loginBody = @{
+    email = $TestEmail
+    password = $TestPassword
+} | ConvertTo-Json
 
-if ([string]::IsNullOrWhiteSpace($Token)) {
-    Write-Host "❌ Error: Se requiere un token válido" -ForegroundColor Red
+try {
+    $loginResponse = Invoke-RestMethod -Uri "$API_BASE/login" -Method Post -Body $loginBody -ContentType "application/json"
+    
+    if ($loginResponse.success) {
+        $token = $loginResponse.data.token
+        $userId = $loginResponse.data.user.id
+        Write-Host "   ✅ Login exitoso!" -ForegroundColor Green
+        Write-Host "   👤 Usuario: $($loginResponse.data.user.name)" -ForegroundColor Gray
+        Write-Host "   🆔 ID: $userId" -ForegroundColor Gray
+        Write-Host ""
+    } else {
+        Write-Host "   ❌ Login falló: $($loginResponse.message)" -ForegroundColor Red
+        exit 1
+    }
+} catch {
+    Write-Host "   ❌ Error al conectar con el servidor" -ForegroundColor Red
+    Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
+$headers = @{
+    "Authorization" = "Bearer $token"
+    "Content-Type" = "application/json"
+    "X-User-Role" = $UserRole
+    "X-User-Permission" = "view.own.overdue.concepts.summary"
+}
+
+# Paso 2: Obtener información de pagos vencidos
+Write-Host "⏰ PASO 2: Obteniendo información de pagos vencidos..." -ForegroundColor Yellow
+
+$endpoint = if ($StudentId) { 
+    "$API_BASE/dashboard/overdue/$StudentId"
+} else { 
+    "$API_BASE/dashboard/overdue"
+}
+
+$queryParams = @()
+if ($ForceRefresh) {
+    $queryParams += "forceRefresh=true"
+}
+
+if ($queryParams.Count -gt 0) {
+    $endpoint += "?" + ($queryParams -join "&")
+}
+
+Write-Host "   URL: GET $endpoint" -ForegroundColor Gray
+Write-Host ""
+
 try {
-    # Construir URL
-    $url = if ([string]::IsNullOrWhiteSpace($StudentId)) {
-        "$BaseUrl/pending-payments/overdue"
-    } else {
-        "$BaseUrl/pending-payments/overdue/$StudentId"
-    }
+    $response = Invoke-RestMethod -Uri $endpoint -Method Get -Headers $headers
     
-    # Agregar query parameters
-    if ($ForceRefresh) {
-        $url += "?forceRefresh=true"
-    }
-    
-    Write-Host "🔄 Obteniendo pagos vencidos..." -ForegroundColor Yellow
-    Write-Host "URL: $url" -ForegroundColor Gray
-    Write-Host "Role: $Role" -ForegroundColor Gray
-    if (![string]::IsNullOrWhiteSpace($StudentId)) {
-        Write-Host "Student ID: $StudentId" -ForegroundColor Gray
-    }
-    Write-Host ""
-    
-    $headers = @{
-        "Authorization" = "Bearer $Token"
-        "Content-Type" = "application/json"
-        "Accept" = "application/json"
-        "X-User-Role" = $Role
-        "X-User-Permission" = "view.overdue.concepts"
-    }
-    
-    $response = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -ErrorAction Stop
-    
-    Write-Host "✅ Pagos vencidos obtenidos exitosamente!" -ForegroundColor Green
-    Write-Host ""
-    
-    # Mostrar respuesta
-    Write-Host "📊 RESPUESTA:" -ForegroundColor Cyan
-    Write-Host "Success: $($response.success)" -ForegroundColor White
-    Write-Host "Message: $($response.message)" -ForegroundColor White
-    
-    if ($response.data.pending_payments) {
-        $payments = $response.data.pending_payments
-        Write-Host ""
-        Write-Host "⚠️  PAGOS VENCIDOS: $($payments.Count)" -ForegroundColor Red
+    if ($response.success) {
+        Write-Host "   ✅ Información obtenida exitosamente!" -ForegroundColor Green
         Write-Host ""
         
-        $totalAmount = 0
-        foreach ($payment in $payments) {
-            Write-Host "  📌 Pago #$($payment.id)" -ForegroundColor Yellow
-            Write-Host "     Concepto: $($payment.concept_name)" -ForegroundColor White
-            Write-Host "     Descripción: $($payment.description)" -ForegroundColor Gray
-            Write-Host "     Monto: `$$($payment.amount) MXN" -ForegroundColor Red
-            Write-Host "     Fecha inicio: $($payment.start_date)" -ForegroundColor Gray
-            Write-Host "     Fecha vencimiento: $($payment.end_date)" -ForegroundColor Red
+        Write-Host "   📬 RESULTADO:" -ForegroundColor Cyan
+        Write-Host "   ────────────────────────────────────────────" -ForegroundColor Gray
+        Write-Host "   💬 Mensaje: $($response.message)" -ForegroundColor Gray
+        Write-Host ""
+        
+        if ($response.data.total_overdue) {
+            $overdue = $response.data.total_overdue
             
-            if ($payment.student_id) {
-                Write-Host "     Student ID: $($payment.student_id)" -ForegroundColor Gray
+            Write-Host "   💳 TOTAL DE PAGOS VENCIDOS:" -ForegroundColor Cyan
+            Write-Host "   ────────────────────────────────────────────" -ForegroundColor Gray
+            
+            $totalAmount = [double]$overdue.totalAmount
+            $totalCount = [int]$overdue.totalCount
+            
+            # Determinar color basado en la cantidad vencida
+            if ($totalCount -eq 0) {
+                Write-Host "   ✅ Monto vencido: `$$($overdue.totalAmount) MXN" -ForegroundColor Green
+                Write-Host "   ✅ Cantidad de pagos vencidos: $totalCount" -ForegroundColor Green
+                Write-Host ""
+                Write-Host "   🎉 ¡No hay pagos vencidos!" -ForegroundColor Green
+            } else {
+                Write-Host "   ⚠️  Monto vencido: `$$($overdue.totalAmount) MXN" -ForegroundColor Red
+                Write-Host "   ⚠️  Cantidad de pagos vencidos: $totalCount" -ForegroundColor Red
+                
+                if ($totalCount -gt 1) {
+                    Write-Host "   📊 Promedio por pago: `$$([Math]::Round($totalAmount / $totalCount, 2)) MXN" -ForegroundColor Gray
+                }
             }
-            
-            Write-Host ""
-            $totalAmount += [decimal]$payment.amount
         }
         
-        Write-Host "⚠️  TOTAL VENCIDO: `$$($totalAmount.ToString('N2')) MXN" -ForegroundColor Red
         Write-Host ""
-        Write-Host "🚨 ACCIÓN REQUERIDA: Estos pagos están vencidos y requieren atención inmediata" -ForegroundColor Yellow
+        Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+        Write-Host "   ✅ PRUEBA COMPLETADA EXITOSAMENTE" -ForegroundColor Green
+        Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+        
     } else {
-        Write-Host ""
-        Write-Host "✅ No hay pagos vencidos" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "📝 Todos los pagos están al día" -ForegroundColor Yellow
+        Write-Host "   ⚠️  Solicitud no exitosa" -ForegroundColor Yellow
+        Write-Host "   💬 Mensaje: $($response.message)" -ForegroundColor Gray
     }
-    
-    Write-Host ""
-    Write-Host "📋 Respuesta completa (JSON):" -ForegroundColor Gray
-    $response | ConvertTo-Json -Depth 10
     
 } catch {
-    Write-Host "❌ Error al obtener pagos vencidos" -ForegroundColor Red
-    Write-Host ""
+    $errorDetails = $_.ErrorDetails.Message
     
-    if ($_.Exception.Response) {
-        $statusCode = [int]$_.Exception.Response.StatusCode
-        Write-Host "Código de estado: $statusCode" -ForegroundColor Red
-        
-        $statusMessages = @{
-            401 = "No autenticado - Verifica tu token"
-            403 = "No autorizado - No tienes permisos para ver pagos vencidos"
-            404 = "No encontrado - Verifica el ID del estudiante"
-            422 = "Error de validación - Verifica los datos enviados"
-            429 = "Demasiadas solicitudes - Espera un momento e intenta de nuevo"
-            500 = "Error interno del servidor"
-        }
-        
-        if ($statusMessages.ContainsKey($statusCode)) {
-            Write-Host "ℹ️  $($statusMessages[$statusCode])" -ForegroundColor Yellow
-        }
-        
+    if ($errorDetails) {
         try {
-            $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-            $responseBody = $reader.ReadToEnd() | ConvertFrom-Json
+            $errorJson = $errorDetails | ConvertFrom-Json
             
-            Write-Host ""
-            Write-Host "Mensaje: $($responseBody.message)" -ForegroundColor Yellow
+            Write-Host "   ❌ Error al obtener pagos vencidos" -ForegroundColor Red
+            Write-Host "   💬 Mensaje: $($errorJson.message)" -ForegroundColor Red
             
-            if ($responseBody.error_code) {
-                Write-Host "Código de error: $($responseBody.error_code)" -ForegroundColor Yellow
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            
+            switch ($statusCode) {
+                401 {
+                    Write-Host "   🔒 No autenticado (token inválido o expirado)" -ForegroundColor Red
+                }
+                403 {
+                    Write-Host "   🔓 No autorizado (permisos insuficientes o no es padre/admin del estudiante)" -ForegroundColor Red
+                }
+                404 {
+                    Write-Host "   📭 Estudiante no encontrado" -ForegroundColor Red
+                }
+                429 {
+                    Write-Host "   ⏱️  Demasiadas solicitudes (rate limit)" -ForegroundColor Red
+                    Write-Host "   💡 Espera unos momentos antes de reintentar" -ForegroundColor Gray
+                }
             }
             
-            if ($responseBody.errors) {
+            if ($errorJson.error_code) {
+                Write-Host "   🔍 Código de error: $($errorJson.error_code)" -ForegroundColor Red
+            }
+            
+            if ($errorJson.errors) {
                 Write-Host ""
-                Write-Host "Errores de validación:" -ForegroundColor Yellow
-                $responseBody.errors | ConvertTo-Json -Depth 3
+                Write-Host "   📋 Detalles de errores:" -ForegroundColor Yellow
+                foreach ($field in $errorJson.errors.PSObject.Properties) {
+                    Write-Host "      • $($field.Name):" -ForegroundColor Yellow
+                    foreach ($error in $field.Value) {
+                        Write-Host "        - $error" -ForegroundColor Red
+                    }
+                }
             }
-            
         } catch {
-            Write-Host "Respuesta de error:" -ForegroundColor Yellow
-            Write-Host $_.Exception.Message -ForegroundColor Red
+            Write-Host "   ❌ Error: $errorDetails" -ForegroundColor Red
         }
     } else {
-        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "   ❌ Error al conectar" -ForegroundColor Red
+        Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor Red
     }
+    
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "   ❌ PRUEBA FALLÓ" -ForegroundColor Red
+    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ""
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "Test completado" -ForegroundColor Cyan
-Write-Host "==================================" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "   📊 INFORMACIÓN DEL ENDPOINT" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "Endpoint: GET /api/v1/dashboard/overdue/{studentId?}" -ForegroundColor Gray
 Write-Host ""
-Write-Host "💡 EJEMPLOS DE USO:" -ForegroundColor Yellow
+Write-Host "Propósito:" -ForegroundColor Gray
+Write-Host "  Devuelve el monto total y cantidad de pagos vencidos" -ForegroundColor Gray
 Write-Host ""
-Write-Host "# Como estudiante (sin studentId):" -ForegroundColor Gray
-Write-Host ".\test-overdue-payments.ps1 -Token 'tu_token' -Role 'student'" -ForegroundColor White
+Write-Host "Headers requeridos:" -ForegroundColor Gray
+Write-Host "  • Authorization: Bearer {token}" -ForegroundColor Gray
+Write-Host "  • X-User-Role: student|parent" -ForegroundColor Gray
+Write-Host "  • X-User-Permission: view.own.overdue.concepts.summary" -ForegroundColor Gray
 Write-Host ""
-Write-Host "# Como padre (con studentId específico):" -ForegroundColor Gray
-Write-Host ".\test-overdue-payments.ps1 -Token 'tu_token' -Role 'parent' -StudentId 3" -ForegroundColor White
+Write-Host "Query Parameters:" -ForegroundColor Gray
+Write-Host "  • forceRefresh (boolean): Forzar actualización de caché (default: false)" -ForegroundColor Gray
 Write-Host ""
-Write-Host "# Con forzar actualización de caché:" -ForegroundColor Gray
-Write-Host ".\test-overdue-payments.ps1 -Token 'tu_token' -ForceRefresh" -ForegroundColor White
+Write-Host "Parámetros de ruta:" -ForegroundColor Gray
+Write-Host "  • studentId (integer): ID del estudiante - opcional, solo para padres" -ForegroundColor Gray
 Write-Host ""
-Write-Host "# Con URL base personalizada:" -ForegroundColor Gray
-Write-Host ".\test-overdue-payments.ps1 -Token 'tu_token' -BaseUrl 'https://api.ejemplo.com/api/v1' -ForceRefresh" -ForegroundColor White
+Write-Host "Respuestas esperadas:" -ForegroundColor Gray
+Write-Host "  • 200: Información obtenida correctamente" -ForegroundColor Green
+Write-Host "  • 401: No autenticado" -ForegroundColor Red
+Write-Host "  • 403: No autorizado (usuario no relacionado con estudiante)" -ForegroundColor Red
+Write-Host "  • 404: Estudiante no encontrado" -ForegroundColor Red
+Write-Host "  • 429: Demasiadas solicitudes" -ForegroundColor Red
+Write-Host ""
+Write-Host "Ejemplos de uso:" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  # Obtener pagos vencidos del usuario autenticado" -ForegroundColor Gray
+Write-Host '  .\test-overdue-payments.ps1' -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  # Forzar actualización de caché" -ForegroundColor Gray
+Write-Host '  .\test-overdue-payments.ps1 -ForceRefresh' -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  # Como padre, obtener pagos vencidos de un hijo" -ForegroundColor Gray
+Write-Host '  .\test-overdue-payments.ps1 -StudentId 5 -UserRole "parent"' -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  # Combinado: hijo específico y forzar refresh" -ForegroundColor Gray
+Write-Host '  .\test-overdue-payments.ps1 -StudentId 5 -UserRole "parent" -ForceRefresh' -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  # Con credenciales personalizadas" -ForegroundColor Gray
+Write-Host '  .\test-overdue-payments.ps1 -TestEmail "usuario@test.com" -TestPassword "clave123" -StudentId 3' -ForegroundColor Yellow
+Write-Host ""
