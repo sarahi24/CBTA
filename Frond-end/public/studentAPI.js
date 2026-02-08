@@ -549,8 +549,8 @@ window.StudentAPI = {
   },
 
   /**
-   * STUDENTS - GET /api/v1/students
-   * Listar todos los estudiantes con paginación (para financial staff)
+   * STUDENTS - GET /api/v1/payments/students
+   * Listar estudiantes con resumen de sus pagos (para financial staff)
    * @param {string} token - Token de autenticación
    * @param {object} options - Opciones de búsqueda y paginación
    * @param {string} options.search - Búsqueda por email, CURP o n_control
@@ -567,7 +567,7 @@ window.StudentAPI = {
         forceRefresh = false
       } = options;
 
-      const params = new URL(`${API_BASE}/students`);
+      const params = new URL(`${API_BASE}/payments/students`);
       if (search) params.searchParams.append('search', search);
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
@@ -582,7 +582,7 @@ window.StudentAPI = {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.students'
+          'X-User-Permission': 'view.payments.student.summary'
         }
       });
 

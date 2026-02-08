@@ -125,11 +125,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:validate debt')->post('/validate', [DebtsController::class, 'validatePayment']);
     });
 
-    Route::prefix('payments')->middleware('role:financial staff')->group(function(){
+    Route::prefix('payments')->middleware(['role:financial staff', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
         Route::middleware('permission:view payments')->get('/', [PaymentsController::class, 'index']);
+        Route::middleware('permission:view.payments.student.summary')->get('/students', [PaymentsController::class, 'students']);
     });
 
-     Route::prefix('students')->middleware(['role:financial staff', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
+     Route::prefix('students')->middleware('role:financial staff')->group(function(){
         Route::middleware('permission:view students')->get('/', [StudentsController::class, 'index']);
     });
 
