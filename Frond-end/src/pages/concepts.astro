@@ -103,51 +103,114 @@ async function loadConcepts(){
     });
     conceptsCache = data?.data?.concepts?.items || [];
     
-    // Cargar información de relaciones para enriquecer los datos
-    if (conceptsCache.length > 0) {
-      console.log(`📦 Cargando relaciones para ${conceptsCache.length} conceptos...`);
-      
-      // Cachés locales para relaciones
-      const relationsCache = {};
-      
-      // Hacer peticiones paralelas para las relaciones (máximo 15 conceptos para no sobrecargar)
-      const conceptsToEnrich = conceptsCache.slice(0, 15);
-      const relationPromises = conceptsToEnrich.map(async (concept) => {
-        if (relationsCache[concept.id]) return;
-        try {
-          const relData = await apiFetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
-            headers: {
-              'X-User-Role': 'financial-staff',
-              'X-User-Permission': 'view.concepts'
-            }
-          });
-          if (relData?.data?.concept?.applies_to) {
-            relationsCache[concept.id] = relData.data.concept;
-          }
-        } catch (err) {
-          console.warn(`⚠️ No se pudieron cargar relaciones para concepto ${concept.id}:`, err.message);
-        }
-      });
-      
-      // Esperar a que se carguen todas las relaciones
-      await Promise.all(relationPromises);
-      
-      // Enriquecer el caché con las relaciones
-      conceptsCache = conceptsCache.map(c => {
-        if (relationsCache[c.id]) {
-          return { ...c, ...relationsCache[c.id] };
-        }
-        return c;
-      });
-      
-      console.log(`✅ Relaciones cargadas, renderizando...`);
-    }
-    
+    // Renderizar inmediatamente sin esperar relaciones
     renderConcepts();
+    
+    // Cargar relaciones en background (sin bloquear)
+    if (conceptsCache.length > 0) {
+      console.log(`📦 Iniciando carga de relaciones en background...`);
+      loadRelationsInBackground();
+    }
   } catch(err){
     console.error(err);
     grid.innerHTML = `<div class="col-span-full text-center py-16 bg-gradient-to-br from-red-50 to-white rounded-2xl border-2 border-red-300 shadow-xl"><div class="flex flex-col items-center gap-4"><i class="fas fa-exclamation-triangle text-5xl text-red-600"></i><p class="text-red-700 font-bold text-lg">Error al cargar conceptos</p><p class="text-red-600 text-sm">${escapeHtml(err.message || 'Error desconocido')}</p></div></div>`;
   }
+}
+
+async function loadRelationsInBackground() {
+  // Cargar relaciones cachadas de localStorage
+  const relationsCache = JSON.parse(localStorage.getItem('conceptsRelationsCache') || '{}');
+  let cacheChanged = false;
+  
+  // Cola de conceptos para cargar relaciones (máximo 2 simultáneas)
+  const maxConcurrent = 2;
+  const delayMs = 300; // 300ms entre batches
+  
+  for (let i = 0; i < conceptsCache.length; i += maxConcurrent) {
+    const batch = conceptsCache.slice(i, i + maxConcurrent);
+    
+    const promises = batch.map(async (concept) => {
+      // Si ya está en caché, no hacer petición
+      if (relationsCache[concept.id]) {
+        updateConceptCard(concept.id, relationsCache[concept.id]);
+        return;
+      }
+      
+      try {
+        const relData = await apiFetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
+          headers: {
+            'X-User-Role': 'financial-staff',
+            'X-User-Permission': 'view.concepts'
+          }
+        });
+        
+        if (relData?.data?.concept) {
+          const relInfo = relData.data.concept;
+          relationsCache[concept.id] = relInfo;
+          cacheChanged = true;
+          
+          // Actualizar la tarjeta inmediatamente
+          updateConceptCard(concept.id, relInfo);
+          console.log(`✅ Relaciones cargadas para concepto ${concept.id}`);
+        }
+      } catch (err) {
+        console.warn(`⚠️ No se pudieron cargar relaciones para concepto ${concept.id}:`, err.message);
+        // Continuar sin bloquear, la tarjeta mostrará "No definido"
+      }
+    });
+    
+    // Esperar a que se complete el batch actual
+    await Promise.all(promises);
+    
+    // Esperar antes del siguiente batch (respeta rate limit)
+    if (i + maxConcurrent < conceptsCache.length) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  // Guardar caché actualizado
+  if (cacheChanged) {
+    localStorage.setItem('conceptsRelationsCache', JSON.stringify(relationsCache));
+    console.log('💾 Caché de relaciones guardado');
+  }
+}
+
+function updateConceptCard(conceptId, relInfo) {
+  // Encontrar la tarjeta del concepto
+  const card = document.querySelector(`[data-concept-id="${conceptId}"]`);
+  if (!card) return;
+  
+  // Actualizar el elemento de alcance
+  const scopeSpan = card.querySelector('[data-scope-value]');
+  if (!scopeSpan) return;
+  
+  // Calcular el nuevo texto de alcance
+  const applies = relInfo.applies_to || relInfo.appliesTo || '';
+  let scopeText = 'No definido';
+  
+  if (applies === 'todos' || applies === 'all') {
+    scopeText = '✅ Aplica a todos';
+  } else if (applies === 'students') {
+    const count = (relInfo.users || relInfo.userIds || relInfo.user_ids || []).length;
+    scopeText = count > 0 ? `👥 ${count} estudiantes` : 'Estudiantes';
+  } else if (applies === 'career' || applies === 'careers') {
+    const count = (relInfo.careers || relInfo.careerIds || relInfo.career_ids || []).length;
+    scopeText = count > 0 ? `🎓 ${count} carreras` : 'Por carrera';
+  } else if (applies === 'semester' || applies === 'semesters') {
+    const count = (relInfo.semesters || []).length;
+    scopeText = count > 0 ? `📅 ${count} semestres` : 'Por semestre';
+  } else if (applies === 'tag' || applies === 'tags') {
+    scopeText = '🏷️ Por etiqueta';
+  }
+  
+  // Actualizar el contenido con animación suave
+  scopeSpan.style.transition = 'opacity 0.3s ease-in-out';
+  scopeSpan.style.opacity = '0';
+  
+  setTimeout(() => {
+    scopeSpan.textContent = scopeText;
+    scopeSpan.style.opacity = '1';
+  }, 150);
 }
 
 function renderConcepts(){
@@ -197,39 +260,8 @@ function renderConcepts(){
 
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
-    // Determinar el texto del alcance basado en applies_to
-    const scopeText = (() => {
-      const applies = c.applies_to || c.appliesTo || '';
-      
-      if (!applies) {
-        return 'No definido';
-      }
-      
-      if (applies === 'todos' || applies === 'all') {
-        return '✅ Aplica a todos';
-      }
-      
-      if (applies === 'students') {
-        const studentCount = (c.users || c.userIds || c.user_ids || []).length;
-        return studentCount > 0 ? `👥 ${studentCount} estudiantes` : 'Estudiantes';
-      }
-      
-      if (applies === 'career' || applies === 'careers') {
-        const careerCount = (c.careers || c.careerIds || c.career_ids || []).length;
-        return careerCount > 0 ? `🎓 ${careerCount} carreras` : 'Por carrera';
-      }
-      
-      if (applies === 'semester' || applies === 'semesters') {
-        const semesterCount = (c.semesters || []).length;
-        return semesterCount > 0 ? `📅 ${semesterCount} semestres` : 'Por semestre';
-      }
-      
-      if (applies === 'tag' || applies === 'tags') {
-        return '🏷️ Por etiqueta';
-      }
-      
-      return applies;
-    })();
+    // Mostrar "Cargando..." inicialmente (se actualizará en background)
+    const scopeText = '⏳ Cargando...';
     
     // Usar expiration_human si está disponible, si no usar las fechas individuales
     const expirationText = c.expiration_human || `${c.start_date || '-'} a ${c.end_date || '-'}`;
@@ -261,7 +293,7 @@ function renderConcepts(){
               <i class="fas fa-filter text-[${PRIMARY_TEXT_COLOR_HEX}]"></i>
               <span class="text-[${PRIMARY_TEXT_COLOR_HEX}] font-bold text-xs uppercase tracking-wider">Alcance</span>
             </div>
-            <span class="font-bold text-gray-800 bg-white px-3 py-1 rounded-lg shadow-sm">${scopeText}</span>
+            <span class="font-bold text-gray-800 bg-white px-3 py-1 rounded-lg shadow-sm" data-scope-value>${scopeText}</span>
           </div>
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
