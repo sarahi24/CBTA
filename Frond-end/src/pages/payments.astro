@@ -1,46 +1,7 @@
 ---
-// src/pages/pago_estado.astro
 import Layout from "../layouts/Layout.astro"; 
-import { API_ENDPOINTS } from "../config/api.js";
 
-const pageTitle = "Historial de Pagos - CBTA 71";
-
-// Configuración de Carreras para el mapeo de nombres en Excel
-const CAREER_MAP = {
-  'TAG-E': 'Técnico Agropecuario',
-  'TOF': 'Técnico en Ofimática',
-  'TEM': 'Técnico en Admón. de Emprendimiento',
-  'TAG-M': 'Técnico Agropecuario (Mixta)',
-  'TRH': 'Técnico en Admón. de Recursos Humanos (Mixta)',
-  '': 'Sin Carrera'
-};
-
-let students = [];
-try {
-    const res = await fetch(API_ENDPOINTS.students.list);
-    if (res.ok) {
-        const json = await res.json();
-        students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-    }
-} catch (e) {}
-
-if (!students.length) {
-    // Fallback data removed - API should provide students
-    students = [];
-}
-
-const safeStudents = students.map((s, i) => ({
-    id: s.id ?? String(i + 1),
-    numControl: s.numControl ?? s.id ?? '',
-    nombre: s.nombre ?? s.name ?? '',
-    apellidoP: s.apellidoP ?? s.apellidoPaterno ?? '',
-    apellidoM: s.apellidoM ?? s.apellidoMaterno ?? '',
-    semestre: s.semestre ?? '1',
-    carrera: s.carrera ?? '',
-}));
-
-const studentsJSON = JSON.stringify(safeStudents).replace(/</g, '\\u003c');
-const careerMapJSON = JSON.stringify(CAREER_MAP);
+const pageTitle = "Gestión de Pagos - CBTA 71";
 ---
 
 <Layout title={pageTitle}>
@@ -92,10 +53,14 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     <div class="flex flex-row items-center gap-3 mb-8 w-full">
         <div class="relative flex-grow">
             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="search-input" placeholder="Buscar por nombre, matrícula o concepto..." class="w-full pl-12 pr-4 h-[48px] bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-4 focus:ring-[#2E594D]/10 focus:border-[#2E594D] outline-none transition-all shadow-md" />
+            <input type="text" id="search-input" placeholder="Buscar por email, nombre o concepto..." class="w-full pl-12 pr-4 h-[48px] bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-4 focus:ring-[#2E594D]/10 focus:border-[#2E594D] outline-none transition-all shadow-md" />
         </div>
 
         <div class="flex items-center gap-2 relative">
+            <button id="refresh-btn" class="flex items-center gap-2 px-5 h-[48px] border-2 border-green-600 text-green-600 font-bold text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md" title="Actualizar caché">
+                <i class="fas fa-sync-alt"></i>
+                <span>Actualizar</span>
+            </button>
             <button id="toggle-filters" class="flex items-center gap-2 px-5 h-[48px] border-2 border-[#2E594D] text-[#2E594D] font-bold text-sm rounded-xl hover:bg-[#2E594D] hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md">
                 <i class="fas fa-filter"></i>
                 <span>Filtros</span>
@@ -169,110 +134,120 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     </div>
 
     <div class="flex flex-col items-center gap-4 py-6 bg-white rounded-xl shadow-md">
-        <p class="text-xs font-bold text-[#2D584C] flex items-center gap-2">
-            <i class="fas fa-list"></i>
-            <span>Total de Registros: <span id="p-total" class="text-base">0</span></span>
-        </p>
+        <div class="flex items-center gap-6">
+            <p class="text-xs font-bold text-[#2D584C] flex items-center gap-2">
+                <i class="fas fa-list"></i>
+                <span>Total de Registros: <span id="p-total" class="text-base">0</span></span>
+            </p>
+            <p class="text-xs font-bold text-gray-500 flex items-center gap-2">
+                <i class="fas fa-file-alt"></i>
+                <span>Página <span id="current-page" class="text-base text-[#2D584C]">1</span> de <span id="last-page" class="text-base text-[#2D584C]">1</span></span>
+            </p>
+        </div>
         <div class="flex items-center gap-2" id="pagination-controls"></div>
     </div>
 </div>
-
-<script is:inline define:vars={{ studentsJSON, careerMapJSON }}>
-window.__INITIAL_STUDENTS_PAYMENTS = JSON.parse(studentsJSON);
-window.__CAREER_MAP = JSON.parse(careerMapJSON);
-</script>
 
 <script type="module">
 import { StudentAPI } from '../utils/studentAPI.js';
 
 (function() {
     let currentPage = 1;
-    const itemsPerPage = 50;
-    let filteredData = [];
+    let lastPage = 1;
+    let totalRecords = 0;
+    const itemsPerPage = 15;
     let isLoading = false;
+    let searchTerm = '';
+    let searchTimeout = null;
 
     const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
+    const refreshBtn = document.getElementById('refresh-btn');
     const filterMenu = document.getElementById('filter-menu');
 
     document.getElementById('toggle-filters').onclick = (e) => { e.stopPropagation(); filterMenu.classList.toggle('show'); };
     document.onclick = () => filterMenu.classList.remove('show');
     filterMenu.onclick = (e) => e.stopPropagation();
 
-    // Cargar pagos desde API
-    async function loadPayments() {
+    // Cargar pagos desde API con paginación del servidor
+    async function loadPayments(forceRefresh = false) {
         if (isLoading) return;
         isLoading = true;
+
+        // Mostrar indicador de carga
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-8 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <i class="fas fa-spinner fa-spin text-4xl text-[#2D584C]"></i>
+                        <p class="text-gray-600 font-bold">${forceRefresh ? 'Actualizando datos...' : 'Cargando pagos...'}</p>
+                    </div>
+                </td>
+            </tr>
+        `;
 
         try {
             const token = localStorage.getItem('access_token');
             if (!token) {
-                console.warn('⚠️ No hay token de autenticación');
-                render();
+                showError('No hay sesión activa. Por favor inicia sesión.');
+                setTimeout(() => window.location.href = '/login', 2000);
                 return;
             }
 
-            try {
-                // Intentar usar el nuevo endpoint GET /api/v1/payments
-                const response = await StudentAPI.getAllPayments(token, {
-                    search: searchInput.value.trim(),
-                    page: 1,
-                    perPage: 1000, // Obtener muchos para paginación local
-                    forceRefresh: false
-                });
+            const response = await StudentAPI.getAllPayments(token, {
+                search: searchTerm,
+                page: currentPage,
+                perPage: itemsPerPage,
+                forceRefresh: forceRefresh
+            });
 
-                if (response.success && response.data?.payments?.items) {
-                    const allPayments = response.data.payments.items.map(payment => ({
-                        id: payment.id,
-                        date: payment.date,
-                        concept: payment.concept,
-                        amount: payment.amount,
-                        amount_received: payment.amount_received,
-                        method: payment.method,
-                        fullName: payment.fullName,
-                        paidAt: payment.date
-                    }));
+            if (response.success && response.data?.payments) {
+                const paymentsData = response.data.payments;
+                
+                // Actualizar variables de paginación
+                currentPage = paymentsData.currentPage || 1;
+                lastPage = paymentsData.lastPage || 1;
+                totalRecords = paymentsData.total || 0;
 
-                    localStorage.setItem('paymentsList', JSON.stringify(allPayments));
-                    console.log('✅ Pagos cargados (GET /api/v1/payments):', allPayments.length);
-                    render();
-                    return;
-                }
-            } catch (error) {
-                console.warn('⚠️ No se pudo cargar con GET /api/v1/payments:', error.message);
+                console.log(`✅ Pagos cargados: ${paymentsData.items?.length || 0} de ${totalRecords} total`);
+                
+                renderPayments(paymentsData.items || []);
+                updatePaginationInfo();
+            } else {
+                showError('No se pudieron cargar los pagos');
             }
-
-            // Fallback: Usar datos de localStorage si el endpoint falla
-            render();
+        } catch (error) {
+            console.error('❌ Error al cargar pagos:', error);
+            showError(error.message || 'Error al cargar los pagos');
         } finally {
             isLoading = false;
         }
     }
 
-    const render = () => {
-        const allPayments = JSON.parse(localStorage.getItem('paymentsList') || '[]') || [];
-        const students = JSON.parse(localStorage.getItem('studentsList') || '[]') || window.__INITIAL_STUDENTS_PAYMENTS;
+    // Renderizar pagos en la tabla
+    const renderPayments = (payments) => {
+        if (!payments || payments.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-8 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <i class="fas fa-inbox text-5xl text-gray-300"></i>
+                            <p class="text-gray-500 font-bold">No se encontraron pagos</p>
+                            <p class="text-gray-400 text-sm">Intenta ajustar los filtros de búsqueda</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
 
-        const term = searchInput.value.toLowerCase();
-        const semesterSel = document.getElementById('semester-filter').value;
-        const methodSel = document.getElementById('method-filter').value;
-
-        filteredData = allPayments.filter(p => {
-            const matchesSearch = 
-                (p.fullName || '').toLowerCase().includes(term) || 
-                (p.concept || '').toLowerCase().includes(term);
-            
-            const matchesMethod = methodSel === 'all' || (p.method || '').includes(methodSel);
-            
-            return matchesSearch && matchesMethod;
-        });
-
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const pageItems = filteredData.slice(startIdx, startIdx + itemsPerPage);
-
-        tableBody.innerHTML = pageItems.map(p => {
-            const dateStr = p.date || p.paidAt || new Date().toISOString();
-            const displayDate = new Date(dateStr).toLocaleDateString('es-MX');
+        tableBody.innerHTML = payments.map(p => {
+            const dateStr = p.date || new Date().toISOString();
+            const displayDate = new Date(dateStr).toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
 
             return `
                 <tr class="hover:bg-gradient-to-r hover:from-[#2D584C]/5 hover:to-transparent transition-all duration-200">
@@ -301,38 +276,140 @@ import { StudentAPI } from '../utils/studentAPI.js';
                     </td>
                     <td class="px-8 py-5 text-right">
                         <span class="font-black text-[#2E594D] text-base">
-                            $${Number(p.amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}
+                            $${Number(p.amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}
                         </span>
                     </td>
                 </tr>
             `;
         }).join('');
-
-        document.getElementById('p-total').textContent = filteredData.length;
-        renderPagination(Math.ceil(filteredData.length / itemsPerPage));
     };
 
-    const renderPagination = (totalPages) => {
+    // Mostrar errores
+    const showError = (message) => {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-8 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <i class="fas fa-exclamation-triangle text-5xl text-red-400"></i>
+                        <p class="text-red-600 font-bold">${message}</p>
+                        <button onclick="location.reload()" class="mt-2 px-4 py-2 bg-[#2D584C] text-white rounded-lg hover:bg-[#1e3d35] transition">
+                            Reintentar
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    };
+
+    // Actualizar información de paginación
+    const updatePaginationInfo = () => {
+        document.getElementById('p-total').textContent = totalRecords;
+        document.getElementById('current-page').textContent = currentPage;
+        document.getElementById('last-page').textContent = lastPage;
+        renderPagination();
+    };
+
+    const renderPagination = () => {
         const controls = document.getElementById('pagination-controls');
-        if(totalPages <= 1) { controls.innerHTML = ''; return; }
+        if(lastPage <= 1) { 
+            controls.innerHTML = ''; 
+            return; 
+        }
+
         let html = '';
-        for(let i=1; i<=totalPages; i++) {
+        
+        // Botón anterior
+        html += `
+            <button class="page-link ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                    data-page="${currentPage - 1}" 
+                    ${currentPage === 1 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        `;
+
+        // Páginas
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let endPage = Math.min(lastPage, startPage + maxVisible - 1);
+        
+        if (endPage - startPage < maxVisible - 1) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+            html += `<button class="page-link" data-page="1">1</button>`;
+            if (startPage > 2) {
+                html += `<span class="px-2 text-gray-400">...</span>`;
+            }
+        }
+
+        for(let i = startPage; i <= endPage; i++) {
             html += `<button class="page-link ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
         }
+
+        if (endPage < lastPage) {
+            if (endPage < lastPage - 1) {
+                html += `<span class="px-2 text-gray-400">...</span>`;
+            }
+            html += `<button class="page-link" data-page="${lastPage}">${lastPage}</button>`;
+        }
+
+        // Botón siguiente
+        html += `
+            <button class="page-link ${currentPage === lastPage ? 'opacity-50 cursor-not-allowed' : ''}" 
+                    data-page="${currentPage + 1}" 
+                    ${currentPage === lastPage ? 'disabled' : ''}>
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+
         controls.innerHTML = html;
-        controls.querySelectorAll('button').forEach(b => {
-            b.onclick = () => { currentPage = parseInt(b.dataset.page); render(); };
+        controls.querySelectorAll('button:not([disabled])').forEach(b => {
+            b.onclick = () => { 
+                const newPage = parseInt(b.dataset.page);
+                if (newPage >= 1 && newPage <= lastPage && newPage !== currentPage) {
+                    currentPage = newPage;
+                    loadPayments();
+                }
+            };
         });
     };
 
-    searchInput.oninput = () => { currentPage = 1; render(); };
-    document.getElementById('semester-filter').onchange = () => { currentPage = 1; render(); };
-    document.getElementById('method-filter').onchange = () => { currentPage = 1; render(); };
+    // Event listeners
+    searchInput.oninput = () => { 
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchTerm = searchInput.value.trim();
+            currentPage = 1;
+            loadPayments();
+        }, 500); // Debounce de 500ms
+    };
+
+    refreshBtn.onclick = () => {
+        const icon = refreshBtn.querySelector('i');
+        icon.classList.add('fa-spin');
+        loadPayments(true).finally(() => {
+            icon.classList.remove('fa-spin');
+        });
+    };
+
+    document.getElementById('semester-filter').onchange = () => { 
+        currentPage = 1; 
+        loadPayments(); 
+    };
+    
+    document.getElementById('method-filter').onchange = () => { 
+        currentPage = 1; 
+        loadPayments(); 
+    };
+    
     document.getElementById('clear-filters').onclick = () => { 
         searchInput.value = ''; 
+        searchTerm = '';
         document.getElementById('semester-filter').value = 'all'; 
         document.getElementById('method-filter').value = 'all'; 
-        render(); 
+        currentPage = 1;
+        loadPayments(); 
     };
 
     // Cargar pagos al iniciar
