@@ -224,7 +224,7 @@ export const StudentAPI = {
   },
 
   /**
-   * ADEUDOS - GET /api/v1/pending-payments/{studentId?}
+   * ADEUDOS - GET /api/v1/pending-payment
    * Obtener pagos pendientes del usuario autenticado
    * @param {number|null} studentId - ID del estudiante (opcional para padres con múltiples hijos)
    * @param {string} token - Token de autenticación
@@ -233,7 +233,13 @@ export const StudentAPI = {
    */
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(studentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`);
+      // Construir URL base SIN el parámetro studentId en el path
+      const url = new URL(`${API_BASE}/pending-payment`);
+      
+      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
+      if (studentId) {
+        url.searchParams.append('id', studentId);
+      }
       
       // Agregar query parameters
       if (forceRefresh) {
@@ -264,7 +270,7 @@ export const StudentAPI = {
   },
 
   /**
-   * ADEUDOS - GET /api/v1/pending-payments/overdue/{studentId?}
+   * ADEUDOS - GET /api/v1/pending-payment/overdue
    * Obtener pagos vencidos del usuario autenticado
    * @param {number|null} studentId - ID del estudiante (opcional para padres con múltiples hijos)
    * @param {string} token - Token de autenticación
@@ -273,7 +279,13 @@ export const StudentAPI = {
    */
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`);
+      // Construir URL base SIN el parámetro studentId en el path
+      const url = new URL(`${API_BASE}/pending-payment/overdue`);
+      
+      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
+      if (studentId) {
+        url.searchParams.append('id', studentId);
+      }
       
       // Agregar query parameters
       if (forceRefresh) {
