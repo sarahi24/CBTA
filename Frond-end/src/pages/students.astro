@@ -219,19 +219,60 @@ async function loadStudents(forceRefresh = false) {
         });
 
         console.log('📡 Respuesta del servidor:', response);
+        console.log('📊 response.success:', response.success);
+        console.log('📊 response.data:', response.data);
+        console.log('📊 response.data?.payments:', response.data?.payments);
 
-        if (response.success && response.data?.payments) {
-            const studentsData = response.data.payments;
+        if (response.success && response.data) {
+            // Intentar diferentes estructuras de respuesta
+            let studentsData = null;
             
-            currentPage = studentsData.currentPage || 1;
-            lastPage = studentsData.lastPage || 1;
-            totalRecords = studentsData.total || 0;
+            // Opción 1: response.data.payments (estructura esperada)
+            if (response.data.payments) {
+                studentsData = response.data.payments;
+                console.log('✅ Usando estructura: response.data.payments');
+            }
+            // Opción 2: response.data.students (alternativa)
+            else if (response.data.students) {
+                studentsData = response.data.students;
+                console.log('✅ Usando estructura: response.data.students');
+            }
+            // Opción 3: response.data directamente es el array
+            else if (Array.isArray(response.data)) {
+                studentsData = {
+                    items: response.data,
+                    currentPage: 1,
+                    lastPage: 1,
+                    total: response.data.length
+                };
+                console.log('✅ Usando estructura: response.data (array directo)');
+            }
+            // Opción 4: response.data.data (doble anidación)
+            else if (response.data.data) {
+                studentsData = response.data.data.payments || response.data.data;
+                console.log('✅ Usando estructura: response.data.data');
+            }
+            
+            if (studentsData && studentsData.items) {
+                currentPage = studentsData.currentPage || 1;
+                lastPage = studentsData.lastPage || 1;
+                totalRecords = studentsData.total || 0;
 
-            console.log(`✅ Estudiantes cargados: ${studentsData.items?.length || 0} de ${totalRecords} total`);
-            
-            renderTable(studentsData.items || []);
-            updatePaginationInfo();
+                console.log(`✅ Estudiantes cargados: ${studentsData.items.length} de ${totalRecords} total`);
+                console.log('📋 Primer estudiante (muestra):', studentsData.items[0]);
+                
+                renderTable(studentsData.items);
+                updatePaginationInfo();
+            } else {
+                console.error('❌ No se encontró estructura válida de datos');
+                console.error('Estructura recibida:', {
+                    success: response.success,
+                    dataKeys: response.data ? Object.keys(response.data) : []
+                });
+                showError('Estructura de datos incorrecta del servidor');
+            }
         } else {
+            console.error('❌ Respuesta sin éxito o sin datos');
             showError('No se pudieron cargar los estudiantes');
         }
     } catch (error) {

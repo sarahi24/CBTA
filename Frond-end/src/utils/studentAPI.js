@@ -900,7 +900,7 @@ export const StudentAPI = {
   },
 
   /**
-   * STUDENTS - GET /api/v1/payments
+   * STUDENTS - GET /api/v1/payments/students
    * Listar estudiantes con resumen de sus pagos (para financial staff)
    * @param {string} token - Token de autenticación
    * @param {object} options - Opciones de búsqueda y paginación
@@ -918,7 +918,7 @@ export const StudentAPI = {
         forceRefresh = false
       } = options;
 
-      const params = new URL(`${API_BASE}/payments`);
+      const params = new URL(`${API_BASE}/payments/students`);
       if (search) params.searchParams.append('search', search);
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
@@ -931,7 +931,7 @@ export const StudentAPI = {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.payments'
+          'X-User-Permission': 'view.payments.student.summary'
         }
       });
 
