@@ -600,6 +600,69 @@ window.StudentAPI = {
       console.error('❌ StudentAPI.getPaymentStudents:', err);
       throw err;
     }
+  },
+
+  /**
+   * DEBTS - GET /api/v1/debts
+   * Listar todos los pagos pendientes con paginación (para financial staff)
+   * @param {string} token - Token de autenticación
+   * @param {object} options - Opciones de búsqueda y paginación
+   * @param {string} options.search - Búsqueda por CURP, email o n_control
+   * @param {number} options.page - Página número (default: 1)
+   * @param {number} options.perPage - Items por página (default: 15)
+   * @param {boolean} options.forceRefresh - Forzar actualización del caché
+   */
+  async getAllPendingDebts(token, options = {}) {
+    try {
+      const {
+        search = '',
+        page = 1,
+        perPage = 15,
+        forceRefresh = false
+      } = options;
+
+      const params = new URL(`${API_BASE}/debts`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+
+      console.log(`🔍 [StudentAPI] getAllPendingDebts URL: ${params.toString()}`);
+
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.debts'
+        }
+      });
+
+      console.log(`📡 [StudentAPI] getAllPendingDebts Response Status: ${response.status}`);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleAuthError(401);
+          throw new Error('No autenticado. Por favor inicia sesión.');
+        }
+        if (response.status === 403) {
+          throw new Error('No tienes permiso para ver los adeudos.');
+        }
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getAllPendingDebts Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || 'Error al obtener adeudos');
+      }
+
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getAllPendingDebts Success:`, data);
+      return data;
+    } catch (err) {
+      console.error('❌ StudentAPI.getAllPendingDebts:', err);
+      throw err;
+    }
   }
 };
 
