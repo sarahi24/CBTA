@@ -98,32 +98,32 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
                     <tr>
                         <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
                             <div class="flex items-center gap-2">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Fecha</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center gap-2">
                                 <i class="fas fa-file-invoice-dollar"></i>
-                                <span>Concepto de Pago</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-user-graduate"></i>
-                                <span>Estudiante</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-credit-card"></i>
-                                <span>Método</span>
+                                <span>Concepto</span>
                             </div>
                         </th>
                         <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white">
                             <div class="flex items-center justify-end gap-2">
-                                <i class="fas fa-dollar-sign"></i>
-                                <span>Monto</span>
+                                <i class="fas fa-coins"></i>
+                                <span>Total</span>
+                            </div>
+                        </th>
+                        <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white">
+                            <div class="flex items-center justify-end gap-2">
+                                <i class="fas fa-hand-holding-dollar"></i>
+                                <span>Recaudado</span>
+                            </div>
+                        </th>
+                        <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white">
+                            <div class="flex items-center justify-end gap-2">
+                                <i class="fas fa-percentage"></i>
+                                <span>Tasa Cobranza</span>
+                            </div>
+                        </th>
+                        <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-calendar-check"></i>
+                                <span>Período de Pagos</span>
                             </div>
                         </th>
                     </tr>
@@ -165,11 +165,41 @@ import { StudentAPI } from '/studentAPI.js';
     const refreshBtn = document.getElementById('refresh-btn');
     const filterMenu = document.getElementById('filter-menu');
 
-    document.getElementById('toggle-filters').onclick = (e) => { e.stopPropagation(); filterMenu.classList.toggle('show'); };
+    // Formatear fecha
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch {
+            return dateString;
+        }
+    };
+
+    // Normalizar concepto de pago
+    const normalizePaymentConcept = (item) => {
+        return {
+            conceptName: item.concept_name || item.conceptName || 'N/A',
+            amountTotal: parseFloat(item.amount_total || item.amountTotal || 0),
+            amountReceivedTotal: parseFloat(item.amount_received_total || item.amountReceivedTotal || 0),
+            collectionRate: parseFloat(item.collection_rate || item.collectionRate || 0),
+            firstPaymentDate: item.first_payment_date || item.firstPaymentDate || null,
+            lastPaymentDate: item.last_payment_date || item.lastPaymentDate || null
+        };
+    };
+
+    document.getElementById('toggle-filters').onclick = (e) => { 
+        e.stopPropagation(); 
+        filterMenu.classList.toggle('show'); 
+    };
     document.onclick = () => filterMenu.classList.remove('show');
     filterMenu.onclick = (e) => e.stopPropagation();
 
-    // Cargar pagos desde API con paginación del servidor
+    // Cargar pagos por concepto desde API con paginación
     async function loadPayments(forceRefresh = false) {
         if (isLoading) return;
         isLoading = true;
@@ -194,7 +224,8 @@ import { StudentAPI } from '/studentAPI.js';
                 return;
             }
 
-            const response = await StudentAPI.getAllPayments(token, {
+            // Usar endpoint /api/v1/payments/by-concept
+            const response = await StudentAPI.getPaymentsByConcept(token, {
                 search: searchTerm,
                 page: currentPage,
                 perPage: itemsPerPage,
@@ -209,22 +240,22 @@ import { StudentAPI } from '/studentAPI.js';
                 lastPage = paymentsData.lastPage || 1;
                 totalRecords = paymentsData.total || 0;
 
-                console.log(`✅ Pagos cargados: ${paymentsData.items?.length || 0} de ${totalRecords} total`);
+                console.log(`✅ Conceptos de pago cargados: ${paymentsData.items?.length || 0} de ${totalRecords} total`);
                 
                 renderPayments(paymentsData.items || []);
                 updatePaginationInfo();
             } else {
-                showError('No se pudieron cargar los pagos');
+                showError('No se pudieron cargar los pagos por concepto');
             }
         } catch (error) {
-            console.error('❌ Error al cargar pagos:', error);
+            console.error('❌ Error al cargar pagos por concepto:', error);
             showError(error.message || 'Error al cargar los pagos');
         } finally {
             isLoading = false;
         }
     }
 
-    // Renderizar pagos en la tabla
+    // Renderizar pagos por concepto en la tabla
     const renderPayments = (payments) => {
         if (!payments || payments.length === 0) {
             tableBody.innerHTML = `
@@ -232,7 +263,7 @@ import { StudentAPI } from '/studentAPI.js';
                     <td colspan="5" class="px-8 py-12 text-center">
                         <div class="flex flex-col items-center gap-3">
                             <i class="fas fa-inbox text-5xl text-gray-300"></i>
-                            <p class="text-gray-500 font-bold">No se encontraron pagos</p>
+                            <p class="text-gray-500 font-bold">No se encontraron conceptos de pago</p>
                             <p class="text-gray-400 text-sm">Intenta ajustar los filtros de búsqueda</p>
                         </div>
                     </td>
@@ -242,42 +273,45 @@ import { StudentAPI } from '/studentAPI.js';
         }
 
         tableBody.innerHTML = payments.map(p => {
-            const dateStr = p.date || new Date().toISOString();
-            const displayDate = new Date(dateStr).toLocaleDateString('es-MX', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            const normalized = normalizePaymentConcept(p);
+            
+            // Determinar color de tasa de cobranza
+            let collectionColor = 'text-red-600';
+            if (normalized.collectionRate >= 75) collectionColor = 'text-emerald-600';
+            else if (normalized.collectionRate >= 50) collectionColor = 'text-amber-600';
+
+            // Período de pagos
+            const periodStart = formatDate(normalized.firstPaymentDate);
+            const periodEnd = formatDate(normalized.lastPaymentDate);
+            const periodText = periodStart === 'N/A' ? 'Sin registros' : `${periodStart} - ${periodEnd}`;
 
             return `
                 <tr class="hover:bg-gradient-to-r hover:from-[#2D584C]/5 hover:to-transparent transition-all duration-200">
-                    <td class="px-8 py-5 text-gray-600 font-semibold text-xs">
-                        <div class="flex items-center gap-2">
-                            <i class="far fa-calendar text-[#2D584C]"></i>
-                            <span>${displayDate}</span>
-                        </div>
-                    </td>
                     <td class="px-8 py-5">
-                        <span class="text-gray-900 font-extrabold text-xs uppercase block tracking-tight">
-                            ${p.concept || 'PAGO REGISTRADO'}
-                        </span>
-                    </td>
-                    <td class="px-8 py-5">
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-user text-[#2D584C] text-xs"></i>
-                            <span class="text-gray-800 font-bold text-xs uppercase">${p.fullName || 'N/A'}</span>
-                        </div>
-                    </td>
-                    <td class="px-8 py-5">
-                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-white uppercase bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-1 rounded-full">
-                            <i class="fas fa-money-bill-wave text-xs"></i>
-                            ${p.method || 'N/A'}
+                        <span class="text-gray-900 font-extrabold text-sm uppercase block tracking-tight">
+                            ${normalized.conceptName}
                         </span>
                     </td>
                     <td class="px-8 py-5 text-right">
-                        <span class="font-black text-[#2E594D] text-base">
-                            $${Number(p.amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                        <span class="text-gray-700 font-bold text-sm">
+                            $${normalized.amountTotal.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}
                         </span>
+                    </td>
+                    <td class="px-8 py-5 text-right">
+                        <span class="text-emerald-700 font-black text-sm">
+                            $${normalized.amountReceivedTotal.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 text-right">
+                        <span class="font-black text-base ${collectionColor}">
+                            ${normalized.collectionRate.toFixed(2)}%
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 text-left">
+                        <div class="flex items-center gap-2 text-xs text-gray-600 font-semibold">
+                            <i class="fas fa-calendar text-[#2D584C]"></i>
+                            <span>${periodText}</span>
+                        </div>
                     </td>
                 </tr>
             `;

@@ -234,7 +234,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
   <!-- VALIDACIÓN RÁPIDA DE PAGOS STRIPE -->
   <div id="quick-validate-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
       <div class="flex justify-between items-center mb-4 border-b pb-3">
         <div class="flex items-center gap-2">
           <i class="fas fa-bolt text-indigo-600 text-lg"></i>
@@ -243,14 +243,19 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         <button id="quick-validate-close-x" class="text-gray-400 font-bold">✕</button>
       </div>
 
-      <form id="quick-validate-form" class="space-y-3">
-        <div>
-          <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Estudiante (Email, CURP o N. Control)</label>
-          <input id="quick-search-input" type="text" placeholder="juan.perez@ejemplo.com" class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 outline-none" required />
+      <!-- Selector de estudiante -->
+      <div id="quick-student-selector" class="mb-4">
+        <label class="block text-[9px] font-bold text-gray-500 uppercase mb-2">1. Selecciona Estudiante</label>
+        <div id="quick-students-list" class="border-2 border-gray-200 rounded-lg max-h-64 overflow-y-auto bg-gray-50">
+          <div class="p-4 text-center text-sm text-gray-500">Cargando estudiantes...</div>
         </div>
+        <div id="quick-selected-student" class="hidden mt-2 p-2 bg-indigo-50 border-2 border-indigo-200 rounded-lg text-[10px] font-bold text-indigo-700"></div>
+      </div>
 
+      <!-- Campo Payment Intent (oculto hasta seleccionar estudiante) -->
+      <form id="quick-validate-form" class="hidden space-y-3">
         <div>
-          <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Payment Intent ID</label>
+          <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">2. Payment Intent ID</label>
           <input id="quick-intent-input" type="text" placeholder="pi_..." class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:border-indigo-500 outline-none" required />
         </div>
 
@@ -267,12 +272,14 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
           <div id="quick-result-amount" class="text-emerald-600 font-black mt-1"></div>
           <div id="quick-result-status" class="text-[10px] text-gray-500 mt-1"></div>
         </div>
+        <button id="quick-result-close-btn" class="mt-3 w-full py-1 text-[9px] font-bold text-emerald-700 hover:bg-emerald-100 rounded-lg transition-all">Cerrar</button>
       </div>
 
       <!-- Error rápido -->
       <div id="quick-error-section" class="hidden mt-4 p-3 bg-red-50 border-2 border-red-200 rounded-lg">
         <div class="text-[9px] font-bold text-red-600 uppercase mb-2">❌ Error</div>
         <div id="quick-error-text" class="text-[10px] text-red-700 font-bold"></div>
+        <button id="quick-error-back-btn" class="mt-2 w-full py-1 text-[9px] font-bold text-red-700 hover:bg-red-100 rounded-lg transition-all">Atrás</button>
       </div>
     </div>
   </div>
@@ -760,24 +767,79 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
     // ====== VALIDACIÓN RÁPIDA ======
     const quickValidateModal = document.getElementById('quick-validate-modal');
-    const quickSearchInput = document.getElementById('quick-search-input');
     const quickIntentInput = document.getElementById('quick-intent-input');
     const quickForm = document.getElementById('quick-validate-form');
+    const quickStudentsList = document.getElementById('quick-students-list');
+    const quickSelectedStudent = document.getElementById('quick-selected-student');
     const quickResultSection = document.getElementById('quick-result-section');
     const quickErrorSection = document.getElementById('quick-error-section');
+    let selectedStudentData = null;
 
     // Abrir modal de validación rápida
     document.getElementById('open-quick-validate-btn').onclick = () => {
       quickValidateModal.classList.replace('hidden', 'flex');
-      quickSearchInput.value = '';
+      selectedStudentData = null;
+      quickSelectedStudent.classList.add('hidden');
+      quickForm.classList.add('hidden');
       quickIntentInput.value = '';
       quickResultSection.classList.add('hidden');
       quickErrorSection.classList.add('hidden');
+      
+      // Cargar lista de estudiantes únicos
+      const uniqueStudents = [];
+      const seen = new Set();
+      
+      pendingPayments.forEach(payment => {
+        const key = payment.userName + '|' + payment.nControl;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueStudents.push({
+            name: payment.userName,
+            nControl: payment.nControl,
+            email: payment.email,
+            id: payment.studentId
+          });
+        }
+      });
+
+      // Renderizar lista de estudiantes
+      quickStudentsList.innerHTML = uniqueStudents.length > 0 
+        ? uniqueStudents.map((student, idx) => `
+          <button type="button" class="quick-student-btn w-full text-left p-3 hover:bg-indigo-100 border-b border-gray-200 transition-colors flex justify-between items-start" data-index="${idx}" data-name="${student.name}" data-nControl="${student.nControl}" data-email="${student.email}" data-id="${student.id}">
+            <div class="flex-1">
+              <div class="font-bold text-[11px] text-gray-900">${student.name}</div>
+              <div class="text-[9px] text-gray-500">${student.nControl}</div>
+            </div>
+            <i class="fas fa-arrow-right text-indigo-600 text-[10px] mt-1"></i>
+          </button>
+        `).join('')
+        : '<div class="p-4 text-center text-sm text-gray-500">No hay estudiantes con adeudos</div>';
+
+      // Agregar listeners a cada botón de estudiante
+      document.querySelectorAll('.quick-student-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          selectedStudentData = {
+            name: btn.dataset.name,
+            nControl: btn.dataset.nControl,
+            email: btn.dataset.email,
+            studentId: btn.dataset.id
+          };
+          
+          quickSelectedStudent.textContent = `✓ ${selectedStudentData.name} (${selectedStudentData.nControl})`;
+          quickSelectedStudent.classList.remove('hidden');
+          document.getElementById('quick-student-selector').style.opacity = '0.6';
+          document.getElementById('quick-student-selector').style.pointerEvents = 'none';
+          quickForm.classList.remove('hidden');
+          quickIntentInput.focus();
+        };
+      });
     };
 
     // Cerrar modal de validación rápida
     const closeQuickValidateModal = () => {
       quickValidateModal.classList.replace('flex', 'hidden');
+      selectedStudentData = null;
     };
     document.getElementById('quick-validate-close-x').onclick = closeQuickValidateModal;
 
@@ -785,16 +847,14 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     quickForm.onsubmit = async (e) => {
       e.preventDefault();
       
-      const search = quickSearchInput.value.trim();
-      const paymentIntentId = quickIntentInput.value.trim();
-
-      if (!search) {
-        document.getElementById('quick-error-text').textContent = 'Ingresa el estudiante';
+      if (!selectedStudentData) {
+        document.getElementById('quick-error-text').textContent = 'Selecciona un estudiante';
         quickErrorSection.classList.remove('hidden');
         quickResultSection.classList.add('hidden');
         return;
       }
 
+      const paymentIntentId = quickIntentInput.value.trim();
       if (!paymentIntentId) {
         document.getElementById('quick-error-text').textContent = 'Ingresa el Payment Intent ID';
         quickErrorSection.classList.remove('hidden');
@@ -808,8 +868,11 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
           throw new Error('No autenticado');
         }
 
+        // Usar el email como búsqueda si está disponible, sino el nControl
+        const searchQuery = selectedStudentData.email || selectedStudentData.nControl || selectedStudentData.name;
+
         const response = await StudentAPI.validateStripePayment(token, {
-          searchQuery: search,
+          searchQuery: searchQuery,
           paymentIntentId: paymentIntentId
         });
 
@@ -817,11 +880,14 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
           const data = response.data;
           const metadata = data.metadata || {};
           
-          document.getElementById('quick-result-name').textContent = `${metadata.studentName || 'N/A'}`;
+          document.getElementById('quick-result-name').textContent = `${metadata.studentName || selectedStudentData.name}`;
           document.getElementById('quick-result-amount').textContent = `$${parseFloat(metadata.amount || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-          document.getElementById('quick-result-status').textContent = metadata.wasReconciled ? '✓ Reconciliado' : '○ Sin reconsiliación';
+          document.getElementById('quick-result-status').textContent = metadata.wasReconciled ? '✓ Reconciliado' : '○ Sin reconciliación';
           
           quickErrorSection.classList.add('hidden');
+          document.getElementById('quick-student-selector').style.opacity = '1';
+          document.getElementById('quick-student-selector').style.pointerEvents = 'auto';
+          quickForm.classList.add('hidden');
           quickResultSection.classList.remove('hidden');
         } else {
           throw new Error(response.message || 'Error en validación');
@@ -831,6 +897,19 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         quickErrorSection.classList.remove('hidden');
         quickResultSection.classList.add('hidden');
       }
+    };
+
+    // Botón cerrar resultado
+    document.getElementById('quick-result-close-btn').onclick = closeQuickValidateModal;
+
+    // Botón atrás en error
+    document.getElementById('quick-error-back-btn').onclick = () => {
+      document.getElementById('quick-student-selector').style.opacity = '1';
+      document.getElementById('quick-student-selector').style.pointerEvents = 'auto';
+      quickIntentInput.value = '';
+      quickForm.classList.remove('hidden');
+      quickErrorSection.classList.add('hidden');
+      quickIntentInput.focus();
     };
     
     // Cargar datos inicialmente
