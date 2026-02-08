@@ -9,6 +9,81 @@ const PRIMARY_TEXT_COLOR = 'text-[#2E584C]';
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
+<style>
+  :root {
+    --primary-color: #2E594D;
+    --primary-dark: #1e3d35;
+    --emerald: #10b981;
+    --teal: #14b8a6;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(to bottom right, #f8fafc, #ffffff, rgba(16, 185, 129, 0.05));
+    color: #1f2937;
+  }
+
+  /* Animaciones personalizadas */
+  @keyframes slideInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-in {
+    animation: slideInDown 0.5s ease-out;
+  }
+
+  .grid {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .card {
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Ensure proper text rendering */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 900;
+  }
+
+  /* Tailwind fixes */
+  .text-transparent {
+    color: transparent;
+  }
+
+  .bg-clip-text {
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+</style>
+
 <Layout title={pageTitle}>  
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 min-h-screen">
 
@@ -170,6 +245,11 @@ function renderConcepts(){
   grid.innerHTML = list.map(c=>{
     const amount = Number(c.amount)||0;
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
+    
+    // Obtener fechas con mapeo flexible
+    const startDate = c.start_date || c.startDate || c.start || c.fecha_inicio || c.fechaInicio || c.beginning_date || c.beginningDate || '-';
+    const endDate = c.end_date || c.endDate || c.end || c.fecha_fin || c.fechaFin || c.expiration_date || c.expirationDate || c.expiry_date || c.expiryDate || '-';
+    
     const scopeText = (() => {
       const applies = c.applies_to || c.appliesTo || '';
       if (applies === 'todos') return 'Todos';
@@ -205,28 +285,24 @@ function renderConcepts(){
           </div>
         </div>
 
-        <!-- Sección de Alcance y Vigencia -->
-        <div class="space-y-3 py-4 rounded-2xl ${isInactive ? 'bg-amber-100/30' : 'bg-emerald-100/20'} border-2 ${isInactive ? 'border-amber-300/50' : 'border-emerald-300/40'} px-4 mb-6 relative z-10">
-          <!-- Alcance -->
-          <div class="flex items-center justify-between gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
-            <div class="flex items-center gap-2">
+        <div class="text-sm space-y-3 py-5 rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-5 mb-6 shadow-lg backdrop-blur-sm relative z-10">
+          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
+            <div class="flex items-center gap-3">
               <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-emerald-100'} rounded-lg">
-                <i class="fas fa-bullseye ${isInactive ? 'text-amber-600' : 'text-emerald-600'} text-sm"></i>
+                <i class="fas fa-bullseye ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-sm"></i>
               </div>
-              <span class="text-gray-700 font-bold text-xs uppercase tracking-widest">Alcance</span>
+              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Alcance</span>
             </div>
-            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r ${isInactive ? 'from-amber-50 to-orange-50' : 'from-emerald-50 to-teal-50'} px-3 py-1 rounded-lg border ${isInactive ? 'border-amber-200' : 'border-emerald-200'}">${scopeText}</span>
+            <span class="font-bold text-[#2E594D] bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-xl shadow-sm border border-emerald-200">${scopeText}</span>
           </div>
-          
-          <!-- Vigencia -->
-          <div class="flex items-center justify-between gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
-            <div class="flex items-center gap-2">
+          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
+            <div class="flex items-center gap-3">
               <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg">
-                <i class="fas fa-calendar-alt ${isInactive ? 'text-amber-600' : 'text-blue-600'} text-sm"></i>
+                <i class="fas fa-calendar-check ${isInactive ? 'text-amber-700' : 'text-blue-700'} text-sm"></i>
               </div>
-              <span class="text-gray-700 font-bold text-xs uppercase tracking-widest">Vigencia</span>
+              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Vigencia</span>
             </div>
-            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1 rounded-lg border border-blue-200">${escapeHtml(c.start_date || '-')} → ${escapeHtml(c.end_date || '-')}</span>
+            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1 rounded-lg border border-blue-200">${escapeHtml(String(startDate).substring(0, 10))} → ${escapeHtml(String(endDate).substring(0, 10))}</span>
           </div>
         </div>
 
