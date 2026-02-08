@@ -252,6 +252,21 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const saveCharges = (data) => localStorage.setItem('chargesList', JSON.stringify(data));
     const fmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
+    const normalizePendingPayment = (payment) => {
+      return {
+        id: payment.id || `debt-${Date.now()}`,
+        userId: payment.userId || payment.user_id || payment.student_id || payment.studentId || null,
+        studentId: payment.student_id || payment.studentId || payment.userId || payment.user_id || null,
+        conceptId: payment.concept_id || payment.conceptId || null,
+        userName: payment.user_name || payment.student_name || payment.fullName || 'N/A',
+        nControl: payment.n_control || payment.nControl || '',
+        concept: payment.concept_name || payment.concept || payment.conceptTitle || 'CARGO',
+        conceptTitle: payment.concept_name || payment.conceptTitle || payment.concept || 'CARGO',
+        amount: payment.amount || payment.amount_total || 0,
+        status: payment.status || 'pending'
+      };
+    };
+
     const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
     const paginationInfo = document.getElementById('pagination-info');
@@ -292,14 +307,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
           });
           
           if (response.success && response.data?.pending_payments?.items) {
-            pendingPayments = response.data.pending_payments.items.map(payment => ({
-              id: payment.id || `debt-${Date.now()}`,
-              userName: payment.user_name,
-              concept: payment.concept_name,
-              conceptTitle: payment.concept_name,
-              amount: payment.amount,
-              status: 'pending'
-            }));
+            pendingPayments = response.data.pending_payments.items.map(normalizePendingPayment);
             
             console.log('✅ Pagos pendientes cargados (GET /api/v1/debts):', pendingPayments.length);
             renderTable();
@@ -314,16 +322,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         const response = await StudentAPI.getPendingPayments(null, token, forceRefresh, userRole);
         
         if (response.success && response.data?.pending_payments) {
-          pendingPayments = response.data.pending_payments.map(payment => ({
-            id: payment.id,
-            studentId: payment.student_id || payment.studentId,
-            conceptId: payment.concept_id || payment.conceptId,
-            userName: payment.student_name || 'N/A',
-            concept: payment.concept_name,
-            conceptTitle: payment.concept_name,
-            amount: payment.amount,
-            status: 'pending'
-          }));
+          pendingPayments = response.data.pending_payments.map(normalizePendingPayment);
           
           console.log('✅ Pagos pendientes cargados (GET /api/v1/pending-payments):', pendingPayments.length);
           renderTable();
@@ -367,7 +366,8 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
             return `
               <tr class="hover:bg-gray-50 transition-all border-l-4 border-transparent hover:border-[#2D584C]">
                 <td class="px-8 py-5">
-                    <div class="text-[12px] font-black text-gray-900 uppercase">${ch.userName || 'N/A'}</div>
+                  <div class="text-[12px] font-black text-gray-900 uppercase">${ch.userName || 'N/A'}</div>
+                  ${ch.nControl ? `<div class="text-[10px] text-gray-400 font-mono">${ch.nControl}</div>` : ''}
                 </td>
                 <td class="px-8 py-5 text-[11px] text-gray-500 font-bold uppercase">${ch.concept || 'CARGO'}</td>
                 <td class="px-8 py-5 text-right text-sm font-black text-red-600 font-mono">${fmt(ch.amount)}</td>

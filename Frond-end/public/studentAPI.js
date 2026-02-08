@@ -612,6 +612,89 @@ window.StudentAPI = {
   },
 
   /**
+   * DEBTS - GET /api/v1/debts/stripe-payments
+   * Obtener pagos desde Stripe
+   * @param {string} token - Token de autenticacion
+   * @param {string} search - Email, CURP o n_control (requerido)
+   * @param {number|null} year - Ano especifico (opcional)
+   * @param {boolean} forceRefresh - Forzar actualizacion del cache
+   */
+  async getStripePayments(token, search = '', year = null, forceRefresh = false) {
+    try {
+      const url = new URL(`${API_BASE}/debts/stripe-payments`);
+      if (search) url.searchParams.append('search', search);
+      if (year) url.searchParams.append('year', year);
+      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+      console.log(`🔍 [StudentAPI] getStripePayments URL: ${url.toString()}`);
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.stripe.payments'
+        }
+      });
+
+      console.log(`📡 [StudentAPI] getStripePayments Response Status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getStripePayments Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || 'Error al cargar pagos de Stripe');
+      }
+
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getStripePayments Success:`, data);
+      return data;
+    } catch (err) {
+      console.error('❌ StudentAPI.getStripePayments:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * DEBTS - POST /api/v1/debts/validate
+   * Validar un pago de Stripe
+   * @param {string} search - Email, CURP o n_control del estudiante
+   * @param {string} paymentIntentId - Payment Intent ID de Stripe
+   * @param {string} token - Token de autenticacion
+   */
+  async validateStripePayment(search, paymentIntentId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/debts/validate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'validate.debt'
+        },
+        body: JSON.stringify({
+          search,
+          payment_intent_id: paymentIntentId
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || 'Error al validar pago');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.validateStripePayment:', err);
+      throw err;
+    }
+  },
+
+  /**
    * DEBTS - GET /api/v1/debts
    * Listar todos los pagos pendientes con paginación (para financial staff)
    * @param {string} token - Token de autenticación

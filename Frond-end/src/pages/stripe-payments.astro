@@ -119,6 +119,25 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
     const countPendingEl = document.getElementById('count-pending');
 
     const fmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+    const formatDate = (value) => {
+      if (!value) return 'N/A';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('es-MX');
+    };
+
+    const normalizeStripePayment = (payment) => {
+      return {
+        id: String(payment.id || ''),
+        paymentIntentId: String(payment.payment_intent_id || payment.payment_intent || ''),
+        conceptName: String(payment.concept_name || payment.concept || 'N/A'),
+        status: String(payment.status || 'unknown'),
+        amountTotal: Number(payment.amount_total ?? payment.amount ?? 0),
+        amountReceived: Number(payment.amount_received ?? payment.amount_received_total ?? 0),
+        created: payment.created || null,
+        receiptUrl: payment.receipt_url || payment.receipt || ''
+      };
+    };
     
     async function loadStripePayments(forceRefresh = false) {
       if (isLoading) return;
@@ -149,16 +168,7 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
         const response = await StudentAPI.getStripePayments(token, search, year, forceRefresh);
         
         if (response.success && response.data?.payments) {
-          stripePayments = response.data.payments.map(payment => ({
-            id: payment.id,
-            paymentIntentId: payment.payment_intent_id,
-            conceptName: payment.concept_name,
-            status: payment.status,
-            amountTotal: parseFloat(payment.amount_total || 0),
-            amountReceived: parseFloat(payment.amount_received || 0),
-            created: new Date(payment.created),
-            receiptUrl: payment.receipt_url
-          }));
+          stripePayments = response.data.payments.map(normalizeStripePayment);
           
           console.log('✅ Pagos de Stripe cargados:', stripePayments.length);
           renderTable();
@@ -186,9 +196,9 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
       
       const filtered = stripePayments.filter(payment => {
         if (!term) return true;
-        return payment.conceptName.toLowerCase().includes(term) ||
-               payment.id.toLowerCase().includes(term) ||
-               payment.paymentIntentId.toLowerCase().includes(term);
+         return payment.conceptName.toLowerCase().includes(term) ||
+           payment.id.toLowerCase().includes(term) ||
+           payment.paymentIntentId.toLowerCase().includes(term);
       });
 
       const totalItems = filtered.length;
@@ -205,12 +215,15 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
         const rowClass = payment.status === 'succeeded' ? 'bg-green-50' : 
                         payment.status === 'pending' ? 'bg-yellow-50' : 
                         'bg-red-50';
+
+        const displayId = payment.id ? `${payment.id.substring(0,12)}...` : 'N/A';
+        const displayIntent = payment.paymentIntentId ? `${payment.paymentIntentId.substring(0,12)}...` : 'N/A';
         
         return `
           <tr class="hover:bg-gray-50 transition-all border-l-4 border-purple-500 ${rowClass}">
             <td class="px-8 py-5">
-                <div class="text-[11px] font-mono font-black text-gray-900">${payment.id.substring(0,12)}...</div>
-                <div class="text-[9px] text-gray-400 font-mono">${payment.paymentIntentId.substring(0,12)}...</div>
+                <div class="text-[11px] font-mono font-black text-gray-900">${displayId}</div>
+                <div class="text-[9px] text-gray-400 font-mono">${displayIntent}</div>
             </td>
             <td class="px-8 py-5 text-[11px] text-gray-600 font-bold">${payment.conceptName}</td>
             <td class="px-8 py-5 text-center">
@@ -219,7 +232,7 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
               </span>
             </td>
             <td class="px-8 py-5 text-right text-sm font-black text-purple-600 font-mono">${fmt(payment.amountReceived)}</td>
-            <td class="px-8 py-5 text-[11px] text-gray-600 font-bold">${payment.created.toLocaleDateString('es-MX')}</td>
+            <td class="px-8 py-5 text-[11px] text-gray-600 font-bold">${formatDate(payment.created)}</td>
             <td class="px-8 py-5 text-center">
               ${payment.receiptUrl ? `<a href="${payment.receiptUrl}" target="_blank" class="text-blue-600 hover:underline text-[10px] font-black">VER RECIBO</a>` : '<span class="text-gray-400 text-[10px]">N/A</span>'}
             </td>
@@ -254,7 +267,7 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
     }
 
     function updateSummary() {
-      const totalReceived = stripePayments.reduce((sum, p) => sum + p.amountReceived, 0);
+      const totalReceived = stripePayments.reduce((sum, p) => sum + (p.amountReceived || 0), 0);
       const succeeded = stripePayments.filter(p => p.status === 'succeeded').length;
       const pending = stripePayments.filter(p => p.status === 'pending').length;
       
@@ -271,7 +284,7 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
         'Concepto': p.conceptName,
         'Estado': p.status,
         'Monto Recibido': p.amountReceived,
-        'Fecha': p.created.toLocaleDateString('es-MX'),
+        'Fecha': formatDate(p.created),
         'Recibo': p.receiptUrl || 'No disponible'
       }));
 

@@ -150,6 +150,27 @@ import { StudentAPI } from '/studentAPI.js';
         return 'collection-low';
     };
 
+    const normalizeConcept = (concept) => {
+        const amountTotal = Number(concept.amount_total ?? concept.amount ?? 0);
+        const amountReceivedTotal = Number(concept.amount_received_total ?? concept.amount_received ?? 0);
+        const collectionRate = Number(concept.collection_rate ?? concept.collectionRate ?? 0);
+
+        return {
+            conceptName: concept.concept_name ?? concept.concept ?? concept.name ?? 'N/A',
+            amountTotal,
+            amountReceivedTotal,
+            collectionRate,
+            firstPaymentDate: concept.first_payment_date ?? concept.firstPaymentDate ?? null,
+            lastPaymentDate: concept.last_payment_date ?? concept.lastPaymentDate ?? null
+        };
+    };
+
+    const formatDate = (value) => {
+        if (!value) return 'N/A';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('es-MX');
+    };
+
     // Cargar datos desde API con paginación del servidor
     async function loadConcepts(forceRefresh = false) {
         if (isLoading) return;
@@ -195,7 +216,7 @@ import { StudentAPI } from '/studentAPI.js';
                 currentPage = paymentsData.currentPage || 1;
                 lastPage = paymentsData.lastPage || 1;
                 totalRecords = paymentsData.total || 0;
-                allConcepts = paymentsData.items || [];
+                allConcepts = (paymentsData.items || []).map(normalizeConcept);
 
                 console.log(`✅ Conceptos cargados: ${allConcepts.length} de ${totalRecords} total`);
                 
@@ -217,8 +238,8 @@ import { StudentAPI } from '/studentAPI.js';
 
     // Actualizar tarjetas de resumen
     function updateSummaryCards() {
-        const totalAmount = allConcepts.reduce((sum, c) => sum + parseFloat(c.amount_total || 0), 0);
-        const totalReceived = allConcepts.reduce((sum, c) => sum + parseFloat(c.amount_received_total || 0), 0);
+        const totalAmount = allConcepts.reduce((sum, c) => sum + (c.amountTotal || 0), 0);
+        const totalReceived = allConcepts.reduce((sum, c) => sum + (c.amountReceivedTotal || 0), 0);
         const globalRate = totalAmount > 0 ? ((totalReceived / totalAmount) * 100) : 0;
 
         document.getElementById('total-amount').textContent = fmt(totalAmount);
@@ -261,22 +282,24 @@ import { StudentAPI } from '/studentAPI.js';
         }
 
         tableBody.innerHTML = allConcepts.map(concept => {
-            const rate = parseFloat(concept.collection_rate || 0);
+            const rate = parseFloat(concept.collectionRate || 0);
             const badgeClass = getCollectionClass(rate);
+            const firstDate = formatDate(concept.firstPaymentDate);
+            const lastDate = formatDate(concept.lastPaymentDate);
 
             return `
                 <tr class="hover:bg-purple-50/30 transition-colors">
                     <td class="px-6 py-5">
-                        <span class="text-gray-900 font-extrabold text-sm uppercase">${concept.concept_name}</span>
+                        <span class="text-gray-900 font-extrabold text-sm uppercase">${concept.conceptName}</span>
                     </td>
-                    <td class="px-6 py-5 text-right font-black text-gray-700 font-mono">${fmt(concept.amount_total)}</td>
-                    <td class="px-6 py-5 text-right font-black text-emerald-600 font-mono">${fmt(concept.amount_received_total)}</td>
+                    <td class="px-6 py-5 text-right font-black text-gray-700 font-mono">${fmt(concept.amountTotal)}</td>
+                    <td class="px-6 py-5 text-right font-black text-emerald-600 font-mono">${fmt(concept.amountReceivedTotal)}</td>
                     <td class="px-6 py-5 text-center">
                         <span class="collection-badge ${badgeClass}">${rate.toFixed(2)}%</span>
                     </td>
                     <td class="px-6 py-5 text-center text-xs text-gray-500">
-                        <div>${concept.first_payment_date || 'N/A'}</div>
-                        <div class="text-[10px] text-gray-400">a ${concept.last_payment_date || 'N/A'}</div>
+                        <div>${firstDate}</div>
+                        <div class="text-[10px] text-gray-400">a ${lastDate}</div>
                     </td>
                 </tr>
             `;
@@ -368,12 +391,12 @@ import { StudentAPI } from '/studentAPI.js';
 
         const exportData = allConcepts.map((c, idx) => ({
             'No.': idx + 1,
-            'Concepto': c.concept_name,
-            'Monto Total': parseFloat(c.amount_total),
-            'Recibido': parseFloat(c.amount_received_total),
-            'Tasa Cobranza (%)': parseFloat(c.collection_rate),
-            'Primera Fecha': c.first_payment_date,
-            'Última Fecha': c.last_payment_date
+            'Concepto': c.conceptName,
+            'Monto Total': c.amountTotal,
+            'Recibido': c.amountReceivedTotal,
+            'Tasa Cobranza (%)': c.collectionRate,
+            'Primera Fecha': formatDate(c.firstPaymentDate),
+            'Última Fecha': formatDate(c.lastPaymentDate)
         }));
 
         const ws = XLSX.utils.json_to_sheet(exportData);
