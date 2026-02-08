@@ -136,7 +136,7 @@ function renderConcepts(){
                           (c.metadata?.students_count) || 0;
 
     return `
-      <div class="bg-gradient-to-br ${isInactive ? 'from-amber-50 via-white to-amber-50 border-amber-300' : 'from-white via-[#2E594D]/5 to-white border-[#2E594D]/20'} rounded-2xl shadow-xl border-2 p-6 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.02] duration-300">
+      <div class="bg-gradient-to-br ${isInactive ? 'from-amber-50 via-white to-amber-50 border-amber-300' : 'from-white via-[#2E594D]/5 to-white border-[#2E594D]/20'} rounded-2xl shadow-xl border-2 p-6 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.02] duration-300" data-concept-id="${c.id}">
         <div class="flex justify-between items-start mb-6 pb-4 border-b-2 ${isInactive ? 'border-amber-200' : 'border-[#2E594D]/10'}">
           <div class="pr-3 flex-1">
             <div class="flex items-center gap-2 mb-2">
@@ -250,18 +250,35 @@ async function mutateConcept(id, action){
     };
     alert(`✓ ${successMessages[action]}`);
     
-    await loadConcepts();
+    // Si es delete, remover inmediatamente del DOM
+    if (action === 'delete') {
+      const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
+      if (cardEl) {
+        cardEl.style.opacity = '0';
+        cardEl.style.transform = 'scale(0.9)';
+        setTimeout(() => cardEl.remove(), 300);
+      }
+      // Remover del caché
+      conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
+    } else {
+      await loadConcepts();
+    }
     return true;
   } catch (err) {
     console.error(`Error en ${action}:`, err);
     
-    // Manejo especial para conflictos 409 o mensajes de estado ya existente
-    if (err.message.includes('ya está') || 
-        err.message.includes('ya fue') || 
-        err.message.includes('elimina')) {
-      alert(`⚠️ ${err.message}\n\nActualizando lista...`);
-      await loadConcepts(); // Recargar para mostrar estado actualizado
-      return false;
+    // Si es 409 (ya eliminado), remover inmediatamente
+    if (err.message.includes('ya está eliminado') || err.message.includes('409')) {
+      console.warn(`El concepto ${id} ya fue eliminado en el servidor, removiendo de UI...`);
+      const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
+      if (cardEl) {
+        cardEl.style.opacity = '0';
+        cardEl.style.transform = 'scale(0.9)';
+        setTimeout(() => cardEl.remove(), 300);
+      }
+      conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
+      alert('⚠️ El concepto ya fue eliminado previamente');
+      return true;
     } else {
       alert(`❌ Error: ${err.message}`);
       return false;
