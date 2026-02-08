@@ -93,8 +93,37 @@ const getIconSvg = (iconName, sizeClass) => {
         }
 
         if (icon === 'students') {
-            const students = JSON.parse(localStorage.getItem('studentsList') || '[]');
-            elVal.textContent = String(students.length);
+            // Intentar obtener estudiantes de localStorage
+            let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+            let studentCount = 0;
+            
+            // Si es un objeto (no un array)
+            if (studentsList && typeof studentsList === 'object' && !Array.isArray(studentsList)) {
+                // Si tiene propiedad 'total' (formato del Dashboard)
+                if (studentsList.total !== undefined) {
+                    studentCount = studentsList.total;
+                } else if (studentsList.students !== undefined) {
+                    // Si tiene un array 'students'
+                    studentCount = Array.isArray(studentsList.students) ? studentsList.students.length : 0;
+                } else if (studentsList.data?.students !== undefined) {
+                    // Si está en data.students
+                    studentCount = Array.isArray(studentsList.data.students) ? studentsList.data.students.length : 0;
+                } else if (studentsList.data !== undefined && !Array.isArray(studentsList.data)) {
+                    // Si data es un objeto
+                    studentCount = 0;
+                } else if (Array.isArray(studentsList.data)) {
+                    // Si data es un array
+                    studentCount = studentsList.data.length;
+                } else if (studentsList.items !== undefined) {
+                    studentCount = Array.isArray(studentsList.items) ? studentsList.items.length : 0;
+                }
+            } else if (Array.isArray(studentsList)) {
+                // Si es un array directo
+                studentCount = studentsList.length;
+            }
+            
+            elVal.textContent = String(studentCount);
+            
             const hoy = new Date();
             if (elDesc) elDesc.textContent = hoy.toLocaleDateString('es-MX');
         }
@@ -104,4 +133,5 @@ const getIconSvg = (iconName, sizeClass) => {
     window.addEventListener('storage', updateCard);
     window.addEventListener('conceptsUpdated', updateCard);
     window.addEventListener('chargesUpdated', updateCard);
+    window.addEventListener('studentsUpdated', updateCard);
 </script>

@@ -241,60 +241,102 @@ async function mutateConcept(id, action){
       }
     });
     
-    // Mostrar mensaje de éxito
-    const successMessages = {
-      finalize: 'Concepto finalizado exitosamente',
-      activate: 'Concepto activado exitosamente',
-      disable: 'Concepto deshabilitado exitosamente',
-      delete: 'Concepto marcado como eliminado'
-    };
-    alert(`✓ ${successMessages[action]}`);
+    console.log(`✅ ${action} exitoso para concepto ${id}`);
     
-    // Si es delete, remover inmediatamente del DOM
+    // Si es delete, remover inmediatamente del DOM y cache
     if (action === 'delete') {
-      const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
-      if (cardEl) {
-        cardEl.style.opacity = '0';
-        cardEl.style.transform = 'scale(0.9)';
-        setTimeout(() => cardEl.remove(), 300);
-      }
-      // Remover del caché
+      console.log(`🗑️ Ejecutando eliminación visual para ID ${id}`);
+      
+      // Remover del cache primero
+      const beforeLen = conceptsCache.length;
       conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
-    } else {
-      await loadConcepts();
-    }
-    return true;
-  } catch (err) {
-    const errorMsg = err.message || String(err);
-    console.error(`Error en ${action}:`, err);
-    
-    // Si es 409 (ya eliminado), remover inmediatamente
-    const isAlreadyDeleted = errorMsg.toLowerCase().includes('ya está eliminado') || 
-                           errorMsg.toLowerCase().includes('ya fue eliminado') ||
-                           errorMsg.toLowerCase().includes('conflict');
-    
-    if (isAlreadyDeleted && action === 'delete') {
-      console.warn(`Concepto ${id} ya fue eliminado. Removiendo del UI...`);
+      console.log(`Cache: ${beforeLen} → ${conceptsCache.length} items`);
+      
+      // Buscar y animar removal del DOM
       const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
-      console.log('Card element found:', !!cardEl);
+      console.log(`Elemento DOM encontrado: ${!!cardEl}`);
       
       if (cardEl) {
-        cardEl.style.transition = 'all 0.3s ease-out';
+        // Aplicar animación de salida
+        cardEl.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
         cardEl.style.opacity = '0';
-        cardEl.style.transform = 'scale(0.95)';
+        cardEl.style.transform = 'translateX(100px) scale(0)';
+        cardEl.style.pointerEvents = 'none';
+        
+        // Remover del DOM después de animación
         setTimeout(() => {
-          if (cardEl.parentNode) cardEl.parentNode.removeChild(cardEl);
-        }, 300);
+          if (cardEl && cardEl.parentNode) {
+            try {
+              cardEl.parentNode.removeChild(cardEl);
+              console.log(`✅ Elemento removido del DOM`);
+            } catch (e) {
+              console.error(`Error removiendo elemento:`, e);
+            }
+          }
+        }, 500);
       }
       
-      // Remover del cache también
-      conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
-      console.log('Cache después eliminar:', conceptsCache.length);
-      
-      alert('⚠️ El concepto ya estaba eliminado. Se ha actualizado la vista.');
+      alert(`✓ Concepto eliminado exitosamente`);
       return true;
     } else {
-      alert(`❌ Error: ${errorMsg}`);
+      // Para otros actions, recargar lista completa
+      await loadConcepts();
+      alert(`✓ Operación ejecutada exitosamente`);
+      return true;
+    }
+  } catch (err) {
+    const errorMsg = (err.message || String(err)).toLowerCase();
+    console.error(`❌ Error en ${action}:`, err);
+    console.log(`Mensaje error lowercase: "${errorMsg}"`);
+    console.log(`Buscando palabras clave...`);
+    console.log(`- "ya está eliminado": ${errorMsg.includes('ya está eliminado')}`);
+    console.log(`- "conflict": ${errorMsg.includes('conflict')}`);
+    
+    // Detectar si ya está eliminado
+    const isAlreadyDeleted = errorMsg.includes('ya está eliminado') || 
+                           errorMsg.includes('ya fue eliminado') ||
+                           errorMsg.includes('conflict') ||
+                           errorMsg.includes('409');
+    
+    console.log(`isAlreadyDeleted: ${isAlreadyDeleted}, action: ${action}`);
+    
+    if (isAlreadyDeleted && action === 'delete') {
+      console.warn(`⚠️ Concepto ${id} ya estaba eliminado en servidor. Sincronizando UI...`);
+      
+      // Buscar y remover el elemento
+      const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
+      console.log(`Elemento encontrado: ${!!cardEl}`);
+      
+      if (cardEl) {
+        // Remover con animación
+        cardEl.style.transition = 'all 0.4s ease-out';
+        cardEl.style.opacity = '0';
+        cardEl.style.pointerEvents = 'none';
+        cardEl.style.height = '0';
+        cardEl.style.marginTop = '0';
+        cardEl.style.marginBottom = '0';
+        cardEl.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+          console.log(`Removiendo del DOM...`);
+          if (cardEl && cardEl.parentNode) {
+            cardEl.parentNode.removeChild(cardEl);
+            console.log(`✅ Elemento removido del DOM`);
+          }
+        }, 400);
+      } else {
+        console.warn(`⚠️ No se encontró elemento [data-concept-id="${id}"]`);
+      }
+      
+      // Remover del cache
+      const beforeLen = conceptsCache.length;
+      conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
+      console.log(`Cache: ${beforeLen} → ${conceptsCache.length} items`);
+      
+      alert('⚠️ Ya estaba eliminado. Vista sincronizada.');
+      return true;
+    } else {
+      alert(`❌ Error: ${err.message}`);
       return false;
     }
   }
