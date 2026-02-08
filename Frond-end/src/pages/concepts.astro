@@ -10,37 +10,41 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
 <Layout title={pageTitle}>  
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 min-h-screen">
 
-  
-    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 pb-6 border-b-2 border-[#2E594D]/20 bg-white rounded-2xl shadow-lg px-6 py-5">
-      <div class="flex items-center gap-4">
-        <div class="p-4 bg-gradient-to-br from-[#2E594D] to-[#1e3d35] rounded-2xl shadow-xl flex-shrink-0">
-          <i class="fas fa-file-invoice-dollar text-3xl text-white"></i>
+    <!-- Header mejorado con animación -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 bg-white rounded-3xl shadow-2xl px-8 py-6 border border-gray-100 relative overflow-hidden">
+      <!-- Decoración de fondo -->
+      <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#2E594D]/5 to-emerald-500/5 rounded-full blur-3xl -z-0"></div>
+      
+      <div class="flex items-center gap-5 relative z-10">
+        <div class="p-4 bg-gradient-to-br from-[#2E594D] via-emerald-700 to-[#1e3d35] rounded-2xl shadow-2xl flex-shrink-0 transform hover:rotate-6 transition-transform duration-300">
+          <i class="fas fa-file-invoice-dollar text-4xl text-white"></i>
         </div>
 
         <div>
-          <h1 class="text-3xl font-extrabold text-[#2E594D] tracking-tight flex items-center gap-3">
-            Gestión de Conceptos de Cobro
-            <span class="text-xs bg-[#2E594D]/10 text-[#2E594D] px-3 py-1 rounded-full font-semibold">Sistema de Pagos</span>
+          <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#2E594D] to-emerald-700 tracking-tight flex flex-wrap items-center gap-3">
+            Gestión de Conceptos
+            <span class="text-[10px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-1.5 rounded-full font-bold shadow-lg animate-pulse">ACTIVO</span>
           </h1>
-          <p class="text-sm text-gray-600 mt-2 flex items-center gap-2">
-            <i class="fas fa-info-circle text-[#2E594D]"></i>
-            Definición y asignación de adeudos a grupos de estudiantes
+          <p class="text-sm text-gray-600 mt-3 flex items-center gap-2 font-medium">
+            <i class="fas fa-lightbulb text-amber-500 animate-pulse"></i>
+            <span>Administra y asigna conceptos de cobro de forma inteligente</span>
           </p>
         </div>
       </div>
 
       <a href="/new"
-         class="mt-4 sm:mt-0 px-6 py-3 bg-gradient-to-r from-[#2E594D] to-[#1e3d35] text-white font-bold rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 text-sm sm:text-base flex items-center gap-2">
-        <i class="fas fa-plus-circle"></i> 
-        <span>Crear Nuevo Concepto</span>
+         class="mt-6 sm:mt-0 px-8 py-4 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-sm sm:text-base flex items-center gap-3 relative z-10 group overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <i class="fas fa-plus-circle text-lg relative z-10"></i> 
+        <span class="relative z-10">Crear Concepto</span>
       </a>
     </header>
 
     <div id="concepts-grid"
          class="grid gap-8"
-         style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));">
+         style="grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));">
     </div>
 
   </div>
@@ -59,9 +63,9 @@ function formatCurrency(amount){
 
 function getStatusBadge(status){
   const s = (status || '').toLowerCase();
-  if (s === 'finalizado' || s === 'finalized') return '<span class="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase">Finalizado</span>';
-  if (s === 'inactivo' || s === 'inactive') return '<span class="inline-block mt-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold uppercase">Inactivo</span>';
-  return '<span class="inline-block mt-1 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase">Vigente</span>';
+  if (s === 'finalizado' || s === 'finalized') return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-amber-300"><i class="fas fa-flag-checkered"></i> Finalizado</span>';
+  if (s === 'inactivo' || s === 'inactive') return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-gray-300"><i class="fas fa-pause-circle"></i> Inactivo</span>';
+  return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-emerald-300 animate-pulse"><i class="fas fa-check-circle"></i> Vigente</span>';
 }
 
 async function apiFetch(url, options = {}) {
@@ -93,7 +97,20 @@ let conceptsCache = [];
 async function loadConcepts(){
   const grid = document.getElementById('concepts-grid');
   if(!grid) return;
-  grid.innerHTML = '<div class="col-span-full text-center py-16 bg-gradient-to-br from-white to-[#2E594D]/5 rounded-2xl border-2 border-[#2E594D]/20 shadow-xl"><div class="flex flex-col items-center gap-4"><i class="fas fa-spinner fa-spin text-5xl text-[#2E594D]"></i><p class="text-[#2E594D] font-bold text-lg">Cargando conceptos...</p></div></div>';
+  grid.innerHTML = `
+    <div class="col-span-full text-center py-20 bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/10 rounded-3xl border-2 border-emerald-200/50 shadow-2xl">
+      <div class="flex flex-col items-center gap-5">
+        <div class="relative">
+          <div class="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+          <i class="fas fa-spinner fa-spin text-6xl text-emerald-700 relative z-10"></i>
+        </div>
+        <div class="space-y-2">
+          <p class="text-[#2E594D] font-black text-xl">Cargando conceptos...</p>
+          <p class="text-gray-600 text-sm font-medium">Por favor espera un momento</p>
+        </div>
+      </div>
+    </div>
+  `;
   try {
     const data = await apiFetch(`${API_BASE}/v1/concepts?perPage=50`, {
       headers: {
@@ -102,122 +119,26 @@ async function loadConcepts(){
       }
     });
     conceptsCache = data?.data?.concepts?.items || [];
-    
-    // Renderizar inmediatamente
     renderConcepts();
-    
-    // Cargar relaciones en background (sin headers personalizados para evitar CORS preflight)
-    if (conceptsCache.length > 0) {
-      console.log(`📦 Iniciando carga de relaciones en background...`);
-      loadRelationsInBackground();
-    }
   } catch(err){
     console.error(err);
-    grid.innerHTML = `<div class="col-span-full text-center py-16 bg-gradient-to-br from-red-50 to-white rounded-2xl border-2 border-red-300 shadow-xl"><div class="flex flex-col items-center gap-4"><i class="fas fa-exclamation-triangle text-5xl text-red-600"></i><p class="text-red-700 font-bold text-lg">Error al cargar conceptos</p><p class="text-red-600 text-sm">${escapeHtml(err.message || 'Error desconocido')}</p></div></div>`;
+    grid.innerHTML = `
+      <div class="col-span-full text-center py-20 bg-gradient-to-br from-red-50 via-rose-50 to-white rounded-3xl border-2 border-red-300 shadow-2xl">
+        <div class="flex flex-col items-center gap-5">
+          <div class="p-6 bg-gradient-to-br from-red-100 to-rose-100 rounded-full shadow-xl">
+            <i class="fas fa-exclamation-triangle text-6xl text-red-600"></i>
+          </div>
+          <div class="space-y-2">
+            <p class="text-red-800 font-black text-xl">Error al cargar conceptos</p>
+            <p class="text-red-600 text-sm font-medium max-w-md">${escapeHtml(err.message || 'Error desconocido')}</p>
+          </div>
+          <button onclick="loadConcepts()" class="mt-2 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+            <i class="fas fa-redo mr-2"></i> Reintentar
+          </button>
+        </div>
+      </div>
+    `;
   }
-}
-
-async function loadRelationsInBackground() {
-  // Cargar relaciones cachadas de localStorage
-  const relationsCache = JSON.parse(localStorage.getItem('conceptsRelationsCache') || '{}');
-  let cacheChanged = false;
-  
-  // Cola de conceptos para cargar relaciones (máximo 2 simultáneas)
-  const maxConcurrent = 2;
-  const delayMs = 300; // 300ms entre batches
-  
-  for (let i = 0; i < conceptsCache.length; i += maxConcurrent) {
-    const batch = conceptsCache.slice(i, i + maxConcurrent);
-    
-    const promises = batch.map(async (concept) => {
-      // Si ya está en caché, no hacer petición
-      if (relationsCache[concept.id]) {
-        updateConceptCard(concept.id, relationsCache[concept.id]);
-        return;
-      }
-      
-      try {
-        // Usar fetch simple sin headers personalizados para evitar CORS preflight
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const relData = await response.json();
-        
-        if (relData?.data?.concept) {
-          const relInfo = relData.data.concept;
-          relationsCache[concept.id] = relInfo;
-          cacheChanged = true;
-          
-          // Actualizar la tarjeta inmediatamente
-          updateConceptCard(concept.id, relInfo);
-          console.log(`✅ Relaciones cargadas para concepto ${concept.id}`);
-        }
-      } catch (err) {
-        console.warn(`⚠️ No se pudieron cargar relaciones para concepto ${concept.id}:`, err.message);
-        // Continuar sin bloquear, la tarjeta mostrará "No definido"
-      }
-    });
-    
-    // Esperar a que se complete el batch actual
-    await Promise.all(promises);
-    
-    // Esperar antes del siguiente batch (respeta rate limit)
-    if (i + maxConcurrent < conceptsCache.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-  
-  // Guardar caché actualizado
-  if (cacheChanged) {
-    localStorage.setItem('conceptsRelationsCache', JSON.stringify(relationsCache));
-    console.log('💾 Caché de relaciones guardado');
-  }
-}
-
-function updateConceptCard(conceptId, relInfo) {
-  // Encontrar la tarjeta del concepto
-  const card = document.querySelector(`[data-concept-id="${conceptId}"]`);
-  if (!card) return;
-  
-  // Actualizar el elemento de alcance
-  const scopeSpan = card.querySelector('[data-scope-value]');
-  if (!scopeSpan) return;
-  
-  // Calcular el nuevo texto de alcance
-  const applies = relInfo.applies_to || relInfo.appliesTo || '';
-  let scopeText = 'No definido';
-  
-  if (applies === 'todos' || applies === 'all') {
-    scopeText = '✅ Aplica a todos';
-  } else if (applies === 'students') {
-    const count = (relInfo.users || relInfo.userIds || relInfo.user_ids || []).length;
-    scopeText = count > 0 ? `👥 ${count} estudiantes` : 'Estudiantes';
-  } else if (applies === 'career' || applies === 'careers') {
-    const count = (relInfo.careers || relInfo.careerIds || relInfo.career_ids || []).length;
-    scopeText = count > 0 ? `🎓 ${count} carreras` : 'Por carrera';
-  } else if (applies === 'semester' || applies === 'semesters') {
-    const count = (relInfo.semesters || []).length;
-    scopeText = count > 0 ? `📅 ${count} semestres` : 'Por semestre';
-  } else if (applies === 'tag' || applies === 'tags') {
-    scopeText = '🏷️ Por etiqueta';
-  }
-  
-  // Actualizar el contenido con animación suave
-  scopeSpan.style.transition = 'opacity 0.3s ease-in-out';
-  scopeSpan.style.opacity = '0';
-  
-  setTimeout(() => {
-    scopeSpan.textContent = scopeText;
-    scopeSpan.style.opacity = '1';
-  }, 150);
 }
 
 function renderConcepts(){
@@ -225,129 +146,133 @@ function renderConcepts(){
   if(!grid) return;
   const list = [...conceptsCache];
   if(!list.length){
-    grid.innerHTML = `<div class="col-span-full text-center py-20 bg-gradient-to-br from-white to-[#2E594D]/5 rounded-2xl shadow-2xl border-2 border-[#2E594D]/20"><div class="flex flex-col items-center gap-4"><i class="fas fa-inbox text-6xl text-[#2E594D]/50"></i><p class="text-[#2E594D] font-bold text-xl">No hay conceptos registrados</p><p class="text-gray-600 text-sm">Comienza creando tu primer concepto de cobro</p><a href="/new" class="mt-4 px-6 py-3 bg-gradient-to-r from-[#2E594D] to-[#1e3d35] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"><i class="fas fa-plus-circle mr-2"></i>Crear Concepto</a></div></div>`;
+    grid.innerHTML = `
+      <div class="col-span-full text-center py-24 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 rounded-3xl shadow-2xl border-2 border-emerald-200/50">
+        <div class="flex flex-col items-center gap-6">
+          <div class="p-6 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full shadow-xl">
+            <i class="fas fa-inbox text-7xl text-emerald-700"></i>
+          </div>
+          <div class="space-y-2">
+            <p class="text-[#2E594D] font-black text-2xl">No hay conceptos registrados</p>
+            <p class="text-gray-600 text-base font-medium">Comienza creando tu primer concepto de cobro</p>
+          </div>
+          <a href="/new" class="mt-4 px-8 py-4 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 group relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-plus-circle text-lg relative z-10"></i>
+            <span class="relative z-10">Crear Mi Primer Concepto</span>
+          </a>
+        </div>
+      </div>
+    `;
     return;
   }
 
-  grid.innerHTML = list.map((c, idx)=>{
-    // Mostrar estructura del primer concepto para debugging
-    if (idx === 0) {
-      console.log('📋 Estructura del concepto:', c);
-      console.log('🔍 Buscando campos de monto:', {
-        amount: c.amount,
-        monto: c.monto,
-        totalAmount: c.totalAmount,
-        value: c.value,
-        precio: c.precio
-      });
-    }
-
-    // Mapeo flexible de campos de monto con manejo de strings con coma
-    let amount = 0;
-    const parseAmount = (val) => {
-      if (val === undefined || val === null || val === '') return 0;
-      // Remover comas y convertir a número
-      const numStr = String(val).replace(/,/g, '');
-      return parseFloat(numStr) || 0;
-    };
-
-    if (c.amount !== undefined && c.amount !== null && c.amount !== '') {
-      amount = parseAmount(c.amount);
-    } else if (c.monto !== undefined && c.monto !== null && c.monto !== '') {
-      amount = parseAmount(c.monto);
-    } else if (c.totalAmount !== undefined && c.totalAmount !== null) {
-      amount = parseAmount(c.totalAmount);
-    } else if (c.value !== undefined && c.value !== null) {
-      amount = parseAmount(c.value);
-    } else if (c.precio !== undefined && c.precio !== null) {
-      amount = parseAmount(c.precio);
-    }
-
-    console.log(`💰 Concepto "${c.concept_name}" - Monto parseado: ${amount}`);
-
+  grid.innerHTML = list.map(c=>{
+    const amount = Number(c.amount)||0;
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
-    
-    // Mostrar "Cargando..." inicialmente (se actualizará en background)
-    const scopeText = '⏳ Cargando...';
-    
-    // Usar expiration_human si está disponible, si no usar las fechas individuales
-    const expirationText = c.expiration_human || `${c.start_date || '-'} a ${c.end_date || '-'}`;
+    const scopeText = (() => {
+      const applies = c.applies_to || c.appliesTo || '';
+      if (applies === 'todos') return 'Todos';
+      if (applies === 'students') return `${(c.userIds||c.user_ids||[]).length} alumnos`; 
+      if (applies === 'career' || applies === 'careers') return `${(c.careerIds||c.careers||[]).length} carreras`;
+      if (applies === 'semesters' || applies === 'semester') return `${(c.semesters||[]).length} semestres`;
+      return 'No definido';
+    })();
     
     // Intentar obtener estudiantes afectados de varios campos posibles
     const affectedCount = c.affectedStudentsCount || c.affected_students_count || 
-                          (c.users || c.userIds || c.user_ids || []).length || 
+                          (c.userIds||c.user_ids||[]).length || 
                           (c.metadata?.students_count) || 0;
 
     return `
-      <div class="bg-gradient-to-br ${isInactive ? 'from-amber-50 via-white to-amber-50 border-amber-300' : 'from-white via-[#2E594D]/5 to-white border-[#2E594D]/20'} rounded-2xl shadow-xl border-2 p-6 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.02] duration-300" data-concept-id="${c.id}">
-        <div class="flex justify-between items-start mb-6 pb-4 border-b-2 ${isInactive ? 'border-amber-200' : 'border-[#2E594D]/10'}">
+      <div class="group bg-gradient-to-br ${isInactive ? 'from-amber-50 via-orange-50 to-amber-50 border-amber-300/50' : 'from-white via-emerald-50/20 to-teal-50/10 border-gray-200'} rounded-3xl shadow-xl border-2 p-7 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 duration-500 relative overflow-hidden">
+        <!-- Decoración de fondo -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${isInactive ? 'from-amber-400/10' : 'from-emerald-400/10'} to-transparent rounded-full blur-2xl -z-0"></div>
+        
+        <div class="flex justify-between items-start mb-6 pb-5 border-b-2 ${isInactive ? 'border-amber-200' : 'border-gray-100'} relative z-10">
           <div class="pr-3 flex-1">
-            <div class="flex items-center gap-2 mb-2">
-              <i class="fas fa-receipt text-[${PRIMARY_TEXT_COLOR_HEX}] text-lg"></i>
-              <h3 class="font-black text-xl text-gray-900 leading-tight line-clamp-2">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
+            <div class="flex items-center gap-3 mb-3">
+              <div class="p-2 bg-gradient-to-br ${isInactive ? 'from-amber-100 to-orange-100' : 'from-emerald-100 to-teal-100'} rounded-xl shadow-md">
+                <i class="fas fa-receipt ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-base"></i>
+              </div>
+              <h3 class="font-black text-xl text-gray-900 leading-tight line-clamp-2 group-hover:text-[#2E594D] transition-colors">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
             </div>
             ${getStatusBadge(c.status)}
           </div>
-          <div class="flex flex-col items-end bg-gradient-to-br from-[#2E594D] to-[#1e3d35] px-4 py-3 rounded-xl shadow-lg flex-shrink-0">
-            <span class="text-xs text-white/80 font-semibold uppercase tracking-wide">Monto</span>
+          <div class="flex flex-col items-end bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 px-5 py-4 rounded-2xl shadow-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <span class="text-[10px] text-white/80 font-bold uppercase tracking-widest mb-1">💰 Monto</span>
             <span class="text-2xl font-black text-white">${formatCurrency(amount)}</span>
           </div>
         </div>
 
-        <div class="text-sm space-y-4 py-5 rounded-xl ${isInactive ? 'bg-amber-50/50' : 'bg-[#2E594D]/5'} border-2 ${isInactive ? 'border-amber-200' : 'border-[#2E594D]/20'} px-5 mb-6 shadow-inner">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <i class="fas fa-filter text-[${PRIMARY_TEXT_COLOR_HEX}]"></i>
-              <span class="text-[${PRIMARY_TEXT_COLOR_HEX}] font-bold text-xs uppercase tracking-wider">Alcance</span>
+        <div class="text-sm space-y-3 py-5 rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-5 mb-6 shadow-lg backdrop-blur-sm relative z-10">
+          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-emerald-100'} rounded-lg">
+                <i class="fas fa-bullseye ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-sm"></i>
+              </div>
+              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Alcance</span>
             </div>
-            <span class="font-bold text-gray-800 bg-white px-3 py-1 rounded-lg shadow-sm" data-scope-value>${scopeText}</span>
+            <span class="font-bold text-[#2E594D] bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-xl shadow-sm border border-emerald-200">${scopeText}</span>
           </div>
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <i class="fas fa-calendar-alt text-[${PRIMARY_TEXT_COLOR_HEX}]"></i>
-              <span class="text-[${PRIMARY_TEXT_COLOR_HEX}] font-bold text-xs uppercase tracking-wider">Vigencia</span>
+          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg">
+                <i class="fas fa-calendar-check ${isInactive ? 'text-amber-700' : 'text-blue-700'} text-sm"></i>
+              </div>
+              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Vigencia</span>
             </div>
-            <span class="font-semibold text-gray-800 bg-white px-3 py-1 rounded-lg shadow-sm text-xs">${escapeHtml(expirationText)}</span>
+            <span class="font-semibold text-gray-800 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl shadow-sm text-[10px] border border-blue-200">${escapeHtml(c.start_date || '')} - ${escapeHtml(c.end_date || '')}</span>
           </div>
         </div>
 
         <div class="space-y-4">
-          <div class="hidden text-sm text-gray-700 bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border-2 border-blue-200 mb-3 shadow-inner" id="details-${c.id}">
-              <div class="flex items-start gap-2">
-                <i class="fas fa-info-circle text-blue-500 mt-1"></i>
-                <div>
-                  <p class="font-semibold text-blue-900 mb-1">Descripción del Concepto:</p>
-                  <p class="text-gray-700">${escapeHtml(c.description || 'Sin descripción.')}</p>
+          <div class="hidden text-sm text-gray-700 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white p-5 rounded-2xl border-2 border-blue-200 mb-3 shadow-lg backdrop-blur-sm" id="details-${c.id}">
+              <div class="flex items-start gap-3">
+                <div class="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg shadow-md flex-shrink-0">
+                  <i class="fas fa-info-circle text-blue-600 text-base"></i>
+                </div>
+                <div class="flex-1">
+                  <p class="font-black text-blue-900 mb-2 flex items-center gap-2">
+                    <span>Descripción del Concepto</span>
+                  </p>
+                  <p class="text-gray-700 leading-relaxed">${escapeHtml(c.description || 'Sin descripción disponible.')}</p>
                 </div>
               </div>
           </div>
           
-          <div class="grid grid-cols-3 gap-3">
-            <button onclick="window.editConcept('${c.id}')" class="py-3 text-xs font-bold bg-gradient-to-br from-[#2E594D] to-[#1e3d35] text-white rounded-xl hover:shadow-xl hover:scale-105 transition-all duration-300">
-              <i class="fas fa-edit mb-1 block text-base"></i>
-              <span>Editar</span>
+          <div class="grid grid-cols-3 gap-3 relative z-10">
+            <button onclick="window.editConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 text-white rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+              <i class="fas fa-edit mb-1 block text-lg relative z-10 group-hover/btn:rotate-12 transition-transform"></i>
+              <span class="relative z-10">Editar</span>
             </button>
 
             ${!isInactive ? `
-              <button onclick="window.finalizeConcept('${c.id}')" class="py-3 text-xs font-bold bg-gradient-to-br from-amber-50 to-amber-100 text-amber-700 rounded-xl hover:shadow-xl hover:scale-105 border-2 border-amber-300 transition-all duration-300">
-                <i class="fas fa-check-double mb-1 block text-base"></i>
-                <span>Finalizar</span>
+              <button onclick="window.finalizeConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-amber-100 to-orange-100 text-amber-800 rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-amber-300 transition-all duration-300 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-amber-200 to-orange-200 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+                <i class="fas fa-check-double mb-1 block text-lg relative z-10 group-hover/btn:scale-110 transition-transform"></i>
+                <span class="relative z-10">Finalizar</span>
               </button>
             ` : `
-              <button onclick="window.activateConcept('${c.id}')" class="py-3 text-xs font-bold bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 rounded-xl hover:shadow-xl hover:scale-105 border-2 border-emerald-300 transition-all duration-300">
-                <i class="fas fa-play mb-1 block text-base"></i>
-                <span>Activar</span>
+              <button onclick="window.activateConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-800 rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-emerald-300 transition-all duration-300 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-emerald-200 to-teal-200 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+                <i class="fas fa-play mb-1 block text-lg relative z-10 group-hover/btn:translate-x-1 transition-transform"></i>
+                <span class="relative z-10">Activar</span>
               </button>
             `}
 
-            <button onclick="window.deleteConcept('${c.id}')" class="py-3 text-xs font-bold bg-gradient-to-br from-red-50 to-red-100 text-red-700 rounded-xl hover:shadow-xl hover:scale-105 border-2 border-red-300 transition-all duration-300">
-              <i class="fas fa-trash-alt mb-1 block text-base"></i>
-              <span>Borrar</span>
+            <button onclick="window.deleteConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-red-100 to-rose-100 text-red-800 rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-red-300 transition-all duration-300 relative overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-r from-red-200 to-rose-200 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+              <i class="fas fa-trash-alt mb-1 block text-lg relative z-10 group-hover/btn:rotate-12 transition-transform"></i>
+              <span class="relative z-10">Borrar</span>
             </button>
           </div>
           
-          <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="w-full text-xs text-[#2E594D] hover:text-[#1e3d35] font-bold tracking-wider transition bg-[#2E594D]/5 hover:bg-[#2E594D]/10 py-2 rounded-lg border border-[#2E594D]/20">
-            <i class="fas fa-info-circle mr-1"></i> Ver descripción <i class="fas fa-chevron-down ml-1"></i>
+          <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="w-full text-xs text-[#2E594D] hover:text-white font-bold tracking-wider transition-all bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-[#2E594D] hover:to-emerald-700 py-3 rounded-xl border-2 border-emerald-200 hover:border-emerald-600 shadow-md hover:shadow-xl relative z-10 group/info">
+            <i class="fas fa-info-circle mr-2 group-hover/info:rotate-180 transition-transform duration-500"></i> 
+            <span>Ver descripción completa</span>
+            <i class="fas fa-chevron-down ml-2 group-hover/info:translate-y-1 transition-transform"></i>
           </button>
         </div>
       </div>
@@ -384,100 +309,27 @@ async function mutateConcept(id, action){
       }
     });
     
-    console.log(`✅ ${action} exitoso para concepto ${id}`);
+    // Mostrar mensaje de éxito
+    const successMessages = {
+      finalize: 'Concepto finalizado exitosamente',
+      activate: 'Concepto activado exitosamente',
+      disable: 'Concepto deshabilitado exitosamente',
+      delete: 'Concepto marcado como eliminado'
+    };
+    alert(`✓ ${successMessages[action]}`);
     
-    // Si es delete, remover inmediatamente del DOM y cache
-    if (action === 'delete') {
-      console.log(`🗑️ Ejecutando eliminación visual para ID ${id}`);
-      
-      // Remover del cache primero
-      const beforeLen = conceptsCache.length;
-      conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
-      console.log(`Cache: ${beforeLen} → ${conceptsCache.length} items`);
-      
-      // Buscar y animar removal del DOM
-      const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
-      console.log(`Elemento DOM encontrado: ${!!cardEl}`);
-      
-      if (cardEl) {
-        // Aplicar animación de salida
-        cardEl.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-        cardEl.style.opacity = '0';
-        cardEl.style.transform = 'translateX(100px) scale(0)';
-        cardEl.style.pointerEvents = 'none';
-        
-        // Remover del DOM después de animación
-        setTimeout(() => {
-          if (cardEl && cardEl.parentNode) {
-            try {
-              cardEl.parentNode.removeChild(cardEl);
-              console.log(`✅ Elemento removido del DOM`);
-            } catch (e) {
-              console.error(`Error removiendo elemento:`, e);
-            }
-          }
-        }, 500);
-      }
-      
-      alert(`✓ Concepto eliminado exitosamente`);
-      return true;
-    } else {
-      // Para otros actions, recargar lista completa
-      await loadConcepts();
-      alert(`✓ Operación ejecutada exitosamente`);
-      return true;
-    }
+    await loadConcepts();
+    return true;
   } catch (err) {
-    const errorMsg = (err.message || String(err)).toLowerCase();
-    console.error(`❌ Error en ${action}:`, err);
-    console.log(`Mensaje error lowercase: "${errorMsg}"`);
-    console.log(`Buscando palabras clave...`);
-    console.log(`- "ya está eliminado": ${errorMsg.includes('ya está eliminado')}`);
-    console.log(`- "conflict": ${errorMsg.includes('conflict')}`);
+    console.error(`Error en ${action}:`, err);
     
-    // Detectar si ya está eliminado
-    const isAlreadyDeleted = errorMsg.includes('ya está eliminado') || 
-                           errorMsg.includes('ya fue eliminado') ||
-                           errorMsg.includes('conflict') ||
-                           errorMsg.includes('409');
-    
-    console.log(`isAlreadyDeleted: ${isAlreadyDeleted}, action: ${action}`);
-    
-    if (isAlreadyDeleted && action === 'delete') {
-      console.warn(`⚠️ Concepto ${id} ya estaba eliminado en servidor. Sincronizando UI...`);
-      
-      // Buscar y remover el elemento
-      const cardEl = document.querySelector(`[data-concept-id="${id}"]`);
-      console.log(`Elemento encontrado: ${!!cardEl}`);
-      
-      if (cardEl) {
-        // Remover con animación
-        cardEl.style.transition = 'all 0.4s ease-out';
-        cardEl.style.opacity = '0';
-        cardEl.style.pointerEvents = 'none';
-        cardEl.style.height = '0';
-        cardEl.style.marginTop = '0';
-        cardEl.style.marginBottom = '0';
-        cardEl.style.overflow = 'hidden';
-        
-        setTimeout(() => {
-          console.log(`Removiendo del DOM...`);
-          if (cardEl && cardEl.parentNode) {
-            cardEl.parentNode.removeChild(cardEl);
-            console.log(`✅ Elemento removido del DOM`);
-          }
-        }, 400);
-      } else {
-        console.warn(`⚠️ No se encontró elemento [data-concept-id="${id}"]`);
-      }
-      
-      // Remover del cache
-      const beforeLen = conceptsCache.length;
-      conceptsCache = conceptsCache.filter(c => String(c.id) !== String(id));
-      console.log(`Cache: ${beforeLen} → ${conceptsCache.length} items`);
-      
-      alert('⚠️ Ya estaba eliminado. Vista sincronizada.');
-      return true;
+    // Manejo especial para conflictos 409 o mensajes de estado ya existente
+    if (err.message.includes('ya está') || 
+        err.message.includes('ya fue') || 
+        err.message.includes('elimina')) {
+      alert(`⚠️ ${err.message}\n\nActualizando lista...`);
+      await loadConcepts(); // Recargar para mostrar estado actualizado
+      return false;
     } else {
       alert(`❌ Error: ${err.message}`);
       return false;

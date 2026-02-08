@@ -129,11 +129,6 @@ const pageTitle = "Dashboard - SIGE";
             pendingDesc.textContent = count === 1 ? '1 Adeudo' : `${count} Adeudos`;
           }
           
-          // Disparar evento para que CardInfo se actualice
-          window.dispatchEvent(new CustomEvent('chargesUpdated', { 
-            detail: pendingData
-          }));
-          
           console.log('✅ Datos de pagos pendientes cargados:', pendingData);
         }
       } catch (error) {
@@ -168,17 +163,6 @@ const pageTitle = "Dashboard - SIGE";
             const today = new Date().toLocaleDateString('es-MX');
             estudiantesDesc.textContent = `Actualizado: ${today}`;
           }
-          
-          // Guardar en localStorage también para que CardInfo pueda acceder
-          localStorage.setItem('studentsList', JSON.stringify({
-            total: totalStudents,
-            updatedAt: new Date().toISOString()
-          }));
-          
-          // Disparar evento para que CardInfo se actualice
-          window.dispatchEvent(new CustomEvent('studentsUpdated', { 
-            detail: { total: totalStudents } 
-          }));
           
           console.log('✅ Datos de estudiantes cargados:', totalStudents);
         }
@@ -219,11 +203,6 @@ const pageTitle = "Dashboard - SIGE";
           
           // Guardar balance disponible para validación de payout
           availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
-          
-          // Disparar evento para que CardInfo se actualice
-          window.dispatchEvent(new CustomEvent('chargesUpdated', { 
-            detail: paymentsData
-          }));
           
           console.log('✅ Datos de pagos cargados:', paymentsData);
         }
