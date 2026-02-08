@@ -102,6 +102,47 @@ async function loadConcepts(){
       }
     });
     conceptsCache = data?.data?.concepts?.items || [];
+    
+    // Cargar información de relaciones para enriquecer los datos
+    if (conceptsCache.length > 0) {
+      console.log(`📦 Cargando relaciones para ${conceptsCache.length} conceptos...`);
+      
+      // Cachés locales para relaciones
+      const relationsCache = {};
+      
+      // Hacer peticiones paralelas para las relaciones (máximo 15 conceptos para no sobrecargar)
+      const conceptsToEnrich = conceptsCache.slice(0, 15);
+      const relationPromises = conceptsToEnrich.map(async (concept) => {
+        if (relationsCache[concept.id]) return;
+        try {
+          const relData = await apiFetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
+            headers: {
+              'X-User-Role': 'financial-staff',
+              'X-User-Permission': 'view.concepts'
+            }
+          });
+          if (relData?.data?.concept?.applies_to) {
+            relationsCache[concept.id] = relData.data.concept;
+          }
+        } catch (err) {
+          console.warn(`⚠️ No se pudieron cargar relaciones para concepto ${concept.id}:`, err.message);
+        }
+      });
+      
+      // Esperar a que se carguen todas las relaciones
+      await Promise.all(relationPromises);
+      
+      // Enriquecer el caché con las relaciones
+      conceptsCache = conceptsCache.map(c => {
+        if (relationsCache[c.id]) {
+          return { ...c, ...relationsCache[c.id] };
+        }
+        return c;
+      });
+      
+      console.log(`✅ Relaciones cargadas, renderizando...`);
+    }
+    
     renderConcepts();
   } catch(err){
     console.error(err);
@@ -156,22 +197,46 @@ function renderConcepts(){
 
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
+    // Determinar el texto del alcance basado en applies_to
+    const scopeText = (() => {
+      const applies = c.applies_to || c.appliesTo || '';
+      
+      if (!applies) {
+        return 'No definido';
+      }
+      
+      if (applies === 'todos' || applies === 'all') {
+        return '✅ Aplica a todos';
+      }
+      
+      if (applies === 'students') {
+        const studentCount = (c.users || c.userIds || c.user_ids || []).length;
+        return studentCount > 0 ? `👥 ${studentCount} estudiantes` : 'Estudiantes';
+      }
+      
+      if (applies === 'career' || applies === 'careers') {
+        const careerCount = (c.careers || c.careerIds || c.career_ids || []).length;
+        return careerCount > 0 ? `🎓 ${careerCount} carreras` : 'Por carrera';
+      }
+      
+      if (applies === 'semester' || applies === 'semesters') {
+        const semesterCount = (c.semesters || []).length;
+        return semesterCount > 0 ? `📅 ${semesterCount} semestres` : 'Por semestre';
+      }
+      
+      if (applies === 'tag' || applies === 'tags') {
+        return '🏷️ Por etiqueta';
+      }
+      
+      return applies;
+    })();
+    
     // Usar expiration_human si está disponible, si no usar las fechas individuales
     const expirationText = c.expiration_human || `${c.start_date || '-'} a ${c.end_date || '-'}`;
     
-    // Mapeo flexible para alcance
-    const scopeText = (() => {
-      const applies = c.applies_to || c.appliesTo || '';
-      if (applies === 'todos') return 'Todos';
-      if (applies === 'students') return `${(c.userIds||c.user_ids||[]).length} alumnos`; 
-      if (applies === 'career' || applies === 'careers') return `${(c.careerIds||c.careers||[]).length} carreras`;
-      if (applies === 'semesters' || applies === 'semester') return `${(c.semesters||[]).length} semestres`;
-      return 'No definido';
-    })();
-    
     // Intentar obtener estudiantes afectados de varios campos posibles
     const affectedCount = c.affectedStudentsCount || c.affected_students_count || 
-                          (c.userIds||c.user_ids||[]).length || 
+                          (c.users || c.userIds || c.user_ids || []).length || 
                           (c.metadata?.students_count) || 0;
 
     return `
