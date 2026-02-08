@@ -1,47 +1,48 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { API_ENDPOINTS } from '../config/api.js';
 
 // ================= CONFIG =================
 const MAX_SEMESTER = 10;
 const SEMESTERS = Array.from({ length: MAX_SEMESTER }, (_, i) => i + 1);
 
-const CAREERS = [
-  { code: 'TAG-E', name: 'Técnico Agropecuario' },
-  { code: 'TOF', name: 'Técnico en Ofimática' },
-  { code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
-  { code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
-  { code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
-];
-
-const CAREER_MAP = CAREERS.reduce((a, c) => {
-  a[c.code] = c.name;
-  return a;
-}, { '': 'Sin Carrera' });
-
 // ================= DATA =================
 let students = [];
+const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+
 try {
-  const res = await fetch(API_ENDPOINTS.students.list);
+  const accessToken = ''; // Will be loaded client-side
+  const res = await fetch(`${API_BASE}/payments/students?perPage=500`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'X-User-Role': 'financial-staff',
+      'X-User-Permission': 'view.payments'
+    }
+  });
+  
   if (res.ok) {
     const json = await res.json();
     students = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
   }
-} catch (e) {}
+} catch (e) {
+  console.error('Error fetching students:', e);
+}
 
-students = students.map((s, i) => ({
-  id: s.id ?? String(i + 1),
-  numControl: s.numControl ?? '',
-  nombre: s.nombre ?? '',
-  apellidoP: s.apellidoP ?? '',
-  apellidoM: s.apellidoM ?? '',
+// Transform to compatible format
+students = students.map((s) => ({
+  id: s.userId ?? s.id ?? '',
+  numControl: s.n_control ?? s.numControl ?? '',
+  fullName: s.fullName ?? '',
   semestre: s.semestre ? Math.min(Number(s.semestre), MAX_SEMESTER) : 1,
-  carrera: s.carrera ?? '',
-  correo: s.correo ?? '',
+  carrera: s.career_name ?? s.carrera ?? 'Sin Carrera',
+  numPending: s.num_pending ?? 0,
+  numExpired: s.num_expired ?? 0,
+  numPaid: s.num_paid ?? 0,
+  totalAmountPending: s.total_amount_pending ?? 0,
+  expiredAmount: s.expired_amount ?? 0,
+  totalPaid: s.total_paid ?? 0,
 }));
 
 const studentsJSON = JSON.stringify(students);
-const careerMapJSON = JSON.stringify(CAREER_MAP);
 ---
 
 <style>
@@ -129,8 +130,9 @@ body {
           <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de Pago:</label>
           <select id="filter-adeudo" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#2D584C] bg-gray-50">
             <option value="">Cualquier estado</option>
-            <option value="pendiente">Con Adeudo</option>
-            <option value="corriente">Al Corriente</option>
+            <option value="vencido">Vencido</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="pagado">Pagado</option>
           </select>
         </div>
         <button id="clear-filters" class="w-full mt-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold border border-red-100 hover:bg-red-200 transition flex items-center justify-center gap-2 text-xs">
@@ -166,18 +168,18 @@ body {
   </section>
 </div>
 
-<div id="data-store" data-students={studentsJSON} data-career-map={careerMapJSON} is:raw></div>
+<div id="data-store" data-students={studentsJSON} is:raw></div>
 
 <script type="module">
 const STORAGE_KEY = 'studentsList';
+const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 const ITEMS_PER_PAGE = 50;
 let currentPage = 1;
 
 const dataStore = document.getElementById('data-store');
-const initial = JSON.parse(dataStore.dataset.students);
-const CAREER_MAP = JSON.parse(dataStore.dataset.careerMap);
+let studentsList = JSON.parse(dataStore.dataset.students) || [];
 
-let filters = { text:'', carrera:'', semestre:'', adeudo:'' };
+let filters = { text: '', carrera: '', semestre: '', adeudo: '' };
 
 const filterBtn = document.getElementById('filter-btn');
 const filterMenu = document.getElementById('filter-menu');
@@ -186,136 +188,240 @@ const filterCarrera = document.getElementById('filter-carrera');
 const filterSemestre = document.getElementById('filter-semestre');
 const filterAdeudo = document.getElementById('filter-adeudo');
 const clearFiltersButton = document.getElementById('clear-filters');
-const tbodyDesktop = document.getElementById('tbody-desktop'); 
+const tbodyDesktop = document.getElementById('tbody-desktop');
 const noResults = document.getElementById('no-results');
 const paginationInfo = document.getElementById('pagination-info');
 const paginationControls = document.getElementById('pagination-controls');
 
-// Interacción Menú Filtros
+// ======================  HELPERS  ======================
+async function fetchWithTokenRefresh(url, options = {}) {
+  const getToken = () => localStorage.getItem('access_token');
+  
+  let response = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      'X-User-Role': 'financial-staff',
+      'X-User-Permission': 'view.payments',
+      ...options.headers
+    }
+  });
+
+  if (response.status === 401) {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          localStorage.setItem('access_token', data.access_token);
+          
+          response = await fetch(url, {
+            ...options,
+            headers: {
+              'Authorization': `Bearer ${data.access_token}`,
+              'X-User-Role': 'financial-staff',
+              'X-User-Permission': 'view.payments',
+              ...options.headers
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Token refresh failed:', e);
+      }
+    }
+  }
+
+  return response;
+}
+
+async function loadStudents() {
+  try {
+    const response = await fetchWithTokenRefresh(`${API_BASE}/payments/students?perPage=500`);
+    if (response.ok) {
+      const json = await response.json();
+      const data = Array.isArray(json) ? json : (json.data || []);
+      studentsList = data.map(s => ({
+        id: s.userId ?? s.id ?? '',
+        numControl: s.n_control ?? s.numControl ?? '',
+        fullName: s.fullName ?? '',
+        semestre: s.semestre ? Math.min(Number(s.semestre), 10) : 1,
+        carrera: s.career_name ?? s.carrera ?? 'Sin Carrera',
+        numPending: s.num_pending ?? 0,
+        numExpired: s.num_expired ?? 0,
+        numPaid: s.num_paid ?? 0,
+        totalAmountPending: s.total_amount_pending ?? 0,
+        expiredAmount: s.expired_amount ?? 0,
+        totalPaid: s.total_paid ?? 0,
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(studentsList));
+      render();
+    }
+  } catch (e) {
+    console.error('Error loading students:', e);
+    render();
+  }
+}
+
+function getPaymentStatus(student) {
+  if (student.numExpired > 0) {
+    return { 
+      text: 'Vencido', 
+      adeudo: (student.expiredAmount || 0).toFixed(2), 
+      bad: true,
+      type: 'expired'
+    };
+  }
+  if (student.numPending > 0) {
+    return { 
+      text: 'Pendiente', 
+      adeudo: (student.totalAmountPending || 0).toFixed(2), 
+      bad: true,
+      type: 'pending'
+    };
+  }
+  return { 
+    text: 'Pagado', 
+    adeudo: '0.00', 
+    bad: false,
+    type: 'paid'
+  };
+}
+
+// ====================== EVENTS ======================
 filterBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   filterMenu.classList.toggle('active');
 });
 
 document.addEventListener('click', (e) => {
-    if (!filterBtn.contains(e.target) && !filterMenu.contains(e.target)) {
-        filterMenu.classList.remove('active');
-    }
+  if (!filterBtn.contains(e.target) && !filterMenu.contains(e.target)) {
+    filterMenu.classList.remove('active');
+  }
 });
 
-// Funciones de Datos
-function readLocal(){
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || initial; } catch { return initial; }
-}
-
-function getChargesSum(id){
-  try {
-    const c = JSON.parse(localStorage.getItem('chargesList') || '[]');
-    return c.filter(x => String(x.studentId) === String(id) && (x.status === 'pending' || x.status === 'pendiente'))
-            .reduce((s,x)=>s+Number(x.amount),0);
-  } catch { return 0; }
-}
-
-function paymentStatus(id){
-  const p = getChargesSum(id);
-  return p > 0 ? { text:'Pago Pendiente', adeudo:p.toFixed(2), bad:true } : { text:'Al Corriente', adeudo:'0.00', bad:false };
-}
-
-// Lógica de Renderizado y Paginación
-function render(){
-    const allFiltered = readLocal().filter(s=>{
-      const t = filters.text.toLowerCase();
-      const st = paymentStatus(s.id);
-      const fullName = `${s.nombre} ${s.apellidoP} ${s.apellidoM}`.toLowerCase();
-      return ((!t || fullName.includes(t) || s.numControl.toLowerCase().includes(t)) &&
-        (!filters.carrera || s.carrera === filters.carrera) &&
-        (!filters.semestre || String(s.semestre) === filters.semestre) &&
-        (!filters.adeudo || (filters.adeudo==='pendiente' && st.bad) || (filters.adeudo==='corriente' && !st.bad)));
-    });
-
-    const totalItems = allFiltered.length;
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+// ====================== RENDERING ======================
+function render() {
+  const allFiltered = studentsList.filter(s => {
+    const t = filters.text.toLowerCase();
+    const status = getPaymentStatus(s);
+    const fullNameLower = (s.fullName || '').toLowerCase();
     
-    if (currentPage > totalPages) currentPage = totalPages || 1;
+    return (
+      (!t || fullNameLower.includes(t) || (s.numControl || '').toLowerCase().includes(t)) &&
+      (!filters.carrera || s.carrera === filters.carrera) &&
+      (!filters.semestre || String(s.semestre) === filters.semestre) &&
+      (!filters.adeudo || 
+        (filters.adeudo === 'vencido' && status.type === 'expired') ||
+        (filters.adeudo === 'pendiente' && status.type === 'pending') ||
+        (filters.adeudo === 'pagado' && status.type === 'paid')
+      )
+    );
+  });
 
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const paginatedList = allFiltered.slice(start, start + ITEMS_PER_PAGE);
+  const totalItems = allFiltered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
-    tbodyDesktop.innerHTML = '';
-    noResults.classList.toggle('hidden', allFiltered.length > 0);
+  if (currentPage > totalPages) currentPage = totalPages || 1;
 
-    paginatedList.forEach((s)=>{
-        const st = paymentStatus(s.id);
-        const badgeClass = st.bad ? 'badge-pending' : 'badge-current';
-        tbodyDesktop.insertAdjacentHTML('beforeend', `
-          <tr class="hover:bg-[#2D584C]/5 transition border-b border-gray-50">
-            <td class="px-6 py-4 font-mono text-xs font-bold text-gray-500">${s.numControl}</td>
-            <td class="px-6 py-4 font-bold text-gray-900">${s.nombre} ${s.apellidoP} ${s.apellidoM}</td>
-            <td class="px-6 py-4 text-center font-medium">${s.semestre}º</td>
-            <td class="px-6 py-4 text-gray-600 text-xs">${CAREER_MAP[s.carrera] || s.carrera}</td>
-            <td class="px-6 py-4 text-center">
-              <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${badgeClass}">${st.text}</span>
-            </td>
-            <td class="px-6 py-4 text-right font-black text-base ${st.bad ? 'text-red-600' : 'text-emerald-700'}">$${st.adeudo}</td>
-          </tr>
-        `);
-    });
+  const start = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedList = allFiltered.slice(start, start + ITEMS_PER_PAGE);
 
-    updatePaginationUI(totalItems, totalPages);
+  tbodyDesktop.innerHTML = '';
+  noResults.classList.toggle('hidden', allFiltered.length > 0);
+
+  paginatedList.forEach((s) => {
+    const status = getPaymentStatus(s);
+    const badgeClass = status.bad ? 'badge-pending' : 'badge-current';
+    tbodyDesktop.insertAdjacentHTML('beforeend', `
+      <tr class="hover:bg-[#2D584C]/5 transition border-b border-gray-50">
+        <td class="px-6 py-4 font-mono text-xs font-bold text-gray-500">${s.numControl}</td>
+        <td class="px-6 py-4 font-bold text-gray-900">${s.fullName || 'N/A'}</td>
+        <td class="px-6 py-4 text-center font-medium">${s.semestre}º</td>
+        <td class="px-6 py-4 text-gray-600 text-xs">${s.carrera}</td>
+        <td class="px-6 py-4 text-center">
+          <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${badgeClass}">${status.text}</span>
+        </td>
+        <td class="px-6 py-4 text-right font-black text-base ${status.bad ? 'text-red-600' : 'text-emerald-700'}">$${status.adeudo}</td>
+      </tr>
+    `);
+  });
+
+  updatePaginationUI(totalItems, totalPages);
 }
 
 function updatePaginationUI(totalItems, totalPages) {
-    const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
-    const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
-    
-    paginationInfo.innerText = `Mostrando ${startItem}-${endItem} de ${totalItems} registros`;
-    paginationControls.innerHTML = '';
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
-    if (totalPages <= 1) return;
+  paginationInfo.innerText = `Mostrando ${startItem}-${endItem} de ${totalItems} registros`;
+  paginationControls.innerHTML = '';
 
-    const createBtn = (label, targetPage, disabled = false, active = false) => {
-        const btn = document.createElement('button');
-        btn.innerText = label;
-        btn.disabled = disabled;
-        btn.className = `min-w-[32px] h-8 px-2 rounded-lg text-xs font-black transition-all ${
-            active ? 'bg-[#2D584C] text-white shadow-md' : 
-            disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-200'
-        }`;
-        if (!disabled) btn.onclick = () => { currentPage = targetPage; render(); window.scrollTo({top:0, behavior:'smooth'}); };
-        return btn;
-    };
+  if (totalPages <= 1) return;
 
-    paginationControls.appendChild(createBtn('←', currentPage - 1, currentPage === 1));
+  const createBtn = (label, targetPage, disabled = false, active = false) => {
+    const btn = document.createElement('button');
+    btn.innerText = label;
+    btn.disabled = disabled;
+    btn.className = `min-w-[32px] h-8 px-2 rounded-lg text-xs font-black transition-all ${
+      active ? 'bg-[#2D584C] text-white shadow-md' :
+      disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-200'
+    }`;
+    if (!disabled) btn.onclick = () => { currentPage = targetPage; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    return btn;
+  };
 
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            paginationControls.appendChild(createBtn(i, i, false, currentPage === i));
-        } else if (i === currentPage - 2 || i === currentPage + 2) {
-            const span = document.createElement('span');
-            span.innerText = '...';
-            span.className = 'text-gray-400 px-1';
-            paginationControls.appendChild(span);
-        }
+  paginationControls.appendChild(createBtn('←', currentPage - 1, currentPage === 1));
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+      paginationControls.appendChild(createBtn(i, i, false, currentPage === i));
+    } else if (i === currentPage - 2 || i === currentPage + 2) {
+      const span = document.createElement('span');
+      span.innerText = '...';
+      span.className = 'text-gray-400 px-1';
+      paginationControls.appendChild(span);
     }
+  }
 
-    paginationControls.appendChild(createBtn('→', currentPage + 1, currentPage === totalPages));
+  paginationControls.appendChild(createBtn('→', currentPage + 1, currentPage === totalPages));
 }
 
-// Eventos de Filtro
+// ====================== FILTER EVENTS ======================
 searchInput.addEventListener('input', (e) => { filters.text = e.target.value; currentPage = 1; render(); });
 filterCarrera.addEventListener('change', (e) => { filters.carrera = e.target.value; currentPage = 1; render(); });
 filterSemestre.addEventListener('change', (e) => { filters.semestre = e.target.value; currentPage = 1; render(); });
 filterAdeudo.addEventListener('change', (e) => { filters.adeudo = e.target.value; currentPage = 1; render(); });
 
 clearFiltersButton.addEventListener('click', () => {
-    filters = { text:'', carrera:'', semestre:'', adeudo:'' };
-    searchInput.value = ''; filterCarrera.value = ''; filterSemestre.value = ''; filterAdeudo.value = '';
-    currentPage = 1;
-    render();
-    filterMenu.classList.remove('active');
+  filters = { text: '', carrera: '', semestre: '', adeudo: '' };
+  searchInput.value = '';
+  filterCarrera.value = '';
+  filterSemestre.value = '';
+  filterAdeudo.value = '';
+  currentPage = 1;
+  render();
+  filterMenu.classList.remove('active');
 });
 
-window.onload = render;
+// ====================== INITIALIZATION ======================
+// Populate career filter dynamically
+const uniqueCareers = [...new Set(studentsList.map(s => s.carrera))].sort();
+uniqueCareers.forEach(career => {
+  const option = document.createElement('option');
+  option.value = career;
+  option.textContent = career;
+  filterCarrera.appendChild(option);
+});
+
+// Load initial render and then fetch updated data
+render();
+loadStudents();
 </script>
 
 </Layout>

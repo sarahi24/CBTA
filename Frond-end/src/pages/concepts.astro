@@ -103,10 +103,10 @@ async function loadConcepts(){
     });
     conceptsCache = data?.data?.concepts?.items || [];
     
-    // Renderizar inmediatamente sin esperar relaciones
+    // Renderizar inmediatamente
     renderConcepts();
     
-    // Cargar relaciones en background (sin bloquear)
+    // Cargar relaciones en background (sin headers personalizados para evitar CORS preflight)
     if (conceptsCache.length > 0) {
       console.log(`📦 Iniciando carga de relaciones en background...`);
       loadRelationsInBackground();
@@ -137,12 +137,19 @@ async function loadRelationsInBackground() {
       }
       
       try {
-        const relData = await apiFetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
+        // Usar fetch simple sin headers personalizados para evitar CORS preflight
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
           headers: {
-            'X-User-Role': 'financial-staff',
-            'X-User-Permission': 'view.concepts'
+            'Authorization': `Bearer ${token}`
           }
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const relData = await response.json();
         
         if (relData?.data?.concept) {
           const relInfo = relData.data.concept;
