@@ -888,6 +888,60 @@ export const StudentAPI = {
   },
 
   /**
+   * PAYMENTS - GET /api/v1/payments/students
+   * Listar estudiantes con resumen de sus pagos
+   * @param {string} token - Token de autenticación
+   * @param {object} options - Opciones de búsqueda y paginación
+   * @param {string} options.search - Búsqueda por email, CURP o n_control
+   * @param {number} options.page - Página número (default: 1)
+   * @param {number} options.perPage - Items por página (default: 15)
+   * @param {boolean} options.forceRefresh - Forzar actualización del caché
+   */
+  async getPaymentStudents(token, options = {}) {
+    try {
+      const {
+        search = '',
+        page = 1,
+        perPage = 15,
+        forceRefresh = false
+      } = options;
+
+      const params = new URL(`${API_BASE}/payments/students`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.payments.student.summary'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('No autenticado. Por favor inicia sesión.');
+        }
+        if (response.status === 403) {
+          throw new Error('No tienes permiso para ver el resumen de estudiantes.');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al obtener estudiantes');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getPaymentStudents:', err);
+      throw err;
+    }
+  },
+
+  /**
    * CREAR INTENTO DE PAGO - POST /api/v1/pending-payments
    * Generar intento de pago para un concepto pendiente
    * @param {number} conceptId - ID del concepto a pagar

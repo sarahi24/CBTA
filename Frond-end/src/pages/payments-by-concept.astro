@@ -108,7 +108,10 @@ const pageTitle = "Pagos por Concepto - CBTA 71";
 
     <!-- Paginación -->
     <div class="flex flex-col items-center gap-4 py-4">
-        <p class="text-slate-500 text-sm font-medium">Conceptos: <span id="total-concepts" class="font-bold text-slate-800">0</span></p>
+        <div class="flex items-center gap-6">
+            <p class="text-slate-500 text-sm font-medium">Conceptos: <span id="total-concepts" class="font-bold text-slate-800">0</span></p>
+            <p class="text-slate-500 text-sm font-medium">Página <span id="current-page" class="font-bold text-purple-600">1</span> de <span id="last-page" class="font-bold text-purple-600">1</span></p>
+        </div>
         <div class="flex items-center gap-2" id="pagination-controls"></div>
     </div>
 </div>
@@ -120,10 +123,13 @@ import { StudentAPI } from '../utils/studentAPI.js';
 
 (function() {
     let currentPage = 1;
-    const itemsPerPage = 20;
+    let lastPage = 1;
+    let totalRecords = 0;
+    const itemsPerPage = 15;
     let allConcepts = [];
-    let filteredConcepts = [];
     let isLoading = false;
+    let searchTerm = '';
+    let searchTimeout = null;
 
     const tableBody = document.getElementById('concepts-table-body');
     const searchInput = document.getElementById('search-input');
@@ -144,7 +150,7 @@ import { StudentAPI } from '../utils/studentAPI.js';
         return 'collection-low';
     };
 
-    // Cargar datos desde API
+    // Cargar datos desde API con paginación del servidor
     async function loadConcepts(forceRefresh = false) {
         if (isLoading) return;
         isLoading = true;
@@ -153,28 +159,55 @@ import { StudentAPI } from '../utils/studentAPI.js';
             refreshBtn.disabled = true;
             refreshBtn.innerHTML = '<svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Cargando...';
 
+            // Mostrar indicador en la tabla
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-8 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <svg class="animate-spin h-10 w-10 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="text-gray-600 font-bold">${forceRefresh ? 'Actualizando datos...' : 'Cargando conceptos...'}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
             const token = localStorage.getItem('access_token');
             if (!token) {
-                console.warn('⚠️ No hay token de autenticación');
-                render();
+                showError('No hay sesión activa. Por favor inicia sesión.');
+                setTimeout(() => window.location.href = '/login', 2000);
                 return;
             }
 
             const response = await StudentAPI.getPaymentsByConcept(token, {
-                search: '',
-                page: 1,
-                perPage: 1000,
+                search: searchTerm,
+                page: currentPage,
+                perPage: itemsPerPage,
                 forceRefresh: forceRefresh
             });
 
-            if (response.success && response.data?.payments?.items) {
-                allConcepts = response.data.payments.items;
-                console.log('✅ Conceptos cargados:', allConcepts.length);
-                render();
+            if (response.success && response.data?.payments) {
+                const paymentsData = response.data.payments;
+                
+                // Actualizar variables de paginación
+                currentPage = paymentsData.currentPage || 1;
+                lastPage = paymentsData.lastPage || 1;
+                totalRecords = paymentsData.total || 0;
+                allConcepts = paymentsData.items || [];
+
+                console.log(`✅ Conceptos cargados: ${allConcepts.length} de ${totalRecords} total`);
+                
+                updateSummaryCards();
+                renderTable();
+                updatePaginationInfo();
+            } else {
+                showError('No se pudieron cargar los conceptos');
             }
         } catch (error) {
             console.error('❌ Error al cargar conceptos:', error);
-            alert('Error al cargar datos: ' + error.message);
+            showError(error.message || 'Error al cargar datos');
         } finally {
             isLoading = false;
             refreshBtn.disabled = false;
@@ -182,29 +215,52 @@ import { StudentAPI } from '../utils/studentAPI.js';
         }
     }
 
-    // Renderizar tabla
-    function render() {
-        const term = searchInput.value.toLowerCase();
-        
-        filteredConcepts = allConcepts.filter(c => 
-            (c.concept_name || '').toLowerCase().includes(term)
-        );
-
-        // Actualizar resumen
-        const totalAmount = filteredConcepts.reduce((sum, c) => sum + parseFloat(c.amount_total || 0), 0);
-        const totalReceived = filteredConcepts.reduce((sum, c) => sum + parseFloat(c.amount_received_total || 0), 0);
+    // Actualizar tarjetas de resumen
+    function updateSummaryCards() {
+        const totalAmount = allConcepts.reduce((sum, c) => sum + parseFloat(c.amount_total || 0), 0);
+        const totalReceived = allConcepts.reduce((sum, c) => sum + parseFloat(c.amount_received_total || 0), 0);
         const globalRate = totalAmount > 0 ? ((totalReceived / totalAmount) * 100) : 0;
 
         document.getElementById('total-amount').textContent = fmt(totalAmount);
         document.getElementById('total-received').textContent = fmt(totalReceived);
         document.getElementById('global-rate').textContent = globalRate.toFixed(2) + '%';
-        document.getElementById('total-concepts').textContent = filteredConcepts.length;
+    }
 
-        // Paginar
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const pageItems = filteredConcepts.slice(startIdx, startIdx + itemsPerPage);
+    // Mostrar errores
+    function showError(message) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-8 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <i class="fas fa-exclamation-triangle text-5xl text-red-400"></i>
+                        <p class="text-red-600 font-bold">${message}</p>
+                        <button onclick="location.reload()" class="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                            Reintentar
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
 
-        tableBody.innerHTML = pageItems.map(concept => {
+    // Renderizar tabla
+    function renderTable() {
+        if (!allConcepts || allConcepts.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-8 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <i class="fas fa-inbox text-5xl text-gray-300"></i>
+                            <p class="text-gray-500 font-bold">No se encontraron conceptos</p>
+                            <p class="text-gray-400 text-sm">Intenta ajustar los filtros de búsqueda</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = allConcepts.map(concept => {
             const rate = parseFloat(concept.collection_rate || 0);
             const badgeClass = getCollectionClass(rate);
 
@@ -225,33 +281,92 @@ import { StudentAPI } from '../utils/studentAPI.js';
                 </tr>
             `;
         }).join('');
+    }
 
-        renderPagination(Math.ceil(filteredConcepts.length / itemsPerPage));
+    // Actualizar información de paginación
+    function updatePaginationInfo() {
+        document.getElementById('total-concepts').textContent = totalRecords;
+        document.getElementById('current-page').textContent = currentPage;
+        document.getElementById('last-page').textContent = lastPage;
+        renderPagination();
     }
 
     // Renderizar paginación
-    function renderPagination(totalPages) {
+    function renderPagination() {
         const controls = document.getElementById('pagination-controls');
-        if (totalPages <= 1) { controls.innerHTML = ''; return; }
+        if (lastPage <= 1) { 
+            controls.innerHTML = ''; 
+            return; 
+        }
 
         let html = '';
-        for (let i = 1; i <= totalPages; i++) {
+        
+        // Botón anterior
+        html += `
+            <button class="min-w-[40px] h-10 px-3 rounded-lg ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-purple-100'} font-bold border border-gray-200 transition-all" 
+                    data-page="${currentPage - 1}" 
+                    ${currentPage === 1 ? 'disabled' : ''}>
+                ←
+            </button>
+        `;
+
+        // Páginas
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let endPage = Math.min(lastPage, startPage + maxVisible - 1);
+        
+        if (endPage - startPage < maxVisible - 1) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+            html += `<button class="min-w-[40px] h-10 px-3 rounded-lg bg-white text-gray-700 hover:bg-purple-100 font-bold border border-gray-200 transition-all" data-page="1">1</button>`;
+            if (startPage > 2) {
+                html += `<span class="px-2 text-gray-400">...</span>`;
+            }
+        }
+
+        for(let i = startPage; i <= endPage; i++) {
             const active = i === currentPage ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-purple-100';
             html += `<button class="min-w-[40px] h-10 px-3 rounded-lg ${active} font-bold border border-gray-200 transition-all" data-page="${i}">${i}</button>`;
         }
+
+        if (endPage < lastPage) {
+            if (endPage < lastPage - 1) {
+                html += `<span class="px-2 text-gray-400">...</span>`;
+            }
+            html += `<button class="min-w-[40px] h-10 px-3 rounded-lg bg-white text-gray-700 hover:bg-purple-100 font-bold border border-gray-200 transition-all" data-page="${lastPage}">${lastPage}</button>`;
+        }
+
+        // Botón siguiente
+        html += `
+            <button class="min-w-[40px] h-10 px-3 rounded-lg ${currentPage === lastPage ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-purple-100'} font-bold border border-gray-200 transition-all" 
+                    data-page="${currentPage + 1}" 
+                    ${currentPage === lastPage ? 'disabled' : ''}>
+                →
+            </button>
+        `;
+
         controls.innerHTML = html;
-        controls.querySelectorAll('button').forEach(b => {
-            b.onclick = () => { currentPage = parseInt(b.dataset.page); render(); window.scrollTo(0, 0); };
+        controls.querySelectorAll('button:not([disabled])').forEach(b => {
+            b.onclick = () => { 
+                const newPage = parseInt(b.dataset.page);
+                if (newPage >= 1 && newPage <= lastPage && newPage !== currentPage) {
+                    currentPage = newPage;
+                    loadConcepts();
+                    window.scrollTo(0, 0);
+                }
+            };
         });
-    }
+    };
 
     // Exportar a Excel
     exportBtn.onclick = () => {
-        if (filteredConcepts.length === 0) {
+        if (allConcepts.length === 0) {
             return alert('No hay datos para exportar');
         }
 
-        const exportData = filteredConcepts.map((c, idx) => ({
+        const exportData = allConcepts.map((c, idx) => ({
             'No.': idx + 1,
             'Concepto': c.concept_name,
             'Monto Total': parseFloat(c.amount_total),
@@ -268,7 +383,15 @@ import { StudentAPI } from '../utils/studentAPI.js';
     };
 
     // Event listeners
-    searchInput.oninput = () => { currentPage = 1; render(); };
+    searchInput.oninput = () => { 
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchTerm = searchInput.value.trim();
+            currentPage = 1;
+            loadConcepts();
+        }, 500); // Debounce de 500ms
+    };
+    
     refreshBtn.onclick = () => loadConcepts(true);
 
     // Cargar al iniciar
