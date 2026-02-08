@@ -205,24 +205,28 @@ function renderConcepts(){
           </div>
         </div>
 
-        <div class="text-sm space-y-3 py-5 rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-5 mb-6 shadow-lg backdrop-blur-sm relative z-10">
-          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
-            <div class="flex items-center gap-3">
+        <!-- Sección de Alcance y Vigencia -->
+        <div class="space-y-3 py-4 rounded-2xl ${isInactive ? 'bg-amber-100/30' : 'bg-emerald-100/20'} border-2 ${isInactive ? 'border-amber-300/50' : 'border-emerald-300/40'} px-4 mb-6 relative z-10">
+          <!-- Alcance -->
+          <div class="flex items-center justify-between gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center gap-2">
               <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-emerald-100'} rounded-lg">
-                <i class="fas fa-bullseye ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-sm"></i>
+                <i class="fas fa-bullseye ${isInactive ? 'text-amber-600' : 'text-emerald-600'} text-sm"></i>
               </div>
-              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Alcance</span>
+              <span class="text-gray-700 font-bold text-xs uppercase tracking-widest">Alcance</span>
             </div>
-            <span class="font-bold text-[#2E594D] bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-xl shadow-sm border border-emerald-200">${scopeText}</span>
+            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r ${isInactive ? 'from-amber-50 to-orange-50' : 'from-emerald-50 to-teal-50'} px-3 py-1 rounded-lg border ${isInactive ? 'border-amber-200' : 'border-emerald-200'}">${scopeText}</span>
           </div>
-          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
-            <div class="flex items-center gap-3">
+          
+          <!-- Vigencia -->
+          <div class="flex items-center justify-between gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center gap-2">
               <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg">
-                <i class="fas fa-calendar-check ${isInactive ? 'text-amber-700' : 'text-blue-700'} text-sm"></i>
+                <i class="fas fa-calendar-alt ${isInactive ? 'text-amber-600' : 'text-blue-600'} text-sm"></i>
               </div>
-              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Vigencia</span>
+              <span class="text-gray-700 font-bold text-xs uppercase tracking-widest">Vigencia</span>
             </div>
-            <span class="font-semibold text-gray-800 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl shadow-sm text-[10px] border border-blue-200">${escapeHtml(c.start_date || '')} - ${escapeHtml(c.end_date || '')}</span>
+            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1 rounded-lg border border-blue-200">${escapeHtml(c.start_date || '-')} → ${escapeHtml(c.end_date || '-')}</span>
           </div>
         </div>
 
