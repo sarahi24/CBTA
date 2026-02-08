@@ -298,11 +298,11 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         }
 
         try {
-          // Intentar usar el nuevo endpoint GET /api/v1/debts
+          // Usar GET /api/v1/debts (máximo 200 items por página)
           const response = await StudentAPI.getAllPendingDebts(token, {
             search: searchInput.value.trim(),
             page: 1,
-            perPage: 1000,
+            perPage: 200,
             forceRefresh: forceRefresh
           });
           
@@ -310,22 +310,19 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
             pendingPayments = response.data.pending_payments.items.map(normalizePendingPayment);
             
             console.log('✅ Pagos pendientes cargados (GET /api/v1/debts):', pendingPayments.length);
+            console.log('📊 Paginación:', {
+              currentPage: response.data.pending_payments.currentPage,
+              lastPage: response.data.pending_payments.lastPage,
+              total: response.data.pending_payments.total
+            });
             renderTable();
             return;
+          } else {
+            console.warn('⚠️ Respuesta vacía del endpoint /api/v1/debts');
           }
         } catch (error) {
-          console.warn('⚠️ No se pudo cargar con GET /api/v1/debts, usando fallback:', error.message);
-        }
-
-        // Fallback: Si el endpoint nuevo no existe, usar getPendingPayments antiguo
-        const userRole = localStorage.getItem('user_role') || 'student';
-        const response = await StudentAPI.getPendingPayments(null, token, forceRefresh, userRole);
-        
-        if (response.success && response.data?.pending_payments) {
-          pendingPayments = response.data.pending_payments.map(normalizePendingPayment);
-          
-          console.log('✅ Pagos pendientes cargados (GET /api/v1/pending-payments):', pendingPayments.length);
-          renderTable();
+          console.error('❌ Error al cargar adeudos:', error.message);
+          console.error('Detalles:', error);
         }
       } catch (error) {
         console.error('❌ Error al cargar pagos pendientes:', error);
