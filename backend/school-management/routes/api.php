@@ -129,7 +129,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:view payments')->get('/', [PaymentsController::class, 'index']);
     });
 
-     Route::prefix('students')->middleware('role:financial staff')->group(function(){
+     Route::prefix('students')->middleware(['role:financial staff', \App\Http\Middleware\CorsMiddleware::class])->group(function(){
         Route::middleware('permission:view students')->get('/', [StudentsController::class, 'index']);
     });
 
