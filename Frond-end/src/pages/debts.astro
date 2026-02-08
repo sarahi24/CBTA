@@ -402,7 +402,9 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     }
 
     // --- LÓGICA DE EXPORTACIÓN EXCEL ---
-    document.getElementById('export-xlsx').onclick = () => {
+    const exportBtn = document.getElementById('export-xlsx');
+    if (exportBtn) {
+      exportBtn.onclick = () => {
         const charges = getCharges().filter(c => !['paid', 'pagado'].includes(String(c.status).toLowerCase()));
 
         const data = charges.map((ch, idx) => {
@@ -419,7 +421,8 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Adeudos");
         XLSX.writeFile(workbook, `Adeudos_CBTA71_${new Date().toLocaleDateString()}.xlsx`);
-    };
+      };
+    }
 
     // --- LÓGICA DEL MODAL Y AUTOCOMPLETADO ---
     const modal = document.getElementById('pay-modal');
