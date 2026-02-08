@@ -5,27 +5,114 @@
 
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 
+// Helper para hacer fetch con manejo automático de token expirado
+async function _fetchWithTokenRefresh(url, options = {}) {
+  let token = localStorage.getItem('access_token');
+  
+  if (!token) {
+    throw new Error('No hay token, inicia sesión');
+  }
+
+  // Primera intentona con el token actual
+  let response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    }
+  });
+
+  // Si es 401, intentar refrescar el token
+  if (response.status === 401) {
+    console.warn('⚠️ Token expirado, intentando refrescar...');
+    
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      // Intentar refrescar el token
+      const refreshResponse = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!refreshResponse.ok) {
+        throw new Error('No se pudo refrescar el token');
+      }
+
+      const refreshData = await refreshResponse.json();
+      const newAccessToken = refreshData?.data?.access_token || 
+                           refreshData?.data?.user_tokens?.access_token ||
+                           refreshData?.access_token;
+      const newRefreshToken = refreshData?.data?.refresh_token || 
+                            refreshData?.data?.user_tokens?.refresh_token ||
+                            refreshData?.refresh_token;
+
+      if (newAccessToken) {
+        localStorage.setItem('access_token', newAccessToken);
+        token = newAccessToken;
+        console.log('✅ Token refrescado exitosamente');
+      }
+
+      if (newRefreshToken) {
+        localStorage.setItem('refresh_token', newRefreshToken);
+      }
+
+      // Reintentar la petición original con el nuevo token
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers,
+        }
+      });
+    } catch (refreshError) {
+      console.error('❌ Error refrescando token:', refreshError);
+      // Si falla el refresh, limpiar tokens y redirigir al login
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_data');
+      window.location.href = '/';
+      throw new Error('Sesión expirada, por favor inicia sesión nuevamente');
+    }
+  }
+
+  // Procesar respuesta
+  if (response.status === 204) {
+    return { success: true };
+  }
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    const errorMsg = data.message || `Error ${response.status}`;
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
 export const DashboardAPI = {
   /**
    * Limpiar caché del dashboard
    */
   async refreshCache(token) {
     try {
-      const response = await fetch(`${API_BASE}/dashboard-staff/refresh`, {
+      const data = await _fetchWithTokenRefresh(`${API_BASE}/dashboard-staff/refresh`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al limpiar caché');
-      }
-
-      return await response.json();
+      return data;
     } catch (err) {
       console.error('❌ Error refreshing dashboard cache:', err);
       throw err;
@@ -43,21 +130,10 @@ export const DashboardAPI = {
       url.searchParams.append('perPage', perPage);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-      const response = await fetch(url.toString(), {
+      const data = await _fetchWithTokenRefresh(url.toString(), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar conceptos');
-      }
-
-      return await response.json();
+      return data;
     } catch (err) {
       console.error('❌ Error fetching concepts:', err);
       throw err;
@@ -73,21 +149,10 @@ export const DashboardAPI = {
       url.searchParams.append('only_this_year', onlyThisYear);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-      const response = await fetch(url.toString(), {
+      const data = await _fetchWithTokenRefresh(url.toString(), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pagos realizados');
-      }
-
-      return await response.json();
+      return data;
     } catch (err) {
       console.error('❌ Error fetching payments made:', err);
       throw err;
@@ -103,21 +168,10 @@ export const DashboardAPI = {
       url.searchParams.append('only_this_year', onlyThisYear);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-      const response = await fetch(url.toString(), {
+      const data = await _fetchWithTokenRefresh(url.toString(), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar total de estudiantes');
-      }
-
-      return await response.json();
+      return data;
     } catch (err) {
       console.error('❌ Error fetching students count:', err);
       throw err;
@@ -133,21 +187,10 @@ export const DashboardAPI = {
       url.searchParams.append('only_this_year', onlyThisYear);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-      const response = await fetch(url.toString(), {
+      const data = await _fetchWithTokenRefresh(url.toString(), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pagos pendientes');
-      }
-
-      return await response.json();
+      return data;
     } catch (err) {
       console.error('❌ Error fetching pending payments:', err);
       throw err;
@@ -159,21 +202,10 @@ export const DashboardAPI = {
    */
   async createPayout(token) {
     try {
-      const response = await fetch(`${API_BASE}/dashboard-staff/payout`, {
+      const data = await _fetchWithTokenRefresh(`${API_BASE}/dashboard-staff/payout`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al crear payout');
-      }
-
-      return await response.json();
+      return data;
     } catch (err) {
       console.error('❌ Error creating payout:', err);
       throw err;
