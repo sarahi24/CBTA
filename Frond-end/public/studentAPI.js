@@ -549,8 +549,8 @@ window.StudentAPI = {
   },
 
   /**
-   * PAYMENTS - GET /api/v1/payments/students
-   * Listar estudiantes con resumen de sus pagos
+   * STUDENTS - GET /api/v1/students
+   * Listar todos los estudiantes con paginación (para financial staff)
    * @param {string} token - Token de autenticación
    * @param {object} options - Opciones de búsqueda y paginación
    * @param {string} options.search - Búsqueda por email, CURP o n_control
@@ -567,11 +567,13 @@ window.StudentAPI = {
         forceRefresh = false
       } = options;
 
-      const params = new URL(`${API_BASE}/payments/students`);
+      const params = new URL(`${API_BASE}/students`);
       if (search) params.searchParams.append('search', search);
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+
+      console.log(`🔍 [StudentAPI] getPaymentStudents URL: ${params.toString()}`);
 
       const response = await fetch(params.toString(), {
         method: 'GET',
@@ -580,22 +582,29 @@ window.StudentAPI = {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.payments.student.summary'
+          'X-User-Permission': 'view.students'
         }
       });
 
+      console.log(`📡 [StudentAPI] getPaymentStudents Response Status: ${response.status}`);
+
       if (!response.ok) {
         if (response.status === 401) {
+          handleAuthError(401);
           throw new Error('No autenticado. Por favor inicia sesión.');
         }
         if (response.status === 403) {
           throw new Error('No tienes permiso para ver el resumen de estudiantes.');
         }
-        const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getPaymentStudents Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
         throw new Error(errorData.message || 'Error al obtener estudiantes');
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getPaymentStudents Success:`, data);
+      return data;
     } catch (err) {
       console.error('❌ StudentAPI.getPaymentStudents:', err);
       throw err;

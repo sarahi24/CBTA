@@ -218,16 +218,20 @@ async function loadStudents(forceRefresh = false) {
             forceRefresh: forceRefresh
         });
 
-        if (response.success && response.data?.payments) {
-            const studentsData = response.data.payments;
-            
-            currentPage = studentsData.currentPage || 1;
-            lastPage = studentsData.lastPage || 1;
-            totalRecords = studentsData.total || 0;
+        console.log('📡 Respuesta del servidor:', response);
 
-            console.log(`✅ Estudiantes cargados: ${studentsData.items?.length || 0} de ${totalRecords} total`);
+        if (response.success && response.data) {
+            // El backend devuelve directamente la colección en response.data
+            const studentsArray = Array.isArray(response.data) ? response.data : [];
             
-            renderTable(studentsData.items || []);
+            console.log(`✅ Estudiantes cargados: ${studentsArray.length} total`);
+            
+            // Actualizar información de paginación (si viene del backend)
+            currentPage = 1; // Por ahora estático
+            lastPage = 1;    // Por ahora estático
+            totalRecords = studentsArray.length;
+            
+            renderTable(studentsArray);
             updatePaginationInfo();
         } else {
             showError('No se pudieron cargar los estudiantes');
