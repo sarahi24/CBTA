@@ -131,19 +131,28 @@ function renderConcepts(){
       });
     }
 
-    // Mapeo flexible de campos de monto
+    // Mapeo flexible de campos de monto con manejo de strings con coma
     let amount = 0;
+    const parseAmount = (val) => {
+      if (val === undefined || val === null || val === '') return 0;
+      // Remover comas y convertir a número
+      const numStr = String(val).replace(/,/g, '');
+      return parseFloat(numStr) || 0;
+    };
+
     if (c.amount !== undefined && c.amount !== null && c.amount !== '') {
-      amount = Number(c.amount) || 0;
+      amount = parseAmount(c.amount);
     } else if (c.monto !== undefined && c.monto !== null && c.monto !== '') {
-      amount = Number(c.monto) || 0;
+      amount = parseAmount(c.monto);
     } else if (c.totalAmount !== undefined && c.totalAmount !== null) {
-      amount = Number(c.totalAmount) || 0;
+      amount = parseAmount(c.totalAmount);
     } else if (c.value !== undefined && c.value !== null) {
-      amount = Number(c.value) || 0;
+      amount = parseAmount(c.value);
     } else if (c.precio !== undefined && c.precio !== null) {
-      amount = Number(c.precio) || 0;
+      amount = parseAmount(c.precio);
     }
+
+    console.log(`💰 Concepto "${c.concept_name}" - Monto parseado: ${amount}`);
 
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     const scopeText = (() => {
