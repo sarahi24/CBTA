@@ -443,10 +443,13 @@ window.editConcept = async (id) => {
     
     const conceptData = await conceptResponse.json();
     console.log('📋 Concepto cargado del API:', conceptData);
+    console.log('🔍 conceptData.success:', conceptData.success);
+    console.log('🔍 conceptData.data:', conceptData.data);
     
     let conceptInfo = {};
     if (conceptData.success && conceptData.data) {
       const c = conceptData.data;
+      console.log('🔍 Datos del concepto (c):', c);
       conceptInfo = {
         id: c.id,
         title: c.concept_name || c.conceptName || c.name,
@@ -456,7 +459,9 @@ window.editConcept = async (id) => {
         start_date: c.start_date || c.startDate || '',
         end_date: c.end_date || c.endDate || ''
       };
+      console.log('✅ conceptInfo construido:', conceptInfo);
     } else {
+      console.error('❌ Respuesta sin success o sin data. conceptData:', conceptData);
       throw new Error('Respuesta inválida del servidor');
     }
     
@@ -520,12 +525,17 @@ window.editConcept = async (id) => {
     }
     
     // 3. Combinar datos del concepto + relaciones y guardar en localStorage
+    console.log('🔧 Construyendo finalData...');
+    console.log('🔧 conceptInfo:', conceptInfo);
+    console.log('🔧 scopeRules:', scopeRules);
+    
     const finalData = {
       ...conceptInfo,
       scopeRules: scopeRules
     };
     
     console.log('💾 Guardando en localStorage:', finalData);
+    console.log('💾 finalData stringificado:', JSON.stringify(finalData));
     localStorage.setItem('editingConcept', JSON.stringify(finalData));
     
     // 4. Redirigir a la página de edición
