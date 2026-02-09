@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { StudentAPI } from '../utils/studentAPI.js';
 
 // ================= CONFIG =================
 const MAX_SEMESTER = 10;
@@ -145,8 +144,7 @@ window.__CAREER_MAP = JSON.parse(careerMapJSON);
 </script>
 
 <script type="module">
-import { StudentAPI } from '../utils/studentAPI.js';
-window.StudentAPI = StudentAPI;
+import { StudentAPI } from '/studentAPI.js';
 
 const ITEMS_PER_PAGE = 15;
 let currentPage = 1;
@@ -225,19 +223,57 @@ async function loadStudents(forceRefresh = false) {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
-            forceRefresh: forceRefresh
+            forceRefresh: forceRefresh,
+            role: role,
+            permission: 'view.payments.student.summary'
         });
 
         console.log('📡 Respuesta del servidor:', response);
+        console.log('📊 Estructura completa:', JSON.stringify(response, null, 2));
 
-        if (response.success && response.data?.payments) {
-            const studentsData = response.data.payments;
+        if (response.success && response.data) {
+            let studentsData = null;
             
-            console.log(`✅ Estudiantes cargados: ${studentsData.items?.length || 0}`);
+            console.log('🔍 Buscando datos en:', {
+                'response.data.payments': !!response.data.payments,
+                'response.data.students': !!response.data.students,
+                'Array.isArray(response.data)': Array.isArray(response.data),
+                'response.data.data': !!response.data.data,
+                'response.data.items': !!response.data.items
+            });
             
-            if (studentsData.items && studentsData.items.length > 0) {
-                console.log('🔍 Primer estudiante:', studentsData.items[0]);
-                console.log('📋 Campos disponibles:', Object.keys(studentsData.items[0]).join(', '));
+            if (response.data.payments) {
+                console.log('✅ Usando response.data.payments');
+                studentsData = response.data.payments;
+            }
+            else if (response.data.students) {
+                console.log('✅ Usando response.data.students');
+                studentsData = response.data.students;
+            }
+            else if (response.data.items) {
+                console.log('✅ Usando response.data.items directamente');
+                studentsData = response.data;
+            }
+            else if (Array.isArray(response.data)) {
+                console.log('✅ response.data es un array');
+                studentsData = {
+                    items: response.data,
+                    currentPage: 1,
+                    lastPage: 1,
+                    total: response.data.length
+                };
+            }
+            else if (response.data.data) {
+                console.log('✅ Usando response.data.data');
+                studentsData = response.data.data.payments || response.data.data;
+            }
+            
+            console.log('📦 studentsData:', studentsData);
+            
+            if (studentsData && studentsData.items) {
+                console.log(`✅ Estudiantes cargados: ${studentsData.items.length}`);
+                console.log('🔍 Primer estudiante completo:', studentsData.items[0]);
+                console.log('📋 Todas las claves del estudiante:', Object.keys(studentsData.items[0]).join(', '));
                 
                 // Debug de campos de carrera
                 const firstStudent = studentsData.items[0];
@@ -340,32 +376,26 @@ function renderTable(students) {
     }
 
     tbodyDesktop.innerHTML = students.map(s => {
-        // Campos según API oficial
-        const pendingAmount = Number(s.total_pending || 0);
+        const hasPending = Number(s.num_pending || 0) > 0;
+        const hasExpired = Number(s.num_expired || 0) > 0;
+        const pendingAmount = Number(s.total_amount_pending || 0);
         const paidAmount = Number(s.total_paid || 0);
-        const overdueAmount = Number(s.total_overdue || 0);
-        const fullName = s.full_name || s.fullName || 'Sin nombre';
-        const nControl = s.n_control || 'N/A';
-        
-        // Calcular indicadores (si no vienen del backend)
-        const hasPending = pendingAmount > 0;
-        const hasOverdue = overdueAmount > 0;
 
         return `
             <tr class="hover:bg-[#2D584C]/5 transition border-b border-gray-50">
-                <td class="px-4 py-4 font-mono text-xs font-bold text-gray-600">${nControl}</td>
-                <td class="px-4 py-4 font-bold text-gray-900 text-sm">${fullName}</td>
+                <td class="px-4 py-4 font-mono text-xs font-bold text-gray-600">${s.n_control || 'N/A'}</td>
+                <td class="px-4 py-4 font-bold text-gray-900 text-sm">${s.fullName || 'Sin nombre'}</td>
                 <td class="px-4 py-4 text-center font-medium">${s.semestre || '-'}º</td>
                 <td class="px-4 py-4 text-gray-600 text-xs">${s.career_name || 'N/A'}</td>
                 <td class="px-3 py-4 text-center">
                     <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-black ${
                         hasPending ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-400'
-                    }" title="Pendientes: $${pendingAmount.toFixed(2)}">${hasPending ? '•' : '0'}</span>
+                    }">${s.num_pending || 0}</span>
                 </td>
                 <td class="px-3 py-4 text-center">
                     <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-black ${
-                        hasOverdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-400'
-                    }" title="Vencidos: $${overdueAmount.toFixed(2)}">${hasOverdue ? '•' : '0'}</span>
+                        hasExpired ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-400'
+                    }">${s.num_expired || 0}</span>
                 </td>
                 <td class="px-4 py-4 text-right font-black ${pendingAmount > 0 ? 'text-red-600' : 'text-gray-400'}">$${pendingAmount.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                 <td class="px-4 py-4 text-right font-black ${paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}">$${paidAmount.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
