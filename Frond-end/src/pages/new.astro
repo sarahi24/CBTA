@@ -421,7 +421,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               return data;
             })
             .then(basicResult => {
-              // 2. Actualizar relaciones con PATCH
+              // 2. Actualizar relaciones con PATCH - SOLO si hay datos de relaciones cargados
+              const hasRelationsData = 
+                payload.applies_to && (
+                  (payload.students && payload.students.length > 0) ||
+                  (payload.careers && payload.careers.length > 0) ||
+                  (payload.semestres && payload.semestres.length > 0) ||
+                  payload.applies_to === 'todos'
+                );
+              
+              // Si NO hay datos de relaciones cargados (formulario vacío), saltar la actualización de relaciones
+              // para no borrar los datos existentes en el backend
+              if (!hasRelationsData) {
+                console.log('⚠️ No hay datos de relaciones para actualizar, manteniendo los existentes');
+                return basicResult;
+              }
+              
               const relationsData = {
                 applies_to: payload.applies_to
               };
