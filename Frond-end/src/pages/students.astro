@@ -262,23 +262,27 @@ async function loadStudents(forceRefresh = false) {
                 // Filtrar por carrera
                 if (filters.carrera) {
                     console.log(`\n🎓 Filtrando por carrera ID: "${filters.carrera}"`);
+                    
+                    // Obtener el nombre de la carrera desde el mapa
+                    const careerName = window.careerMap ? window.careerMap[filters.carrera] : null;
+                    console.log(`   Nombre de carrera asociado: "${careerName}"`);
+                    
                     const before = filteredStudents.length;
                     
-                    filteredStudents = filteredStudents.filter(s => {
-                        // Mostrar info de cada estudiante cuando buscamos por la primera carrera
-                        if (filters.carrera && filteredStudents.length === before) {
-                            console.log(`  Estudiante ${s.n_control}:`);
-                            console.log(`    career_id: ${s.career_id}`);
-                            console.log(`    id_career: ${s.id_career}`);
-                            console.log(`    carrera_id: ${s.carrera_id}`);
-                        }
-                        
-                        // Intentar todos los posibles nombres de campo para carrera
-                        const careerField = s.career_id || s.id_career || s.carrera_id || s.career || s.id_carrera;
-                        const match = String(careerField) === String(filters.carrera);
-                        
-                        return match;
-                    });
+                    if (careerName) {
+                        // Filtrar por nombre de carrera
+                        filteredStudents = filteredStudents.filter(s => {
+                            const match = String(s.career_name || '').trim() === String(careerName).trim();
+                            return match;
+                        });
+                    } else {
+                        // Si no hay nombre, intentar por ID
+                        filteredStudents = filteredStudents.filter(s => {
+                            const careerField = s.career_id || s.id_career || s.carrera_id || s.career || s.id_carrera;
+                            const match = String(careerField) === String(filters.carrera);
+                            return match;
+                        });
+                    }
                     
                     console.log(`📊 Resultado: ${before} → ${filteredStudents.length} estudiantes`);
                 }
@@ -495,6 +499,14 @@ async function loadCareers() {
         if (response.success && response.data && response.data.careers) {
             const careers = response.data.careers;
             console.log(`✅ Carreras cargadas: ${careers.length}`);
+            console.log('📋 Carreras:', careers.map(c => `${c.id}: ${c.career_name}`).join(', '));
+
+            // Guardar mapa de carrera para referencia
+            window.careerMap = {};
+            careers.forEach(career => {
+                window.careerMap[career.id] = career.career_name;
+            });
+            console.log('📌 Mapa de carreras guardado:', window.careerMap);
 
             // Llenar el select con las opciones
             const careerSelect = document.getElementById('filter-carrera');
@@ -502,8 +514,9 @@ async function loadCareers() {
 
             careers.forEach(career => {
                 const option = document.createElement('option');
-                option.value = career.id;
-                option.textContent = career.career_name;
+                option.value = career.id;  // ID como valor
+                option.textContent = career.career_name;  // Nombre como texto mostrado
+                option.dataset.careerName = career.career_name;  // Guardar nombre como atributo
                 careerSelect.appendChild(option);
             });
 
@@ -513,7 +526,6 @@ async function loadCareers() {
         }
     } catch (error) {
         console.error('❌ Error al cargar carreras:', error);
-        // Mostrar un mensaje pero no detener la carga de estudiantes
         document.getElementById('filter-carrera').innerHTML = '<option value="">Error al cargar carreras</option>';
     }
 }
