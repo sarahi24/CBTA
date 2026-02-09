@@ -224,6 +224,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       },
 
       populateForm(concept) {
+        console.log('📋 Poblando formulario con concepto:', concept);
         this.formData.id = concept.id;
         this.formData.title = concept.title;
         this.formData.amount = concept.amount;
@@ -233,11 +234,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.formData.endDate = concept.end_date || concept.endDate || '';
         if (concept.scopeRules) {
           this.formData.allStudents = concept.scopeRules.allStudents;
-          this.formData.selectedCareers = concept.scopeRules.careers || [];
-          this.formData.selectedSemesters = concept.scopeRules.semesters || [];
+          
+          // Asegurar que careers sean strings
+          this.formData.selectedCareers = (concept.scopeRules.careers || []).map(c => String(c));
+          
+          // Asegurar que semesters sean números
+          this.formData.selectedSemesters = (concept.scopeRules.semesters || []).map(s => parseInt(s));
+          
+          console.log('✅ Carreras seleccionadas:', this.formData.selectedCareers);
+          console.log('✅ Semestres seleccionados:', this.formData.selectedSemesters);
+          
           if (Array.isArray(concept.scopeRules.specificStudents)) {
             this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => {
               const student = this.allStudents.find(s => String(s.id) === String(id));
+              return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
+            });
+            console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
+          }
+        }
+      },
               return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
             });
           }
@@ -437,22 +452,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               return data;
             })
             .then(basicResult => {
-              // 2. Actualizar relaciones con PATCH - SOLO si hay datos de relaciones cargados
-              const hasRelationsData = 
-                payload.applies_to && (
-                  (payload.students && payload.students.length > 0) ||
-                  (payload.careers && payload.careers.length > 0) ||
-                  (payload.semestres && payload.semestres.length > 0) ||
-                  payload.applies_to === 'todos'
-                );
-              
-              // Si NO hay datos de relaciones cargados (formulario vacío), saltar la actualización de relaciones
-              // para no borrar los datos existentes en el backend
-              if (!hasRelationsData) {
-                console.log('⚠️ No hay datos de relaciones para actualizar, manteniendo los existentes');
-                return basicResult;
-              }
-              
+              // 2. Actualizar relaciones con PATCH
+              // Siempre intentar actualizar relaciones ya que ahora las cargamos del API
               const relationsData = {
                 applies_to: payload.applies_to
               };

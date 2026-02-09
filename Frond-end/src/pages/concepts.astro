@@ -421,8 +421,74 @@ async function mutateConcept(id, action){
 }
 
 /* --- EXPOSICIÓN GLOBAL --- */
-window.editConcept = (id) => {
+window.editConcept = async (id) => {
   const c = conceptsCache.find(x=>String(x.id)===String(id));
+  
+  // Primero cargar las relaciones desde el API
+  const token = localStorage.getItem('access_token');
+  let scopeRules = {
+    allStudents: (c.applies_to || c.appliesTo) === 'todos',
+    careers: [],
+    semesters: [],
+    specificStudents: []
+  };
+  
+  try {
+    const response = await fetch(`${API_BASE}/concepts/relations/${id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-User-Role': 'financial-staff',
+        'X-User-Permission': 'view.concepts'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('📋 Relaciones cargadas del API:', data);
+      
+      if (data.success && data.data) {
+        const rel = data.data;
+        
+        // Procesar careers - puede venir como array de IDs o array de objetos
+        let careersIds = [];
+        if (Array.isArray(rel.careers)) {
+          careersIds = rel.careers.map(c => typeof c === 'object' ? String(c.id) : String(c));
+        } else if (Array.isArray(rel.careerIds)) {
+          careersIds = rel.careerIds.map(id => String(id));
+        }
+        
+        // Procesar semestres - puede venir como array de números o strings
+        let semestresIds = [];
+        if (Array.isArray(rel.semestres) || Array.isArray(rel.semesters)) {
+          semestresIds = (rel.semestres || rel.semesters).map(s => parseInt(s));
+        }
+        
+        // Procesar students - puede venir como array de IDs o array de objetos
+        let studentIds = [];
+        if (Array.isArray(rel.students)) {
+          studentIds = rel.students.map(s => typeof s === 'object' ? String(s.id) : String(s));
+        } else if (Array.isArray(rel.userIds) || Array.isArray(rel.user_ids)) {
+          studentIds = (rel.userIds || rel.user_ids).map(id => String(id));
+        }
+        
+        scopeRules = {
+          allStudents: (rel.applies_to || c.applies_to) === 'todos',
+          careers: careersIds,
+          semesters: semestresIds,
+          specificStudents: studentIds
+        };
+        console.log('✅ Scope rules procesados:', scopeRules);
+      }
+    } else {
+      console.warn('⚠️ No se pudieron cargar relaciones, usando datos del cache');
+    }
+  } catch (error) {
+    console.error('❌ Error cargando relaciones:', error);
+  }
+  
   localStorage.setItem('editingConcept', JSON.stringify({
     id: c.id,
     title: c.concept_name || c.conceptName,
@@ -431,12 +497,7 @@ window.editConcept = (id) => {
     status: c.status,
     start_date: c.start_date,
     end_date: c.end_date,
-    scopeRules: {
-      allStudents: (c.applies_to || c.appliesTo) === 'todos',
-      careers: c.careerIds || c.careers || [],
-      semesters: c.semesters || [],
-      specificStudents: c.userIds || c.user_ids || []
-    }
+    scopeRules: scopeRules
   }));
   window.location.href = '/new?edit='+encodeURIComponent(id);
 };
