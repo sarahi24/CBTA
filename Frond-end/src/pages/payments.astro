@@ -1,10 +1,15 @@
 ---
-import Layout from "../layouts/Layout.astro"; 
+import Layout from "../layouts/Layout.astro";
+import { StudentAPI } from "../utils/studentAPI.js";
 
 const pageTitle = "Gestión de Pagos - CBTA 71";
 ---
 
 <Layout title={pageTitle}>
+<script define:vars={{ StudentAPI }}>
+  window.StudentAPI = StudentAPI;
+</script>
+
 <style is:global>
     :root { --cbta-green: #2E594D; }
     
@@ -147,10 +152,7 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 </div>
 
 <script type="module">
-import { StudentAPI } from '../utils/studentAPI.js';
-
-(function() {
-    let currentPage = 1;
+const ITEMS_PER_PAGE = 15;
     let lastPage = 1;
     let totalRecords = 0;
     const itemsPerPage = 15;

@@ -250,6 +250,7 @@
 | **Método** | **Endpoint** | **Descripción** | **Body/Params** |
 |------------|--------------|-----------------|-----------------|
 | `GET` | `/payments` | Listar todos los pagos | Query: `search`, `page`, `perPage`, `forceRefresh` |
+| `GET` | `/payments/history/{studentId?}` | Historial de pagos del usuario autenticado | Query: `perPage` (15), `page` (1), `forceRefresh` (false) |
 | `GET` | `/payments/by-concept` | Pagos agrupados por concepto | Query: `search`, `page`, `perPage`, `forceRefresh` |
 
 **Headers requeridos:**
@@ -263,7 +264,72 @@
 
 ---
 
-### 📄 Pagos por Concepto (`/payments-by-concept.astro`)
+### � Historial de Pagos (`/payments/history`)
+
+**Descripción:** Obtener historial completo de pagos del usuario autenticado con soporte para paginación y cacheo.
+
+**Endpoints utilizados:**
+
+| **Método** | **Endpoint** | **Descripción** | **Body/Params** |
+|------------|--------------|-----------------|-----------------|
+| `GET` | `/payments/history/{studentId?}` | Historial de pagos del usuario autenticado | Query: `perPage`, `page`, `forceRefresh`; Headers: `X-User-Role`, `X-User-Permission` |
+
+**Headers requeridos:**
+```json
+{
+  "Authorization": "Bearer {token}",
+  "X-User-Role": "student|parent",
+  "X-User-Permission": "view.payments.history"
+}
+```
+
+**Parámetros de Query:**
+- `perPage` (integer, default: 15) - Cantidad de registros por página
+- `page` (integer, default: 1) - Número de página
+- `forceRefresh` (boolean, default: false) - Forzar actualización del caché
+- `{studentId}` (integer, optional) - ID del estudiante (para parents)
+
+**Respuesta exitosa (200):**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "payment_history": {
+      "items": [
+        {
+          "id": 123,
+          "concept": "Pago de inscripción",
+          "amount": "1500.00",
+          "amount_received": "1500.00",
+          "status": "paid",
+          "date": "hace 2 dias"
+        }
+      ],
+      "currentPage": 1,
+      "lastPage": 5,
+      "perPage": 15,
+      "total": 72,
+      "hasMorePages": true,
+      "nextPage": 2,
+      "previousPage": null
+    }
+  }
+}
+```
+
+**Códigos de respuesta:**
+- `200` - Historial de pagos obtenido correctamente
+- `401` - No autenticado
+- `403` - No autorizado
+- `404` - No encontrado
+- `422` - Error de validación
+- `429` - Demasiadas solicitudes
+- `500` - Error interno del servidor
+
+---
+
+### �📄 Pagos por Concepto (`/payments-by-concept.astro`)
 
 **Descripción:** Vista de pagos agrupados por concepto con estadísticas.
 
@@ -1101,6 +1167,7 @@ DELETE /api/v1/parents/delete-parent/42
 - ✅ `/pending-payment/overdue` - Pagos vencidos
 - ✅ `/pending-payments` - Crear intención de pago
 - ✅ `/payments` - Listar pagos
+- ✅ `/payments/history/{studentId?}` - Historial de pagos
 - ✅ `/payments/by-concept` - Pagos por concepto
 - ✅ `/payments/students` - Resumen por estudiante
 - ✅ `/debts` - Listar adeudos
