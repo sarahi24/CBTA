@@ -127,7 +127,7 @@ window.StudentAPI = {
 
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(`${API_BASE}/pending-payment`);
+      const url = new URL(`${API_BASE}/pending-payments`);
       
       // Log inicial
       console.log(`🔍 [StudentAPI] getPendingPayments - URL base: ${url.toString()}, forceRefresh: ${forceRefresh}`);
@@ -169,7 +169,7 @@ window.StudentAPI = {
 
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(`${API_BASE}/pending-payment/overdue`);
+      const url = new URL(`${API_BASE}/pending-payments/overdue`);
       if (studentId) url.searchParams.append('id', studentId);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {

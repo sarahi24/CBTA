@@ -234,7 +234,7 @@ export const StudentAPI = {
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       // Construir URL base SIN el parámetro studentId en el path
-      const url = new URL(`${API_BASE}/pending-payment`);
+      const url = new URL(`${API_BASE}/pending-payments`);
       
       // Si se proporciona studentId (caso de padres), agregarlo como query parameter
       if (studentId) {
@@ -280,7 +280,7 @@ export const StudentAPI = {
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       // Construir URL base SIN el parámetro studentId en el path
-      const url = new URL(`${API_BASE}/pending-payment/overdue`);
+      const url = new URL(`${API_BASE}/pending-payments/overdue`);
       
       // Si se proporciona studentId (caso de padres), agregarlo como query parameter
       if (studentId) {
