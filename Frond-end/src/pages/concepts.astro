@@ -271,9 +271,6 @@ function renderConcepts(){
       console.log('✅ Vigencia mostrada será:', dateRangeText);
     }
     
-    // Para el alcance, por ahora mostramos "No especificado" hasta que el API lo incluya
-    const scopeText = 'No especificado';
-    
     // Intentar obtener estudiantes afectados de varios campos posibles
     const affectedCount = c.affectedStudentsCount || c.affected_students_count || 
                           (c.userIds||c.user_ids||[]).length || 
@@ -301,15 +298,6 @@ function renderConcepts(){
         </div>
 
         <div class="text-sm space-y-3 py-5 rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-5 mb-6 shadow-lg backdrop-blur-sm relative z-10">
-          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
-            <div class="flex items-center gap-3">
-              <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-emerald-100'} rounded-lg">
-                <i class="fas fa-bullseye ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-sm"></i>
-              </div>
-              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Alcance</span>
-            </div>
-            <span class="font-bold text-[#2E594D] bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-xl shadow-sm border border-emerald-200">${scopeText}</span>
-          </div>
           <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
             <div class="flex items-center gap-3">
               <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg">
