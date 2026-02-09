@@ -47,6 +47,9 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         <div class="relative w-full lg:w-[320px]">
           <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
           <input type="text" id="search-input" placeholder="Buscar alumno por nombre o matrícula..." class="w-full pl-11 pr-4 h-[48px] border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-[#2D584C] focus:ring-4 focus:ring-[#2D584C]/10 bg-white shadow-sm transition-all" />
+          <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors hidden">
+            <i class="fas fa-times-circle"></i>
+          </button>
         </div>
         <button id="refresh-debts-btn" class="h-[48px] px-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center text-xs font-bold gap-2 shrink-0">
           <i class="fas fa-sync-alt"></i>
@@ -58,6 +61,18 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         </button>
       </div>
     </header>
+
+    <!-- Indicador de búsqueda activa -->
+    <div id="search-indicator" class="hidden mb-4 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-filter text-blue-600"></i>
+        <span class="text-sm font-bold text-blue-900">Buscando: <span id="search-term" class="font-black text-blue-700"></span></span>
+        <span id="search-results-count" class="ml-2 px-2 py-1 bg-blue-600 text-white text-xs font-black rounded-full"></span>
+      </div>
+      <button id="clear-search-badge" class="text-blue-600 hover:text-blue-800 font-bold text-sm">
+        <i class="fas fa-times"></i> Limpiar
+      </button>
+    </div>
 
     <div class="bg-gradient-to-br from-white via-[#2D584C]/5 to-white rounded-2xl shadow-2xl border-2 border-[#2D584C]/20 overflow-hidden">
       <div class="overflow-x-auto">
@@ -291,15 +306,32 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     }
 
     function renderTable() {
-        const term = searchInput.value.toLowerCase();
+        const term = searchInput.value.toLowerCase().trim();
         const allPending = getCharges().filter(c => !['paid', 'pagado'].includes(String(c.status).toLowerCase()));
         
-        // Filtrar localmente por nombre de estudiante o concepto
+        // Filtrar localmente por nombre de estudiante, matrícula o concepto
         const filtered = allPending.filter(ch => {
             const fullName = (ch.userName || '').toLowerCase();
+            const nControl = (ch.nControl || '').toLowerCase();
             const concept = (ch.concept || '').toLowerCase();
-            return !term || fullName.includes(term) || concept.includes(term);
+            return !term || fullName.includes(term) || nControl.includes(term) || concept.includes(term);
         });
+
+        // Mostrar/ocultar indicador de búsqueda
+        const searchIndicator = document.getElementById('search-indicator');
+        const searchTermElement = document.getElementById('search-term');
+        const searchResultsCount = document.getElementById('search-results-count');
+        const clearSearchBtn = document.getElementById('clear-search');
+
+        if (term) {
+            searchIndicator.classList.remove('hidden');
+            searchTermElement.textContent = searchInput.value;
+            searchResultsCount.textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`;
+            clearSearchBtn.classList.remove('hidden');
+        } else {
+            searchIndicator.classList.add('hidden');
+            clearSearchBtn.classList.add('hidden');
+        }
 
         const totalItems = filtered.length;
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -308,18 +340,50 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
         const pageData = filtered.slice(start, start + ITEMS_PER_PAGE);
 
-        tableBody.innerHTML = pageData.map((ch) => {
-            return `
-              <tr class="hover:bg-gray-50 transition-all border-l-4 border-transparent hover:border-[#2D584C]">
-                <td class="px-8 py-5">
-                  <div class="text-[12px] font-black text-gray-900 uppercase">${ch.userName || 'N/A'}</div>
-                  ${ch.nControl ? `<div class="text-[10px] text-gray-400 font-mono">${ch.nControl}</div>` : ''}
+        if (pageData.length === 0) {
+            tableBody.innerHTML = `
+              <tr>
+                <td colspan="3" class="px-8 py-16 text-center">
+                  <div class="flex flex-col items-center gap-4">
+                    <i class="fas fa-search text-6xl text-gray-300"></i>
+                    <div>
+                      <p class="text-lg font-black text-gray-900 mb-2">
+                        ${term ? 'No se encontraron resultados' : 'No hay adeudos pendientes'}
+                      </p>
+                      <p class="text-sm text-gray-500">
+                        ${term ? `No hay coincidencias para "${searchInput.value}"` : 'Todos los pagos están al corriente'}
+                      </p>
+                      ${term ? `<button onclick="document.getElementById('search-input').value=''; document.getElementById('search-input').dispatchEvent(new Event('input'));" class="mt-4 px-4 py-2 bg-[#2D584C] text-white rounded-lg font-bold text-sm hover:bg-[#1e3d35] transition">Limpiar búsqueda</button>` : ''}
+                    </div>
+                  </div>
                 </td>
-                <td class="px-8 py-5 text-[11px] text-gray-500 font-bold uppercase">${ch.concept || 'CARGO'}</td>
-                <td class="px-8 py-5 text-right text-sm font-black text-red-600 font-mono">${fmt(ch.amount)}</td>
               </tr>
             `;
-        }).join('');
+        } else {
+            tableBody.innerHTML = pageData.map((ch) => {
+                // Highlight del término de búsqueda
+                const highlightText = (text, term) => {
+                    if (!term) return text;
+                    const regex = new RegExp(`(${term})`, 'gi');
+                    return text.replace(regex, '<mark class="bg-yellow-200 font-black">$1</mark>');
+                };
+
+                const userName = ch.userName || 'N/A';
+                const nControl = ch.nControl || '';
+                const concept = ch.concept || 'CARGO';
+
+                return `
+                  <tr class="hover:bg-gray-50 transition-all border-l-4 border-transparent hover:border-[#2D584C]">
+                    <td class="px-8 py-5">
+                      <div class="text-[12px] font-black text-gray-900 uppercase">${highlightText(userName, term)}</div>
+                      ${nControl ? `<div class="text-[10px] text-gray-400 font-mono">${highlightText(nControl, term)}</div>` : ''}
+                    </td>
+                    <td class="px-8 py-5 text-[11px] text-gray-500 font-bold uppercase">${highlightText(concept, term)}</td>
+                    <td class="px-8 py-5 text-right text-sm font-black text-red-600 font-mono">${fmt(ch.amount)}</td>
+                  </tr>
+                `;
+            }).join('');
+        }
 
         updatePaginationControls(totalItems, totalPages);
     }
@@ -371,6 +435,21 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     }
 
     searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    
+    // Limpiar búsqueda
+    document.getElementById('clear-search').addEventListener('click', () => {
+        searchInput.value = '';
+        currentPage = 1;
+        renderTable();
+        searchInput.focus();
+    });
+
+    document.getElementById('clear-search-badge').addEventListener('click', () => {
+        searchInput.value = '';
+        currentPage = 1;
+        renderTable();
+        searchInput.focus();
+    });
     
     // Event listener para el botón de actualizar
     if (refreshBtn) {
