@@ -545,10 +545,11 @@ const title = 'Panel de Estudiante';
 
   /* --- STATS --- */
   .stats-scroll-container { 
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: 1.5rem;
     animation: fadeIn 0.8s ease-out 0.2s both;
+    width: 100%;
   }
   
   .stats-scroll-container > :nth-child(1) {
