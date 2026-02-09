@@ -17,6 +17,10 @@ const title = 'Panel de Estudiante';
         porcentajeProgreso: 0,
         loading: false,
         error: '',
+        // Estados de colapso para móvil
+        collapsedStats: false,
+        collapsedBalance: false,
+        collapsedHistory: false,
 
         async init() {
           const token = localStorage.getItem('access_token');
@@ -115,6 +119,18 @@ const title = 'Panel de Estudiante';
 
         circumference() {
           return 2 * Math.PI * 50;
+        },
+
+        toggleStats() {
+          this.collapsedStats = !this.collapsedStats;
+        },
+
+        toggleBalance() {
+          this.collapsedBalance = !this.collapsedBalance;
+        },
+
+        toggleHistory() {
+          this.collapsedHistory = !this.collapsedHistory;
         }
       };
     }
@@ -149,7 +165,21 @@ const title = 'Panel de Estudiante';
 
 
 
-    <section class="stats-scroll-container">
+    <section class="stats-scroll-container collapsible-section">
+      <button class="collapse-toggle mobile-only" @click="toggleStats()" type="button">
+        <span class="collapse-title">Resumen de Pagos</span>
+        <svg class="chevron-icon" :class="{ 'rotated': !collapsedStats }" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div class="collapsible-content" 
+           x-show="!collapsedStats" 
+           x-transition:enter="ease-out duration-300"
+           x-transition:enter-start="opacity-0 transform scale-95"
+           x-transition:enter-end="opacity-100 transform scale-100"
+           x-transition:leave="ease-in duration-200"
+           x-transition:leave-start="opacity-100 transform scale-100"
+           x-transition:leave-end="opacity-0 transform scale-95">
       <div class="card-container danger">
         <div class="card-header">
           <span class="label">Pendientes</span>
@@ -194,9 +224,24 @@ const title = 'Panel de Estudiante';
           <p class="subtitle">Total pagado</p>
         </div>
       </div>
+      </div>
     </section>
 
-    <div class="bottom-grid">
+    <div class="bottom-grid collapsible-section">
+      <button class="collapse-toggle mobile-only" @click="toggleBalance()" type="button">
+        <span class="collapse-title">Balance y Progreso</span>
+        <svg class="chevron-icon" :class="{ 'rotated': !collapsedBalance }" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div class="collapsible-content" 
+           x-show="!collapsedBalance" 
+           x-transition:enter="ease-out duration-300"
+           x-transition:enter-start="opacity-0 transform scale-95"
+           x-transition:enter-end="opacity-100 transform scale-100"
+           x-transition:leave="ease-in duration-200"
+           x-transition:leave-start="opacity-100 transform scale-100"
+           x-transition:leave-end="opacity-0 transform scale-95">
       <div class="summary-card glass-effect">
         <div class="card-header">
            <h3 class="summary-title">Balance de Cuenta</h3>
@@ -251,12 +296,26 @@ const title = 'Panel de Estudiante';
           </div>
         </div>
       </div>
+      </div>
     </div>
 
-    <div class="payments-wrapper glass-effect">
+    <div class="payments-wrapper glass-effect collapsible-section">
       <div class="table-header">
         <h3 class="summary-title">Historial Reciente</h3>
+        <button class="collapse-toggle mobile-only inline-toggle" @click="toggleHistory()" type="button">
+          <svg class="chevron-icon" :class="{ 'rotated': !collapsedHistory }" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
       </div>
+      <div class="collapsible-content" 
+           x-show="!collapsedHistory" 
+           x-transition:enter="ease-out duration-300"
+           x-transition:enter-start="opacity-0 transform scale-95"
+           x-transition:enter-end="opacity-100 transform scale-100"
+           x-transition:leave="ease-in duration-200"
+           x-transition:leave-start="opacity-100 transform scale-100"
+           x-transition:leave-end="opacity-0 transform scale-95">
       <div class="payments-section">
         <h3 class="payments-title">Mis Pagos</h3>
 
@@ -1076,6 +1135,104 @@ const title = 'Panel de Estudiante';
 
   .toast-close:hover {
     color: var(--text-main);
+  }
+
+  /* === ESTILOS PARA TARJETAS PLEGABLES EN MÓVIL === */
+  .collapsible-section {
+    position: relative;
+  }
+
+  .collapse-toggle {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    background: linear-gradient(135deg, #2e594d 0%, #3d7566 100%);
+    border: none;
+    border-radius: 1rem;
+    color: white;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(46, 89, 77, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .collapse-toggle:hover {
+    background: linear-gradient(135deg, #3d7566 0%, #4a8a77 100%);
+    box-shadow: 0 6px 16px rgba(46, 89, 77, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .collapse-toggle:active {
+    transform: translateY(0);
+  }
+
+  .collapse-title {
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+  }
+
+  .chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+  }
+
+  .chevron-icon.rotated {
+    transform: rotate(180deg);
+  }
+
+  .collapsible-content {
+    overflow: hidden;
+  }
+
+  .inline-toggle {
+    padding: 0.5rem;
+    background: transparent;
+    box-shadow: none;
+    margin-bottom: 0;
+    width: auto;
+  }
+
+  .inline-toggle:hover {
+    background: rgba(46, 89, 77, 0.1);
+  }
+
+  .inline-toggle .chevron-icon {
+    color: var(--primary);
+  }
+
+  .mobile-only {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-only {
+      display: flex;
+    }
+
+    .collapsible-content {
+      animation: slideDown 0.3s ease-out;
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      max-height: 2000px;
+    }
   }
 </style>
 
