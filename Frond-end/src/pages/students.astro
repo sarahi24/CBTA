@@ -199,6 +199,9 @@ async function loadStudents(forceRefresh = false) {
 
     try {
         const token = localStorage.getItem('access_token');
+        const role = localStorage.getItem('user_role') || 'financial-staff';
+        const permission = localStorage.getItem('user_permission') || 'view.payments.student.summary';
+        
         if (!token) {
             showError('No hay sesión activa. Por favor inicia sesión.');
             setTimeout(() => window.location.href = '/login', 2000);
@@ -209,7 +212,9 @@ async function loadStudents(forceRefresh = false) {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
-            forceRefresh: forceRefresh
+            forceRefresh: forceRefresh,
+            role: role,
+            permission: permission
         });
 
         console.log('📡 Respuesta del servidor:', response);

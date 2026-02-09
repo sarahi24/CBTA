@@ -170,12 +170,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         url.searchParams.append('page', '1');
         url.searchParams.append('perPage', '1000');
         url.searchParams.append('status', 'activo');
+        
+        const userRole = localStorage.getItem('user_role') || 'admin';
+        const userPermission = localStorage.getItem('user_permission') || 'view.users';
+        
         fetch(url.toString(), {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'X-User-Role': userRole,
+            'X-User-Permission': userPermission
           }
         })
         .then(res => {

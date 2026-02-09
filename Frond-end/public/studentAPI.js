@@ -557,6 +557,8 @@ window.StudentAPI = {
    * @param {number} options.page - Página número (default: 1)
    * @param {number} options.perPage - Items por página (default: 15)
    * @param {boolean} options.forceRefresh - Forzar actualización del caché
+   * @param {string} options.role - Rol del usuario
+   * @param {string} options.permission - Permiso del usuario
    */
   async getPaymentStudents(token, options = {}) {
     try {
@@ -564,7 +566,9 @@ window.StudentAPI = {
         search = '',
         page = 1,
         perPage = 15,
-        forceRefresh = false
+        forceRefresh = false,
+        role = 'financial-staff',
+        permission = 'view.payments.student.summary'
       } = options;
 
       const params = new URL(`${API_BASE}/payments/students`);
@@ -581,8 +585,8 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.payments.student.summary'
+          'X-User-Role': role,
+          'X-User-Permission': permission
         }
       });
 
