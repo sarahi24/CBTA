@@ -602,60 +602,6 @@ export const StudentAPI = {
   },
 
   /**
-   * ADDITIONAL - GET /api/v1/payments
-   * Obtener lista de pagos
-   */
-  async getAllPayments(token) {
-    try {
-      const response = await fetch(`${API_BASE}/payments`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pagos');
-      }
-
-      return await response.json();
-    } catch (err) {
-      console.error('❌ StudentAPI.getAllPayments:', err);
-      throw err;
-    }
-  },
-
-  /**
-   * ADDITIONAL - GET /api/v1/payments/by-concept
-   * Obtener lista de pagos por concepto
-   */
-  async getPaymentsByConcept(token) {
-    try {
-      const response = await fetch(`${API_BASE}/payments/by-concept`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar pagos por concepto');
-      }
-
-      return await response.json();
-    } catch (err) {
-      console.error('❌ StudentAPI.getPaymentsByConcept:', err);
-      throw err;
-    }
-  },
-
-  /**
    * DEBTS - GET /api/v1/debts/stripe-payments
    * Obtener pagos desde Stripe
    * @param {string} token - Token de autenticación

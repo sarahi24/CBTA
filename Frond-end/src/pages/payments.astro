@@ -397,8 +397,8 @@ const tableBody = document.getElementById('payments-table-body');
                 return;
             }
 
-            // Llamar endpoint de pagos filtrado por concepto
-            const response = await StudentAPI.getPaymentStudents(token, {
+            // Llamar endpoint /payments (pagos individuales) filtrado por concepto
+            const response = await StudentAPI.getAllPayments(token, {
                 search: conceptName,
                 page: 1,
                 perPage: 100,
@@ -406,24 +406,24 @@ const tableBody = document.getElementById('payments-table-body');
             });
 
             if (response.success && response.data?.payments?.items) {
-                const students = response.data.payments.items;
+                const payments = response.data.payments.items;
                 
                 // Filtrar solo los que coincidan con el concepto
-                const filtered = students.filter(s => 
-                    (s.concept_name || s.concept || '').includes(conceptName) ||
-                    conceptName.includes(s.concept_name || s.concept || '')
+                const filtered = payments.filter(p => 
+                    (p.concept || '').toLowerCase().includes(conceptName.toLowerCase()) ||
+                    conceptName.toLowerCase().includes((p.concept || '').toLowerCase())
                 );
 
                 if (filtered.length > 0) {
-                    container.innerHTML = filtered.map(s => `
+                    container.innerHTML = filtered.map(p => `
                         <div class="flex items-center justify-between p-2 border-b border-gray-200 hover:bg-blue-50 rounded transition">
                             <div class="flex-1">
-                                <p class="font-bold text-gray-900">${s.user_name || s.student_name || 'N/A'}</p>
-                                <p class="text-[10px] text-gray-500">Matrícula: ${s.n_control || s.nControl || 'N/A'}</p>
+                                <p class="font-bold text-gray-900">${p.fullName || 'N/A'}</p>
+                                <p class="text-[10px] text-gray-500">ID Usuario: ${p.userId || 'N/A'} | ${p.method || 'N/A'}</p>
                             </div>
                             <div class="text-right">
-                                <p class="font-black text-emerald-700">$${parseFloat(s.amount_received || s.amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
-                                <p class="text-[9px] text-gray-400">${formatDate(s.payment_date || s.date)}</p>
+                                <p class="font-black text-emerald-700">$${parseFloat(p.amount_received || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
+                                <p class="text-[9px] text-gray-400">${formatDate(p.date)}</p>
                             </div>
                         </div>
                     `).join('');
