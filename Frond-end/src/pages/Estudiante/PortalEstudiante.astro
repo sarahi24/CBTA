@@ -949,17 +949,29 @@ const title = 'Panel de Estudiante';
     .mobile-hide { display: none; }
 
     .stats-scroll-container { 
-      display: flex; 
-      overflow-x: auto; 
-      margin: 0 -1rem; 
-      padding: 0 1rem 0.5rem 1rem;
-      scrollbar-width: none;
+      grid-template-columns: 1fr;
+      gap: 1rem;
     }
-    .stats-scroll-container::-webkit-scrollbar { display: none; }
 
-    .stats-scroll-container > * {
-      min-width: 240px;
-      flex: 0 0 auto;
+    .stats-scroll-container .card-container {
+      min-height: auto;
+      padding: 1rem;
+    }
+
+    .stats-scroll-container .card-header {
+      margin-bottom: 0.5rem;
+    }
+
+    .stats-scroll-container .label {
+      font-size: 0.85rem;
+    }
+
+    .stats-scroll-container .amount {
+      font-size: 1.75rem;
+    }
+
+    .stats-scroll-container .subtitle {
+      font-size: 0.8rem;
     }
 
     .bottom-grid { grid-template-columns: 1fr; gap: 1.5rem; }
@@ -980,11 +992,27 @@ const title = 'Panel de Estudiante';
   }
 
   @media (max-width: 480px) {
-    .main-container { padding: 0.75rem; gap: 1.25rem; }
+    .main-container { padding: 0.75rem; gap: 1rem; }
     .header-right { width: 100%; flex-direction: column; align-items: stretch; }
     .refresh-cache-btn { width: 100%; justify-content: center; }
     .current-date { width: 100%; text-align: center; padding: 0.6rem 0.9rem; }
-    .stats-scroll-container > * { min-width: 180px; }
+    
+    .stats-scroll-container .card-container {
+      padding: 0.85rem;
+    }
+
+    .stats-scroll-container .amount {
+      font-size: 1.5rem;
+    }
+
+    .stats-scroll-container .label {
+      font-size: 0.8rem;
+    }
+
+    .stats-scroll-container .subtitle {
+      font-size: 0.75rem;
+    }
+
     .payments-section { padding: 1.2rem; }
     .payments-table { font-size: 0.82rem; }
     .payments-table thead { display: none; }
