@@ -546,87 +546,89 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         </div>
 
         <template x-teleport="body">
-            <div x-show="isDeleting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="isDeleting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="isDeleting = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
-                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="relative bg-white rounded-2xl p-3 sm:p-8 w-full max-w-sm text-center shadow-2xl">
+                    <div class="w-12 sm:w-16 h-12 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                        <svg class="w-6 sm:w-8 h-6 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-2">¿Eliminar usuario?</h3>
-                    <p class="text-slate-500 text-sm mb-6" x-text="`Se eliminará permanentemente a ${userToDeleteName}`"></p>
-                    <div class="flex gap-3">
-                        <button @click="isDeleting = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">Cancelar</button>
-                        <button @click="deleteUser(userToDeleteId)" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">Eliminar</button>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 mb-2">¿Eliminar usuario?</h3>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6" x-text="`Se eliminará permanentemente a ${userToDeleteName}`"></p>
+                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                        <button @click="isDeleting = false" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">Cancelar</button>
+                        <button @click="deleteUser(userToDeleteId)" class="flex-1 py-2.5 sm:py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors text-sm sm:text-base">Eliminar</button>
                     </div>
                 </div>
             </div>
         </template>
 
         <template x-teleport="body">
-            <div x-show="isImporting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="isImporting" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="isImporting = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Importar Usuarios desde Excel</h3>
-                    <p class="text-slate-500 text-sm mb-6">Carga un archivo Excel con los datos de múltiples usuarios para registrarlos masivamente</p>
+                <div class="relative bg-white rounded-2xl p-3 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-lg sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2">Importar Usuarios desde Excel</h3>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6">Carga un archivo Excel con los datos de múltiples usuarios para registrarlos masivamente</p>
                     
                     <div @dragover.prevent="isDragging = true" 
                          @dragleave.prevent="isDragging = false"
                          @drop.prevent="handleFileDrop($event)"
                          :class="isDragging ? 'dropzone-active' : ''"
-                         class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center transition-all cursor-pointer hover:border-institucional"
+                         class="border-2 border-dashed border-slate-300 rounded-xl p-4 sm:p-8 text-center transition-all cursor-pointer hover:border-institucional"
                          @click="$refs.fileInput.click()">
                         <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept=".xlsx,.xls" class="hidden">
-                        <svg class="w-16 h-16 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-12 sm:w-16 h-12 sm:h-16 mx-auto text-slate-400 mb-2 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
-                        <p class="text-slate-700 font-semibold mb-2">Arrastra tu archivo Excel aquí</p>
-                        <p class="text-slate-500 text-sm mb-4">o haz clic para seleccionar</p>
-                        <p class="text-xs text-slate-400">Formatos aceptados: .xlsx, .xls</p>
+                        <p class="text-slate-700 font-semibold mb-1 sm:mb-2 text-sm sm:text-base">Arrastra tu archivo Excel aquí</p>
+                        <p class="text-slate-500 text-xs sm:text-sm mb-2 sm:mb-4">o haz clic para seleccionar</p>
+                        <p class="text-xs text-slate-400">Formatos: .xlsx, .xls</p>
                     </div>
 
-                    <div x-show="selectedFile" class="mt-4 p-4 bg-slate-50 rounded-lg flex items-center gap-3">
-                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div x-show="selectedFile" class="mt-3 sm:mt-4 p-2 sm:p-4 bg-slate-50 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                        <svg class="w-6 sm:w-8 h-6 sm:h-8 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
-                        <div class="flex-1">
-                            <p class="font-semibold text-slate-800" x-text="selectedFile?.name"></p>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-800 text-xs sm:text-sm truncate" x-text="selectedFile?.name"></p>
                             <p class="text-xs text-slate-500" x-text="selectedFile ? `${(selectedFile.size / 1024).toFixed(2)} KB` : ''"></p>
                         </div>
-                        <button @click="selectedFile = null; importedData = []" class="p-2 text-slate-400 hover:text-red-500">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button @click="selectedFile = null; importedData = []" class="p-2 text-slate-400 hover:text-red-500 flex-shrink-0">
+                            <svg class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
                     </div>
 
-                    <div x-show="importedData.length > 0" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p class="text-sm text-blue-800">
+                    <div x-show="importedData.length > 0" class="mt-3 sm:mt-4 p-2 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-xs sm:text-sm text-blue-800">
                             <span class="font-bold" x-text="importedData.length"></span> usuario(s) detectado(s) en el archivo
                         </p>
                     </div>
 
-                    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p class="text-sm font-semibold text-amber-900 mb-2">📋 Columnas requeridas (en orden):</p>
-                        <div class="text-xs text-amber-700 font-mono bg-white p-3 rounded overflow-x-auto">
-                            <div>1. name | 2. last_name | 3. email | 4. phone_number</div>
-                            <div>5. birthdate | 6. gender | 7. curp | 8. street</div>
-                            <div>9. city | 10. state | 11. zip_code | 12. stripe_customer_id (opcional)</div>
-                            <div>13. blood_type | 14. registration_date | 15. status</div>
-                            <div>16. career_id | 17. n_control | 18. semestre | 19. group | 20. workshop</div>
+                    <div class="mt-4 sm:mt-6 p-2 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p class="text-xs sm:text-sm font-semibold text-amber-900 mb-2">📋 Columnas requeridas:</p>
+                        <div class="text-xs text-amber-700 font-mono bg-white p-2 sm:p-3 rounded overflow-x-auto space-y-1">
+                            <div>1. name | 2. last_name | 3. email</div>
+                            <div>4. phone_number | 5. birthdate | 6. gender</div>
+                            <div>7. curp | 8. street | 9. city</div>
+                            <div>10. state | 11. zip_code | 12. stripe_id</div>
+                            <div>13. blood_type | 14. register_date</div>
+                            <div>15. status | 16. career_id | 17. n_control</div>
+                            <div>18. semestre | 19. group | 20. workshop</div>
                         </div>
                         <p class="text-xs text-amber-800 mt-2">
-                            💡 <strong>Nota:</strong> El campo password no se incluye, se genera automáticamente
+                            💡 <strong>Nota:</strong> Password se genera automáticamente
                         </p>
-                        <button @click="downloadTemplate()" class="mt-3 text-xs text-institucional hover:underline font-semibold flex items-center gap-1">
-                            ⬇️ Descargar plantilla de ejemplo
+                        <button @click="downloadTemplate()" class="mt-2 text-xs text-institucional hover:underline font-semibold flex items-center gap-1">
+                            ⬇️ Descargar plantilla
                         </button>
                     </div>
 
-                    <div class="flex gap-3 mt-6">
-                        <button @click="closeImportModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">Cancelar</button>
-                        <button @click="processImport()" :disabled="!selectedFile || isSaving" class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
+                        <button @click="closeImportModal()" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">Cancelar</button>
+                        <button @click="processImport()" :disabled="!selectedFile || isSaving" class="flex-1 py-2.5 sm:py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base">
                             <span x-show="!isSaving">Importar Usuarios</span>
                             <span x-show="isSaving">Importando...</span>
                         </button>
@@ -637,16 +639,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         <!-- Modal de Importación de Estudiantes -->
         <template x-teleport="body">
-            <div x-show="isImportingStudents" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="isImportingStudents" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="closeImportStudentsModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">📚 Importar Detalles de Estudiantes</h3>
-                    <p class="text-slate-500 text-sm mb-6">Carga un archivo Excel con los detalles académicos de estudiantes existentes</p>
+                <div class="relative bg-white rounded-2xl p-3 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-lg sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2">📚 Importar Detalles de Estudiantes</h3>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6">Carga un archivo Excel con los detalles académicos de estudiantes existentes</p>
 
-                    <div x-show="importStudentsError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    <div x-show="importStudentsError" class="mb-2 sm:mb-4 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-lg text-xs sm:text-sm text-red-700">
                         <span x-text="importStudentsError"></span>
                     </div>
-                    <div x-show="importStudentsErrorDetails.length" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 space-y-1">
+                    <div x-show="importStudentsErrorDetails.length" class="mb-2 sm:mb-4 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 space-y-1 max-h-32 overflow-y-auto">
                         <template x-for="(err, idx) in importStudentsErrorDetails" :key="idx">
                             <div class="font-mono" x-text="err"></div>
                         </template>
@@ -656,55 +658,54 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                          @dragleave.prevent="isDragging = false"
                          @drop.prevent="handleFileDrop($event)"
                          :class="isDragging ? 'dropzone-active' : ''"
-                         class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center transition-all cursor-pointer hover:border-institucional"
+                         class="border-2 border-dashed border-slate-300 rounded-xl p-4 sm:p-8 text-center transition-all cursor-pointer hover:border-institucional"
                          @click="$refs.fileInputStudents.click()">
                         <input type="file" x-ref="fileInputStudents" @change="handleFileSelect($event)" accept=".xlsx,.xls" class="hidden">
-                        <svg class="w-16 h-16 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-12 sm:w-16 h-12 sm:h-16 mx-auto text-slate-400 mb-2 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
-                        <p class="text-slate-700 font-semibold mb-2">Arrastra tu archivo Excel aquí</p>
-                        <p class="text-slate-500 text-sm mb-4">o haz clic para seleccionar</p>
-                        <p class="text-xs text-slate-400">Formatos aceptados: .xlsx, .xls</p>
+                        <p class="text-slate-700 font-semibold mb-1 sm:mb-2 text-sm sm:text-base">Arrastra tu archivo Excel aquí</p>
+                        <p class="text-slate-500 text-xs sm:text-sm mb-2 sm:mb-4">o haz clic para seleccionar</p>
+                        <p class="text-xs text-slate-400">Formatos: .xlsx, .xls</p>
                     </div>
 
-                    <div x-show="selectedFile" class="mt-4 p-4 bg-slate-50 rounded-lg flex items-center gap-3">
-                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div x-show="selectedFile" class="mt-3 sm:mt-4 p-2 sm:p-4 bg-slate-50 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                        <svg class="w-6 sm:w-8 h-6 sm:h-8 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
-                        <div class="flex-1">
-                            <p class="font-semibold text-slate-800" x-text="selectedFile?.name"></p>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-800 text-xs sm:text-sm truncate" x-text="selectedFile?.name"></p>
                             <p class="text-xs text-slate-500" x-text="selectedFile ? `${(selectedFile.size / 1024).toFixed(2)} KB` : ''"></p>
                         </div>
-                        <button @click="selectedFile = null" class="p-2 text-slate-400 hover:text-red-500">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button @click="selectedFile = null" class="p-2 text-slate-400 hover:text-red-500 flex-shrink-0">
+                            <svg class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
                     </div>
 
-                    <div class="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <p class="text-sm font-semibold text-purple-900 mb-2">📋 Formato requerido (columnas en orden):</p>
-                        <div class="text-xs text-purple-700 font-mono bg-white p-2 rounded break-all">
+                    <div class="mt-4 sm:mt-6 p-2 sm:p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p class="text-xs sm:text-sm font-semibold text-purple-900 mb-2">📋 Columnas requeridas:</p>
+                        <div class="text-xs text-purple-700 font-mono bg-white p-2 sm:p-2 rounded break-all whitespace-normal">
                             curp | career_id | n_control | semestre | group | workshop
                         </div>
-                        <div class="mt-3 space-y-1 text-xs text-purple-800">
+                        <div class="mt-2 sm:mt-3 space-y-1 text-xs text-purple-800">
                             <p>⚠️ <strong>Importante:</strong></p>
-                            <ul class="list-disc list-inside pl-2 space-y-1">
-                                <li>El CURP debe existir en la base de datos</li>
-                                <li><strong>career_id</strong>: número entero (ejemplo: 1, 2, 3)</li>
-                                <li><strong>n_control</strong>: texto (ejemplo: "20240001")</li>
-                                <li><strong>semestre</strong>: número del 1 al 12</li>
-                                <li><strong>group</strong>: texto opcional (ejemplo: "A", "B")</li>
-                                <li><strong>workshop</strong>: texto opcional (ejemplo: "Taller 1")</li>
+                            <ul class="list-disc list-inside pl-2 space-y-0.5 text-xs">
+                                <li>CURP debe existir</li>
+                                <li>career_id: número entero</li>
+                                <li>n_control: texto</li>
+                                <li>semestre: 1-12</li>
+                                <li>group/workshop: opcional</li>
                             </ul>
                         </div>
                     </div>
 
-                    <div class="flex gap-3 mt-6">
-                        <button @click="closeImportStudentsModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
+                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
+                        <button @click="closeImportStudentsModal()" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">
                             Cancelar
                         </button>
-                        <button @click="processImportStudents()" :disabled="!selectedFile || isSaving" class="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button @click="processImportStudents()" :disabled="!selectedFile || isSaving" class="flex-1 py-2.5 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base">
                             <span x-show="!isSaving">Importar Estudiantes</span>
                             <span x-show="isSaving">Importando...</span>
                         </button>
@@ -715,43 +716,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         <!-- Modal de Gestión de Estudiante -->
         <template x-teleport="body">
-            <div x-show="showStudentModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="showStudentModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="showStudentModal = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">
+                <div class="relative bg-white rounded-2xl p-3 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-lg sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2">
                         <span x-show="!hasStudentDetails">🎓 Asociar Detalles de Estudiante</span>
                         <span x-show="hasStudentDetails">✏️ Editar Detalles de Estudiante</span>
                     </h3>
-                    <p class="text-slate-500 text-sm mb-6">
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6">
                         <span x-show="!hasStudentDetails">Asignar información académica al usuario seleccionado</span>
                         <span x-show="hasStudentDetails">Actualizar carrera, grupo y taller del estudiante</span>
                     </p>
                     
                     <!-- Datos del usuario seleccionado -->
-                    <div x-show="currentStudentUser" class="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-200">
-                        <p class="text-sm text-slate-600"><strong>Usuario:</strong> <span x-text="(currentStudentUser?.nombre || currentStudentUser?.name || 'N/A') + ' ' + (currentStudentUser?.apellidoP || currentStudentUser?.apellidoPaterno || currentStudentUser?.apellido_paterno || '')"></span></p>
-                        <p class="text-sm text-slate-600"><strong>Email:</strong> <span x-text="currentStudentUser?.correo || currentStudentUser?.email || 'N/A'"></span></p>
-                        <p class="text-sm text-slate-600"><strong>ID:</strong> <span x-text="studentDetails.user_id"></span></p>
+                    <div x-show="currentStudentUser" class="bg-slate-50 p-2 sm:p-4 rounded-lg mb-4 sm:mb-6 border border-slate-200">
+                        <p class="text-xs sm:text-sm text-slate-600"><strong>Usuario:</strong> <span class="truncate" x-text="(currentStudentUser?.nombre || currentStudentUser?.name || 'N/A') + ' ' + (currentStudentUser?.apellidoP || currentStudentUser?.apellidoPaterno || currentStudentUser?.apellido_paterno || '')"></span></p>
+                        <p class="text-xs sm:text-sm text-slate-600"><strong>Email:</strong> <span class="truncate" x-text="currentStudentUser?.correo || currentStudentUser?.email || 'N/A'"></span></p>
+                        <p class="text-xs sm:text-sm text-slate-600"><strong>ID:</strong> <span x-text="studentDetails.user_id"></span></p>
                     </div>
                     
-                    <form @submit.prevent="saveStudentDetails()" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form @submit.prevent="saveStudentDetails()" class="space-y-3 sm:space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Carrera *</label>
                                 <div class="flex items-start gap-2">
                                     <div class="flex-1">
                                         <select x-model="studentDetails.career_id" required
-                                                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                                class="w-full p-2 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional text-sm sm:text-base">
                                             <option value="">Selecciona una carrera</option>
                                             <template x-for="career in careers" :key="career.id">
                                                 <option :value="career.id" x-text="`ID ${career.id} - ${career.career_name}`"></option>
                                             </template>
                                         </select>
                                         <p x-show="isLoadingCareers" class="text-xs text-slate-500 mt-1">Cargando carreras...</p>
-                                        <p x-show="!isLoadingCareers && !careers.length" class="text-xs text-slate-500 mt-1">No hay carreras registradas.</p>
+                                        <p x-show="!isLoadingCareers && !careers.length" class="text-xs text-slate-500 mt-1">No hay carreras.</p>
                                     </div>
                                     <button type="button" @click="loadCareers(true)"
-                                            class="px-3 py-2 text-xs font-semibold text-teal-700 hover:text-teal-800 hover:bg-teal-50 rounded-lg border border-teal-200">
+                                            class="px-2 sm:px-3 py-2 text-xs font-semibold text-teal-700 hover:text-teal-800 hover:bg-teal-50 rounded-lg border border-teal-200 flex-shrink-0">
                                         🔄
                                     </button>
                                 </div>
@@ -759,44 +760,44 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">
-                                    Número de Control *
-                                    <span x-show="hasStudentDetails" class="text-xs font-normal text-amber-600 ml-2">(No editable)</span>
+                                    Nº Control *
+                                    <span x-show="hasStudentDetails" class="text-xs font-normal text-amber-600 ml-1">(No editable)</span>
                                 </label>
                                 <input x-model="studentDetails.n_control" type="text" required 
                                        :readonly="hasStudentDetails"
                                        :class="hasStudentDetails ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
-                                       class="w-full p-3 border border-slate-200 rounded-xl input-institucional">
+                                       class="w-full p-2 sm:p-3 border border-slate-200 rounded-xl input-institucional text-sm sm:text-base">
                             </div>
                             
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">
                                     Semestre *
-                                    <span x-show="hasStudentDetails" class="text-xs font-normal text-amber-600 ml-2">(Use promoción masiva)</span>
+                                    <span x-show="hasStudentDetails" class="text-xs font-normal text-amber-600 ml-1">(Promocion)</span>
                                 </label>
                                 <input x-model="studentDetails.semestre" type="number" required min="1" max="12" 
                                        :readonly="hasStudentDetails"
                                        :class="hasStudentDetails ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'"
-                                       class="w-full p-3 border border-slate-200 rounded-xl input-institucional">
+                                       class="w-full p-2 sm:p-3 border border-slate-200 rounded-xl input-institucional text-sm sm:text-base">
                             </div>
                             
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Grupo</label>
                                 <input x-model="studentDetails.group" type="text" maxlength="10" 
-                                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                       class="w-full p-2 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional text-sm sm:text-base">
                             </div>
                             
                             <div class="md:col-span-2">
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Taller</label>
                                 <input x-model="studentDetails.workshop" type="text" 
-                                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
+                                       class="w-full p-2 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional text-sm sm:text-base">
                             </div>
                         </div>
                         
-                        <div class="flex gap-3 mt-6">
-                            <button type="button" @click="showStudentModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
+                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
+                            <button type="button" @click="showStudentModal = false" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">
                                 Cancelar
                             </button>
-                            <button type="submit" :disabled="isSaving" class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50">
+                            <button type="submit" :disabled="isSaving" class="flex-1 py-2.5 sm:py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 text-sm sm:text-base">
                                 <span x-show="!isSaving && !studentDetails.n_control">Asociar Estudiante</span>
                                 <span x-show="!isSaving && studentDetails.n_control">Actualizar Detalles</span>
                                 <span x-show="isSaving && !studentDetails.n_control">Asociando...</span>
@@ -810,66 +811,66 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         <!-- Modal de Creación/Edición de Carrera -->
         <template x-teleport="body">
-            <div x-show="showCareerModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="showCareerModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="closeCareerModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2" x-text="careerEditingId ? '✏️ Editar carrera' : '🧭 Crear nueva carrera'"></h3>
-                    <p class="text-slate-500 text-sm mb-6" x-text="careerEditingId ? 'Modifica el nombre de la carrera.' : 'Registra una carrera académica disponible para los estudiantes.'"></p>
+                <div class="relative bg-white rounded-2xl p-3 sm:p-8 w-full max-w-lg shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-lg sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2" x-text="careerEditingId ? '✏️ Editar carrera' : '🧭 Crear nueva carrera'"></h3>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6" x-text="careerEditingId ? 'Modifica el nombre de la carrera.' : 'Registra una carrera académica disponible para los estudiantes.'"></p>
 
-                    <form @submit.prevent="saveCareer()" class="space-y-4">
+                    <form @submit.prevent="saveCareer()" class="space-y-3 sm:space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nombre de la carrera *</label>
                             <input x-model="careerForm.career_name" type="text" required maxlength="100"
-                                   class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional"
+                                   class="w-full p-2 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional text-sm sm:text-base"
                                    placeholder="Ej. Ofimática">
-                            <p x-show="careerError" class="text-sm text-red-600 mt-2" x-text="careerError"></p>
+                            <p x-show="careerError" class="text-xs sm:text-sm text-red-600 mt-2" x-text="careerError"></p>
                         </div>
 
-                        <div class="flex gap-3 pt-2">
-                            <button type="button" @click="closeCareerModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
+                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+                            <button type="button" @click="closeCareerModal()" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">
                                 Cancelar
                             </button>
                             <button type="submit" :disabled="isSavingCareer"
-                                    class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    class="flex-1 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base">
                                 <span x-show="!isSavingCareer" x-text="careerEditingId ? 'Actualizar carrera' : 'Crear carrera'"></span>
                                 <span x-show="isSavingCareer" x-text="careerEditingId ? 'Actualizando...' : 'Creando...'"></span>
                             </button>
                         </div>
                     </form>
 
-                    <div class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-sm font-semibold text-slate-800">Carreras existentes (ID)</h4>
+                    <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div class="flex items-center justify-between mb-2 sm:mb-3">
+                            <h4 class="text-xs sm:text-sm font-semibold text-slate-800">Carreras existentes (ID)</h4>
                             <button type="button" @click="loadCareers(false)" class="text-xs font-semibold text-teal-700 hover:text-teal-800">
-                                ↻ Actualizar
+                                ↻ Refr.
                             </button>
                         </div>
-                        <div x-show="isLoadingCareers" class="text-sm text-slate-600">Cargando carreras...</div>
-                        <div x-show="!isLoadingCareers && careers.length" class="max-h-56 overflow-y-auto divide-y divide-slate-200 text-sm">
+                        <div x-show="isLoadingCareers" class="text-xs sm:text-sm text-slate-600">Cargando carreras...</div>
+                        <div x-show="!isLoadingCareers && careers.length" class="max-h-40 sm:max-h-56 overflow-y-auto divide-y divide-slate-200 text-xs sm:text-sm">
                             <template x-for="career in careers" :key="career.id">
-                                <div class="py-2 flex items-center justify-between gap-3">
+                                <div class="py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
                                     <div class="flex flex-col">
-                                        <span class="font-mono text-slate-600" x-text="`ID ${career.id}`"></span>
+                                        <span class="font-mono text-slate-600 text-xs" x-text="`ID ${career.id}`"></span>
                                         <span class="font-semibold text-slate-800" x-text="career.career_name"></span>
                                     </div>
-                                    <div class="flex gap-2">
+                                    <div class="flex gap-2 w-full sm:w-auto">
                                         <button type="button"
                                                 @click="startEditCareer(career)"
-                                                class="px-2 py-1 text-xs font-semibold text-blue-700 hover:text-blue-800 hover:bg-blue-50 rounded">
+                                                class="flex-1 sm:flex-none px-2 py-1 text-xs font-semibold text-blue-700 hover:text-blue-800 hover:bg-blue-50 rounded">
                                             Editar
                                         </button>
                                         <button type="button"
                                                 @click="deleteCareer(career.id)"
                                                 :disabled="careerDeletingId === career.id"
-                                                class="px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
+                                                class="flex-1 sm:flex-none px-2 py-1 text-xs font-semibold text-red-700 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50">
                                             <span x-show="careerDeletingId !== career.id">Eliminar</span>
-                                            <span x-show="careerDeletingId === career.id">Borrando...</span>
+                                            <span x-show="careerDeletingId === career.id">Borr...</span>
                                         </button>
                                     </div>
                                 </div>
                             </template>
                         </div>
-                        <p x-show="!isLoadingCareers && !careers.length" class="text-sm text-slate-500">No hay carreras registradas.</p>
+                        <p x-show="!isLoadingCareers && !careers.length" class="text-xs sm:text-sm text-slate-500">No hay carreras registradas.</p>
                     </div>
                 </div>
             </div>
@@ -877,25 +878,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         <!-- Modal de Gestión de Roles -->
         <template x-teleport="body">
-            <div x-show="showRolesModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="showRolesModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="showRolesModal = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">🔐 Gestionar Roles</h3>
-                    <p class="text-slate-500 text-sm mb-6">
+                <div class="relative bg-white rounded-2xl p-4 sm:p-8 w-full max-w-3xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2">🔐 Gestionar Roles</h3>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6">
                         Agregar o eliminar roles para <span class="font-bold" x-text="selectedUsers.length"></span> usuario(s) seleccionado(s)
                     </p>
                     
                     <form @submit.prevent="updateRoles()" class="space-y-6">
                         
                         <!-- Mensaje de ayuda -->
-                        <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-                            <div class="flex items-start gap-3">
+                        <div class="p-3 sm:p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                            <div class="flex items-start gap-2 sm:gap-3">
                                 <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                                 </svg>
                                 <div class="flex-1">
-                                    <p class="text-sm font-bold text-blue-900 mb-1">💡 Instrucciones</p>
-                                    <p class="text-sm text-blue-800">
+                                    <p class="text-xs sm:text-sm font-bold text-blue-900 mb-1">💡 Instrucciones</p>
+                                    <p class="text-xs sm:text-sm text-blue-800">
                                         <strong>Debes seleccionar al menos un rol</strong> para agregar O eliminar antes de actualizar.
                                     </p>
                                 </div>
@@ -904,31 +905,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         
                         <!-- Alerta cuando no hay roles seleccionados -->
                         <div x-show="rolesToAdd.length === 0 && rolesToRemove.length === 0" 
-                             class="p-4 bg-amber-50 border-2 border-amber-400 rounded-xl">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             class="p-3 sm:p-4 bg-amber-50 border-2 border-amber-400 rounded-xl">
+                            <div class="flex items-start gap-2 sm:gap-3">
+                                <svg class="w-5 sm:w-6 h-5 sm:h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                 </svg>
                                 <div class="flex-1">
-                                    <p class="font-bold text-amber-900 mb-1">⚠️ No hay roles seleccionados</p>
-                                    <p class="text-sm text-amber-800">
+                                    <p class="font-bold text-amber-900 mb-1 text-sm sm:text-base">⚠️ No hay roles seleccionados</p>
+                                    <p class="text-xs sm:text-sm text-amber-800">
                                         Marca al menos un checkbox en <strong>"Agregar Roles"</strong> O <strong>"Eliminar Roles"</strong> para continuar.
                                     </p>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                             <!-- Agregar Roles -->
-                            <div class="p-4 bg-green-50 border-2 border-green-300 rounded-xl shadow-lg">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-black text-green-900 text-lg flex items-center gap-2">
-                                        <span class="text-2xl">➕</span> Agregar Roles
+                            <div class="p-3 sm:p-4 bg-green-50 border-2 border-green-300 rounded-xl shadow-lg">
+                                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                    <h4 class="font-black text-green-900 text-base sm:text-lg flex items-center gap-1 sm:gap-2">
+                                        <span class="text-xl sm:text-2xl">➕</span> <span>Agregar Roles</span>
                                     </h4>
-                                    <span class="px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
-                                          x-text="rolesToAdd.length + ' seleccionados'"></span>
+                                    <span class="px-2 sm:px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
+                                          x-text="rolesToAdd.length + ' sel.'"></span>
                                 </div>
-                                <div class="space-y-2 max-h-60 overflow-y-auto">
+                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
                                     <!-- Opción "Sin rol" -->
                                     <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
                                         <input type="checkbox" value="" 
@@ -949,21 +950,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                             
                             <!-- Eliminar Roles -->
-                            <div class="p-4 bg-red-50 border-2 border-red-300 rounded-xl shadow-lg">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-black text-red-900 text-lg flex items-center gap-2">
-                                        <span class="text-2xl">➖</span> Eliminar Roles
+                            <div class="p-3 sm:p-4 bg-red-50 border-2 border-red-300 rounded-xl shadow-lg">
+                                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                    <h4 class="font-black text-red-900 text-base sm:text-lg flex items-center gap-1 sm:gap-2">
+                                        <span class="text-xl sm:text-2xl">➖</span> <span>Eliminar Roles</span>
                                     </h4>
-                                    <span class="px-3 py-1 bg-red-200 text-red-900 rounded-full text-xs font-bold" 
-                                          x-text="rolesToRemove.length + ' seleccionados'"></span>
+                                    <span class="px-2 sm:px-3 py-1 bg-red-200 text-red-900 rounded-full text-xs font-bold" 
+                                          x-text="rolesToRemove.length + ' sel.'"></span>
                                 </div>
-                                <div class="space-y-2 max-h-60 overflow-y-auto">
+                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
                                     <template x-for="role in availableRoles" :key="role.id">
-                                        <label class="flex items-center gap-2 p-2 hover:bg-red-100 rounded-lg cursor-pointer transition-colors">
+                                        <label class="flex items-center gap-2 p-2 hover:bg-red-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
                                             <input type="checkbox" :value="role.name" 
                                                    x-model="rolesToRemove"
                                                    class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
-                                            <span class="text-sm font-medium text-red-800" x-text="role.displayName || role.name"></span>
+                                            <span class="font-medium text-red-800" x-text="role.displayName || role.name"></span>
                                         </label>
                                     </template>
                                 </div>
@@ -994,15 +995,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                         </div>
                         
-                        <div class="flex gap-3">
-                            <button type="button" @click="showRolesModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
+                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                            <button type="button" @click="showRolesModal = false" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">
                                 Cancelar
                             </button>
                             <button type="submit" :disabled="isSaving || (rolesToAdd.length === 0 && rolesToRemove.length === 0)" 
-                                    class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative group"
-                                    :title="(rolesToAdd.length === 0 && rolesToRemove.length === 0) ? 'Selecciona al menos un rol para continuar' : 'Actualizar roles de usuarios seleccionados'">
+                                    class="flex-1 py-2.5 sm:py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative group text-sm sm:text-base"
+                                    :title="(rolesToAdd.length === 0 && rolesToRemove.length === 0) ? 'Selecciona al menos un rol para continuar' : 'Actualizar roles de usuarios seleccionados">
                                 <span x-show="!isSaving && (rolesToAdd.length > 0 || rolesToRemove.length > 0)">✅ Actualizar Roles</span>
-                                <span x-show="!isSaving && rolesToAdd.length === 0 && rolesToRemove.length === 0">⚠️ Selecciona roles primero</span>
+                                <span x-show="!isSaving && rolesToAdd.length === 0 && rolesToRemove.length === 0">⚠️ Selecciona roles</span>
                                 <span x-show="isSaving">⏳ Actualizando...</span>
                             </button>
                         </div>
@@ -1013,31 +1014,33 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         <!-- Modal de Gestión de Permisos -->
         <template x-teleport="body">
-            <div x-show="showPermissionsModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div x-show="showPermissionsModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4">
                 <div @click="showPermissionsModal = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
-                <div class="relative bg-white rounded-2xl p-8 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-2">🔑 Gestionar Permisos</h3>
-                    <p class="text-slate-500 text-sm mb-6">
+                <div class="relative bg-white rounded-2xl p-4 sm:p-8 w-full max-w-3xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2">🔑 Gestionar Permisos</h3>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6">
                         Agregar o eliminar permisos para <span class="font-bold" x-text="selectedUsers.length"></span> usuario(s) seleccionado(s)
                     </p>
                     
-                    <form @submit.prevent="updatePermissions()" class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <form @submit.prevent="updatePermissions()" class="space-y-4 sm:space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                             <!-- Agregar Permisos -->
-                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                                <h4 class="font-bold text-blue-900 mb-3">➕ Agregar Permisos</h4>
-                                <div x-show="permissionsAvailableToAdd.length === 0" class="text-sm text-blue-600 italic py-2">
+                            <div class="p-3 sm:p-4 bg-blue-50 border-2 border-blue-300 rounded-xl shadow-lg">
+                                <h4 class="font-black text-blue-900 mb-3 text-base sm:text-lg flex items-center gap-2">
+                                    <span class="text-xl sm:text-2xl">➕</span> <span>Agregar Permisos</span>
+                                </h4>
+                                <div x-show="permissionsAvailableToAdd.length === 0" class="text-xs sm:text-sm text-blue-600 italic py-2">
                                     Los usuarios seleccionados ya tienen todos los permisos disponibles.
                                 </div>
-                                <div class="space-y-2 max-h-60 overflow-y-auto">
+                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
                                     <template x-if="permissionsAvailableToAdd && permissionsAvailableToAdd.length > 0">
                                         <template x-for="permission in permissionsAvailableToAdd" :key="permission.name">
-                                            <label class="flex items-center gap-2 p-2 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors">
+                                            <label class="flex items-center gap-2 p-2 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
                                                 <input type="checkbox" 
                                                        :value="permission.name"
                                                        x-model="permissionsToAdd"
                                                        class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                                                <span class="text-sm font-medium text-blue-800">
+                                                <span class="font-medium text-blue-800">
                                                     <span x-show="permission.displayName" x-text="permission.displayName"></span>
                                                     <span x-show="!permission.displayName" x-text="permission.name"></span>
                                                 </span>
@@ -1048,20 +1051,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                             
                             <!-- Eliminar Permisos -->
-                            <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                                <h4 class="font-bold text-orange-900 mb-3">➖ Eliminar Permisos</h4>
-                                <div x-show="permissionsAvailableToRemove.length === 0" class="text-sm text-orange-600 italic py-2">
+                            <div class="p-3 sm:p-4 bg-orange-50 border-2 border-orange-300 rounded-xl shadow-lg">
+                                <h4 class="font-black text-orange-900 mb-3 text-base sm:text-lg flex items-center gap-2">
+                                    <span class="text-xl sm:text-2xl">➖</span> <span>Eliminar Permisos</span>
+                                </h4>
+                                <div x-show="permissionsAvailableToRemove.length === 0" class="text-xs sm:text-sm text-orange-600 italic py-2">
                                     Los usuarios seleccionados no tienen permisos para eliminar.
                                 </div>
-                                <div class="space-y-2 max-h-60 overflow-y-auto">
+                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
                                     <template x-if="permissionsAvailableToRemove && permissionsAvailableToRemove.length > 0">
                                         <template x-for="permission in permissionsAvailableToRemove" :key="permission.name">
-                                            <label class="flex items-center gap-2 p-2 hover:bg-orange-100 rounded-lg cursor-pointer transition-colors">
+                                            <label class="flex items-center gap-2 p-2 hover:bg-orange-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
                                                 <input type="checkbox"
                                                        :value="permission.name"
                                                        x-model="permissionsToRemove"
                                                        class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
-                                                <span class="text-sm font-medium text-orange-800">
+                                                <span class="font-medium text-orange-800">
                                                     <span x-show="permission.displayName" x-text="permission.displayName"></span>
                                                     <span x-show="!permission.displayName" x-text="permission.name"></span>
                                                 </span>
@@ -1072,14 +1077,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                         </div>
                         
-                        <div class="flex gap-3">
-                            <button type="button" @click="showPermissionsModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors">
+                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                            <button type="button" @click="showPermissionsModal = false" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">
                                 Cancelar
                             </button>
                             <button type="submit" :disabled="isSaving || (permissionsToAdd.length === 0 && permissionsToRemove.length === 0)" 
-                                    class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50">
-                                <span x-show="!isSaving">Actualizar Permisos</span>
-                                <span x-show="isSaving">Actualizando...</span>
+                                    class="flex-1 py-2.5 sm:py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 text-sm sm:text-base">
+                                <span x-show="!isSaving">✅ Actualizar Permisos</span>
+                                <span x-show="isSaving">⏳ Actualizando...</span>
                             </button>
                         </div>
                     </form>
