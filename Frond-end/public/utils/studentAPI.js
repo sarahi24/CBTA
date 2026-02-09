@@ -127,10 +127,12 @@ window.StudentAPI = {
 
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(`${API_BASE}/pending-payments`);
+      // If studentId provided, use /pending-payments/{studentId}
+      // Otherwise use /pending-payments for current user
+      const endpoint = studentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
+      console.log(`🔍 [StudentAPI] getPendingPayments - Endpoint: ${endpoint}, forceRefresh: ${forceRefresh}`);
       
-      // Log inicial
-      console.log(`🔍 [StudentAPI] getPendingPayments - URL base: ${url.toString()}, forceRefresh: ${forceRefresh}`);
+      const url = new URL(endpoint);
       
       if (forceRefresh) {
         url.searchParams.append('forceRefresh', 'true');
@@ -169,9 +171,14 @@ window.StudentAPI = {
 
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const url = new URL(`${API_BASE}/pending-payments/overdue`);
-      if (studentId) url.searchParams.append('id', studentId);
+      // If studentId provided, use /pending-payments/overdue/{studentId}
+      // Otherwise use /pending-payments/overdue for current user
+      const endpoint = studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
+      console.log('📡 Fetching overdue payments from:', endpoint);
+      
+      const url = new URL(endpoint);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+      
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {

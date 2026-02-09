@@ -233,13 +233,12 @@ export const StudentAPI = {
    */
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      // Construir URL base SIN el parámetro studentId en el path
-      const url = new URL(`${API_BASE}/pending-payments`);
+      // If studentId provided, use /pending-payments/{studentId}
+      // Otherwise use /pending-payments for current user
+      const endpoint = studentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
+      console.log(`📡 Fetching pending payments from: ${endpoint}`);
       
-      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
-      if (studentId) {
-        url.searchParams.append('id', studentId);
-      }
+      const url = new URL(endpoint);
       
       // Agregar query parameters
       if (forceRefresh) {
@@ -279,15 +278,12 @@ export const StudentAPI = {
    */
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      // Construir URL base SIN el parámetro studentId en el path
-      const url = new URL(`${API_BASE}/pending-payments/overdue`);
+      // If studentId provided, use /pending-payments/overdue/{studentId}
+      // Otherwise use /pending-payments/overdue for current user
+      const endpoint = studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
+      console.log('📡 Fetching overdue payments from:', endpoint);
       
-      // Si se proporciona studentId (caso de padres), agregarlo como query parameter
-      if (studentId) {
-        url.searchParams.append('id', studentId);
-      }
-      
-      // Agregar query parameters
+      const url = new URL(endpoint);
       if (forceRefresh) {
         url.searchParams.append('forceRefresh', 'true');
       }

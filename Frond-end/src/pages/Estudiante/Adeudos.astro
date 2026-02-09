@@ -24,6 +24,7 @@ const title = "Finanzas Estudiantiles";
       alumnoNombre: 'Usuario',
       showOverdueAlert: false,
       activeTab: 'pending',
+      userId: null,
 
       async ensureStudentAPI() {
         if (window.StudentAPI) return true;
@@ -73,9 +74,11 @@ const title = "Finanzas Estudiantiles";
         
         const token = localStorage.getItem('access_token');
         const userId = localStorage.getItem('userId');
+        this.userId = userId;  // Guardar en el estado
         
         console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
         console.log('🔍 [Adeudos] Token disponible:', !!token);
+        console.log('🔍 [Adeudos] UserId:', userId);
         const apiReady = await this.ensureStudentAPI();
         console.log('🔍 [Adeudos] StudentAPI disponible:', apiReady);
         
@@ -130,8 +133,10 @@ const title = "Finanzas Estudiantiles";
         this.loadingTab = true;
         try {
           console.log('📥 Cargando adeudos desde StudentAPI...');
-          // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
-          const paymentsData = await window.StudentAPI.getPendingPayments(null, token, false, 'student');
+          console.log('🔍 UserId:', this.userId);
+          
+          // Pasar el userId para que se construya el endpoint correcto
+          const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, false, 'student');
           
           console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
           
@@ -166,24 +171,48 @@ const title = "Finanzas Estudiantiles";
 
       async loadOverduePayments() {
         const token = localStorage.getItem('access_token');
-        if (!token) return;
+        if (!token) {
+          console.warn('⚠️ No token available for overdue payments');
+          return;
+        }
 
         this.loadingTab = true;
         try {
           console.log('📥 Cargando pagos vencidos desde StudentAPI...');
-          // Pasar null para obtener datos del usuario autenticado (no necesita studentId en el path)
-          const overdueData = await window.StudentAPI.getOverduePayments(null, token, false, 'student');
+          console.log('🔍 Token disponible:', token.substring(0, 10) + '...');
+          console.log('🔍 UserId:', this.userId);
           
+          // Verificar que window.StudentAPI existe
+          if (!window.StudentAPI) {
+            throw new Error('window.StudentAPI no está disponible');
+          }
+          
+          console.log('✅ window.StudentAPI disponible');
+          
+          // Pasar el userId para que se construya el endpoint correcto
+          const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, false, 'student');
+          
+          console.log('📊 [Adeudos] Respuesta completa del servidor:', overdueData);
           console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
           
           // El backend retorna: { success: true, data: [...] } donde data es un array
           let overdueArray = [];
           if (overdueData?.data) {
             if (Array.isArray(overdueData.data)) {
+              console.log('✅ Respuesta es un array directo');
               overdueArray = overdueData.data;
             } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
+              console.log('✅ Respuesta tiene estructura pending_payments');
               overdueArray = overdueData.data.pending_payments;
+            } else {
+              console.log('⚠️ Estructura de respuesta inesperada:', {
+                tieneData: !!overdueData.data,
+                tienePendingPayments: !!overdueData.data?.pending_payments,
+                estructuraDatos: Object.keys(overdueData.data || {})
+              });
             }
+          } else {
+            console.log('📭 No data received from API');
           }
           
           console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);

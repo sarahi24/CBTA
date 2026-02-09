@@ -37,7 +37,7 @@ const title = 'Panel de Estudiante';
           try {
             const parsedUserId = parseInt(userId, 10);
             const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-              window.StudentAPI.getPendingPayments(null, token, false, 'student').catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPendingPayments(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getOverdueTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getPaidTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getPendingTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; })
