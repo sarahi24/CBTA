@@ -199,8 +199,19 @@ async function loadStudents(forceRefresh = false) {
 
     try {
         const token = localStorage.getItem('access_token');
-        const role = localStorage.getItem('user_role') || 'financial-staff';
-        const permission = localStorage.getItem('user_permission') || 'view.payments.student.summary';
+        
+        // Obtener rol del userData guardado
+        let role = 'financial-staff';
+        try {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+                role = userData.roles[0];
+            } else {
+                role = userData.role || userData.type || 'financial-staff';
+            }
+        } catch (e) {
+            console.warn('⚠️ No se pudo obtener el rol, usando financial-staff');
+        }
         
         if (!token) {
             showError('No hay sesión activa. Por favor inicia sesión.');
@@ -214,7 +225,7 @@ async function loadStudents(forceRefresh = false) {
             perPage: ITEMS_PER_PAGE,
             forceRefresh: forceRefresh,
             role: role,
-            permission: permission
+            permission: 'view.payments.student.summary'
         });
 
         console.log('📡 Respuesta del servidor:', response);
@@ -493,15 +504,26 @@ document.head.appendChild(style);
 async function loadCareers() {
     try {
         const token = localStorage.getItem('access_token');
-        const role = localStorage.getItem('user_role') || 'financial-staff';
-        const permission = localStorage.getItem('user_permission') || 'view.careers';
+        
+        // Obtener rol del userData guardado
+        let role = 'financial-staff';
+        try {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+                role = userData.roles[0];
+            } else {
+                role = userData.role || userData.type || 'financial-staff';
+            }
+        } catch (e) {
+            console.warn('⚠️ No se pudo obtener el rol para carreras');
+        }
         
         if (!token) {
             console.warn('⚠️ No hay token para cargar carreras');
             return;
         }
 
-        const response = await StudentAPI.getCareers(token, { role, permission });
+        const response = await StudentAPI.getCareers(token, { role, permission: 'view.careers' });
         console.log('📡 Respuesta de carreras:', response);
 
         if (response.success && response.data && response.data.careers) {

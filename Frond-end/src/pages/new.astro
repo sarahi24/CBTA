@@ -171,8 +171,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         url.searchParams.append('perPage', '1000');
         url.searchParams.append('status', 'activo');
         
-        const userRole = localStorage.getItem('user_role') || 'admin';
-        const userPermission = localStorage.getItem('user_permission') || 'view.users';
+        // Obtener rol del userData guardado
+        let userRole = 'admin';
+        try {
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+            userRole = userData.roles[0];
+          } else {
+            userRole = userData.role || userData.type || 'admin';
+          }
+        } catch (e) {
+          console.warn('⚠️ No se pudo obtener el rol del usuario, usando admin por defecto');
+        }
+        
+        console.log('🔐 Rol del usuario para API:', userRole);
         
         fetch(url.toString(), {
           method: 'GET',
@@ -180,8 +192,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'X-User-Role': userRole,
-            'X-User-Permission': userPermission
+            'X-User-Role': userRole
           }
         })
         .then(res => {
