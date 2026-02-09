@@ -11,6 +11,7 @@ const title = 'Panel de Estudiante';
       return {
         alumnoNombre: 'Estudiante',
         history: [],
+        showAllPayments: false,
         overdue: { totalAmount: '0.00', totalCount: 0 },
         paid: { totalPayments: '0.00', paymentsByMonth: {} },
         pending: { totalAmount: '0.00', totalCount: 0 },
@@ -106,6 +107,17 @@ const title = 'Panel de Estudiante';
 
         circumference() {
           return 2 * Math.PI * 50;
+        },
+
+        getVisiblePayments() {
+          if (this.showAllPayments) {
+            return this.history;
+          }
+          return this.history.slice(0, 5);
+        },
+
+        toggleShowAllPayments() {
+          this.showAllPayments = !this.showAllPayments;
         }
       };
     }
@@ -263,11 +275,11 @@ const title = 'Panel de Estudiante';
 
             <tbody>
               <template x-if="history && history.length > 0">
-                <template x-for="pago in history" :key="pago.id">
+                <template x-for="pago in getVisiblePayments()" :key="pago.id">
                   <tr>
-                    <td x-text="pago.concepto"></td>
-                    <td class="monto" x-text="pago.monto"></td>
-                    <td class="fecha-celda" x-text="pago.fecha || '—'"></td>
+                    <td data-label="Concepto" x-text="pago.concepto"></td>
+                    <td class="monto" data-label="Monto" x-text="pago.monto"></td>
+                    <td class="fecha-celda" data-label="Fecha" x-text="pago.fecha || '—'"></td>
                   </tr>
                 </template>
               </template>
@@ -279,6 +291,12 @@ const title = 'Panel de Estudiante';
             </tbody>
           </table>
         </div>
+
+        <template x-if="history && history.length > 5">
+          <button class="btn-ver-mas" @click="toggleShowAllPayments()" type="button">
+            <span x-text="showAllPayments ? '↑ Mostrar menos' : '↓ Ver todos (' + history.length + ')'"></span>
+          </button>
+        </template>
       </div>
     </div>
   </div>
@@ -664,6 +682,32 @@ const title = 'Panel de Estudiante';
     font-size: 0.85rem;
   }
 
+  .btn-ver-mas {
+    display: block;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #2e594d 0%, #3d7566 100%);
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(46, 89, 77, 0.2);
+  }
+
+  .btn-ver-mas:hover {
+    background: linear-gradient(135deg, #3d7566 0%, #4a8a77 100%);
+    box-shadow: 0 6px 16px rgba(46, 89, 77, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .btn-ver-mas:active {
+    transform: translateY(0);
+  }
+
   /* --- CARDS & GRID --- */
   .bottom-grid { 
     display: grid; 
@@ -951,6 +995,41 @@ const title = 'Panel de Estudiante';
     .progress-inner { padding: 1rem; }
     .table-header { margin-bottom: 1rem; }
     .payments-title { font-size: 1rem; }
+
+    /* Tabla responsiva para móvil */
+    .payments-table { font-size: 0.825rem; }
+    .payments-table thead { display: none; }
+    .payments-table tbody tr {
+      display: block;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.875rem;
+      padding: 1rem;
+      margin-bottom: 0.875rem;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .payments-table tbody tr:hover {
+      background: #f9fafb;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    }
+    .payments-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      text-align: right;
+    }
+    .payments-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b7280;
+      text-align: left;
+      flex: 1;
+    }
+    .btn-ver-mas { font-size: 0.9rem; padding: 0.75rem 1.25rem; }
   }
 
   /* Refresh Cache Button */
