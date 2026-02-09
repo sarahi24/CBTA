@@ -185,6 +185,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
         
         console.log('🔐 Rol del usuario para API:', userRole);
+        console.log('📡 Headers enviados:', {
+          'Authorization': `Bearer ${token.substring(0, 20)}...`,
+          'X-User-Role': userRole
+        });
         
         fetch(url.toString(), {
           method: 'GET',
@@ -196,6 +200,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         })
         .then(res => {
+          console.log('📥 Respuesta show-users status:', res.status);
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
           }
