@@ -488,12 +488,15 @@ document.head.appendChild(style);
 async function loadCareers() {
     try {
         const token = localStorage.getItem('access_token');
+        const role = localStorage.getItem('user_role') || 'financial-staff';
+        const permission = localStorage.getItem('user_permission') || 'view.careers';
+        
         if (!token) {
             console.warn('⚠️ No hay token para cargar carreras');
             return;
         }
 
-        const response = await StudentAPI.getCareers(token);
+        const response = await StudentAPI.getCareers(token, { role, permission });
         console.log('📡 Respuesta de carreras:', response);
 
         if (response.success && response.data && response.data.careers) {

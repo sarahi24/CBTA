@@ -763,11 +763,15 @@ window.StudentAPI = {
    * @param {string} token - Token de autenticación
    * @param {object} options - Opciones
    * @param {boolean} options.forceRefresh - Forzar actualización del caché
+   * @param {string} options.role - Rol del usuario
+   * @param {string} options.permission - Permiso del usuario
    */
   async getCareers(token, options = {}) {
     try {
       const {
-        forceRefresh = false
+        forceRefresh = false,
+        role = 'financial-staff',
+        permission = 'view.careers'
       } = options;
 
       const params = new URL(`${API_BASE}/careers`);
@@ -781,8 +785,8 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': 'financial-staff',
-          'X-User-Permission': 'view.careers'
+          'X-User-Role': role,
+          'X-User-Permission': permission
         }
       });
 
