@@ -250,8 +250,12 @@ function renderConcepts(){
       console.log('📅 Valores de vigencia:', {
         expiration_human: c.expiration_human,
         has_expiration: c.has_expiration,
-        beginDate: c.beginDate,
-        endDate: c.endDate
+        expirationDays: c.expirationDays,
+        expiration_days: c.expiration_days,
+        daysUntilExpiration: c.daysUntilExpiration,
+        days_until_expiration: c.days_until_expiration,
+        daysRemaining: c.daysRemaining,
+        days_remaining: c.days_remaining
       });
     }
     
@@ -262,6 +266,10 @@ function renderConcepts(){
     const dateRangeText = c.expiration_human && c.has_expiration 
       ? c.expiration_human 
       : 'Sin vigencia definida';
+    
+    if (index === 0) {
+      console.log('✅ Vigencia mostrada será:', dateRangeText);
+    }
     
     // Para el alcance, por ahora mostramos "No especificado" hasta que el API lo incluya
     const scopeText = 'No especificado';
