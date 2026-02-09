@@ -133,9 +133,35 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
       <!-- Formulario de búsqueda -->
       <div id="validate-form-section" class="space-y-4">
-        <div>
-          <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Buscar Alumno (Nombre, No. Control, Email o CURP)</label>
-          <input id="validate-search-input" type="text" placeholder="Ej: juan.perez@example.com o SAQ890101HDFLRR99" class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-purple-600 outline-none" />
+        <div class="relative">
+          <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">
+            Buscar Alumno (Nombre, No. Control, Email o CURP)
+            <span class="ml-2 text-[9px] text-purple-600 font-normal">
+              <i class="fas fa-info-circle"></i> Escribe para ver sugerencias
+            </span>
+          </label>
+          <input id="validate-search-input" type="text" placeholder="Ej: camilo, 2168, juan.perez@example.com..." class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-purple-600 outline-none" autocomplete="off" />
+          
+          <!-- Dropdown de sugerencias -->
+          <div id="validate-suggestions" class="hidden absolute z-50 w-full mt-2 bg-white border-2 border-purple-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+            <div class="p-4 text-center text-sm text-gray-500">
+              <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
+              <p>Escribe para buscar estudiantes</p>
+            </div>
+          </div>
+          
+          <!-- Estudiante seleccionado -->
+          <div id="validate-selected-student" class="hidden mt-2 p-3 bg-purple-50 border-2 border-purple-200 rounded-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-black text-purple-900" id="validate-selected-name"></div>
+                <div class="text-xs text-purple-600 font-mono" id="validate-selected-control"></div>
+              </div>
+              <button type="button" id="validate-clear-selection" class="text-purple-600 hover:text-purple-800">
+                <i class="fas fa-times-circle text-lg"></i>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -501,6 +527,10 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const validateFormSection = document.getElementById('validate-form-section');
     const validateResultSection = document.getElementById('validate-result-section');
     const validateErrorSection = document.getElementById('validate-error-section');
+    const validateSuggestions = document.getElementById('validate-suggestions');
+    const validateSelectedStudent = document.getElementById('validate-selected-student');
+    let selectedStudentForValidation = null;
+    let validateSearchTimeout = null;
 
     // Abrir modal de validación
     document.getElementById('open-validate-modal-btn').onclick = () => {
@@ -510,11 +540,135 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       validateFormSection.classList.remove('hidden');
       validateResultSection.classList.add('hidden');
       validateErrorSection.classList.add('hidden');
+      validateSuggestions.classList.add('hidden');
+      validateSelectedStudent.classList.add('hidden');
+      selectedStudentForValidation = null;
     };
+
+    // Búsqueda de estudiantes con autocompletado
+    validateSearchInput.addEventListener('input', () => {
+      clearTimeout(validateSearchTimeout);
+      
+      const searchTerm = validateSearchInput.value.trim().toLowerCase();
+      
+      if (searchTerm.length === 0) {
+        validateSuggestions.classList.add('hidden');
+        return;
+      }
+
+      validateSearchTimeout = setTimeout(() => {
+        // Obtener todos los estudiantes de los adeudos
+        const allPending = getCharges();
+        const uniqueStudents = [];
+        const seen = new Set();
+        
+        allPending.forEach(payment => {
+          const key = payment.userName + '|' + payment.nControl;
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniqueStudents.push({
+              name: payment.userName,
+              nControl: payment.nControl,
+              email: payment.email || '',
+              studentId: payment.studentId
+            });
+          }
+        });
+
+        // Filtrar estudiantes que coincidan con la búsqueda
+        const filtered = uniqueStudents.filter(student => {
+          const name = String(student.name || '').toLowerCase();
+          const nControl = String(student.nControl || '').toLowerCase();
+          const email = String(student.email || '').toLowerCase();
+          
+          return name.includes(searchTerm) || 
+                 nControl.includes(searchTerm) || 
+                 email.includes(searchTerm);
+        }).slice(0, 8); // Máximo 8 sugerencias
+
+        // Función para resaltar coincidencias
+        const highlightMatch = (text, term) => {
+          if (!text || !term) return text;
+          try {
+            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedTerm})`, 'gi');
+            return text.replace(regex, '<mark class="bg-yellow-300 font-black px-1 rounded">$1</mark>');
+          } catch (e) {
+            return text;
+          }
+        };
+
+        // Mostrar sugerencias
+        if (filtered.length > 0) {
+          validateSuggestions.innerHTML = `
+            <div class="p-2 bg-purple-50 border-b-2 border-purple-200">
+              <p class="text-[9px] font-bold text-purple-700 uppercase">
+                <i class="fas fa-users"></i> ${filtered.length} estudiante${filtered.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            ${filtered.map((student, idx) => `
+              <div class="validate-suggestion-item p-3 hover:bg-purple-50 cursor-pointer border-b border-gray-200 transition-colors" data-index="${idx}">
+                <div class="font-bold text-sm text-gray-900">${highlightMatch(student.name, searchTerm)}</div>
+                <div class="text-xs text-gray-500 font-mono">${highlightMatch(student.nControl, searchTerm)}</div>
+                ${student.email ? `<div class="text-[10px] text-purple-600">${highlightMatch(student.email, searchTerm)}</div>` : ''}
+              </div>
+            `).join('')}
+          `;
+          
+          validateSuggestions.classList.remove('hidden');
+          
+          // Agregar event listeners a las sugerencias
+          document.querySelectorAll('.validate-suggestion-item').forEach((item, idx) => {
+            item.onclick = () => selectStudentForValidation(filtered[idx]);
+          });
+        } else {
+          validateSuggestions.innerHTML = `
+            <div class="p-4 text-center">
+              <i class="fas fa-search-minus text-gray-300 text-3xl mb-2"></i>
+              <p class="text-sm text-gray-500 font-bold">No se encontraron estudiantes</p>
+              <p class="text-xs text-gray-400">Intenta con otro término</p>
+            </div>
+          `;
+          validateSuggestions.classList.remove('hidden');
+        }
+      }, 300); // Debounce de 300ms
+    });
+
+    // Seleccionar estudiante de las sugerencias
+    function selectStudentForValidation(student) {
+      selectedStudentForValidation = student;
+      validateSearchInput.value = '';
+      validateSuggestions.classList.add('hidden');
+      validateSelectedStudent.classList.remove('hidden');
+      
+      document.getElementById('validate-selected-name').textContent = student.name;
+      document.getElementById('validate-selected-control').textContent = `Matrícula: ${student.nControl}`;
+      
+      // Enfocar el campo de Payment Intent
+      validatePaymentIntentInput.focus();
+    }
+
+    // Limpiar selección
+    document.getElementById('validate-clear-selection').onclick = () => {
+      selectedStudentForValidation = null;
+      validateSelectedStudent.classList.add('hidden');
+      validateSearchInput.value = '';
+      validateSearchInput.focus();
+    };
+
+    // Cerrar sugerencias al hacer click fuera
+    document.addEventListener('click', (e) => {
+      if (!validateSearchInput.contains(e.target) && !validateSuggestions.contains(e.target)) {
+        validateSuggestions.classList.add('hidden');
+      }
+    });
 
     // Cerrar modal de validación
     const closeValidateModal = () => {
       validateModal.classList.replace('flex', 'hidden');
+      selectedStudentForValidation = null;
+      validateSelectedStudent.classList.add('hidden');
+      validateSuggestions.classList.add('hidden');
     };
     document.getElementById('validate-close-x').onclick = closeValidateModal;
     document.getElementById('validate-close-btn').onclick = closeValidateModal;
@@ -526,6 +680,9 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       validateFormSection.classList.remove('hidden');
       validateResultSection.classList.add('hidden');
       validateErrorSection.classList.add('hidden');
+      validateSelectedStudent.classList.add('hidden');
+      validateSuggestions.classList.add('hidden');
+      selectedStudentForValidation = null;
       validateSearchInput.focus();
     };
 
@@ -555,12 +712,11 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
     // Validar pago
     validateSubmitBtn.onclick = async () => {
-      const search = validateSearchInput.value.trim();
       const paymentIntentId = validatePaymentIntentInput.value.trim();
 
       // Validación de campos
-      if (!search) {
-        showValidationError('Por favor ingresa un término de búsqueda (email, No. Control, CURP, nombre)');
+      if (!selectedStudentForValidation) {
+        showValidationError('Por favor selecciona un estudiante de las sugerencias');
         return;
       }
 
@@ -580,7 +736,12 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
           return;
         }
 
-        const response = await StudentAPI.validateStripePayment(search, paymentIntentId, token);
+        // Usar email, nControl o nombre del estudiante seleccionado
+        const searchQuery = selectedStudentForValidation.email || 
+                           selectedStudentForValidation.nControl || 
+                           selectedStudentForValidation.name;
+
+        const response = await StudentAPI.validateStripePayment(searchQuery, paymentIntentId, token);
 
         if (!response.success) {
           showValidationError(response.message || 'Error al validar el pago');
