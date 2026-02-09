@@ -105,47 +105,47 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </style>
 
 <Layout title={pageTitle}>  
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 min-h-screen">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 md:py-12 bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 min-h-screen">
 
     <!-- Header mejorado con animación -->
-    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl px-8 py-6 border border-gray-100/50 relative overflow-hidden hover:shadow-3xl transition-all duration-500">
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 lg:mb-12 bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border border-gray-100/50 relative overflow-hidden hover:shadow-3xl transition-all duration-500">
       <!-- Decoración de fondo animada -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#2E594D]/5 to-emerald-500/5 rounded-full blur-3xl -z-0 animate-float"></div>
       <div class="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-teal-500/5 to-transparent rounded-full blur-2xl -z-0"></div>
       
-      <div class="flex items-center gap-5 relative z-10">
-        <div class="p-4 bg-gradient-to-br from-[#2E594D] via-emerald-700 to-[#1e3d35] rounded-2xl shadow-2xl flex-shrink-0 transform hover:rotate-6 hover:scale-110 transition-all duration-500 relative overflow-hidden group">
+      <div class="flex items-center gap-3 sm:gap-5 relative z-10 w-full sm:w-auto">
+        <div class="p-2.5 sm:p-3 lg:p-4 bg-gradient-to-br from-[#2E594D] via-emerald-700 to-[#1e3d35] rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl flex-shrink-0 transform hover:rotate-6 hover:scale-110 transition-all duration-500 relative overflow-hidden group">
           <div class="absolute inset-0 shimmer opacity-0 group-hover:opacity-100"></div>
-          <i class="fas fa-file-invoice-dollar text-4xl text-white relative z-10"></i>
+          <i class="fas fa-file-invoice-dollar text-2xl sm:text-3xl lg:text-4xl text-white relative z-10"></i>
         </div>
 
-        <div>
-          <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 tracking-tight flex flex-wrap items-center gap-3">
-            Gestión de Conceptos
-            <span class="text-[10px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white px-4 py-1.5 rounded-full font-bold shadow-lg animate-pulse relative overflow-hidden">
+        <div class="flex-1 min-w-0">
+          <h1 class="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 tracking-tight flex flex-wrap items-center gap-2 sm:gap-3">
+            <span class="truncate">Gestión de Conceptos</span>
+            <span class="text-[9px] sm:text-[10px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 rounded-full font-bold shadow-lg animate-pulse relative overflow-hidden flex-shrink-0">
               <span class="absolute inset-0 shimmer"></span>
               <span class="relative z-10">ACTIVO</span>
             </span>
           </h1>
-          <p class="text-sm text-gray-600 mt-3 flex items-center gap-2 font-medium hover:text-gray-800 transition-colors">
-            <i class="fas fa-lightbulb text-amber-500 animate-pulse"></i>
-            <span>Administra y asigna conceptos de cobro de forma inteligente</span>
+          <p class="text-xs sm:text-sm text-gray-600 mt-1.5 sm:mt-2 lg:mt-3 flex items-center gap-2 font-medium hover:text-gray-800 transition-colors">
+            <i class="fas fa-lightbulb text-amber-500 animate-pulse flex-shrink-0"></i>
+            <span class="line-clamp-1 sm:line-clamp-none">Administra conceptos de cobro</span>
           </p>
         </div>
       </div>
 
       <a href="/new"
-         class="mt-6 sm:mt-0 px-8 py-4 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-sm sm:text-base flex items-center gap-3 relative z-10 group overflow-hidden">
+         class="mt-4 sm:mt-0 w-full sm:w-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-3.5 lg:py-4 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm lg:text-base flex items-center justify-center gap-2 sm:gap-3 relative z-10 group overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <div class="absolute inset-0 shimmer opacity-0 group-hover:opacity-100"></div>
-        <i class="fas fa-plus-circle text-lg relative z-10 group-hover:rotate-90 transition-transform duration-300"></i> 
-        <span class="relative z-10">Crear Concepto</span>
+        <i class="fas fa-plus-circle text-base sm:text-lg relative z-10 group-hover:rotate-90 transition-transform duration-300"></i> 
+        <span class="relative z-10 whitespace-nowrap">Crear Concepto</span>
       </a>
     </header>
 
     <div id="concepts-grid"
-         class="grid gap-8"
-         style="grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));">
+         class="grid gap-4 sm:gap-6 lg:gap-8"
+         style="grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));">
     </div>
 
   </div>
@@ -199,15 +199,15 @@ async function loadConcepts(){
   const grid = document.getElementById('concepts-grid');
   if(!grid) return;
   grid.innerHTML = `
-    <div class="col-span-full text-center py-20 bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/10 rounded-3xl border-2 border-emerald-200/50 shadow-2xl">
-      <div class="flex flex-col items-center gap-5">
+    <div class="col-span-full text-center py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/10 rounded-2xl sm:rounded-3xl border-2 border-emerald-200/50 shadow-xl sm:shadow-2xl">
+      <div class="flex flex-col items-center gap-3 sm:gap-4 lg:gap-5">
         <div class="relative">
-          <div class="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full blur-2xl opacity-30 animate-pulse"></div>
-          <i class="fas fa-spinner fa-spin text-6xl text-emerald-700 relative z-10"></i>
+          <div class="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full blur-xl sm:blur-2xl opacity-30 animate-pulse"></div>
+          <i class="fas fa-spinner fa-spin text-4xl sm:text-5xl lg:text-6xl text-emerald-700 relative z-10"></i>
         </div>
-        <div class="space-y-2">
-          <p class="text-[#2E594D] font-black text-xl">Cargando conceptos...</p>
-          <p class="text-gray-600 text-sm font-medium">Por favor espera un momento</p>
+        <div class="space-y-1 sm:space-y-2 px-4">
+          <p class="text-[#2E594D] font-black text-base sm:text-lg lg:text-xl">Cargando conceptos...</p>
+          <p class="text-gray-600 text-xs sm:text-sm font-medium">Por favor espera un momento</p>
         </div>
       </div>
     </div>
@@ -224,16 +224,16 @@ async function loadConcepts(){
   } catch(err){
     console.error(err);
     grid.innerHTML = `
-      <div class="col-span-full text-center py-20 bg-gradient-to-br from-red-50 via-rose-50 to-white rounded-3xl border-2 border-red-300 shadow-2xl">
-        <div class="flex flex-col items-center gap-5">
-          <div class="p-6 bg-gradient-to-br from-red-100 to-rose-100 rounded-full shadow-xl">
-            <i class="fas fa-exclamation-triangle text-6xl text-red-600"></i>
+      <div class="col-span-full text-center py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-red-50 via-rose-50 to-white rounded-2xl sm:rounded-3xl border-2 border-red-300 shadow-xl sm:shadow-2xl">
+        <div class="flex flex-col items-center gap-3 sm:gap-4 lg:gap-5 px-4">
+          <div class="p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-red-100 to-rose-100 rounded-full shadow-lg sm:shadow-xl">
+            <i class="fas fa-exclamation-triangle text-4xl sm:text-5xl lg:text-6xl text-red-600"></i>
           </div>
-          <div class="space-y-2">
-            <p class="text-red-800 font-black text-xl">Error al cargar conceptos</p>
-            <p class="text-red-600 text-sm font-medium max-w-md">${escapeHtml(err.message || 'Error desconocido')}</p>
+          <div class="space-y-1 sm:space-y-2">
+            <p class="text-red-800 font-black text-base sm:text-lg lg:text-xl">Error al cargar conceptos</p>
+            <p class="text-red-600 text-xs sm:text-sm font-medium max-w-md break-words">${escapeHtml(err.message || 'Error desconocido')}</p>
           </div>
-          <button onclick="loadConcepts()" class="mt-2 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+          <button onclick="loadConcepts()" class="mt-2 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs sm:text-sm">
             <i class="fas fa-redo mr-2"></i> Reintentar
           </button>
         </div>
@@ -248,20 +248,20 @@ function renderConcepts(){
   const list = [...conceptsCache];
   if(!list.length){
     grid.innerHTML = `
-      <div class="col-span-full text-center py-24 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 rounded-3xl shadow-2xl border-2 border-emerald-200/50">
-        <div class="flex flex-col items-center gap-6">
-          <div class="p-6 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full shadow-xl">
-            <i class="fas fa-inbox text-7xl text-emerald-700"></i>
+      <div class="col-span-full text-center py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border-2 border-emerald-200/50">
+        <div class="flex flex-col items-center gap-4 sm:gap-5 lg:gap-6 px-4">
+          <div class="p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full shadow-lg sm:shadow-xl">
+            <i class="fas fa-inbox text-5xl sm:text-6xl lg:text-7xl text-emerald-700"></i>
           </div>
-          <div class="space-y-2">
-            <p class="text-[#2E594D] font-black text-2xl">No hay conceptos registrados</p>
-            <p class="text-gray-600 text-base font-medium">Comienza creando tu primer concepto de cobro</p>
+          <div class="space-y-1 sm:space-y-2">
+            <p class="text-[#2E594D] font-black text-lg sm:text-xl lg:text-2xl">No hay conceptos registrados</p>
+            <p class="text-gray-600 text-sm sm:text-base font-medium px-4">Comienza creando tu primer concepto</p>
           </div>
-          <a href="/new" class="mt-4 px-8 py-4 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 group relative overflow-hidden">
+          <a href="/new" class="mt-2 sm:mt-4 px-5 sm:px-6 lg:px-8 py-3 sm:py-3.5 lg:py-4 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 sm:gap-3 group relative overflow-hidden text-xs sm:text-sm lg:text-base">
             <div class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="absolute inset-0 shimmer opacity-0 group-hover:opacity-100"></div>
-            <i class="fas fa-plus-circle text-lg relative z-10 group-hover:rotate-90 transition-transform duration-300"></i>
-            <span class="relative z-10">Crear Mi Primer Concepto</span>
+            <i class="fas fa-plus-circle text-base sm:text-lg relative z-10 group-hover:rotate-90 transition-transform duration-300"></i>
+            <span class="relative z-10 whitespace-nowrap">Crear Mi Primer Concepto</span>
           </a>
         </div>
       </div>
@@ -284,36 +284,36 @@ function renderConcepts(){
     })();
 
     return `
-      <div class="group bg-gradient-to-br ${isInactive ? 'from-amber-50/90 via-orange-50/80 to-amber-50/90 border-amber-300/50' : 'from-white/95 via-emerald-50/30 to-teal-50/20 border-gray-200/80'} backdrop-blur-xl rounded-3xl shadow-xl border-2 p-7 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-2 duration-500 relative overflow-hidden card">
+      <div class="group bg-gradient-to-br ${isInactive ? 'from-amber-50/90 via-orange-50/80 to-amber-50/90 border-amber-300/50' : 'from-white/95 via-emerald-50/30 to-teal-50/20 border-gray-200/80'} backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-xl border-2 p-4 sm:p-5 lg:p-7 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-2 duration-500 relative overflow-hidden card">
         <!-- Decoración de fondo con animación -->
         <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${isInactive ? 'from-amber-400/10' : 'from-emerald-400/10'} to-transparent rounded-full blur-2xl -z-0 group-hover:scale-150 transition-transform duration-700"></div>
         <div class="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr ${isInactive ? 'from-orange-400/10' : 'from-teal-400/10'} to-transparent rounded-full blur-xl -z-0 group-hover:scale-125 transition-transform duration-700"></div>
         
-        <div class="flex justify-between items-start mb-6 pb-5 border-b-2 ${isInactive ? 'border-amber-200' : 'border-gray-100'} relative z-10">
-          <div class="pr-3 flex-1">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="p-2 bg-gradient-to-br ${isInactive ? 'from-amber-100 to-orange-100' : 'from-emerald-100 to-teal-100'} rounded-xl shadow-md">
-                <i class="fas fa-receipt ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-base"></i>
+        <div class="flex flex-col sm:flex-row justify-between items-start mb-4 sm:mb-5 lg:mb-6 pb-3 sm:pb-4 lg:pb-5 border-b-2 ${isInactive ? 'border-amber-200' : 'border-gray-100'} relative z-10 gap-3 sm:gap-0">
+          <div class="pr-0 sm:pr-3 flex-1 w-full sm:w-auto">
+            <div class="flex items-start sm:items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <div class="p-1.5 sm:p-2 bg-gradient-to-br ${isInactive ? 'from-amber-100 to-orange-100' : 'from-emerald-100 to-teal-100'} rounded-lg sm:rounded-xl shadow-md flex-shrink-0">
+                <i class="fas fa-receipt ${isInactive ? 'text-amber-700' : 'text-emerald-700'} text-sm sm:text-base"></i>
               </div>
-              <h3 class="font-black text-xl text-gray-900 leading-tight line-clamp-2 group-hover:text-[#2E594D] transition-colors">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
+              <h3 class="font-black text-base sm:text-lg lg:text-xl text-gray-900 leading-tight line-clamp-2 group-hover:text-[#2E594D] transition-colors flex-1">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
             </div>
             ${getStatusBadge(c.status)}
           </div>
-          <div class="flex flex-col items-end bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 px-5 py-4 rounded-2xl shadow-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-            <span class="text-[10px] text-white/80 font-bold uppercase tracking-widest mb-1">💰 Monto</span>
-            <span class="text-2xl font-black text-white">${formatCurrency(amount)}</span>
+          <div class="flex flex-col items-center sm:items-end bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300 w-full sm:w-auto">
+            <span class="text-[9px] sm:text-[10px] text-white/80 font-bold uppercase tracking-widest mb-1">💰 Monto</span>
+            <span class="text-xl sm:text-2xl font-black text-white">${formatCurrency(amount)}</span>
           </div>
         </div>
 
-        <div class="text-sm py-5 rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-5 mb-6 shadow-lg backdrop-blur-sm relative z-10">
-          <div class="flex justify-between items-center p-3 bg-white/80 rounded-xl hover:bg-white transition-colors shadow-sm">
-            <div class="flex items-center gap-3">
-              <div class="p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg">
-                <i class="fas fa-calendar-check ${isInactive ? 'text-amber-700' : 'text-blue-700'} text-sm"></i>
+        <div class="text-xs sm:text-sm py-3 sm:py-4 lg:py-5 rounded-xl sm:rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-3 sm:px-4 lg:px-5 mb-4 sm:mb-5 lg:mb-6 shadow-md sm:shadow-lg backdrop-blur-sm relative z-10">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white/80 rounded-lg sm:rounded-xl hover:bg-white transition-colors shadow-sm">
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="p-1.5 sm:p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg flex-shrink-0">
+                <i class="fas fa-calendar-check ${isInactive ? 'text-amber-700' : 'text-blue-700'} text-xs sm:text-sm"></i>
               </div>
-              <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Vigencia</span>
+              <span class="text-gray-700 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Vigencia</span>
             </div>
-            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1 rounded-lg border border-blue-200">${escapeHtml(vigenciaText)}</span>
+            <span class="font-semibold text-gray-800 text-xs sm:text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-2 sm:px-3 py-1 rounded-lg border border-blue-200 w-full sm:w-auto text-center sm:text-left">${escapeHtml(vigenciaText)}</span>
           </div>
         </div>
 
@@ -332,40 +332,40 @@ function renderConcepts(){
               </div>
           </div>
           
-          <div class="grid grid-cols-3 gap-3 relative z-10">
-            <button onclick="window.editConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 text-white rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div class="grid grid-cols-3 gap-2 sm:gap-3 relative z-10">
+            <button onclick="window.editConcept('${c.id}')" class="group/btn py-2.5 sm:py-3 lg:py-4 text-[10px] sm:text-xs font-bold bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 text-white rounded-lg sm:rounded-xl hover:shadow-xl sm:hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
               <div class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
               <div class="absolute inset-0 shimmer opacity-0 group-hover/btn:opacity-100"></div>
-              <i class="fas fa-edit mb-1 block text-lg relative z-10 group-hover/btn:rotate-12 transition-transform"></i>
+              <i class="fas fa-edit mb-0.5 sm:mb-1 block text-sm sm:text-base lg:text-lg relative z-10 group-hover/btn:rotate-12 transition-transform"></i>
               <span class="relative z-10">Editar</span>
-            </button>
             </button>
 
             ${!isInactive ? `
-              <button onclick="window.finalizeConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-amber-100 to-orange-100 text-amber-800 rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-amber-300 transition-all duration-300 relative overflow-hidden">
+              <button onclick="window.finalizeConcept('${c.id}')" class="group/btn py-2.5 sm:py-3 lg:py-4 text-[10px] sm:text-xs font-bold bg-gradient-to-br from-amber-100 to-orange-100 text-amber-800 rounded-lg sm:rounded-xl hover:shadow-xl sm:hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-amber-300 transition-all duration-300 relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-r from-amber-200 to-orange-200 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-                <i class="fas fa-check-double mb-1 block text-lg relative z-10 group-hover/btn:scale-110 transition-transform"></i>
+                <i class="fas fa-check-double mb-0.5 sm:mb-1 block text-sm sm:text-base lg:text-lg relative z-10 group-hover/btn:scale-110 transition-transform"></i>
                 <span class="relative z-10">Finalizar</span>
               </button>
             ` : `
-              <button onclick="window.activateConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-800 rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-emerald-300 transition-all duration-300 relative overflow-hidden">
+              <button onclick="window.activateConcept('${c.id}')" class="group/btn py-2.5 sm:py-3 lg:py-4 text-[10px] sm:text-xs font-bold bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-800 rounded-lg sm:rounded-xl hover:shadow-xl sm:hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-emerald-300 transition-all duration-300 relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-r from-emerald-200 to-teal-200 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-                <i class="fas fa-play mb-1 block text-lg relative z-10 group-hover/btn:translate-x-1 transition-transform"></i>
+                <i class="fas fa-play mb-0.5 sm:mb-1 block text-sm sm:text-base lg:text-lg relative z-10 group-hover/btn:translate-x-1 transition-transform"></i>
                 <span class="relative z-10">Activar</span>
               </button>
             `}
 
-            <button onclick="window.deleteConcept('${c.id}')" class="group/btn py-4 text-xs font-bold bg-gradient-to-br from-red-100 to-rose-100 text-red-800 rounded-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-red-300 transition-all duration-300 relative overflow-hidden">
+            <button onclick="window.deleteConcept('${c.id}')" class="group/btn py-2.5 sm:py-3 lg:py-4 text-[10px] sm:text-xs font-bold bg-gradient-to-br from-red-100 to-rose-100 text-red-800 rounded-lg sm:rounded-xl hover:shadow-xl sm:hover:shadow-2xl hover:scale-105 hover:-translate-y-1 border-2 border-red-300 transition-all duration-300 relative overflow-hidden">
               <div class="absolute inset-0 bg-gradient-to-r from-red-200 to-rose-200 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-              <i class="fas fa-trash-alt mb-1 block text-lg relative z-10 group-hover/btn:rotate-12 transition-transform"></i>
+              <i class="fas fa-trash-alt mb-0.5 sm:mb-1 block text-sm sm:text-base lg:text-lg relative z-10 group-hover/btn:rotate-12 transition-transform"></i>
               <span class="relative z-10">Borrar</span>
             </button>
           </div>
           
-          <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="w-full text-xs text-[#2E594D] hover:text-white font-bold tracking-wider transition-all bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-[#2E594D] hover:to-emerald-700 py-3 rounded-xl border-2 border-emerald-200 hover:border-emerald-600 shadow-md hover:shadow-xl relative z-10 group/info">
-            <i class="fas fa-info-circle mr-2 group-hover/info:rotate-180 transition-transform duration-500"></i> 
-            <span>Ver descripción completa</span>
-            <i class="fas fa-chevron-down ml-2 group-hover/info:translate-y-1 transition-transform"></i>
+          <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="w-full text-[10px] sm:text-xs text-[#2E594D] hover:text-white font-bold tracking-wider transition-all bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-[#2E594D] hover:to-emerald-700 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-emerald-200 hover:border-emerald-600 shadow-md hover:shadow-xl relative z-10 group/info mt-2 sm:mt-0">
+            <i class="fas fa-info-circle mr-1 sm:mr-2 group-hover/info:rotate-180 transition-transform duration-500"></i> 
+            <span class="hidden sm:inline">Ver descripción completa</span>
+            <span class="sm:hidden">Descripción</span>
+            <i class="fas fa-chevron-down ml-1 sm:ml-2 group-hover/info:translate-y-1 transition-transform"></i>
           </button>
         </div>
       </div>
@@ -462,7 +462,19 @@ loadConcepts();
 
 <style>
 .hidden { display:none; }
+.line-clamp-1 { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1; }
 .line-clamp-2 { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .col-span-full { grid-column: 1 / -1; }
+
+/* Optimizaciones adicionales para móvil */
+@media (max-width: 640px) {
+  .card:hover {
+    transform: translateY(-3px) scale(1.01);
+  }
+  
+  .animate-float {
+    animation: none; /* Desactivar animaciones complejas en móvil para mejor rendimiento */
+  }
+}
 </style>
 </Layout>
