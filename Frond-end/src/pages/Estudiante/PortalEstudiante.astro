@@ -1210,8 +1210,6 @@ const title = 'Panel de Estudiante';
 </div>
 
 <script>
-  import { StudentAPI } from '../../utils/studentAPI.js';
-
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
 
@@ -1238,8 +1236,14 @@ const title = 'Panel de Estudiante';
             return;
           }
 
+          // Usar window.StudentAPI que es el script global cargado arriba
+          if (!window.StudentAPI) {
+            showToast('error', 'API no disponible. Por favor, recarga la página.');
+            return;
+          }
+
           // Call API to refresh cache
-          const response = await StudentAPI.refreshDashboardCache(userId ? parseInt(userId) : null, token, 'student');
+          const response = await window.StudentAPI.refreshDashboardCache(userId ? parseInt(userId) : null, token, 'student');
           
           if (response.success) {
             showToast('success', response.message || 'Caché actualizado correctamente');

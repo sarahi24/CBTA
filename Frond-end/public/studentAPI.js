@@ -128,19 +128,39 @@ window.StudentAPI = {
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const url = new URL(`${API_BASE}/pending-payment`);
-      if (studentId) url.searchParams.append('id', studentId);
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+      
+      // Log inicial
+      console.log(`🔍 [StudentAPI] getPendingPayments - URL base: ${url.toString()}, forceRefresh: ${forceRefresh}`);
+      
+      if (forceRefresh) {
+        url.searchParams.append('forceRefresh', 'true');
+      }
+      
+      console.log(`🔍 [StudentAPI] getPendingPayments URL final: ${url.toString()}`);
+      
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': role
+          'X-User-Role': role,
+          'X-User-Permission': 'view.pending.concepts'
         }
       });
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+
+      console.log(`📡 [StudentAPI] getPendingPayments Response Status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.error(`❌ [StudentAPI] getPendingPayments Error Response (${response.status}):`, errorText);
+        const errorData = errorText ? JSON.parse(errorText) : {};
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getPendingPayments Success:`, data);
+      return data;
     } catch (err) {
       console.error('❌ StudentAPI.getPendingPayments:', err);
       throw err;
