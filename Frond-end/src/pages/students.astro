@@ -240,43 +240,60 @@ async function loadStudents(forceRefresh = false) {
                 console.log('🔍 Primer estudiante completo:', studentsData.items[0]);
                 console.log('📋 Todas las claves del estudiante:', Object.keys(studentsData.items[0]).join(', '));
                 
+                // Debug de campos de carrera
+                const firstStudent = studentsData.items[0];
+                console.log('🏫 Campos relacionados con CARRERA:');
+                console.log('  - career_id:', firstStudent.career_id);
+                console.log('  - id_career:', firstStudent.id_career);
+                console.log('  - carrera_id:', firstStudent.carrera_id);
+                console.log('  - career:', firstStudent.career);
+                console.log('  - id_carrera:', firstStudent.id_carrera);
+                console.log('  - career_name:', firstStudent.career_name);
+                console.log('  - careerName:', firstStudent.careerName);
+                console.log('  - nombre_carrera:', firstStudent.nombre_carrera);
+                
+                // Debug de campos de semestre (para comparación)
+                console.log('📚 Campo de SEMESTRE:');
+                console.log('  - semestre:', firstStudent.semestre);
+                
                 // Aplicar filtros locales
                 let filteredStudents = studentsData.items;
                 
                 // Filtrar por carrera
                 if (filters.carrera) {
-                    console.log(`🎓 Filtrando por carrera ID: "${filters.carrera}"`);
+                    console.log(`\n🎓 Filtrando por carrera ID: "${filters.carrera}"`);
                     const before = filteredStudents.length;
                     
                     filteredStudents = filteredStudents.filter(s => {
+                        // Mostrar info de cada estudiante cuando buscamos por la primera carrera
+                        if (filters.carrera && filteredStudents.length === before) {
+                            console.log(`  Estudiante ${s.n_control}:`);
+                            console.log(`    career_id: ${s.career_id}`);
+                            console.log(`    id_career: ${s.id_career}`);
+                            console.log(`    carrera_id: ${s.carrera_id}`);
+                        }
+                        
                         // Intentar todos los posibles nombres de campo para carrera
                         const careerField = s.career_id || s.id_career || s.carrera_id || s.career || s.id_carrera;
                         const match = String(careerField) === String(filters.carrera);
                         
-                        if (s.n_control === studentsData.items[0]?.n_control) {
-                            console.log(`  Estudiante ${s.n_control}: careerField="${careerField}", filtro="${filters.carrera}", match=${match}`);
-                        }
-                        
                         return match;
                     });
                     
-                    console.log(`📊 Estudiantes: ${before} → ${filteredStudents.length} (filtro carrera)`);
+                    console.log(`📊 Resultado: ${before} → ${filteredStudents.length} estudiantes`);
                 }
                 
                 // Filtrar por semestre
                 if (filters.semestre) {
-                    console.log(`📚 Filtrando por semestre: "${filters.semestre}"`);
+                    console.log(`\n📚 Filtrando por semestre: "${filters.semestre}"`);
                     const before = filteredStudents.length;
                     
                     filteredStudents = filteredStudents.filter(s => {
                         const match = String(s.semestre || '') === String(filters.semestre);
-                        if (s.n_control === studentsData.items[0]?.n_control) {
-                            console.log(`  Estudiante ${s.n_control}: semestre="${s.semestre}", filtro="${filters.semestre}", match=${match}`);
-                        }
                         return match;
                     });
                     
-                    console.log(`📊 Estudiantes: ${before} → ${filteredStudents.length} (filtro semestre)`);
+                    console.log(`📊 Resultado: ${before} → ${filteredStudents.length} estudiantes`);
                 }
                 
                 currentPage = studentsData.currentPage || 1;
