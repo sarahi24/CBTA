@@ -820,11 +820,5 @@ window.StudentAPI = {
   }
 };
 
-// Crear referencia para exportación
-const StudentAPI = window.StudentAPI;
-
-// Exportar para módulos ES6
-export { StudentAPI };
-
 // También disponible globalmente como window.StudentAPI
 console.log('✅ StudentAPI cargado desde /public/studentAPI.js');

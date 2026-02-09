@@ -1,6 +1,5 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
-import { StudentAPI } from '../../utils/studentAPI.js';
 
 const title = "Finanzas Estudiantiles";
 // Todo el manejo de datos se hará del lado del cliente
@@ -26,6 +25,34 @@ const title = "Finanzas Estudiantiles";
       showOverdueAlert: false,
       activeTab: 'pending',
 
+      async ensureStudentAPI() {
+        if (window.StudentAPI) return true;
+
+        const existing = document.querySelector('script[data-student-api]');
+        if (!existing) {
+          const script = document.createElement('script');
+          script.src = '/studentAPI.js';
+          script.async = true;
+          script.dataset.studentApi = 'true';
+          document.head.appendChild(script);
+        }
+
+        return new Promise((resolve) => {
+          const start = Date.now();
+          const timer = setInterval(() => {
+            if (window.StudentAPI) {
+              clearInterval(timer);
+              resolve(true);
+              return;
+            }
+            if (Date.now() - start > 4000) {
+              clearInterval(timer);
+              resolve(false);
+            }
+          }, 100);
+        });
+      },
+
       async init() {
         // Obtener datos del usuario desde localStorage de forma más robusta
         const userName = localStorage.getItem('userName');
@@ -49,13 +76,14 @@ const title = "Finanzas Estudiantiles";
         
         console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
         console.log('🔍 [Adeudos] Token disponible:', !!token);
-        console.log('🔍 [Adeudos] StudentAPI disponible:', !!window.StudentAPI);
+        const apiReady = await this.ensureStudentAPI();
+        console.log('🔍 [Adeudos] StudentAPI disponible:', apiReady);
         
-        if (token) {
+        if (token && apiReady) {
           await this.loadPendingPayments();
         }
 
-        if (token) {
+        if (token && apiReady) {
           // Cargar tarjetas desde API usando StudentAPI
           try {
             console.log('📥 Cargando tarjetas desde StudentAPI...');
