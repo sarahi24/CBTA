@@ -914,18 +914,26 @@ const title = 'Panel de Estudiante';
     .student-name { font-size: 1.5rem; }
     .mobile-hide { display: none; }
 
-    .stats-scroll-container { 
-      display: flex; 
-      overflow-x: auto; 
-      margin: 0 -1rem; 
-      padding: 0 1rem 0.5rem 1rem;
-      scrollbar-width: none;
+    .stats-scroll-container > .collapsible-content {
+      grid-template-columns: 1fr !important;
+      gap: 1rem;
     }
-    .stats-scroll-container::-webkit-scrollbar { display: none; }
 
-    .stats-scroll-container > * {
-      min-width: 240px;
-      flex: 0 0 auto;
+    .stats-scroll-container .card-container {
+      padding: 1rem;
+      min-height: auto;
+    }
+
+    .stats-scroll-container .label {
+      font-size: 0.85rem;
+    }
+
+    .stats-scroll-container .amount {
+      font-size: 1.75rem;
+    }
+
+    .stats-scroll-container .subtitle {
+      font-size: 0.8rem;
     }
 
     .bottom-grid { grid-template-columns: 1fr; gap: 1.5rem; }
