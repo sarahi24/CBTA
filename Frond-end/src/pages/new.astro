@@ -167,15 +167,47 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
       populateForm(concept) {
         console.log('📋 Poblando formulario con concepto:', concept);
+        
+        // Asignar campos básicos
         this.formData.id = concept.id;
-        this.formData.title = concept.title;
-        this.formData.amount = concept.amount;
+        this.formData.title = concept.title || '';
+        this.formData.amount = parseFloat(concept.amount) || 0;
         this.formData.description = concept.description || '';
-        this.formData.status = concept.status;
-        this.formData.startDate = concept.start_date || concept.startDate || '';
-        this.formData.endDate = concept.end_date || concept.endDate || '';
+        
+        // Mapear status del API (activo/inactivo) al formato del formulario (active/inactive)
+        const statusMap = {
+          'activo': 'active',
+          'active': 'active',
+          'inactivo': 'inactive',
+          'inactive': 'inactive',
+          'finalizado': 'inactive',
+          'finalized': 'inactive'
+        };
+        this.formData.status = statusMap[(concept.status || '').toLowerCase()] || 'active';
+        console.log('✅ Status mapeado:', concept.status, '→', this.formData.status);
+        
+        // Formatear fechas para input type="date" (YYYY-MM-DD)
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          // Si ya está en formato YYYY-MM-DD, retornar tal cual
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+          // Intentar parsear y formatear
+          try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '';
+            return date.toISOString().split('T')[0];
+          } catch {
+            return '';
+          }
+        };
+        
+        this.formData.startDate = formatDate(concept.start_date || concept.startDate);
+        this.formData.endDate = formatDate(concept.end_date || concept.endDate);
+        console.log('✅ Fechas formateadas:', this.formData.startDate, '→', this.formData.endDate);
+        
+        // Procesar scopeRules
         if (concept.scopeRules) {
-          this.formData.allStudents = concept.scopeRules.allStudents;
+          this.formData.allStudents = concept.scopeRules.allStudents || false;
           
           // Asegurar que careers sean strings
           this.formData.selectedCareers = (concept.scopeRules.careers || []).map(c => String(c));
@@ -194,6 +226,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
           }
         }
+        
+        console.log('✅ Formulario poblado completamente:', this.formData);
       },
 
       toggleSpecificStudent(student) {
