@@ -225,38 +225,19 @@ async function loadStudents(forceRefresh = false) {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
-            forceRefresh: forceRefresh,
-            role: role,
-            permission: 'view.payments.student.summary'
+            forceRefresh: forceRefresh
         });
 
         console.log('📡 Respuesta del servidor:', response);
 
-        if (response.success && response.data) {
-            let studentsData = null;
+        if (response.success && response.data?.payments) {
+            const studentsData = response.data.payments;
             
-            if (response.data.payments) {
-                studentsData = response.data.payments;
-            }
-            else if (response.data.students) {
-                studentsData = response.data.students;
-            }
-            else if (Array.isArray(response.data)) {
-                studentsData = {
-                    items: response.data,
-                    currentPage: 1,
-                    lastPage: 1,
-                    total: response.data.length
-                };
-            }
-            else if (response.data.data) {
-                studentsData = response.data.data.payments || response.data.data;
-            }
+            console.log(`✅ Estudiantes cargados: ${studentsData.items?.length || 0}`);
             
-            if (studentsData && studentsData.items) {
-                console.log(`✅ Estudiantes cargados: ${studentsData.items.length}`);
-                console.log('🔍 Primer estudiante completo:', studentsData.items[0]);
-                console.log('📋 Todas las claves del estudiante:', Object.keys(studentsData.items[0]).join(', '));
+            if (studentsData.items && studentsData.items.length > 0) {
+                console.log('🔍 Primer estudiante:', studentsData.items[0]);
+                console.log('📋 Campos disponibles:', Object.keys(studentsData.items[0]).join(', '));
                 
                 // Debug de campos de carrera
                 const firstStudent = studentsData.items[0];
@@ -359,26 +340,32 @@ function renderTable(students) {
     }
 
     tbodyDesktop.innerHTML = students.map(s => {
-        const hasPending = Number(s.num_pending || 0) > 0;
-        const hasExpired = Number(s.num_expired || 0) > 0;
-        const pendingAmount = Number(s.total_amount_pending || 0);
+        // Campos según API oficial
+        const pendingAmount = Number(s.total_pending || 0);
         const paidAmount = Number(s.total_paid || 0);
+        const overdueAmount = Number(s.total_overdue || 0);
+        const fullName = s.full_name || s.fullName || 'Sin nombre';
+        const nControl = s.n_control || 'N/A';
+        
+        // Calcular indicadores (si no vienen del backend)
+        const hasPending = pendingAmount > 0;
+        const hasOverdue = overdueAmount > 0;
 
         return `
             <tr class="hover:bg-[#2D584C]/5 transition border-b border-gray-50">
-                <td class="px-4 py-4 font-mono text-xs font-bold text-gray-600">${s.n_control || 'N/A'}</td>
-                <td class="px-4 py-4 font-bold text-gray-900 text-sm">${s.fullName || 'Sin nombre'}</td>
+                <td class="px-4 py-4 font-mono text-xs font-bold text-gray-600">${nControl}</td>
+                <td class="px-4 py-4 font-bold text-gray-900 text-sm">${fullName}</td>
                 <td class="px-4 py-4 text-center font-medium">${s.semestre || '-'}º</td>
                 <td class="px-4 py-4 text-gray-600 text-xs">${s.career_name || 'N/A'}</td>
                 <td class="px-3 py-4 text-center">
                     <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-black ${
                         hasPending ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-400'
-                    }">${s.num_pending || 0}</span>
+                    }" title="Pendientes: $${pendingAmount.toFixed(2)}">${hasPending ? '•' : '0'}</span>
                 </td>
                 <td class="px-3 py-4 text-center">
                     <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-black ${
-                        hasExpired ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-400'
-                    }">${s.num_expired || 0}</span>
+                        hasOverdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-400'
+                    }" title="Vencidos: $${overdueAmount.toFixed(2)}">${hasOverdue ? '•' : '0'}</span>
                 </td>
                 <td class="px-4 py-4 text-right font-black ${pendingAmount > 0 ? 'text-red-600' : 'text-gray-400'}">$${pendingAmount.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                 <td class="px-4 py-4 text-right font-black ${paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}">$${paidAmount.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
