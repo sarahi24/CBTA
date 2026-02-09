@@ -64,12 +64,19 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
     <!-- Indicador de búsqueda activa -->
     <div id="search-indicator" class="hidden mb-4 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <i class="fas fa-filter text-blue-600"></i>
-        <span class="text-sm font-bold text-blue-900">Buscando: <span id="search-term" class="font-black text-blue-700"></span></span>
-        <span id="search-results-count" class="ml-2 px-2 py-1 bg-blue-600 text-white text-xs font-black rounded-full"></span>
+      <div class="flex items-center gap-3">
+        <i class="fas fa-search text-blue-600 text-lg"></i>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-blue-900">Buscando: "<span id="search-term" class="font-black text-blue-700"></span>"</span>
+            <span id="search-results-count" class="px-2 py-1 bg-blue-600 text-white text-xs font-black rounded-full"></span>
+          </div>
+          <p class="text-[10px] text-blue-600 mt-1">
+            <i class="fas fa-info-circle"></i> Se busca en: nombre, matrícula y concepto
+          </p>
+        </div>
       </div>
-      <button id="clear-search-badge" class="text-blue-600 hover:text-blue-800 font-bold text-sm">
+      <button id="clear-search-badge" class="text-blue-600 hover:text-blue-800 font-bold text-sm flex items-center gap-2 px-3 py-2 hover:bg-blue-100 rounded-lg transition">
         <i class="fas fa-times"></i> Limpiar
       </button>
     </div>
@@ -309,12 +316,17 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         const term = searchInput.value.toLowerCase().trim();
         const allPending = getCharges().filter(c => !['paid', 'pagado'].includes(String(c.status).toLowerCase()));
         
-        // Filtrar localmente por nombre de estudiante, matrícula o concepto
+        // Filtrar localmente por nombre de estudiante, matrícula o concepto (búsqueda parcial)
         const filtered = allPending.filter(ch => {
-            const fullName = (ch.userName || '').toLowerCase();
-            const nControl = (ch.nControl || '').toLowerCase();
-            const concept = (ch.concept || '').toLowerCase();
-            return !term || fullName.includes(term) || nControl.includes(term) || concept.includes(term);
+            if (!term) return true; // Mostrar todos si no hay término de búsqueda
+            
+            // Convertir todo a string y lowercase para búsqueda case-insensitive
+            const fullName = String(ch.userName || '').toLowerCase();
+            const nControl = String(ch.nControl || '').toLowerCase();
+            const concept = String(ch.concept || '').toLowerCase();
+            
+            // Buscar coincidencias parciales en cualquier campo
+            return fullName.includes(term) || nControl.includes(term) || concept.includes(term);
         });
 
         // Mostrar/ocultar indicador de búsqueda
@@ -361,11 +373,17 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
             `;
         } else {
             tableBody.innerHTML = pageData.map((ch) => {
-                // Highlight del término de búsqueda
+                // Highlight del término de búsqueda con escape de caracteres especiales
                 const highlightText = (text, term) => {
-                    if (!term) return text;
-                    const regex = new RegExp(`(${term})`, 'gi');
-                    return text.replace(regex, '<mark class="bg-yellow-200 font-black">$1</mark>');
+                    if (!term || !text) return text;
+                    try {
+                        // Escapar caracteres especiales de regex
+                        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`(${escapedTerm})`, 'gi');
+                        return text.replace(regex, '<mark class="bg-yellow-300 text-gray-900 font-extrabold px-1 rounded">$1</mark>');
+                    } catch (e) {
+                        return text;
+                    }
                 };
 
                 const userName = ch.userName || 'N/A';
@@ -434,7 +452,24 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       };
     }
 
-    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    // Búsqueda con debounce para mejor rendimiento
+    let searchTimeout = null;
+    searchInput.addEventListener('input', () => { 
+        clearTimeout(searchTimeout);
+        
+        // Mostrar indicador de "buscando..."
+        const searchIndicator = document.getElementById('search-indicator');
+        if (searchInput.value.trim()) {
+            searchIndicator.classList.remove('hidden');
+            document.getElementById('search-term').textContent = searchInput.value;
+            document.getElementById('search-results-count').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        
+        searchTimeout = setTimeout(() => {
+            currentPage = 1; 
+            renderTable();
+        }, 300); // Espera 300ms después de que el usuario deja de escribir
+    });
     
     // Limpiar búsqueda
     document.getElementById('clear-search').addEventListener('click', () => {
