@@ -381,9 +381,9 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     
                     if (roleLower === 'student' || roleLower === 'estudiante' || roleLower === 'parent' || roleLower === 'padre') {
                         redirectUrl = '/Estudiante/PortalEstudiante';
-                    } else if (roleLower === 'admin' || roleLower === 'administrador' || 
-                               roleLower === 'financial-staff' || roleLower === 'financial staff' || 
-                               roleLower === 'caja') {
+                    } else if (roleLower === 'admin' || roleLower === 'administrador') {
+                        redirectUrl = '/roles';
+                    } else if (roleLower === 'financial-staff' || roleLower === 'financial staff' || roleLower === 'caja') {
                         redirectUrl = '/Dashboard';
                     }
                     
