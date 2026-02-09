@@ -5,15 +5,10 @@ import Layout from '../layouts/Layout.astro';
 const MAX_SEMESTER = 10;
 const SEMESTERS = Array.from({ length: MAX_SEMESTER }, (_, i) => i + 1);
 
-const CAREERS = [
-  { code: 'TAG-E', name: 'Técnico Agropecuario' },
-  { code: 'TOF', name: 'Técnico en Ofimática' },
-  { code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
-  { code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
-  { code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
-];
+// Las carreras se cargarán dinámicamente desde API en el cliente
+const CAREERS = [];
 
-const careerEntries = CAREERS.map(c => [c.code, c.name]);
+const careerEntries = CAREERS.map(c => [c.id, c.career_name]);
 const CAREER_MAP = Object.fromEntries([['', 'Sin Carrera'], ...careerEntries]);
 
 const careerMapJSON = JSON.stringify(CAREER_MAP);
@@ -96,8 +91,7 @@ body {
         <div>
           <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Programa Educativo:</label>
           <select id="filter-carrera" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#2D584C] bg-gray-50">
-            <option value="">Todos los Programas</option>
-            {CAREERS.map(c => <option value={c.code}>{c.name}</option>)}
+            <option value="">Cargando carreras...</option>
           </select>
         </div>
         <div>
@@ -219,25 +213,16 @@ async function loadStudents(forceRefresh = false) {
         });
 
         console.log('📡 Respuesta del servidor:', response);
-        console.log('📊 response.success:', response.success);
-        console.log('📊 response.data:', response.data);
-        console.log('📊 response.data?.payments:', response.data?.payments);
 
         if (response.success && response.data) {
-            // Intentar diferentes estructuras de respuesta
             let studentsData = null;
             
-            // Opción 1: response.data.payments (estructura esperada)
             if (response.data.payments) {
                 studentsData = response.data.payments;
-                console.log('✅ Usando estructura: response.data.payments');
             }
-            // Opción 2: response.data.students (alternativa)
             else if (response.data.students) {
                 studentsData = response.data.students;
-                console.log('✅ Usando estructura: response.data.students');
             }
-            // Opción 3: response.data directamente es el array
             else if (Array.isArray(response.data)) {
                 studentsData = {
                     items: response.data,
@@ -245,34 +230,44 @@ async function loadStudents(forceRefresh = false) {
                     lastPage: 1,
                     total: response.data.length
                 };
-                console.log('✅ Usando estructura: response.data (array directo)');
             }
-            // Opción 4: response.data.data (doble anidación)
             else if (response.data.data) {
                 studentsData = response.data.data.payments || response.data.data;
-                console.log('✅ Usando estructura: response.data.data');
             }
             
             if (studentsData && studentsData.items) {
+                console.log(`✅ Estudiantes cargados: ${studentsData.items.length}`);
+                
+                // Aplicar filtros locales
+                let filteredStudents = studentsData.items;
+                
+                // Filtrar por carrera
+                if (filters.carrera) {
+                    filteredStudents = filteredStudents.filter(s => {
+                        const careerMatch = s.career_id == filters.carrera || s.id_career == filters.carrera;
+                        return careerMatch;
+                    });
+                }
+                
+                // Filtrar por semestre
+                if (filters.semestre) {
+                    filteredStudents = filteredStudents.filter(s => {
+                        const semesterMatch = String(s.semestre || '') === String(filters.semestre);
+                        return semesterMatch;
+                    });
+                }
+                
+                // Actualizar paginación basada en resultados filtrados
                 currentPage = studentsData.currentPage || 1;
                 lastPage = studentsData.lastPage || 1;
-                totalRecords = studentsData.total || 0;
-
-                console.log(`✅ Estudiantes cargados: ${studentsData.items.length} de ${totalRecords} total`);
-                console.log('📋 Primer estudiante (muestra):', studentsData.items[0]);
+                totalRecords = filteredStudents.length;
                 
-                renderTable(studentsData.items);
+                renderTable(filteredStudents);
                 updatePaginationInfo();
             } else {
-                console.error('❌ No se encontró estructura válida de datos');
-                console.error('Estructura recibida:', {
-                    success: response.success,
-                    dataKeys: response.data ? Object.keys(response.data) : []
-                });
                 showError('Estructura de datos incorrecta del servidor');
             }
         } else {
-            console.error('❌ Respuesta sin éxito o sin datos');
             showError('No se pudieron cargar los estudiantes');
         }
     } catch (error) {
@@ -436,8 +431,46 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Cargar carreras desde API
+async function loadCareers() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            console.warn('⚠️ No hay token para cargar carreras');
+            return;
+        }
+
+        const response = await StudentAPI.getCareers(token);
+        console.log('📡 Respuesta de carreras:', response);
+
+        if (response.success && response.data && response.data.careers) {
+            const careers = response.data.careers;
+            console.log(`✅ Carreras cargadas: ${careers.length}`);
+
+            // Llenar el select con las opciones
+            const careerSelect = document.getElementById('filter-carrera');
+            careerSelect.innerHTML = '<option value="">Todos los Programas</option>';
+
+            careers.forEach(career => {
+                const option = document.createElement('option');
+                option.value = career.id;
+                option.textContent = career.career_name;
+                careerSelect.appendChild(option);
+            });
+
+            console.log('✅ Select de carreras poblado correctamente');
+        } else {
+            console.warn('⚠️ Respuesta de carreras sin estructura válida');
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar carreras:', error);
+        // Mostrar un mensaje pero no detener la carga de estudiantes
+        document.getElementById('filter-carrera').innerHTML = '<option value="">Error al cargar carreras</option>';
+    }
+}
+
 // Cargar estudiantes al iniciar
-loadStudents();
+loadCareers().then(() => loadStudents());
 </script>
 
 </Layout>

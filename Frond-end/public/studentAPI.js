@@ -755,6 +755,60 @@ window.StudentAPI = {
       console.error('❌ StudentAPI.getAllPendingDebts:', err);
       throw err;
     }
+  },
+
+  /**
+   * CAREERS - GET /api/v1/careers
+   * Obtener lista de todas las carreras disponibles
+   * @param {string} token - Token de autenticación
+   * @param {object} options - Opciones
+   * @param {boolean} options.forceRefresh - Forzar actualización del caché
+   */
+  async getCareers(token, options = {}) {
+    try {
+      const {
+        forceRefresh = false
+      } = options;
+
+      const params = new URL(`${API_BASE}/careers`);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+
+      console.log(`🔍 [StudentAPI] getCareers URL: ${params.toString()}`);
+
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.careers'
+        }
+      });
+
+      console.log(`📡 [StudentAPI] getCareers Response Status: ${response.status}`);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleAuthError(401);
+          throw new Error('No autenticado. Por favor inicia sesión.');
+        }
+        if (response.status === 403) {
+          throw new Error('No tienes permiso para ver las carreras.');
+        }
+        const errorText = await response.text();
+        console.error(`❌ [StudentAPI] getCareers Error Response:`, errorText);
+        const errorData = JSON.parse(errorText || '{}');
+        throw new Error(errorData.message || 'Error al obtener carreras');
+      }
+
+      const data = await response.json();
+      console.log(`✅ [StudentAPI] getCareers Success:`, data);
+      return data;
+    } catch (err) {
+      console.error('❌ StudentAPI.getCareers:', err);
+      throw err;
+    }
   }
 };
 
