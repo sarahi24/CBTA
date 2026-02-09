@@ -53,42 +53,37 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
     <div class="flex flex-row items-center gap-3 mb-8 w-full">
         <div class="relative flex-grow">
             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="search-input" placeholder="Buscar por email, nombre o concepto..." class="w-full pl-12 pr-4 h-[48px] bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-4 focus:ring-[#2E594D]/10 focus:border-[#2E594D] outline-none transition-all shadow-md" />
+            <input type="text" id="search-input" placeholder="Buscar por concepto..." class="w-full pl-12 pr-12 h-[48px] bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-4 focus:ring-[#2E594D]/10 focus:border-[#2E594D] outline-none transition-all shadow-md" />
+            <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors hidden">
+                <i class="fas fa-times-circle"></i>
+            </button>
         </div>
 
-        <div class="flex items-center gap-2 relative">
+        <div class="flex items-center gap-2">
             <button id="refresh-btn" class="flex items-center gap-2 px-5 h-[48px] border-2 border-green-600 text-green-600 font-bold text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md" title="Actualizar caché">
                 <i class="fas fa-sync-alt"></i>
                 <span>Actualizar</span>
             </button>
-            <button id="toggle-filters" class="flex items-center gap-2 px-5 h-[48px] border-2 border-[#2E594D] text-[#2E594D] font-bold text-sm rounded-xl hover:bg-[#2E594D] hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md">
-                <i class="fas fa-filter"></i>
-                <span>Filtros</span>
-            </button>
-
-            <div id="filter-menu" class="filter-card">
-                <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Opciones de Filtrado</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Semestre:</label>
-                        <select id="semester-filter" class="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2E594D]">
-                            <option value="all">Todos</option>
-                            {[...Array(10)].map((_, i) => ( <option value={i + 1}>{i + 1}º Semestre</option> ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Método:</label>
-                        <select id="method-filter" class="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2E594D]">
-                            <option value="all">Todos</option>
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Depósito">Depósito</option>
-                        </select>
-                    </div>
-                    <button id="clear-filters" class="w-full mt-2 p-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors">Limpiar Filtros</button>
-                </div>
-            </div>
         </div>
+    </div>
+
+    <!-- Indicador de búsqueda activa -->
+    <div id="search-indicator" class="hidden mb-4 p-3 bg-green-50 border-2 border-green-200 rounded-xl flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-search text-green-600 text-lg"></i>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-green-900">Buscando: "<span id="search-term" class="font-black text-green-700"></span>"</span>
+            <span id="search-results-count" class="px-2 py-1 bg-green-600 text-white text-xs font-black rounded-full"></span>
+          </div>
+          <p class="text-[10px] text-green-600 mt-1">
+            <i class="fas fa-info-circle"></i> Se busca en: nombre del concepto
+          </p>
+        </div>
+      </div>
+      <button id="clear-search-badge" class="text-green-600 hover:text-green-800 font-bold text-sm flex items-center gap-2 px-3 py-2 hover:bg-green-100 rounded-lg transition">
+        <i class="fas fa-times"></i> Limpiar
+      </button>
     </div>
 
     <div class="bg-gradient-to-br from-white via-[#2D584C]/5 to-white rounded-2xl shadow-2xl border-2 border-[#2D584C]/20 overflow-hidden mb-8">
@@ -166,7 +161,6 @@ import { StudentAPI } from '/studentAPI.js';
     const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
     const refreshBtn = document.getElementById('refresh-btn');
-    const filterMenu = document.getElementById('filter-menu');
 
     // Formatear fecha
     const formatDate = (dateString) => {
@@ -194,13 +188,6 @@ import { StudentAPI } from '/studentAPI.js';
             lastPaymentDate: item.last_payment_date || item.lastPaymentDate || null
         };
     };
-
-    document.getElementById('toggle-filters').onclick = (e) => { 
-        e.stopPropagation(); 
-        filterMenu.classList.toggle('show'); 
-    };
-    document.onclick = () => filterMenu.classList.remove('show');
-    filterMenu.onclick = (e) => e.stopPropagation();
 
     // Cargar pagos por concepto desde API con paginación
     async function loadPayments(forceRefresh = false) {
@@ -260,14 +247,46 @@ import { StudentAPI } from '/studentAPI.js';
 
     // Renderizar pagos por concepto en la tabla
     const renderPayments = (payments) => {
-        if (!payments || payments.length === 0) {
+        const term = searchTerm.toLowerCase().trim();
+        
+        // Filtrar localmente por nombre de concepto
+        let filtered = payments;
+        if (term) {
+            filtered = payments.filter(p => {
+                const conceptName = String(p.concept_name || p.conceptName || '').toLowerCase();
+                return conceptName.includes(term);
+            });
+        }
+
+        // Mostrar/ocultar indicador de búsqueda
+        const searchIndicator = document.getElementById('search-indicator');
+        const searchTermElement = document.getElementById('search-term');
+        const searchResultsCount = document.getElementById('search-results-count');
+        const clearSearchBtn = document.getElementById('clear-search');
+
+        if (term) {
+            searchIndicator.classList.remove('hidden');
+            searchTermElement.textContent = searchInput.value;
+            searchResultsCount.textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`;
+            clearSearchBtn.classList.remove('hidden');
+        } else {
+            searchIndicator.classList.add('hidden');
+            clearSearchBtn.classList.add('hidden');
+        }
+
+        if (!filtered || filtered.length === 0) {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="6" class="px-8 py-12 text-center">
                         <div class="flex flex-col items-center gap-3">
-                            <i class="fas fa-inbox text-5xl text-gray-300"></i>
-                            <p class="text-gray-500 font-bold">No se encontraron conceptos de pago</p>
-                            <p class="text-gray-400 text-sm">Intenta ajustar los filtros de búsqueda</p>
+                            <i class="fas fa-search text-5xl text-gray-300"></i>
+                            <p class="text-gray-500 font-bold">
+                                ${term ? 'No se encontraron resultados' : 'No se encontraron conceptos de pago'}
+                            </p>
+                            <p class="text-gray-400 text-sm">
+                                ${term ? `No hay coincidencias para "${searchInput.value}"` : 'Intenta ajustar los filtros de búsqueda'}
+                            </p>
+                            ${term ? `<button onclick="document.getElementById('search-input').value=''; document.getElementById('search-input').dispatchEvent(new Event('input'));" class="mt-4 px-4 py-2 bg-[#2D584C] text-white rounded-lg font-bold text-sm hover:bg-[#1e3d35] transition">Limpiar búsqueda</button>` : ''}
                         </div>
                     </td>
                 </tr>
@@ -275,8 +294,20 @@ import { StudentAPI } from '/studentAPI.js';
             return;
         }
 
-        tableBody.innerHTML = payments.map((p, idx) => {
+        tableBody.innerHTML = filtered.map((p, idx) => {
             const normalized = normalizePaymentConcept(p);
+            
+            // Highlight del término de búsqueda
+            const highlightText = (text, term) => {
+                if (!term || !text) return text;
+                try {
+                    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(${escapedTerm})`, 'gi');
+                    return text.replace(regex, '<mark class="bg-yellow-300 text-gray-900 font-extrabold px-1 rounded">$1</mark>');
+                } catch (e) {
+                    return text;
+                }
+            };
             
             // Determinar color de tasa de cobranza
             let collectionColor = 'text-red-600';
@@ -292,7 +323,7 @@ import { StudentAPI } from '/studentAPI.js';
                 <tr class="hover:bg-gradient-to-r hover:from-[#2D584C]/5 hover:to-transparent transition-all duration-200 cursor-pointer concept-row" data-concept="${normalized.conceptName}" data-index="${idx}">
                     <td class="px-8 py-5">
                         <span class="text-gray-900 font-extrabold text-sm uppercase block tracking-tight">
-                            ${normalized.conceptName}
+                            ${highlightText(normalized.conceptName, term)}
                         </span>
                     </td>
                     <td class="px-8 py-5 text-right">
@@ -500,12 +531,38 @@ import { StudentAPI } from '/studentAPI.js';
     // Event listeners
     searchInput.oninput = () => { 
         clearTimeout(searchTimeout);
+        
+        // Mostrar indicador de "buscando..."
+        const searchIndicator = document.getElementById('search-indicator');
+        if (searchInput.value.trim()) {
+            searchIndicator.classList.remove('hidden');
+            document.getElementById('search-term').textContent = searchInput.value;
+            document.getElementById('search-results-count').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        
         searchTimeout = setTimeout(() => {
             searchTerm = searchInput.value.trim();
             currentPage = 1;
             loadPayments();
-        }, 500); // Debounce de 500ms
+        }, 300); // Debounce de 300ms
     };
+
+    // Limpiar búsqueda
+    document.getElementById('clear-search').addEventListener('click', () => {
+        searchInput.value = '';
+        searchTerm = '';
+        currentPage = 1;
+        loadPayments();
+        searchInput.focus();
+    });
+
+    document.getElementById('clear-search-badge').addEventListener('click', () => {
+        searchInput.value = '';
+        searchTerm = '';
+        currentPage = 1;
+        loadPayments();
+        searchInput.focus();
+    });
 
     refreshBtn.onclick = () => {
         const icon = refreshBtn.querySelector('i');
@@ -513,25 +570,6 @@ import { StudentAPI } from '/studentAPI.js';
         loadPayments(true).finally(() => {
             icon.classList.remove('fa-spin');
         });
-    };
-
-    document.getElementById('semester-filter').onchange = () => { 
-        currentPage = 1; 
-        loadPayments(); 
-    };
-    
-    document.getElementById('method-filter').onchange = () => { 
-        currentPage = 1; 
-        loadPayments(); 
-    };
-    
-    document.getElementById('clear-filters').onclick = () => { 
-        searchInput.value = ''; 
-        searchTerm = '';
-        document.getElementById('semester-filter').value = 'all'; 
-        document.getElementById('method-filter').value = 'all'; 
-        currentPage = 1;
-        loadPayments(); 
     };
 
     // Cargar pagos al iniciar
