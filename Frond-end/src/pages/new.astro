@@ -58,11 +58,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           console.log('⚠️ No hay token, usando datos por defecto');
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
           console.log('✅ Carreras cargadas (fallback):', this.careers.length);
-          return;
+          return Promise.resolve();
         }
         const url = new URL(this.apiBaseUrl + '/v1/careers');
         url.searchParams.set('forceRefresh', 'false');
-        fetch(url.toString(), {
+        return fetch(url.toString(), {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -155,13 +155,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         // Si hay datos en localStorage, usarlos y NO hacer petición API
         if (loadFromLocalStorage()) {
-          return;
+          return Promise.resolve();
         }
 
         // Si no hay localStorage, mostrar mensaje y no intentar API
         // El usuario debe visitar /roles primero para cargar la lista
         console.info('💡 Tip: Visita /roles para cargar y cachear la lista de usuarios');
         mapStudents([]);
+        return Promise.resolve();
       },
 
       populateForm(concept) {
@@ -512,29 +513,47 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   <div class="p-4 sm:p-6 min-h-screen font-sans"> 
     <div
       x-data="window.conceptFormData"
-      x-init="$nextTick(() => {
+      x-init="async function() {
+        console.log('🚀 Inicializando formulario de conceptos...');
         apiBaseUrl = window.__API_BASE_URL__ || '';
         const token = localStorage.getItem('access_token');
+        
+        // Cargar careers y students primero
         if (token) {
-          loadCareers();
-          loadStudents();
+          await loadCareers();
+          await loadStudents();
+          console.log('✅ Carreras y estudiantes cargados');
         } else {
-          // Use fallback data if no token
           careers = CAREERS.map(c => ({ id: c.code, name: c.name }));
         }
+        
+        // Verificar si estamos editando
         const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
         const rawConcept = localStorage.getItem('editingConcept');
-        if (urlParams.has('edit') && rawConcept) {
+        
+        console.log('🔍 Modo:', editId ? `Edición (ID: ${editId})` : 'Creación');
+        console.log('📦 localStorage editingConcept:', rawConcept ? 'Existe' : 'No existe');
+        
+        if (editId && rawConcept) {
           try {
             const concept = JSON.parse(rawConcept);
+            console.log('📋 Concepto parseado:', concept);
+            console.log('🎯 formData antes:', JSON.parse(JSON.stringify(formData)));
+            
+            // Esperar un tick más para asegurar reactividad de Alpine
+            await $nextTick();
             populateForm(concept);
+            
+            console.log('🎯 formData después:', JSON.parse(JSON.stringify(formData)));
           } catch (e) {
-            console.error('Error:', e);
+            console.error('❌ Error parseando concepto:', e);
           }
         } else {
           localStorage.removeItem('editingConcept');
+          console.log('🆕 Modo creación - localStorage limpiado');
         }
-      })"
+      }()"
       class="space-y-5 max-w-4xl mx-auto"
     >
       

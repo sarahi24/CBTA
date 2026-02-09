@@ -422,19 +422,11 @@ async function mutateConcept(id, action){
 
 /* --- EXPOSICIÓN GLOBAL --- */
 window.editConcept = async (id) => {
-  const c = conceptsCache.find(x=>String(x.id)===String(id));
-  
-  // Primero cargar las relaciones desde el API
   const token = localStorage.getItem('access_token');
-  let scopeRules = {
-    allStudents: (c.applies_to || c.appliesTo) === 'todos',
-    careers: [],
-    semesters: [],
-    specificStudents: []
-  };
   
   try {
-    const response = await fetch(`${API_BASE}/concepts/relations/${id}`, {
+    // 1. Primero cargar los datos completos del concepto desde /concepts/{id}
+    const conceptResponse = await fetch(`${API_BASE}/concepts/${id}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -445,61 +437,104 @@ window.editConcept = async (id) => {
       }
     });
     
-    if (response.ok) {
-      const data = await response.json();
-      console.log('📋 Relaciones cargadas del API:', data);
-      
-      if (data.success && data.data) {
-        const rel = data.data;
-        
-        // Procesar careers - puede venir como array de IDs o array de objetos
-        let careersIds = [];
-        if (Array.isArray(rel.careers)) {
-          careersIds = rel.careers.map(c => typeof c === 'object' ? String(c.id) : String(c));
-        } else if (Array.isArray(rel.careerIds)) {
-          careersIds = rel.careerIds.map(id => String(id));
-        }
-        
-        // Procesar semestres - puede venir como array de números o strings
-        let semestresIds = [];
-        if (Array.isArray(rel.semestres) || Array.isArray(rel.semesters)) {
-          semestresIds = (rel.semestres || rel.semesters).map(s => parseInt(s));
-        }
-        
-        // Procesar students - puede venir como array de IDs o array de objetos
-        let studentIds = [];
-        if (Array.isArray(rel.students)) {
-          studentIds = rel.students.map(s => typeof s === 'object' ? String(s.id) : String(s));
-        } else if (Array.isArray(rel.userIds) || Array.isArray(rel.user_ids)) {
-          studentIds = (rel.userIds || rel.user_ids).map(id => String(id));
-        }
-        
-        scopeRules = {
-          allStudents: (rel.applies_to || c.applies_to) === 'todos',
-          careers: careersIds,
-          semesters: semestresIds,
-          specificStudents: studentIds
-        };
-        console.log('✅ Scope rules procesados:', scopeRules);
-      }
-    } else {
-      console.warn('⚠️ No se pudieron cargar relaciones, usando datos del cache');
+    if (!conceptResponse.ok) {
+      throw new Error(`Error cargando concepto: ${conceptResponse.status}`);
     }
-  } catch (error) {
-    console.error('❌ Error cargando relaciones:', error);
+    
+    const conceptData = await conceptResponse.json();
+    console.log('📋 Concepto cargado del API:', conceptData);
+    
+    let conceptInfo = {};
+    if (conceptData.success && conceptData.data) {
+      const c = conceptData.data;
+      conceptInfo = {
+        id: c.id,
+        title: c.concept_name || c.conceptName || c.name,
+        amount: c.amount,
+        description: c.description || '',
+        status: c.status,
+        start_date: c.start_date || c.startDate || '',
+        end_date: c.end_date || c.endDate || ''
+      };
+    } else {
+      throw new Error('Respuesta inválida del servidor');
+    }
+    
+    // 2. Luego cargar las relaciones desde /concepts/relations/{id}
+    let scopeRules = {
+      allStudents: false,
+      careers: [],
+      semesters: [],
+      specificStudents: []
+    };
+    
+    try {
+      const relationsResponse = await fetch(`${API_BASE}/concepts/relations/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.concepts'
+        }
+      });
+      
+      if (relationsResponse.ok) {
+        const relationsData = await relationsResponse.json();
+        console.log('📋 Relaciones cargadas del API:', relationsData);
+        
+        if (relationsData.success && relationsData.data) {
+          const rel = relationsData.data;
+          
+          // Procesar careers
+          if (Array.isArray(rel.careers) && rel.careers.length > 0) {
+            let careersIds = rel.careers.map(c => typeof c === 'object' ? String(c.id || c.career_id) : String(c));
+            scopeRules.careers = careersIds.filter(Boolean);
+          }
+          
+          // Procesar semesters
+          if (Array.isArray(rel.semesters) && rel.semesters.length > 0) {
+            let semestresIds = rel.semesters.map(s => {
+              if (typeof s === 'object') {
+                return parseInt(s.semester || s.semester_id, 10);
+              } else {
+                return parseInt(s, 10);
+              }
+            });
+            scopeRules.semesters = semestresIds.filter(n => !isNaN(n));
+          }
+          
+          // Procesar students
+          if (Array.isArray(rel.students) && rel.students.length > 0) {
+            let studentsIds = rel.students.map(st => typeof st === 'object' ? String(st.id || st.student_id) : String(st));
+            scopeRules.specificStudents = studentsIds.filter(Boolean);
+          }
+          
+          console.log('✅ Relaciones procesadas:', scopeRules);
+        }
+      }
+    } catch (e) {
+      console.error('⚠️ Error cargando relaciones:', e);
+      // Continuar aunque las relaciones fallen
+    }
+    
+    // 3. Combinar datos del concepto + relaciones y guardar en localStorage
+    const finalData = {
+      ...conceptInfo,
+      scopeRules: scopeRules
+    };
+    
+    console.log('💾 Guardando en localStorage:', finalData);
+    localStorage.setItem('editingConcept', JSON.stringify(finalData));
+    
+    // 4. Redirigir a la página de edición
+    window.location.href = `/new?edit=${id}`;
+    
+  } catch (e) {
+    console.error('❌ Error al cargar el concepto:', e);
+    alert('Error al cargar los datos del concepto. Por favor intenta de nuevo.');
   }
-  
-  localStorage.setItem('editingConcept', JSON.stringify({
-    id: c.id,
-    title: c.concept_name || c.conceptName,
-    amount: c.amount,
-    description: c.description,
-    status: c.status,
-    start_date: c.start_date,
-    end_date: c.end_date,
-    scopeRules: scopeRules
-  }));
-  window.location.href = '/new?edit='+encodeURIComponent(id);
 };
 window.finalizeConcept = (id) => mutateConcept(id, 'finalize');
 window.activateConcept = (id) => mutateConcept(id, 'activate');
