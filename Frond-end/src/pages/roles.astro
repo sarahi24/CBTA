@@ -1717,7 +1717,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                 console.log('🔄 Intentando refrescar token...');
                 try {
-                    const response = await fetch(`${this.apiBaseUrl}/v1/refresh`, {
+                    const response = await fetch(`${this.apiBaseUrl}/v1/refresh-token`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

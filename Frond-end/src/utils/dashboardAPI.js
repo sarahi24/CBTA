@@ -35,7 +35,7 @@ async function _fetchWithTokenRefresh(url, options = {}) {
       }
 
       // Intentar refrescar el token
-      const refreshResponse = await fetch(`${API_BASE}/auth/refresh`, {
+      const refreshResponse = await fetch(`${API_BASE}/refresh-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

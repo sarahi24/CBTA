@@ -531,7 +531,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     let response = await execFetch();
 
                     if (response.status === 401 && refreshToken) {
-                        const refreshResponse = await fetch(`${window.__API_BASE_URL__}/v1/refresh`, {
+                        const refreshResponse = await fetch(`${window.__API_BASE_URL__}/v1/refresh-token`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
