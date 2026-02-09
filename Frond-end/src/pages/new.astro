@@ -158,69 +158,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return;
         }
 
-        // Si no hay localStorage NI token, mostrar lista vacía
-        if (!token) {
-          console.info('💡 Tip: Inicia sesión y visita /roles para cargar la lista de usuarios');
-          mapStudents([]);
-          return;
-        }
-
-        // Solo si NO hay localStorage, intentar cargar desde API
-        const url = new URL(this.apiBaseUrl + '/v1/admin-actions/show-users');
-        url.searchParams.append('page', '1');
-        url.searchParams.append('perPage', '1000');
-        url.searchParams.append('status', 'activo');
-        
-        // Obtener rol del userData guardado
-        let userRole = 'admin';
-        try {
-          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-          if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
-            userRole = userData.roles[0];
-          } else {
-            userRole = userData.role || userData.type || 'admin';
-          }
-        } catch (e) {
-          console.warn('⚠️ No se pudo obtener el rol del usuario, usando admin por defecto');
-        }
-        
-        console.log('🔐 Rol del usuario para API:', userRole);
-        console.log('📡 Headers enviados:', {
-          'Authorization': `Bearer ${token.substring(0, 20)}...`,
-          'X-User-Role': userRole
-        });
-        
-        fetch(url.toString(), {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-User-Role': userRole
-          }
-        })
-        .then(res => {
-          console.log('📥 Respuesta show-users status:', res.status);
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-          }
-          return res.json();
-        })
-        .then(json => {
-          const items = json.data?.users?.items || json.data?.items || json.data || [];
-          if (Array.isArray(items) && items.length) {
-            console.log(`✅ Usuarios cargados desde API: ${items.length}`);
-            mapStudents(items);
-            localStorage.setItem('studentsList', JSON.stringify(items));
-          } else {
-            console.info('💡 Tip: Visita /roles para cargar la lista de usuarios completa');
-            mapStudents([]);
-          }
-        })
-        .catch(() => {
-          console.info('💡 Tip: Visita /roles para cargar y cachear la lista de usuarios');
-          mapStudents([]);
-        });
+        // Si no hay localStorage, mostrar mensaje y no intentar API
+        // El usuario debe visitar /roles primero para cargar la lista
+        console.info('💡 Tip: Visita /roles para cargar y cachear la lista de usuarios');
+        mapStudents([]);
       },
 
       populateForm(concept) {
