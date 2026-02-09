@@ -242,7 +242,33 @@ function renderConcepts(){
     return;
   }
 
-  grid.innerHTML = list.map(c=>{
+  grid.innerHTML = list.map((c, index)=>{
+    // Debug del primer concepto para ver estructura
+    if (index === 0) {
+      console.log('🔍 Primer concepto completo:', c);
+      console.log('📋 Campos disponibles:', Object.keys(c));
+      console.log('📅 Campos de fecha:', {
+        start_date: c.start_date,
+        startDate: c.startDate,
+        beginning_date: c.beginning_date,
+        beginningDate: c.beginningDate,
+        end_date: c.end_date,
+        endDate: c.endDate,
+        expiration_date: c.expiration_date,
+        expirationDate: c.expirationDate
+      });
+      console.log('🎯 Campos de alcance:', {
+        applies_to: c.applies_to,
+        appliesTo: c.appliesTo,
+        scope: c.scope,
+        userIds: c.userIds,
+        user_ids: c.user_ids,
+        careerIds: c.careerIds,
+        careers: c.careers,
+        semesters: c.semesters
+      });
+    }
+    
     const amount = Number(c.amount)||0;
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
