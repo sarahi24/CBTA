@@ -253,11 +253,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         }
       },
-              return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
-            });
-          }
-        }
-      },
 
       toggleSpecificStudent(student) {
         const index = this.formData.selectedSpecificStudents.findIndex(s => s.id === student.id);
