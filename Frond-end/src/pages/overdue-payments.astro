@@ -91,7 +91,7 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 
   <script type="module">
-    import { StudentAPI } from '/studentAPI.js';
+    import { StudentAPI } from '../utils/studentAPI.js';
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let overduePayments = [];
