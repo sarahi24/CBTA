@@ -236,9 +236,9 @@ const title = 'Panel de Estudiante';
             <!-- Círculo Donut Chart -->
             <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 160px; height: 160px; margin: 1.5rem 0;">
               <svg style="width: 100%; height: 100%; transform: rotate(-90deg);" viewBox="0 0 120 120">
-                <!-- Círculo de fondo completo -->
-                <circle cx="60" cy="60" r="50" stroke="#f3f4f6" stroke-width="12" fill="none" />
-                <!-- Círculo de pagos realizados (verde) -->
+                <!-- Círculo de fondo rojo (representa deuda/por pagar) -->
+                <circle cx="60" cy="60" r="50" stroke="#fecaca" stroke-width="12" fill="none" />
+                <!-- Círculo verde (representa pagos realizados - va cubriendo el rojo) -->
                 <circle 
                   cx="60" cy="60" r="50" 
                   stroke="#10b981" 
@@ -250,7 +250,7 @@ const title = 'Panel de Estudiante';
                 />
               </svg>
               <div style="position: absolute; text-align: center;">
-                <div style="font-size: 2rem; font-weight: 900; color: #2e594d; line-height: 1;" x-text="porcentajeProgreso + '%'">0%</div>
+                <div style="font-size: 2rem; font-weight: 900; line-height: 1;" :style="'color: ' + (porcentajeProgreso >= 50 ? '#10b981' : '#ef4444')" x-text="porcentajeProgreso + '%'">0%</div>
                 <div style="font-size: 0.7rem; color: #9ca3af; font-weight: 600; margin-top: 0.25rem;">Completado</div>
               </div>
             </div>
