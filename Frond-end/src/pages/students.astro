@@ -209,10 +209,13 @@ async function loadStudents(forceRefresh = false) {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
+            career: filters.carrera,
+            semester: filters.semestre,
             forceRefresh: forceRefresh
         });
 
         console.log('📡 Respuesta del servidor:', response);
+        console.log('🔍 Filtros enviados:', { carrera: filters.carrera, semestre: filters.semestre });
 
         if (response.success && response.data) {
             let studentsData = null;
@@ -238,45 +241,11 @@ async function loadStudents(forceRefresh = false) {
             if (studentsData && studentsData.items) {
                 console.log(`✅ Estudiantes cargados: ${studentsData.items.length}`);
                 
-                // Aplicar filtros locales
-                let filteredStudents = studentsData.items;
-                
-                // Log para debug
-                if (filteredStudents.length > 0) {
-                    console.log('📋 Primer estudiante completo:', filteredStudents[0]);
-                    console.log('🔍 Campos disponibles:', Object.keys(filteredStudents[0]));
-                }
-                
-                // Filtrar por carrera
-                if (filters.carrera) {
-                    console.log('🎓 Filtrando por carrera:', filters.carrera);
-                    filteredStudents = filteredStudents.filter(s => {
-                        // Intentar múltiples campos para encontrar el ID de carrera
-                        const careerMatch = String(s.career_id || s.id_career || s.carrera_id || '') === String(filters.carrera);
-                        if (careerMatch) {
-                            console.log(`✅ Estudiante ${s.n_control} coincide con carrera ${filters.carrera}`);
-                        }
-                        return careerMatch;
-                    });
-                    console.log(`📊 Estudiantes después de filtro de carrera: ${filteredStudents.length}`);
-                }
-                
-                // Filtrar por semestre
-                if (filters.semestre) {
-                    console.log('📚 Filtrando por semestre:', filters.semestre);
-                    filteredStudents = filteredStudents.filter(s => {
-                        const semesterMatch = String(s.semestre || '') === String(filters.semestre);
-                        return semesterMatch;
-                    });
-                    console.log(`📊 Estudiantes después de filtro de semestre: ${filteredStudents.length}`);
-                }
-                
-                // Actualizar paginación basada en resultados filtrados
                 currentPage = studentsData.currentPage || 1;
                 lastPage = studentsData.lastPage || 1;
-                totalRecords = filteredStudents.length;
+                totalRecords = studentsData.total || studentsData.items.length;
                 
-                renderTable(filteredStudents);
+                renderTable(studentsData.items);
                 updatePaginationInfo();
             } else {
                 showError('Estructura de datos incorrecta del servidor');

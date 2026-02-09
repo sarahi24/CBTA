@@ -564,11 +564,15 @@ window.StudentAPI = {
         search = '',
         page = 1,
         perPage = 15,
+        career = '',
+        semester = '',
         forceRefresh = false
       } = options;
 
       const params = new URL(`${API_BASE}/payments/students`);
       if (search) params.searchParams.append('search', search);
+      if (career) params.searchParams.append('career', career);
+      if (semester) params.searchParams.append('semester', semester);
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
