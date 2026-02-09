@@ -162,6 +162,49 @@ function formatCurrency(amount){
   return new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN', minimumFractionDigits:2 }).format(amount);
 }
 
+function formatVigencia(text) {
+  if (!text) return 'No definida';
+  
+  // Si contiene "días" con decimales, convertir a formato legible
+  const daysMatch = text.match(/(Vence en|Expirado hace)\s+([0-9.]+)\s+días?/);
+  if (daysMatch) {
+    const prefix = daysMatch[1];
+    const totalDays = parseFloat(daysMatch[2]);
+    
+    if (totalDays < 1) {
+      const hours = Math.round(totalDays * 24);
+      return `${prefix} ${hours} hora${hours !== 1 ? 's' : ''}`;
+    } else if (totalDays < 30) {
+      const days = Math.floor(totalDays);
+      return `${prefix} ${days} día${days !== 1 ? 's' : ''}`;
+    } else if (totalDays < 365) {
+      const months = Math.floor(totalDays / 30);
+      const days = Math.floor(totalDays % 30);
+      if (days === 0) {
+        return `${prefix} ${months} mes${months !== 1 ? 'es' : ''}`;
+      }
+      return `${prefix} ${months} mes${months !== 1 ? 'es' : ''} y ${days} día${days !== 1 ? 's' : ''}`;
+    } else {
+      const years = Math.floor(totalDays / 365);
+      const months = Math.floor((totalDays % 365) / 30);
+      if (months === 0) {
+        return `${prefix} ${years} año${years !== 1 ? 's' : ''}`;
+      }
+      return `${prefix} ${years} año${years !== 1 ? 's' : ''} y ${months} mes${months !== 1 ? 'es' : ''}`;
+    }
+  }
+  
+  // Si tiene formato de fecha DD/MM/YYYY → DD/MM/YYYY, hacerlo más compacto
+  if (text.includes('→')) {
+    const dates = text.split('→').map(d => d.trim());
+    if (dates.length === 2) {
+      return `${dates[0]} a ${dates[1]}`;
+    }
+  }
+  
+  return text;
+}
+
 function getStatusBadge(status){
   const s = (status || '').toLowerCase();
   if (s === 'finalizado' || s === 'finalized') return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-amber-300 hover:scale-105 transition-transform"><i class="fas fa-flag-checkered"></i> Finalizado</span>';
@@ -274,7 +317,7 @@ function renderConcepts(){
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
     // Usar expiration_human del API si está disponible, o construir desde fechas
-    const vigenciaText = c.expiration_human || c.expirationHuman || (() => {
+    const vigenciaRaw = c.expiration_human || c.expirationHuman || (() => {
       const startDate = c.start_date || c.startDate || '';
       const endDate = c.end_date || c.endDate || '';
       if (startDate && endDate) {
@@ -282,6 +325,8 @@ function renderConcepts(){
       }
       return 'No definida';
     })();
+    
+    const vigenciaText = formatVigencia(vigenciaRaw);
 
     return `
       <div class="group bg-gradient-to-br ${isInactive ? 'from-amber-50/90 via-orange-50/80 to-amber-50/90 border-amber-300/50' : 'from-white/95 via-emerald-50/30 to-teal-50/20 border-gray-200/80'} backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-xl border-2 p-4 sm:p-5 lg:p-7 flex flex-col justify-between transition-all hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-2 duration-500 relative overflow-hidden card">
@@ -305,15 +350,15 @@ function renderConcepts(){
           </div>
         </div>
 
-        <div class="text-xs sm:text-sm py-3 sm:py-4 lg:py-5 rounded-xl sm:rounded-2xl ${isInactive ? 'bg-gradient-to-br from-amber-50 to-orange-50/50' : 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30'} border-2 ${isInactive ? 'border-amber-200/70' : 'border-emerald-200/50'} px-3 sm:px-4 lg:px-5 mb-4 sm:mb-5 lg:mb-6 shadow-md sm:shadow-lg backdrop-blur-sm relative z-10">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white/80 rounded-lg sm:rounded-xl hover:bg-white transition-colors shadow-sm">
-            <div class="flex items-center gap-2 sm:gap-3">
-              <div class="p-1.5 sm:p-2 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-lg flex-shrink-0">
-                <i class="fas fa-calendar-check ${isInactive ? 'text-amber-700' : 'text-blue-700'} text-xs sm:text-sm"></i>
+        <div class="text-xs py-2 sm:py-2.5 rounded-lg sm:rounded-xl ${isInactive ? 'bg-gradient-to-r from-amber-50/80 to-orange-50/60' : 'bg-gradient-to-r from-blue-50/80 to-indigo-50/60'} border ${isInactive ? 'border-amber-200' : 'border-blue-200'} px-2.5 sm:px-3 mb-3 sm:mb-4 shadow-sm backdrop-blur-sm relative z-10">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <div class="p-1 sm:p-1.5 ${isInactive ? 'bg-amber-100' : 'bg-blue-100'} rounded-md flex-shrink-0">
+                <i class="fas fa-calendar-alt ${isInactive ? 'text-amber-600' : 'text-blue-600'} text-[10px] sm:text-xs"></i>
               </div>
-              <span class="text-gray-700 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Vigencia</span>
+              <span class="text-gray-700 font-bold text-[9px] sm:text-[10px] uppercase tracking-wide">Vigencia</span>
             </div>
-            <span class="font-semibold text-gray-800 text-xs sm:text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-2 sm:px-3 py-1 rounded-lg border border-blue-200 w-full sm:w-auto text-center sm:text-left">${escapeHtml(vigenciaText)}</span>
+            <span class="font-bold text-gray-800 text-[10px] sm:text-xs text-right flex-1 min-w-0">${escapeHtml(vigenciaText)}</span>
           </div>
         </div>
 
