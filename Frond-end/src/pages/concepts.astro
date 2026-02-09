@@ -247,16 +247,30 @@ function renderConcepts(){
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
     // Obtener fechas con mapeo flexible
-    const startDate = c.start_date || c.startDate || c.start || c.fecha_inicio || c.fechaInicio || c.beginning_date || c.beginningDate || '-';
-    const endDate = c.end_date || c.endDate || c.end || c.fecha_fin || c.fechaFin || c.expiration_date || c.expirationDate || c.expiry_date || c.expiryDate || '-';
+    const startDate = c.start_date || c.startDate || c.start || c.fecha_inicio || c.fechaInicio || c.beginning_date || c.beginningDate || null;
+    const endDate = c.end_date || c.endDate || c.end || c.fecha_fin || c.fechaFin || c.expiration_date || c.expirationDate || c.expiry_date || c.expiryDate || null;
+    
+    // Formatear fechas o mostrar mensaje si no existen
+    const formattedStartDate = startDate ? String(startDate).substring(0, 10) : 'No especificado';
+    const formattedEndDate = endDate ? String(endDate).substring(0, 10) : 'No especificado';
+    const dateRangeText = (startDate && endDate) ? `${formattedStartDate} → ${formattedEndDate}` : 'Sin vigencia definida';
     
     const scopeText = (() => {
       const applies = c.applies_to || c.appliesTo || '';
-      if (applies === 'todos') return 'Todos';
-      if (applies === 'students') return `${(c.userIds||c.user_ids||[]).length} alumnos`; 
-      if (applies === 'career' || applies === 'careers') return `${(c.careerIds||c.careers||[]).length} carreras`;
-      if (applies === 'semesters' || applies === 'semester') return `${(c.semesters||[]).length} semestres`;
-      return 'No definido';
+      if (applies === 'todos' || applies === 'all') return 'Todos los estudiantes';
+      if (applies === 'students' || applies === 'student') {
+        const count = (c.userIds||c.user_ids||[]).length;
+        return count > 0 ? `${count} estudiante${count !== 1 ? 's' : ''}` : 'Estudiantes específicos';
+      }
+      if (applies === 'career' || applies === 'careers') {
+        const count = (c.careerIds||c.careers||[]).length;
+        return count > 0 ? `${count} carrera${count !== 1 ? 's' : ''}` : 'Carreras específicas';
+      }
+      if (applies === 'semesters' || applies === 'semester') {
+        const count = (c.semesters||[]).length;
+        return count > 0 ? `${count} semestre${count !== 1 ? 's' : ''}` : 'Semestres específicos';
+      }
+      return 'No especificado';
     })();
     
     // Intentar obtener estudiantes afectados de varios campos posibles
@@ -302,7 +316,7 @@ function renderConcepts(){
               </div>
               <span class="text-gray-700 font-bold text-xs uppercase tracking-wider">Vigencia</span>
             </div>
-            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1 rounded-lg border border-blue-200">${escapeHtml(String(startDate).substring(0, 10))} → ${escapeHtml(String(endDate).substring(0, 10))}</span>
+            <span class="font-semibold text-gray-800 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1 rounded-lg border border-blue-200">${escapeHtml(dateRangeText)}</span>
           </div>
         </div>
 
