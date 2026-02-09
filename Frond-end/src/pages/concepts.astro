@@ -426,7 +426,7 @@ window.editConcept = async (id) => {
   
   try {
     // 1. Primero cargar los datos completos del concepto desde /concepts/{id}
-    const conceptResponse = await fetch(`${API_BASE}/concepts/${id}`, {
+    const conceptResponse = await fetch(`${API_BASE}/v1/concepts/${id}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -469,7 +469,7 @@ window.editConcept = async (id) => {
     };
     
     try {
-      const relationsResponse = await fetch(`${API_BASE}/concepts/relations/${id}`, {
+      const relationsResponse = await fetch(`${API_BASE}/v1/concepts/relations/${id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
