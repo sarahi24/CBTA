@@ -153,14 +153,14 @@ import { StudentAPI } from '../utils/studentAPI.js';
 window.StudentAPI = StudentAPI;
 
 const ITEMS_PER_PAGE = 15;
-    let lastPage = 1;
-    let totalRecords = 0;
-    const itemsPerPage = 15;
-    let isLoading = false;
-    let searchTerm = '';
-    let searchTimeout = null;
+let currentPage = 1;
+let lastPage = 1;
+let totalRecords = 0;
+let isLoading = false;
+let searchTerm = '';
+let searchTimeout = null;
 
-    const tableBody = document.getElementById('payments-table-body');
+const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
     const refreshBtn = document.getElementById('refresh-btn');
 
@@ -220,7 +220,7 @@ const ITEMS_PER_PAGE = 15;
             const response = await StudentAPI.getPaymentsByConcept(token, {
                 search: searchTerm,
                 page: currentPage,
-                perPage: itemsPerPage,
+                perPage: ITEMS_PER_PAGE,
                 forceRefresh: forceRefresh
             });
 
@@ -576,6 +576,5 @@ const ITEMS_PER_PAGE = 15;
 
     // Cargar pagos al iniciar
     loadPayments();
-})();
 </script>
 </Layout>
