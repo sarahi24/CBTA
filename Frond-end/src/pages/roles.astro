@@ -886,10 +886,48 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </p>
                     
                     <form @submit.prevent="updateRoles()" class="space-y-6">
+                        
+                        <!-- Mensaje de ayuda -->
+                        <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="text-sm font-bold text-blue-900 mb-1">💡 Instrucciones</p>
+                                    <p class="text-sm text-blue-800">
+                                        <strong>Debes seleccionar al menos un rol</strong> para agregar O eliminar antes de actualizar.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Alerta cuando no hay roles seleccionados -->
+                        <div x-show="rolesToAdd.length === 0 && rolesToRemove.length === 0" 
+                             class="p-4 bg-amber-50 border-2 border-amber-400 rounded-xl">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="font-bold text-amber-900 mb-1">⚠️ No hay roles seleccionados</p>
+                                    <p class="text-sm text-amber-800">
+                                        Marca al menos un checkbox en <strong>"Agregar Roles"</strong> O <strong>"Eliminar Roles"</strong> para continuar.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- Agregar Roles -->
-                            <div class="p-4 bg-green-50 border border-green-200 rounded-xl">
-                                <h4 class="font-bold text-green-900 mb-3">➕ Agregar Roles</h4>
+                            <div class="p-4 bg-green-50 border-2 border-green-300 rounded-xl shadow-lg">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-black text-green-900 text-lg flex items-center gap-2">
+                                        <span class="text-2xl">➕</span> Agregar Roles
+                                    </h4>
+                                    <span class="px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
+                                          x-text="rolesToAdd.length + ' seleccionados'"></span>
+                                </div>
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
                                     <!-- Opción "Sin rol" -->
                                     <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
@@ -911,8 +949,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                             
                             <!-- Eliminar Roles -->
-                            <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
-                                <h4 class="font-bold text-red-900 mb-3">➖ Eliminar Roles</h4>
+                            <div class="p-4 bg-red-50 border-2 border-red-300 rounded-xl shadow-lg">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-black text-red-900 text-lg flex items-center gap-2">
+                                        <span class="text-2xl">➖</span> Eliminar Roles
+                                    </h4>
+                                    <span class="px-3 py-1 bg-red-200 text-red-900 rounded-full text-xs font-bold" 
+                                          x-text="rolesToRemove.length + ' seleccionados'"></span>
+                                </div>
                                 <div class="space-y-2 max-h-60 overflow-y-auto">
                                     <template x-for="role in availableRoles" :key="role.id">
                                         <label class="flex items-center gap-2 p-2 hover:bg-red-100 rounded-lg cursor-pointer transition-colors">
@@ -955,9 +999,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 Cancelar
                             </button>
                             <button type="submit" :disabled="isSaving || (rolesToAdd.length === 0 && rolesToRemove.length === 0)" 
-                                    class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50">
-                                <span x-show="!isSaving">Actualizar Roles</span>
-                                <span x-show="isSaving">Actualizando...</span>
+                                    class="flex-1 py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative group"
+                                    :title="(rolesToAdd.length === 0 && rolesToRemove.length === 0) ? 'Selecciona al menos un rol para continuar' : 'Actualizar roles de usuarios seleccionados'">
+                                <span x-show="!isSaving && (rolesToAdd.length > 0 || rolesToRemove.length > 0)">✅ Actualizar Roles</span>
+                                <span x-show="!isSaving && rolesToAdd.length === 0 && rolesToRemove.length === 0">⚠️ Selecciona roles primero</span>
+                                <span x-show="isSaving">⏳ Actualizando...</span>
                             </button>
                         </div>
                     </form>
@@ -3585,8 +3631,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return;
                 }
 
+                // VALIDACIÓN MEJORADA: Verificar que haya roles seleccionados
                 if (this.rolesToAdd.length === 0 && this.rolesToRemove.length === 0) {
-                    this.showNotify('Selecciona roles para agregar o eliminar', 'error');
+                    this.showError(
+                        '⚠️ Roles No Seleccionados',
+                        'Debes seleccionar al menos un rol para agregar O eliminar antes de actualizar.',
+                        {
+                            solución: 'Marca uno o más checkboxes en las columnas "Agregar Roles" o "Eliminar Roles"',
+                            rolesToAdd: this.rolesToAdd,
+                            rolesToRemove: this.rolesToRemove
+                        }
+                    );
                     return;
                 }
 
