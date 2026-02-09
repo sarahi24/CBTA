@@ -247,57 +247,24 @@ function renderConcepts(){
     if (index === 0) {
       console.log('🔍 Primer concepto completo:', c);
       console.log('📋 Campos disponibles:', Object.keys(c));
-      console.log('📅 Campos de fecha:', {
-        start_date: c.start_date,
-        startDate: c.startDate,
-        beginning_date: c.beginning_date,
-        beginningDate: c.beginningDate,
-        end_date: c.end_date,
-        endDate: c.endDate,
-        expiration_date: c.expiration_date,
-        expirationDate: c.expirationDate
-      });
-      console.log('🎯 Campos de alcance:', {
-        applies_to: c.applies_to,
-        appliesTo: c.appliesTo,
-        scope: c.scope,
-        userIds: c.userIds,
-        user_ids: c.user_ids,
-        careerIds: c.careerIds,
-        careers: c.careers,
-        semesters: c.semesters
+      console.log('📅 Valores de vigencia:', {
+        expiration_human: c.expiration_human,
+        has_expiration: c.has_expiration,
+        beginDate: c.beginDate,
+        endDate: c.endDate
       });
     }
     
     const amount = Number(c.amount)||0;
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
-    // Obtener fechas con mapeo flexible
-    const startDate = c.start_date || c.startDate || c.start || c.fecha_inicio || c.fechaInicio || c.beginning_date || c.beginningDate || null;
-    const endDate = c.end_date || c.endDate || c.end || c.fecha_fin || c.fechaFin || c.expiration_date || c.expirationDate || c.expiry_date || c.expiryDate || null;
+    // Usar expiration_human si existe (ya viene formateado del API)
+    const dateRangeText = c.expiration_human && c.has_expiration 
+      ? c.expiration_human 
+      : 'Sin vigencia definida';
     
-    // Formatear fechas o mostrar mensaje si no existen
-    const formattedStartDate = startDate ? String(startDate).substring(0, 10) : 'No especificado';
-    const formattedEndDate = endDate ? String(endDate).substring(0, 10) : 'No especificado';
-    const dateRangeText = (startDate && endDate) ? `${formattedStartDate} → ${formattedEndDate}` : 'Sin vigencia definida';
-    
-    const scopeText = (() => {
-      const applies = c.applies_to || c.appliesTo || '';
-      if (applies === 'todos' || applies === 'all') return 'Todos los estudiantes';
-      if (applies === 'students' || applies === 'student') {
-        const count = (c.userIds||c.user_ids||[]).length;
-        return count > 0 ? `${count} estudiante${count !== 1 ? 's' : ''}` : 'Estudiantes específicos';
-      }
-      if (applies === 'career' || applies === 'careers') {
-        const count = (c.careerIds||c.careers||[]).length;
-        return count > 0 ? `${count} carrera${count !== 1 ? 's' : ''}` : 'Carreras específicas';
-      }
-      if (applies === 'semesters' || applies === 'semester') {
-        const count = (c.semesters||[]).length;
-        return count > 0 ? `${count} semestre${count !== 1 ? 's' : ''}` : 'Semestres específicos';
-      }
-      return 'No especificado';
-    })();
+    // Para el alcance, por ahora mostramos "No especificado" hasta que el API lo incluya
+    const scopeText = 'No especificado';
     
     // Intentar obtener estudiantes afectados de varios campos posibles
     const affectedCount = c.affectedStudentsCount || c.affected_students_count || 
