@@ -938,15 +938,15 @@ const title = 'Panel de Estudiante';
   }
 
   /* --- MOBILE ADAPTATIONS --- */
-  /* Tablet breakpoint - mantener horizontal con 2 columnas */
-  @media (max-width: 1024px) and (min-width: 769px) {
+  /* Tablet breakpoint - reducir gaps pero mantener horizontal */
+  @media (max-width: 1024px) and (min-width: 641px) {
     .stats-scroll-container { 
       gap: 1.25rem;
     }
   }
 
-  /* Mobile breakpoint - cambiar a vertical */
-  @media (max-width: 768px) {
+  /* Mobile breakpoint - solo para pantallas realmente pequeñas */
+  @media (max-width: 640px) {
     .main-container { padding: 1rem; gap: 1.5rem; max-width: none; }
     .welcome-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
     .header-left { gap: 0.8rem; }
@@ -1098,7 +1098,7 @@ const title = 'Panel de Estudiante';
     animation: spin 1s linear infinite;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 640px) {
     .refresh-cache-btn .btn-text {
       display: none;
     }
@@ -1244,7 +1244,7 @@ const title = 'Panel de Estudiante';
     display: none;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 640px) {
     .mobile-only {
       display: flex;
     }
