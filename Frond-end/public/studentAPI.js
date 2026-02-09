@@ -43,7 +43,7 @@ function handleAuthError(statusCode) {
   return false;
 }
 
-window.StudentAPI = {
+export const StudentAPI = {
   /**
    * DASHBOARD - GET /api/v1/dashboard/history/{studentId?}
    * Obtener historial de pagos del usuario autenticado
@@ -820,5 +820,6 @@ window.StudentAPI = {
   }
 };
 
-// También disponible globalmente como window.StudentAPI
+// También disponible globalmente como window.StudentAPI para compatibilidad
+window.StudentAPI = StudentAPI;
 console.log('✅ StudentAPI cargado desde /public/studentAPI.js');
