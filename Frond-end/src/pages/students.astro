@@ -209,13 +209,10 @@ async function loadStudents(forceRefresh = false) {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
-            career: filters.carrera,
-            semester: filters.semestre,
             forceRefresh: forceRefresh
         });
 
         console.log('📡 Respuesta del servidor:', response);
-        console.log('🔍 Filtros enviados:', { carrera: filters.carrera, semestre: filters.semestre });
 
         if (response.success && response.data) {
             let studentsData = null;
@@ -240,12 +237,53 @@ async function loadStudents(forceRefresh = false) {
             
             if (studentsData && studentsData.items) {
                 console.log(`✅ Estudiantes cargados: ${studentsData.items.length}`);
+                console.log('🔍 Primer estudiante completo:', studentsData.items[0]);
+                console.log('📋 Todas las claves del estudiante:', Object.keys(studentsData.items[0]).join(', '));
+                
+                // Aplicar filtros locales
+                let filteredStudents = studentsData.items;
+                
+                // Filtrar por carrera
+                if (filters.carrera) {
+                    console.log(`🎓 Filtrando por carrera ID: "${filters.carrera}"`);
+                    const before = filteredStudents.length;
+                    
+                    filteredStudents = filteredStudents.filter(s => {
+                        // Intentar todos los posibles nombres de campo para carrera
+                        const careerField = s.career_id || s.id_career || s.carrera_id || s.career || s.id_carrera;
+                        const match = String(careerField) === String(filters.carrera);
+                        
+                        if (s.n_control === studentsData.items[0]?.n_control) {
+                            console.log(`  Estudiante ${s.n_control}: careerField="${careerField}", filtro="${filters.carrera}", match=${match}`);
+                        }
+                        
+                        return match;
+                    });
+                    
+                    console.log(`📊 Estudiantes: ${before} → ${filteredStudents.length} (filtro carrera)`);
+                }
+                
+                // Filtrar por semestre
+                if (filters.semestre) {
+                    console.log(`📚 Filtrando por semestre: "${filters.semestre}"`);
+                    const before = filteredStudents.length;
+                    
+                    filteredStudents = filteredStudents.filter(s => {
+                        const match = String(s.semestre || '') === String(filters.semestre);
+                        if (s.n_control === studentsData.items[0]?.n_control) {
+                            console.log(`  Estudiante ${s.n_control}: semestre="${s.semestre}", filtro="${filters.semestre}", match=${match}`);
+                        }
+                        return match;
+                    });
+                    
+                    console.log(`📊 Estudiantes: ${before} → ${filteredStudents.length} (filtro semestre)`);
+                }
                 
                 currentPage = studentsData.currentPage || 1;
                 lastPage = studentsData.lastPage || 1;
-                totalRecords = studentsData.total || studentsData.items.length;
+                totalRecords = filteredStudents.length;
                 
-                renderTable(studentsData.items);
+                renderTable(filteredStudents);
                 updatePaginationInfo();
             } else {
                 showError('Estructura de datos incorrecta del servidor');
