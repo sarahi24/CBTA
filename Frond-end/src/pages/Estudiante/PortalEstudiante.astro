@@ -274,9 +274,9 @@ const title = 'Panel de Estudiante';
               <template x-if="history && history.length > 0">
                 <template x-for="pago in history" :key="pago.id">
                   <tr>
-                    <td x-text="pago.concepto"></td>
-                    <td class="monto" x-text="pago.monto"></td>
-                    <td class="fecha-celda" x-text="pago.fecha || '—'"></td>
+                    <td data-label="Concepto" x-text="pago.concepto"></td>
+                    <td data-label="Monto" class="monto" x-text="pago.monto"></td>
+                    <td data-label="Fecha" class="fecha-celda" x-text="pago.fecha || '—'"></td>
                   </tr>
                 </template>
               </template>
@@ -925,9 +925,14 @@ const title = 'Panel de Estudiante';
     .header-right { width: 100%; flex-direction: column; align-items: stretch; }
     .refresh-cache-btn { width: 100%; justify-content: center; }
     .current-date { width: 100%; text-align: center; padding: 0.6rem 0.9rem; }
-    .stats-scroll-container > * { min-width: 200px; }
+    .stats-scroll-container > * { min-width: 180px; }
     .payments-section { padding: 1.2rem; }
     .payments-table { font-size: 0.82rem; }
+    .payments-table thead { display: none; }
+    .payments-table tbody tr { display: block; border: 1px solid #eef2f7; border-radius: 0.85rem; padding: 0.85rem; margin-bottom: 0.75rem; background: #fff; }
+    .payments-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; }
+    .payments-table tbody td::before { content: attr(data-label); font-size: 0.75rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
+    .payments-table tbody tr:hover { background: #fff; }
     .toast-notification { min-width: auto; max-width: calc(100% - 1.5rem); left: 0.75rem; right: 0.75rem; }
   }
 
