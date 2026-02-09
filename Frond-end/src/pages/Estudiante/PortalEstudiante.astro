@@ -957,9 +957,8 @@ const title = 'Panel de Estudiante';
     .student-name { font-size: 1.5rem; }
     .mobile-hide { display: none; }
 
-    .stats-scroll-container { 
-      grid-template-columns: 1fr;
-      gap: 1rem;
+    .stats-scroll-container > .collapsible-content {
+      grid-template-columns: 1fr !important;
     }
 
     .stats-scroll-container .card-container {
@@ -1177,6 +1176,12 @@ const title = 'Panel de Estudiante';
   /* === ESTILOS PARA TARJETAS PLEGABLES EN MÓVIL === */
   .collapsible-section {
     position: relative;
+  }
+
+  .stats-scroll-container > .collapsible-content {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1.5rem;
   }
 
   .collapse-toggle {
