@@ -12,6 +12,8 @@
 2. [Páginas de Personal Financiero](#-páginas-de-personal-financiero)
 3. [Páginas de Administración](#-páginas-de-administración)
 4. [Páginas Públicas](#-páginas-públicas)
+5. [Sistema de Notificaciones](#-sistema-de-notificaciones)
+6. [Relaciones Familiares](#-relaciones-familiares-parents)
 
 ---
 
@@ -560,7 +562,514 @@
 
 ---
 
-## 📊 Resumen de Endpoints por Módulo
+## � Sistema de Notificaciones
+
+**Descripción:** Módulo de gestión de notificaciones para usuarios autenticados. Permite consultar notificaciones leídas y no leídas, marcarlas como leídas y eliminarlas.
+
+**Endpoints utilizados:**
+
+| **Método** | **Endpoint** | **Descripción** | **Params/Body** |
+|------------|--------------|-----------------|-----------------|
+| `GET` | `/notifications` | Obtener notificaciones leídas paginadas | Query: `page` (default: 1), `per_page` (default: 20) |
+| `GET` | `/notifications/unread` | Obtener todas las notificaciones no leídas | - |
+| `POST` | `/notifications/mark-as-read` | Marcar todas las notificaciones como leídas | - |
+| `POST` | `/notifications/mark-as-read/{id}` | Marcar una notificación específica como leída | Param: `id` (UUID) |
+| `DELETE` | `/notifications/{id}` | Eliminar una notificación específica | Param: `id` (UUID) |
+
+**Headers requeridos:**
+```json
+{
+  "Authorization": "Bearer {token}",
+  "Content-Type": "application/json",
+  "Accept": "application/json"
+}
+```
+
+---
+
+### 📋 GET `/notifications` - Notificaciones Leídas Paginadas
+
+**Descripción:** Retorna una lista paginada de las notificaciones LEÍDAS del usuario autenticado.
+
+**Query Parameters:**
+- `page` (integer, opcional): Número de página (default: 1)
+- `per_page` (integer, opcional): Notificaciones por página (default: 20)
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "notifications": {
+      "data": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "type": "App\\Notifications\\PaymentConceptUpdated",
+          "notifiable_type": "App\\Models\\User",
+          "notifiable_id": 1,
+          "data": {
+            "title": "Actualización del concepto de pago",
+            "message": "El concepto 'Matrícula' (1500.00 MXN) ha sido actualizado",
+            "concept_id": 1,
+            "concept_name": "Matrícula",
+            "amount": 1500,
+            "type": "payment_concept_changed",
+            "created_at": "2026-02-09T20:10:48.217Z"
+          },
+          "read_at": "2024-01-15T10:30:00.000000Z",
+          "created_at": "2026-02-09T20:10:48.217Z",
+          "updated_at": "2026-02-09T20:10:48.217Z"
+        }
+      ],
+      "current_page": 1,
+      "last_page": 5,
+      "per_page": 20,
+      "total": 95,
+      "links": {}
+    },
+    "unread_count": 5,
+    "read_count": 95
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **429** - Demasiadas solicitudes
+
+---
+
+### 🔴 GET `/notifications/unread` - Notificaciones No Leídas
+
+**Descripción:** Retorna todas las notificaciones no leídas del usuario autenticado.
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "notifications": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "type": "App\\Notifications\\PaymentConceptUpdated",
+        "notifiable_type": "App\\Models\\User",
+        "notifiable_id": 1,
+        "data": {
+          "title": "Nuevo concepto de pago",
+          "message": "Se ha agregado un nuevo concepto: Examen Extraordinario",
+          "concept_id": 5,
+          "amount": 250.00,
+          "type": "payment_concept_added",
+          "created_at": "2026-02-09T20:10:48.223Z"
+        },
+        "read_at": null,
+        "created_at": "2026-02-09T20:10:48.223Z"
+      }
+    ],
+    "count": 3
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **429** - Demasiadas solicitudes
+
+---
+
+### ✅ POST `/notifications/mark-as-read` - Marcar Todas como Leídas
+
+**Descripción:** Marca todas las notificaciones no leídas del usuario como leídas.
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "unread_count": 0
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **429** - Demasiadas solicitudes
+
+---
+
+### ✔️ POST `/notifications/mark-as-read/{id}` - Marcar Una como Leída
+
+**Descripción:** Marca una notificación específica como leída por su UUID.
+
+**Path Parameter:**
+- `id` (UUID, requerido): Identificador único de la notificación
+
+**Ejemplo:**
+```
+POST /api/v1/notifications/mark-as-read/550e8400-e29b-41d4-a716-446655440000
+```
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "unread_count": 4
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **404** - Notificación no encontrada
+- **429** - Demasiadas solicitudes
+
+---
+
+### 🗑️ DELETE `/notifications/{id}` - Eliminar Notificación
+
+**Descripción:** Elimina una notificación específica del usuario autenticado.
+
+**Path Parameter:**
+- `id` (UUID, requerido): Identificador único de la notificación a eliminar
+
+**Ejemplo:**
+```
+DELETE /api/v1/notifications/550e8400-e29b-41d4-a716-446655440000
+```
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {}
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **404** - Notificación no encontrada
+- **429** - Demasiadas solicitudes
+
+---
+
+### 📌 Tipos de Notificaciones
+
+El sistema puede enviar diferentes tipos de notificaciones según los eventos:
+
+| **Tipo** | **Descripción** | **Datos Incluidos** |
+|----------|-----------------|---------------------|
+| `PaymentConceptUpdated` | Concepto de pago modificado | `concept_id`, `concept_name`, `amount`, `message` |
+| `PaymentConceptAdded` | Nuevo concepto de pago agregado | `concept_id`, `concept_name`, `amount`, `due_date` |
+| `PaymentReceived` | Pago recibido y validado | `payment_id`, `amount`, `concept_name` |
+| `PaymentOverdue` | Pago vencido | `concept_id`, `concept_name`, `due_date`, `amount` |
+| `PaymentReminder` | Recordatorio de pago próximo | `concept_id`, `concept_name`, `due_date`, `days_remaining` |
+
+---
+
+### 💡 Notas de Implementación
+
+**Estructura de Notificaciones:**
+- Todas las notificaciones tienen un UUID único como identificador
+- El campo `data` contiene información específica del tipo de notificación
+- `read_at` es `null` para notificaciones no leídas
+- Las notificaciones se ordenan por fecha de creación (más recientes primero)
+
+**Paginación:**
+- Solo el endpoint `/notifications` (leídas) está paginado
+- `/notifications/unread` retorna todas las notificaciones no leídas sin paginar
+
+**Permisos:**
+- Los usuarios solo pueden ver sus propias notificaciones
+- No se requieren permisos especiales más allá de la autenticación
+
+**Caché:**
+- El contador de notificaciones no leídas puede cachearse brevemente
+- Al marcar como leída o eliminar, se invalida el caché automáticamente
+
+---
+
+## 👨‍👩‍👧 Relaciones Familiares (Parents)
+
+**Descripción:** Módulo para gestionar relaciones entre padres/tutores y estudiantes. Permite invitar padres, aceptar invitaciones y consultar relaciones familiares.
+
+**Endpoints utilizados:**
+
+| **Método** | **Endpoint** | **Descripción** | **Params/Body** |
+|------------|--------------|-----------------|-----------------|
+| `POST` | `/parents/invite` | Enviar invitación a un padre | Body: `{student_id, parent_email}` |
+| `POST` | `/parents/invite/accept` | Aceptar invitación de padre | Body: `{token, relationship}` |
+| `GET` | `/parents/get-children` | Obtener hijos del padre autenticado | - |
+| `GET` | `/parents/get-parents` | Obtener padres del estudiante autenticado | - |
+| `DELETE` | `/parents/delete-parent/{parentId}` | Eliminar relación familiar | Param: `parentId` (integer) |
+
+**Headers requeridos:**
+```json
+{
+  "Authorization": "Bearer {token}",
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "X-User-Role": "student|parent"
+}
+```
+
+---
+
+### 📨 POST `/parents/invite` - Enviar Invitación a Padre
+
+**Rol requerido:** `student`  
+**Descripción:** Envía una invitación de padre a un email específico. El padre recibe un token de aceptación.
+
+**Request Body:**
+```json
+{
+  "student_id": 42,
+  "parent_email": "parent@example.com"
+}
+```
+
+**Respuesta 201 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "token": "uuid-token-123456",
+    "expires_at": "2025-11-27T12:34:56Z"
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **403** - No autorizado (estudiante no puede invitar padres)
+- **422** - Error de validación (email inválido, student_id no existe)
+- **429** - Demasiadas solicitudes
+- **500** - Error interno del servidor
+
+---
+
+### ✅ POST `/parents/invite/accept` - Aceptar Invitación
+
+**Rol requerido:** `parent`  
+**Descripción:** Acepta una invitación de padre usando el token recibido por email.
+
+**Request Body:**
+```json
+{
+  "token": "abc123xyzInviteToken987",
+  "relationship": "padre"
+}
+```
+
+**Valores válidos para `relationship`:**
+- `padre` - Padre/Papá
+- `madre` - Madre/Mamá
+- `tutor` - Tutor/a
+- `abuelo` - Abuelo/a
+- `otro` - Otro familiar
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {}
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **403** - No autorizado (token inválido para este usuario)
+- **422** - Token expirado o inválido
+- **429** - Demasiadas solicitudes
+- **500** - Error interno del servidor
+
+---
+
+### 👧 GET `/parents/get-children` - Obtener Hijos del Padre
+
+**Rol requerido:** `parent`  
+**Descripción:** Retorna la lista de hijos del padre autenticado.
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "children": [
+      {
+        "parentId": 1,
+        "parentName": "Juan Perez",
+        "childrenData": [
+          {
+            "id": 3,
+            "name": "Jesus Perez"
+          },
+          {
+            "id": 4,
+            "name": "Maria Perez"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **403** - No autorizado
+- **404** - Padre no encontrado
+- **429** - Demasiadas solicitudes
+- **500** - Error interno del servidor
+
+---
+
+### 👨‍👩‍👧 GET `/parents/get-parents` - Obtener Padres del Estudiante
+
+**Rol requerido:** `student`  
+**Descripción:** Retorna la lista de padres/tutores del estudiante autenticado.
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Operación completada exitosamente",
+  "data": {
+    "children": [
+      {
+        "studentId": 1,
+        "studentName": "Juan Perez",
+        "parentsData": [
+          {
+            "id": 3,
+            "name": "Jesus Perez",
+            "relationship": "padre"
+          },
+          {
+            "id": 5,
+            "name": "Maria Perez",
+            "relationship": "madre"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **403** - No autorizado
+- **404** - Estudiante no encontrado
+- **429** - Demasiadas solicitudes
+- **500** - Error interno del servidor
+
+---
+
+### 🗑️ DELETE `/parents/delete-parent/{parentId}` - Eliminar Relación Familiar
+
+**Rol requerido:** `student`  
+**Descripción:** Elimina la relación del estudiante con un padre/tutor específico.
+
+**Path Parameter:**
+- `parentId` (integer, requerido): ID del padre a eliminar
+
+**Ejemplo:**
+```
+DELETE /api/v1/parents/delete-parent/42
+```
+
+**Respuesta 200 - Éxito:**
+```json
+{
+  "success": true,
+  "message": "Relación eliminada correctamente",
+  "data": {}
+}
+```
+
+**Respuestas de Error:**
+- **401** - No autenticado
+- **403** - No autorizado (estudiante no puede eliminar otras relaciones)
+- **404** - Padre/relación no encontrada
+- **429** - Demasiadas solicitudes
+- **500** - Error interno del servidor
+
+---
+
+### 📋 Resumen de Flujos
+
+**Flujo de Invitación Completo:**
+
+1. **Estudiante invita padre:**
+   ```
+   POST /parents/invite
+   Body: {student_id: 42, parent_email: "padre@example.com"}
+   Response: {token: "xxx", expires_at: "2025-11-27T12:34:56Z"}
+   ```
+
+2. **Padre recibe email con link**
+   - Email contiene: `https://app.com/accept-invite?token=xxx`
+
+3. **Padre acepta invitación:**
+   ```
+   POST /parents/invite/accept
+   Body: {token: "xxx", relationship: "padre"}
+   ```
+
+4. **Padre consulta sus hijos:**
+   ```
+   GET /parents/get-children
+   Response: {children: [ {...} ]}
+   ```
+
+5. **Estudiante consulta sus padres:**
+   ```
+   GET /parents/get-parents
+   Response: {children: [ {...} ]}
+   ```
+
+6. **Estudiante elimina relación (si es necesario):**
+   ```
+   DELETE /parents/delete-parent/42
+   ```
+
+---
+
+### 💡 Notas de Implementación
+
+**Invitaciones:**
+- Los tokens de invitación expiran después de 7 días
+- Solo un estudiante puede invitar a sus propios padres
+- Un mismo email no puede ser invitado dos veces simultáneamente
+
+**Permisos:**
+- Solo estudiantes pueden invitar padres
+- Solo padres pueden consultar sus hijos
+- Solo padres/tutores aceptados pueden ver información del estudiante
+- Estudiantes solo pueden eliminar sus propias relaciones
+
+**Relaciones:**
+- Un estudiante puede tener múltiples padres/tutores
+- Un padre puede estar vinculado a múltiples estudiantes
+- La relación se establece cuando el padre acepta la invitación
+
+**Tokens:**
+- Los tokens son únicos y de un solo uso
+- Se invalidan después de la aceptación
+- Expiran automáticamente después de 7 días
+
+---
+
+## �📊 Resumen de Endpoints por Módulo
 
 ### **Autenticación y Usuarios**
 - ✅ `/login` - Login de usuarios
@@ -614,6 +1123,13 @@
 - ✅ `/cards` - Crear tarjeta
 - ✅ `/cards/{paymentMethodId}` - Eliminar tarjeta
 
+### **Notificaciones**
+- ✅ `/notifications` - Obtener notificaciones leidas paginadas
+- ✅ `/notifications/unread` - Obtener notificaciones no leidas
+- ✅ `/notifications/mark-as-read` - Marcar todas como leidas
+- ✅ `/notifications/mark-as-read/{id}` - Marcar una notificacion como leida
+- ✅ `/notifications/{id}` - Eliminar notificacion
+
 ### **Administración de Usuarios**
 - ✅ `/admin-actions/show-users` - Listar usuarios
 - ✅ `/admin-actions/users/{id}` - Usuario por ID
@@ -643,6 +1159,13 @@
 - ✅ `/admin-actions/get-student/{studentId}` - Datos de estudiante
 - ✅ `/admin-actions/attach-student/{studentId}` - Asociar estudiante
 - ✅ `/admin-actions/update-student/{studentId}` - Actualizar estudiante
+
+### **Padres/Tutores**
+- ✅ `/parents/invite` - Enviar invitación a padre
+- ✅ `/parents/invite/accept` - Aceptar invitación
+- ✅ `/parents/get-children` - Obtener hijos del padre
+- ✅ `/parents/get-parents` - Obtener padres del estudiante
+- ✅ `/parents/delete-parent/{parentId}` - Eliminar relación
 
 ### **Importación de Datos**
 - ✅ `/admin-actions/import-users` - Importar usuarios
@@ -739,7 +1262,7 @@ Frond-end/
 
 ## ✅ Estado de Implementación
 
-**Endpoints Totales Documentados:** 85+  
+**Endpoints Totales Documentados:** 95+  
 **Páginas con Endpoints:** 20  
 **Archivos API Utilities:** 3  
 
@@ -750,10 +1273,12 @@ Frond-end/
 - ✅ Pagos y Adeudos: 100%
 - ✅ Conceptos: 100%
 - ✅ Tarjetas: 100%
+- ✅ Notificaciones: 100%
 - ✅ Administración: 100%
 - ✅ Roles y Permisos: 100%
 - ✅ Carreras: 100%
 - ✅ Estudiantes: 100%
+- ✅ Padres/Tutores: 100%
 - ✅ Importación: 100%
 
 ---

@@ -932,7 +932,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
                                     <!-- Opción "Sin rol" -->
                                     <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
-                                        <input type="checkbox" value="" 
+                                        <input type="checkbox" value="__NO_ROLE__" 
                                                x-model="rolesToAdd"
                                                class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
                                         <span class="text-sm font-medium text-green-800">🚫 Sin rol</span>
@@ -1271,20 +1271,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <p class="text-red-800 font-medium" x-text="errorModalMessage"></p>
                     </div>
 
-                    <!-- Detalles técnicos (si existen) -->
-                    <div x-show="errorModalDetails" class="mb-6">
-                        <details class="group">
-                            <summary class="cursor-pointer font-semibold text-slate-700 hover:text-slate-900 mb-2 flex items-center gap-2">
-                                <svg class="w-5 h-5 transform group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                </svg>
-                                Detalles técnicos
-                            </summary>
-                            <div class="mt-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                <pre class="text-xs text-slate-700 whitespace-pre-wrap font-mono" x-text="JSON.stringify(errorModalDetails, null, 2)"></pre>
-                            </div>
-                        </details>
-                    </div>
+                    <!-- Detalles técnicos: OCULTOS POR SEGURIDAD -->
+                    <!-- No mostrar información de infraestructura (endpoints, servidores, etc.) -->
 
                     <!-- Botón de cerrar -->
                     <div class="flex justify-center">
@@ -2208,13 +2196,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     // Usar modal de error en lugar de notificación
                     this.showError(
-                        '❌ Error de Conexión',
-                        errorMsg,
-                        {
-                            name: error?.name,
-                            stack: error?.stack,
-                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/promote`
-                        }
+                        '❌ Error de Operación',
+                        'No fue posible promover los estudiantes. Por favor, intenta nuevamente.'
                     );
                 } finally {
                     this.isLoadingUsers = false;
@@ -2339,12 +2322,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.error('❌ Error al importar estudiantes:', error);
                     
                     this.showError(
-                        '❌ Error de Conexión',
-                        'Error al importar estudiantes: ' + error.message,
-                        {
-                            name: error?.name,
-                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/import-students`
-                        }
+                        '❌ Error de Importación',
+                        'No fue posible importar los detalles de estudiantes. Verifica el archivo y intenta nuevamente.'
                     );
                 } finally {
                     this.isSaving = false;
@@ -3017,12 +2996,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.error('❌ Error al importar:', error);
                     
                     this.showError(
-                        '❌ Error de Conexión',
-                        'Error al procesar importación: ' + error.message,
-                        {
-                            name: error?.name,
-                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/import`
-                        }
+                        '❌ Error de Importación',
+                        'No fue posible importar los usuarios. Verifica el archivo y intenta nuevamente.'
                     );
                 } finally {
                     this.isSaving = false;
@@ -3683,12 +3658,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     console.log('📤 updateRoles - Enviando:');
                     console.log('  CURPs válidos:', curps);
-                    console.log('  Roles para agregar:', this.rolesToAdd);
-                    console.log('  Roles para eliminar:', this.rolesToRemove);
+                    console.log('  Roles para agregar (before filter):', this.rolesToAdd);
+                    console.log('  Roles para eliminar (before filter):', this.rolesToRemove);
 
-                    // Asegurar que siempre sean arrays
-                    const rolesToAdd = Array.isArray(this.rolesToAdd) ? this.rolesToAdd : [];
-                    const rolesToRemove = Array.isArray(this.rolesToRemove) ? this.rolesToRemove : [];
+                    // Asegurar que siempre sean arrays y filtrar strings vacíos y __NO_ROLE__
+                    const rolesToAdd = (Array.isArray(this.rolesToAdd) ? this.rolesToAdd : [])
+                        .filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
+                    const rolesToRemove = (Array.isArray(this.rolesToRemove) ? this.rolesToRemove : [])
+                        .filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
+                    
+                    console.log('  Roles para agregar (after filter):', rolesToAdd);
+                    console.log('  Roles para eliminar (after filter):', rolesToRemove);
 
                     // Usar AdminAPI para actualizar roles
                     const result = await window.AdminAPI.updateMultipleUsersRoles(
@@ -3717,37 +3697,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     } else {
                         console.error('❌ Error en respuesta:', result);
                         
-                        // Usar modal de error para mostrar detalles completos
-                        let errorMessage = result.message || `Error al actualizar roles`;
-                        
+                        // Log detailed validation errors
                         if (result.errors) {
-                            const errorDetails = Object.entries(result.errors)
-                                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-                                .join('\n');
-                            errorMessage = errorDetails || errorMessage;
+                            console.error('📋 Validation Errors:', result.errors);
                         }
                         
                         this.showError(
                             '❌ Error al Actualizar Roles',
-                            errorMessage,
-                            {
-                                error_code: result.error_code,
-                                status: response.status,
-                                errors: result.errors,
-                                data: result.data
-                            }
+                            'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
                         );
                     }
                 } catch (error) {
                     console.error('❌ Error al actualizar roles:', error);
+                    if (error.validationErrors) {
+                        console.error('📋 Validation Errors Detalles:', error.validationErrors);
+                    }
                     
                     this.showError(
-                        '❌ Error de Conexión',
-                        `Error al actualizar roles: ${error.message}`,
-                        {
-                            name: error?.name,
-                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/updated-roles`
-                        }
+                        '❌ Error al Actualizar Roles',
+                        'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
                     );
                 } finally {
                     this.isSaving = false;
@@ -4517,13 +4485,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     
                     // Usar modal de error
                     this.showError(
-                        '❌ Error de Conexión',
-                        `Error al promover estudiantes: ${error.message}`,
-                        {
-                            name: error?.name,
-                            stack: error?.stack,
-                            endpoint: `${this.apiBaseUrl}/v1/admin-actions/promote`
-                        }
+                        '❌ Error de Operación',
+                        'No fue posible promover los estudiantes. Por favor, intenta nuevamente.'
                     );
                 } finally {
                     this.isSaving = false;

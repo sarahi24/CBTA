@@ -129,6 +129,7 @@ export const API_ENDPOINTS = {
   // Parents - Padres/Tutores
   parents: {
     invite: `${API_BASE_URL}/v1/parents/invite`,
+    acceptInvite: `${API_BASE_URL}/v1/parents/invite/accept`,
     getChildren: `${API_BASE_URL}/v1/parents/get-children`,
     getParents: `${API_BASE_URL}/v1/parents/get-parents`,
     deleteRelation: (parentId) => `${API_BASE_URL}/v1/parents/delete-parent/${parentId}`,
@@ -138,7 +139,8 @@ export const API_ENDPOINTS = {
   notifications: {
     list: `${API_BASE_URL}/v1/notifications`,
     unread: `${API_BASE_URL}/v1/notifications/unread`,
-    markAsRead: `${API_BASE_URL}/v1/notifications/mark-as-read`,
+    markAllAsRead: `${API_BASE_URL}/v1/notifications/mark-as-read`,
+    markAsRead: (id) => `${API_BASE_URL}/v1/notifications/mark-as-read/${id}`,
     delete: (id) => `${API_BASE_URL}/v1/notifications/${id}`,
   },
 };
