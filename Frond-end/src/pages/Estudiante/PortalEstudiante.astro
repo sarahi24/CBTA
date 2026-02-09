@@ -17,10 +17,6 @@ const title = 'Panel de Estudiante';
         porcentajeProgreso: 0,
         loading: false,
         error: '',
-        // Estados de colapso para móvil
-        collapsedStats: false,
-        collapsedBalance: false,
-        collapsedHistory: false,
 
         async init() {
           const token = localStorage.getItem('access_token');
@@ -36,24 +32,15 @@ const title = 'Panel de Estudiante';
             return;
           }
 
-          const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
           this.loading = true;
           try {
             const parsedUserId = parseInt(userId, 10);
-            const pendingPaymentsRes = await window.StudentAPI.getPendingPayments(null, token, false, 'student')
-              .catch(function(e) { return { error: e.message }; });
-            await sleep(300);
-
-            const overdueRes = await window.StudentAPI.getOverdueTotal(parsedUserId, token, false, 'student')
-              .catch(function(e) { return { error: e.message }; });
-            await sleep(300);
-
-            const paidRes = await window.StudentAPI.getPaidTotal(parsedUserId, token, false, 'student')
-              .catch(function(e) { return { error: e.message }; });
-            await sleep(300);
-
-            const pendingRes = await window.StudentAPI.getPendingTotal(parsedUserId, token, false, 'student')
-              .catch(function(e) { return { error: e.message }; });
+            const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all([
+              window.StudentAPI.getPendingPayments(null, token, false, 'student').catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getOverdueTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPaidTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPendingTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; })
+            ]);
 
             if (pendingPaymentsRes && !pendingPaymentsRes.error) {
               const items = pendingPaymentsRes.data && pendingPaymentsRes.data.pending_payments ? pendingPaymentsRes.data.pending_payments : [];
@@ -119,18 +106,6 @@ const title = 'Panel de Estudiante';
 
         circumference() {
           return 2 * Math.PI * 50;
-        },
-
-        toggleStats() {
-          this.collapsedStats = !this.collapsedStats;
-        },
-
-        toggleBalance() {
-          this.collapsedBalance = !this.collapsedBalance;
-        },
-
-        toggleHistory() {
-          this.collapsedHistory = !this.collapsedHistory;
         }
       };
     }
@@ -165,21 +140,7 @@ const title = 'Panel de Estudiante';
 
 
 
-    <section class="stats-scroll-container collapsible-section">
-      <button class="collapse-toggle mobile-only" @click="toggleStats()" type="button">
-        <span class="collapse-title">Resumen de Pagos</span>
-        <svg class="chevron-icon" :class="{ 'rotated': !collapsedStats }" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
-      <div class="collapsible-content" 
-           x-show="!collapsedStats" 
-           x-transition:enter="ease-out duration-300"
-           x-transition:enter-start="opacity-0 transform scale-95"
-           x-transition:enter-end="opacity-100 transform scale-100"
-           x-transition:leave="ease-in duration-200"
-           x-transition:leave-start="opacity-100 transform scale-100"
-           x-transition:leave-end="opacity-0 transform scale-95">
+    <section class="stats-scroll-container">
       <div class="card-container danger">
         <div class="card-header">
           <span class="label">Pendientes</span>
@@ -224,24 +185,9 @@ const title = 'Panel de Estudiante';
           <p class="subtitle">Total pagado</p>
         </div>
       </div>
-      </div>
     </section>
 
-    <div class="bottom-grid collapsible-section">
-      <button class="collapse-toggle mobile-only" @click="toggleBalance()" type="button">
-        <span class="collapse-title">Balance y Progreso</span>
-        <svg class="chevron-icon" :class="{ 'rotated': !collapsedBalance }" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
-      <div class="collapsible-content" 
-           x-show="!collapsedBalance" 
-           x-transition:enter="ease-out duration-300"
-           x-transition:enter-start="opacity-0 transform scale-95"
-           x-transition:enter-end="opacity-100 transform scale-100"
-           x-transition:leave="ease-in duration-200"
-           x-transition:leave-start="opacity-100 transform scale-100"
-           x-transition:leave-end="opacity-0 transform scale-95">
+    <div class="bottom-grid">
       <div class="summary-card glass-effect">
         <div class="card-header">
            <h3 class="summary-title">Balance de Cuenta</h3>
@@ -296,26 +242,12 @@ const title = 'Panel de Estudiante';
           </div>
         </div>
       </div>
-      </div>
     </div>
 
-    <div class="payments-wrapper glass-effect collapsible-section">
+    <div class="payments-wrapper glass-effect">
       <div class="table-header">
         <h3 class="summary-title">Historial Reciente</h3>
-        <button class="collapse-toggle mobile-only inline-toggle" @click="toggleHistory()" type="button">
-          <svg class="chevron-icon" :class="{ 'rotated': !collapsedHistory }" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
       </div>
-      <div class="collapsible-content" 
-           x-show="!collapsedHistory" 
-           x-transition:enter="ease-out duration-300"
-           x-transition:enter-start="opacity-0 transform scale-95"
-           x-transition:enter-end="opacity-100 transform scale-100"
-           x-transition:leave="ease-in duration-200"
-           x-transition:leave-start="opacity-100 transform scale-100"
-           x-transition:leave-end="opacity-0 transform scale-95">
       <div class="payments-section">
         <h3 class="payments-title">Mis Pagos</h3>
 
@@ -333,9 +265,9 @@ const title = 'Panel de Estudiante';
               <template x-if="history && history.length > 0">
                 <template x-for="pago in history" :key="pago.id">
                   <tr>
-                    <td data-label="Concepto" x-text="pago.concepto"></td>
-                    <td data-label="Monto" class="monto" x-text="pago.monto"></td>
-                    <td data-label="Fecha" class="fecha-celda" x-text="pago.fecha || '—'"></td>
+                    <td x-text="pago.concepto"></td>
+                    <td class="monto" x-text="pago.monto"></td>
+                    <td class="fecha-celda" x-text="pago.fecha || '—'"></td>
                   </tr>
                 </template>
               </template>
@@ -545,11 +477,10 @@ const title = 'Panel de Estudiante';
 
   /* --- STATS --- */
   .stats-scroll-container { 
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
     gap: 1.5rem;
     animation: fadeIn 0.8s ease-out 0.2s both;
-    width: 100%;
   }
   
   .stats-scroll-container > :nth-child(1) {
@@ -566,15 +497,42 @@ const title = 'Panel de Estudiante';
 
   .stats-scroll-container .card-container {
     background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 1rem;
-    padding: 1rem;
+    border: none;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 140px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease;
+    min-height: 160px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stats-scroll-container .card-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, currentColor 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .stats-scroll-container .card-container:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .stats-scroll-container .danger::before { background: linear-gradient(90deg, #ff0000 0%, #ff6b6b 100%); }
+  .stats-scroll-container .warning::before { background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%); }
+  .stats-scroll-container .success::before { background: linear-gradient(90deg, #10b981 0%, #6ee7b7 100%); }
+
+  .stats-scroll-container .card-container:hover::before {
+    opacity: 1;
   }
 
   .stats-scroll-container .card-header {
@@ -582,21 +540,26 @@ const title = 'Panel de Estudiante';
     justify-content: space-between;
     align-items: flex-start;
     width: 100%;
-    margin-bottom: 0;
+    margin-bottom: 0.75rem;
   }
 
   .stats-scroll-container .label {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: #4b5563;
     font-weight: 500;
   }
 
   .stats-scroll-container .icon-wrapper {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.3s ease;
+  }
+
+  .stats-scroll-container .card-container:hover .icon-wrapper {
+    transform: scale(1.1);
   }
 
   .stats-scroll-container .card-body {
@@ -608,10 +571,11 @@ const title = 'Panel de Estudiante';
   }
 
   .stats-scroll-container .amount {
-    font-size: 1.85rem;
+    font-size: 2rem;
     font-weight: 800;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
     text-align: center;
+    line-height: 1.2;
   }
 
   .stats-scroll-container .card-footer {
@@ -620,8 +584,9 @@ const title = 'Panel de Estudiante';
   }
 
   .stats-scroll-container .subtitle {
-    font-size: 0.8rem;
-    color: #6b7280;
+    font-size: 0.825rem;
+    color: #9ca3af;
+    font-weight: 500;
   }
 
   .stats-scroll-container .default .amount { color: #2E594D; }
@@ -635,10 +600,10 @@ const title = 'Panel de Estudiante';
 
   .payments-section {
     background: white;
-    border: 1px solid #f3f4f6;
+    border: none;
     border-radius: 1.5rem;
     padding: 2rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 
   .payments-title {
@@ -714,7 +679,7 @@ const title = 'Panel de Estudiante';
     border: 1px solid rgba(241, 245, 249, 1); 
     border-radius: 2rem; 
     padding: 2rem; 
-    box-shadow: var(--shadow), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
@@ -939,15 +904,7 @@ const title = 'Panel de Estudiante';
   }
 
   /* --- MOBILE ADAPTATIONS --- */
-  /* Tablet breakpoint - reducir gaps pero mantener horizontal */
-  @media (max-width: 1024px) and (min-width: 641px) {
-    .stats-scroll-container { 
-      gap: 1.25rem;
-    }
-  }
-
-  /* Mobile breakpoint - solo para pantallas realmente pequeñas */
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .main-container { padding: 1rem; gap: 1.5rem; max-width: none; }
     .welcome-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
     .header-left { gap: 0.8rem; }
@@ -957,29 +914,18 @@ const title = 'Panel de Estudiante';
     .student-name { font-size: 1.5rem; }
     .mobile-hide { display: none; }
 
-    .stats-scroll-container > .collapsible-content {
-      grid-template-columns: 1fr !important;
+    .stats-scroll-container { 
+      display: flex; 
+      overflow-x: auto; 
+      margin: 0 -1rem; 
+      padding: 0 1rem 0.5rem 1rem;
+      scrollbar-width: none;
     }
+    .stats-scroll-container::-webkit-scrollbar { display: none; }
 
-    .stats-scroll-container .card-container {
-      min-height: auto;
-      padding: 1rem;
-    }
-
-    .stats-scroll-container .card-header {
-      margin-bottom: 0.5rem;
-    }
-
-    .stats-scroll-container .label {
-      font-size: 0.85rem;
-    }
-
-    .stats-scroll-container .amount {
-      font-size: 1.75rem;
-    }
-
-    .stats-scroll-container .subtitle {
-      font-size: 0.8rem;
+    .stats-scroll-container > * {
+      min-width: 240px;
+      flex: 0 0 auto;
     }
 
     .bottom-grid { grid-template-columns: 1fr; gap: 1.5rem; }
@@ -997,38 +943,6 @@ const title = 'Panel de Estudiante';
     .progress-inner { padding: 1rem; }
     .table-header { margin-bottom: 1rem; }
     .payments-title { font-size: 1rem; }
-  }
-
-  @media (max-width: 480px) {
-    .main-container { padding: 0.75rem; gap: 1rem; }
-    .header-right { width: 100%; flex-direction: column; align-items: stretch; }
-    .refresh-cache-btn { width: 100%; justify-content: center; }
-    .current-date { width: 100%; text-align: center; padding: 0.6rem 0.9rem; }
-    
-    .stats-scroll-container .card-container {
-      padding: 0.85rem;
-    }
-
-    .stats-scroll-container .amount {
-      font-size: 1.5rem;
-    }
-
-    .stats-scroll-container .label {
-      font-size: 0.8rem;
-    }
-
-    .stats-scroll-container .subtitle {
-      font-size: 0.75rem;
-    }
-
-    .payments-section { padding: 1.2rem; }
-    .payments-table { font-size: 0.82rem; }
-    .payments-table thead { display: none; }
-    .payments-table tbody tr { display: block; border: 1px solid #eef2f7; border-radius: 0.85rem; padding: 0.85rem; margin-bottom: 0.75rem; background: #fff; }
-    .payments-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; }
-    .payments-table tbody td::before { content: attr(data-label); font-size: 0.75rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
-    .payments-table tbody tr:hover { background: #fff; }
-    .toast-notification { min-width: auto; max-width: calc(100% - 1.5rem); left: 0.75rem; right: 0.75rem; }
   }
 
   /* Refresh Cache Button */
@@ -1098,7 +1012,7 @@ const title = 'Panel de Estudiante';
     animation: spin 1s linear infinite;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .refresh-cache-btn .btn-text {
       display: none;
     }
@@ -1171,110 +1085,6 @@ const title = 'Panel de Estudiante';
 
   .toast-close:hover {
     color: var(--text-main);
-  }
-
-  /* === ESTILOS PARA TARJETAS PLEGABLES EN MÓVIL === */
-  .collapsible-section {
-    position: relative;
-  }
-
-  .stats-scroll-container > .collapsible-content {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 1.5rem;
-  }
-
-  .collapse-toggle {
-    width: 100%;
-    padding: 0.875rem 1.25rem;
-    background: linear-gradient(135deg, #2e594d 0%, #3d7566 100%);
-    border: none;
-    border-radius: 1rem;
-    color: white;
-    font-weight: 700;
-    font-size: 0.95rem;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 12px rgba(46, 89, 77, 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .collapse-toggle:hover {
-    background: linear-gradient(135deg, #3d7566 0%, #4a8a77 100%);
-    box-shadow: 0 6px 16px rgba(46, 89, 77, 0.3);
-    transform: translateY(-2px);
-  }
-
-  .collapse-toggle:active {
-    transform: translateY(0);
-  }
-
-  .collapse-title {
-    font-size: 1rem;
-    letter-spacing: 0.02em;
-  }
-
-  .chevron-icon {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    flex-shrink: 0;
-  }
-
-  .chevron-icon.rotated {
-    transform: rotate(180deg);
-  }
-
-  .collapsible-content {
-    overflow: hidden;
-  }
-
-  .inline-toggle {
-    padding: 0.5rem;
-    background: transparent;
-    box-shadow: none;
-    margin-bottom: 0;
-    width: auto;
-  }
-
-  .inline-toggle:hover {
-    background: rgba(46, 89, 77, 0.1);
-  }
-
-  .inline-toggle .chevron-icon {
-    color: var(--primary);
-  }
-
-  .mobile-only {
-    display: none;
-  }
-
-  @media (max-width: 640px) {
-    .mobile-only {
-      display: flex;
-    }
-
-    .collapsible-content {
-      animation: slideDown 0.3s ease-out;
-    }
-
-    .table-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-  }
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      max-height: 0;
-    }
-    to {
-      opacity: 1;
-      max-height: 2000px;
-    }
   }
 </style>
 
