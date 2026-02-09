@@ -11,9 +11,6 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
 ---
 
 <Layout title={pageTitle}>
-  <script define:vars={{ StudentAPI }}>
-    window.StudentAPI = StudentAPI;
-  </script>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
     <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10 pb-8 border-b-2 border-red-500/20">
@@ -95,6 +92,8 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 
   <script type="module">
+    import { StudentAPI } from '../utils/studentAPI.js';
+    window.StudentAPI = StudentAPI;
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let overduePayments = [];

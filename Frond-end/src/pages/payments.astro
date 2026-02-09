@@ -6,9 +6,6 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 ---
 
 <Layout title={pageTitle}>
-<script define:vars={{ StudentAPI }}>
-  window.StudentAPI = StudentAPI;
-</script>
 
 <style is:global>
     :root { --cbta-green: #2E594D; }
@@ -152,6 +149,9 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 </div>
 
 <script type="module">
+import { StudentAPI } from '../utils/studentAPI.js';
+window.StudentAPI = StudentAPI;
+
 const ITEMS_PER_PAGE = 15;
     let lastPage = 1;
     let totalRecords = 0;
@@ -437,7 +437,7 @@ const ITEMS_PER_PAGE = 15;
             console.error('Error cargando estudiantes:', error);
             container.innerHTML = '<p class="text-red-600 font-bold">Error: ' + error.message + '</p>';
         }
-    };
+    }
 
     // Mostrar errores
     const showError = (message) => {
