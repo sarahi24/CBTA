@@ -911,6 +911,17 @@ const title = 'Panel de Estudiante';
     .payments-title { font-size: 1rem; }
   }
 
+  @media (max-width: 480px) {
+    .main-container { padding: 0.75rem; gap: 1.25rem; }
+    .header-right { width: 100%; flex-direction: column; align-items: stretch; }
+    .refresh-cache-btn { width: 100%; justify-content: center; }
+    .current-date { width: 100%; text-align: center; padding: 0.6rem 0.9rem; }
+    .stats-scroll-container > * { min-width: 200px; }
+    .payments-section { padding: 1.2rem; }
+    .payments-table { font-size: 0.82rem; }
+    .toast-notification { min-width: auto; max-width: calc(100% - 1.5rem); left: 0.75rem; right: 0.75rem; }
+  }
+
   /* Refresh Cache Button */
   .refresh-cache-btn {
     display: flex;

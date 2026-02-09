@@ -674,6 +674,25 @@ const title = "Mi Perfil";
     color: var(--text-muted);
     font-weight: 600;
   }
+  
+    @media (max-width: 768px) {
+      .profile-container { padding: 1.5rem 1rem; }
+      .profile-header h1 { font-size: 2rem; }
+      .profile-content { border-radius: 1.25rem; }
+      .tab-btn { padding: 1rem; font-size: 0.95rem; }
+      .form-section { padding: 1.5rem; }
+      .form-grid { grid-template-columns: 1fr; gap: 1rem; }
+    }
+  
+    @media (max-width: 480px) {
+      .profile-container { padding: 1.25rem 0.75rem; }
+      .profile-header h1 { font-size: 1.7rem; }
+      .tabs-nav { flex-direction: column; }
+      .tab-btn { text-align: left; }
+      .form-section { padding: 1.25rem; }
+      .form-actions { display: flex; flex-direction: column; }
+      .btn-primary { width: 100%; }
+    }
 
   @media (max-width: 768px) {
     .profile-container {
