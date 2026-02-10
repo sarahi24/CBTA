@@ -667,7 +667,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 },
 
                 populateStudentDetails(details) {
-                    this.nControl = details.nControl || 'No disponible';
+                    this.nControl = details.nControl || details.n_control || 'No disponible';
                     this.semestre = details.semestre ? 'Semestre ' + details.semestre : 'No disponible';
                     this.group = details.group || 'No disponible';
                     this.workshop = details.workshop || 'No disponible';
@@ -687,6 +687,12 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         minute: '2-digit'
                     });
 
+                    // Si vienen detalles del estudiante en la respuesta, guardarlos y mostrarlos
+                    if (student.studentDetail) {
+                        localStorage.setItem('student_details', JSON.stringify(student.studentDetail));
+                        this.populateStudentDetails(student.studentDetail);
+                    }
+
                     // Valores de ejemplo - pueden ser actualizados con datos reales de la API
                     this.pendingPayments = student.pendingPayments || '0';
                     this.completedPayments = student.completedPayments || '0';
@@ -700,7 +706,15 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     this.formData.birthdate = student.birthdate || '';
                     this.formData.gender = student.gender || '';
                     this.formData.blood_type = student.blood_type || '';
-                    this.formData.address = Array.isArray(student.address) && student.address[0] ? student.address[0] : '';
+                    
+                    // Manejar dirección - puede ser array o string
+                    if (Array.isArray(student.address)) {
+                        this.formData.address = student.address.join(', ') || '';
+                    } else if (typeof student.address === 'string') {
+                        this.formData.address = student.address;
+                    } else {
+                        this.formData.address = '';
+                    }
                 },
 
                 closeAllModals() {
@@ -852,7 +866,11 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     }
 
                     if (this.formData.address && this.formData.address.trim()) {
-                        requestData.address = [this.formData.address.trim()];
+                        // Dividir dirección por saltos de línea o comas
+                        const addressLines = this.formData.address.trim().split(/[\n,]+/).map(line => line.trim()).filter(line => line.length > 0);
+                        if (addressLines.length > 0) {
+                            requestData.address = addressLines;
+                        }
                     }
 
                     // Validar que hay al menos un campo para actualizar
@@ -861,6 +879,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         this.isUpdating = false;
                         return;
                     }
+
+                    console.log('Datos a enviar:', requestData);
 
                     try {
                         const response = await fetch(API_BASE_URL + '/v1/users/update', {
@@ -879,6 +899,13 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             this.successMessage = data.message || 'Perfil actualizado correctamente';
                             const updatedUser = data.data.user;
                             localStorage.setItem('user_data', JSON.stringify(updatedUser));
+                            
+                            // Guardar detalles del estudiante si existen en la respuesta
+                            if (updatedUser.studentDetail) {
+                                localStorage.setItem('student_details', JSON.stringify(updatedUser.studentDetail));
+                                this.populateStudentDetails(updatedUser.studentDetail);
+                            }
+                            
                             this.studentName = updatedUser.name || updatedUser.username || 'Sin nombre';
                             this.studentEmail = updatedUser.email || 'No disponible';
                             
