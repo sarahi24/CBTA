@@ -42,12 +42,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         startDate: '',
         endDate: '',
         allStudents: true,
-        scopeType: 'carrera', // 'carrera', 'semestre', 'carrera_semestre', 'estudiantes'
+        scopeType: 'carrera', // 'carrera', 'semestre', 'carrera_semestre', 'estudiantes', 'tags'
         selectedCareers: [],
         selectedSemesters: [],
         selectedSpecificStudents: [],
         exceptionStudents: [],
-        applicantTags: ['applicants'],
+        applicantTags: [],
         replaceRelations: false,
         removeAllExceptions: false,
         replaceExceptions: false
@@ -253,10 +253,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           // Determinar el tipo de ámbito basado en los filtros cargados
           if (this.formData.selectedSpecificStudents.length > 0) {
             this.formData.scopeType = 'estudiantes';
+          } else if (this.formData.selectedCareers.length > 0 && this.formData.selectedSemesters.length > 0) {
+            this.formData.scopeType = 'carrera_semestre';
           } else if (this.formData.selectedSemesters.length > 0) {
             this.formData.scopeType = 'semestre';
           } else if (this.formData.selectedCareers.length > 0) {
             this.formData.scopeType = 'carrera';
+          } else if (this.formData.applicantTags.length > 0) {
+            // Si solo tiene tags sin otros filtros, es un concepto de tags
+            this.formData.scopeType = 'tags';
           }
           console.log('✅ Tipo de ámbito detectado:', this.formData.scopeType);
         }
@@ -363,11 +368,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           payload.exceptionStudents = this.formData.exceptionStudents.map(s => String(s.id));
         }
         
-        // Agregar tags de aplicantes (solo en alcance restringido)
-        if (!this.formData.allStudents && this.formData.applicantTags && this.formData.applicantTags.length > 0) {
-          payload.applicantTags = this.formData.applicantTags;
-        }
-        
         // Agregar booleanos de control solo en modo edición
         if (this.formData.id && !this.formData.allStudents) {
           payload.replaceRelations = Boolean(this.formData.replaceRelations);
@@ -395,7 +395,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           delete payload.replaceExceptions;
         } else {
           // Alcance restringido - incluir solo los filtros especificados
-          if (this.formData.selectedSpecificStudents.length > 0) {
+          if (this.formData.scopeType === 'tags') {
+            // Tags especiales - aplica solo a usuarios con esos tags
+            payload.applies_to = 'todos';
+            payload.applicantTags = this.formData.applicantTags.length > 0 ? this.formData.applicantTags : [];
+          } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
           } else if (this.formData.selectedSemesters.length > 0 && this.formData.selectedCareers.length > 0) {
@@ -839,7 +843,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 <i class="fas fa-bullseye text-amber-600"></i>
                 Selecciona el tipo de ámbito (solo uno):
               </label>
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <label class="cursor-pointer">
                   <input type="radio" value="carrera" x-model="formData.scopeType" @change="formData.selectedSemesters = []; formData.selectedSpecificStudents = []" class="sr-only peer">
                   <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-2 peer-checked:ring-blue-200 hover:shadow-md">
@@ -855,10 +859,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   </div>
                 </label>
                 <label class="cursor-pointer">
+                  <input type="radio" value="carrera_semestre" x-model="formData.scopeType" @change="formData.selectedSpecificStudents = []" class="sr-only peer">
+                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:ring-2 peer-checked:ring-green-200 hover:shadow-md">
+                    <i class="fas fa-layer-group text-lg text-green-600 mb-1"></i>
+                    <p class="text-xs font-bold">Carrera + Semestre</p>
+                  </div>
+                </label>
+                <label class="cursor-pointer">
                   <input type="radio" value="estudiantes" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSemesters = []" class="sr-only peer">
                   <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:ring-2 peer-checked:ring-orange-200 hover:shadow-md">
                     <i class="fas fa-user-check text-lg text-orange-600 mb-1"></i>
                     <p class="text-xs font-bold">Estudiantes Específicos</p>
+                  </div>
+                </label>
+                <label class="cursor-pointer">
+                  <input type="radio" value="tags" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSemesters = []; formData.selectedSpecificStudents = []" class="sr-only peer">
+                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
+                    <i class="fas fa-star text-lg text-pink-600 mb-1"></i>
+                    <p class="text-xs font-bold">Casos Especiales</p>
                   </div>
                 </label>
               </div>
@@ -910,6 +928,73 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 </div>
               </div>
 
+              <!-- Carreras + Semestres -->
+              <div x-show="formData.scopeType === 'carrera_semestre'" x-cloak class="space-y-4">
+                <div>
+                  <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fas fa-graduation-cap text-blue-600"></i>
+                    Selecciona las Carreras:
+                  </label>
+                  <div class="grid grid-cols-2 gap-3">
+                    <template x-for="career in careers" :key="career.id">
+                      <label class="cursor-pointer">
+                        <input type="checkbox" :value="career.id" x-model="formData.selectedCareers" class="sr-only peer">
+                        <div
+                          class="p-2 rounded-xl border-2 border-gray-300 text-center flex items-center justify-center min-h-[35px] text-xs transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
+                        >
+                          <span class="font-semibold" x-text="career.name"></span>
+                        </div>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fas fa-calendar-alt text-purple-600"></i>
+                    Selecciona los Semestres:
+                  </label>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="sem in semesters" :key="sem.id">
+                      <label class="cursor-pointer">
+                        <input type="checkbox" :value="sem.id" x-model="formData.selectedSemesters" class="sr-only peer">
+                        <div
+                          class="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 text-sm font-bold transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
+                        >
+                          <span x-text="sem.id + '°'"></span>
+                        </div>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Casos Especiales -->
+              <div x-show="formData.scopeType === 'tags'" x-cloak>
+                <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <i class="fas fa-star text-pink-600"></i>
+                  Selecciona los Casos Especiales:
+                </label>
+                <p class="text-sm text-gray-600 mb-3">Estos conceptos aplicarán a usuarios con características especiales.</p>
+                <div class="grid grid-cols-2 gap-3">
+                  <label class="cursor-pointer">
+                    <input type="checkbox" value="applicant" x-model="formData.applicantTags" class="sr-only peer">
+                    <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
+                      <i class="fas fa-user-graduate text-lg text-pink-600 mb-1"></i>
+                      <p class="text-xs font-bold">Aplicantes/Aspirantes</p>
+                      <p class="text-xs text-gray-500 mt-1">Personas en proceso de admisión</p>
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="checkbox" value="no_student_details" x-model="formData.applicantTags" class="sr-only peer">
+                    <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
+                      <i class="fas fa-user-slash text-lg text-pink-600 mb-1"></i>
+                      <p class="text-xs font-bold">Sin Detalles de Estudiante</p>
+                      <p class="text-xs text-gray-500 mt-1">Usuarios sin información completa</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <!-- Solo Estudiantes Específicos -->
               <div x-show="formData.scopeType === 'estudiantes'" x-cloak>
                 <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -948,13 +1033,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           </div>
         </section>
 
-        <!-- Nueva sección: Excepciones y Tags -->
-        <section x-show="!formData.allStudents" x-cloak x-transition.opacity.duration.300ms class="bg-gradient-to-br from-white via-orange-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-orange-200/50 space-y-5">
+        <!-- Nueva sección: Excepciones -->
+        <section x-show="!formData.allStudents && formData.scopeType !== 'tags'" x-cloak x-transition.opacity.duration.300ms class="bg-gradient-to-br from-white via-orange-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-orange-200/50 space-y-5">
           <div class="flex items-center gap-3 pb-3 border-b-2 border-orange-200/50">
             <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 text-white font-extrabold text-sm shadow-lg">
                 <i class="fas fa-user-slash"></i>
             </span>
-            <h2 class="text-xl font-extrabold text-orange-900">Excepciones y Etiquetas Especiales</h2>
+            <h2 class="text-xl font-extrabold text-orange-900">Excepciones de Estudiantes</h2>
           </div>
 
           <div class="space-y-5">
@@ -992,33 +1077,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </button>
                   </div>
                 </template>
-              </div>
-            </div>
-
-            <!-- Tags de aplicantes -->
-            <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200">
-              <label class="block text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                <i class="fas fa-tags text-indigo-600"></i>
-                Etiquetas de Aplicación
-              </label>
-              <p class="text-xs text-indigo-600 mb-3">Define a qué tipo de usuarios aplica este concepto (puedes seleccionar múltiples).</p>
-              
-              <div class="grid grid-cols-1 gap-2">
-                <label class="cursor-pointer">
-                  <input type="checkbox" value="applicants" x-model="formData.applicantTags" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-indigo-300 peer-checked:border-indigo-600 peer-checked:bg-indigo-100 transition-all text-sm flex items-center gap-2">
-                    <i class="fas fa-user-graduate text-indigo-600"></i>
-                    <span class="font-semibold">Aplicantes/Aspirantes</span>
-                  </div>
-                </label>
-                
-                <label class="cursor-pointer">
-                  <input type="checkbox" value="no_student_details" x-model="formData.applicantTags" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-indigo-300 peer-checked:border-indigo-600 peer-checked:bg-indigo-100 transition-all text-sm flex items-center gap-2">
-                    <i class="fas fa-user-times text-indigo-600"></i>
-                    <span class="font-semibold">Sin Detalles de Estudiante</span>
-                  </div>
-                </label>
               </div>
             </div>
           </div>
