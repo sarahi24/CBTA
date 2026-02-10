@@ -272,6 +272,181 @@ window.StudentAPI = {
       console.error('❌ StudentAPI.createPaymentIntent:', err);
       throw err;
     }
+  },
+
+  async getCareers(token, options = {}) {
+    try {
+      const { role = 'financial-staff', permission = 'view.careers' } = options;
+      const response = await fetch(`${API_BASE}/careers`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': permission
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getCareers:', err);
+      throw err;
+    }
+  },
+
+  async getPaymentStudents(token, options = {}) {
+    try {
+      const { search = '', page = 1, perPage = 15, forceRefresh = false, role = 'financial-staff', permission = 'view.payments.student.summary' } = options;
+      const params = new URL(`${API_BASE}/payments/students`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': permission
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getPaymentStudents:', err);
+      throw err;
+    }
+  },
+
+  async getAllPendingDebts(token, options = {}) {
+    try {
+      const { search = '', page = 1, perPage = 15, forceRefresh = false } = options;
+      const params = new URL(`${API_BASE}/debts`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.debts'
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getAllPendingDebts:', err);
+      throw err;
+    }
+  },
+
+  async getStripePayments(token, search = '', year = null, forceRefresh = false) {
+    try {
+      const url = new URL(`${API_BASE}/debts/stripe-payments`);
+      if (search) url.searchParams.append('search', search);
+      if (year) url.searchParams.append('year', year);
+      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+      
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.stripe.payments'
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getStripePayments:', err);
+      throw err;
+    }
+  },
+
+  async validateStripePayment(search, paymentIntentId, token) {
+    try {
+      const response = await fetch(`${API_BASE}/debts/validate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'validate.debt'
+        },
+        body: JSON.stringify({ search, payment_intent_id: paymentIntentId })
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.validateStripePayment:', err);
+      throw err;
+    }
+  },
+
+  async getAllPayments(token, options = {}) {
+    try {
+      const { search = '', page = 1, perPage = 15, forceRefresh = false } = options;
+      const params = new URL(`${API_BASE}/payments`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.payments'
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getAllPayments:', err);
+      throw err;
+    }
+  },
+
+  async getPaymentsByConcept(token, options = {}) {
+    try {
+      const { search = '', page = 1, perPage = 15, forceRefresh = false } = options;
+      const params = new URL(`${API_BASE}/payments/by-concept`);
+      if (search) params.searchParams.append('search', search);
+      params.searchParams.append('page', page);
+      params.searchParams.append('perPage', perPage);
+      if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      
+      const response = await fetch(params.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.payments'
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getPaymentsByConcept:', err);
+      throw err;
+    }
   }
 };
 
