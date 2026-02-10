@@ -192,7 +192,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
     </div>
 
     <!-- Modal de Edici�n de Perfil -->
-    <div x-show="showEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div x-show="showEditModal" @click.away="showEditModal = false" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-xl max-w-2xl w-full p-8 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-bold text-institucional">Editar Perfil</h3>
@@ -358,7 +358,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
     </div>
 
     <!-- Modal de Cambiar Contrase�a -->
-    <div x-show="showPasswordModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div x-show="showPasswordModal" @click.away="showPasswordModal = false" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-xl max-w-md w-full p-8 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-bold text-institucional">Cambiar Contraseña</h3>
@@ -492,7 +492,9 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 },
 
                 async loadStudentData() {
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
+                    console.log('🔍 Loading student data - Token status:', token ? '✅ Present' : '❌ Missing');
+                    
                     if (!token) {
                         console.log('No token found, using localStorage fallback');
                         this.loadStudentDataFromStorage();
@@ -535,6 +537,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                 loadStudentDataFromStorage() {
                     const userData = localStorage.getItem('user_data');
+                    console.log('📦 Checking localStorage - user_data status:', userData ? '✅ Found' : '❌ Missing');
+                    
                     if (!userData) {
                         console.log('No student data found');
                         return;
@@ -542,6 +546,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                     try {
                         const student = JSON.parse(userData);
+                        console.log('👤 Parsed student data:', { id: student.id, name: student.name, email: student.email });
                         this.populateStudentData(student);
                     } catch (e) {
                         console.error('Error parsing student data:', e);
@@ -549,7 +554,9 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 },
 
                 async loadStudentDetails() {
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
+                    console.log('🔍 Loading student details - Token status:', token ? '✅ Present' : '❌ Missing');
+                    
                     if (!token) {
                         console.log('No token found, using localStorage fallback for student details');
                         this.loadStudentDetailsFromStorage();
@@ -592,6 +599,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                 loadStudentDetailsFromStorage() {
                     const detailsData = localStorage.getItem('student_details');
+                    console.log('📦 Checking localStorage - student_details status:', detailsData ? '✅ Found' : '❌ Missing');
+                    
                     if (!detailsData) {
                         console.log('No student details found in storage');
                         return;
@@ -599,6 +608,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                     try {
                         const details = JSON.parse(detailsData);
+                        console.log('🎓 Parsed student details:', { nControl: details.nControl, semestre: details.semestre });
                         this.populateStudentDetails(details);
                     } catch (e) {
                         console.error('Error parsing student details:', e);
@@ -701,7 +711,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         return;
                     }
 
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
                     if (!token) {
                         this.passwordErrorMessage = 'No estás autenticado. Por favor inicia sesión.';
                         this.isChangingPassword = false;
@@ -758,7 +768,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     this.errorMessage = '';
                     this.errors = {};
 
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
                     if (!token) {
                         this.errorMessage = 'No est�s autenticado. Por favor inicia sesi�n.';
                         this.isUpdating = false;

@@ -126,7 +126,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
 
     <!-- Modal de Edición -->
-    <div x-show="showEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div x-show="showEditModal" @click.away="showEditModal = false" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-xl max-w-2xl w-full p-8 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-bold text-institucional">Editar Perfil</h3>
@@ -292,7 +292,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
 
     <!-- Modal de Cambiar Contraseña -->
-    <div x-show="showPasswordModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div x-show="showPasswordModal" @click.away="showPasswordModal = false" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-xl max-w-md w-full p-8 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-bold text-institucional">Cambiar Contraseña</h3>
@@ -421,7 +421,7 @@ import Layout from '../layouts/Layout.astro';
                 },
 
                 async loadUserData() {
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
                     
                     console.log('🔄 Starting user data load process...');
                     console.log('📋 Token status:', token ? '✅ Present' : '❌ Missing');
@@ -494,6 +494,8 @@ import Layout from '../layouts/Layout.astro';
 
                 loadUserDataFromStorage() {
                     const userData = localStorage.getItem('user_data');
+                    console.log('📦 Checking localStorage - user_data status:', userData ? '✅ Found' : '❌ Missing');
+                    
                     if (!userData) {
                         console.warn('⚠️ No user data found in localStorage');
                         return false;
@@ -655,7 +657,7 @@ import Layout from '../layouts/Layout.astro';
                     this.errorMessage = '';
                     this.errors = {};
 
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
                     if (!token) {
                         this.errorMessage = 'No estás autenticado. Por favor inicia sesión.';
                         this.isUpdating = false;
@@ -776,7 +778,7 @@ import Layout from '../layouts/Layout.astro';
                         return;
                     }
 
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('access_token');
                     if (!token) {
                         this.passwordErrorMessage = 'No estás autenticado. Por favor inicia sesión.';
                         this.isChangingPassword = false;
