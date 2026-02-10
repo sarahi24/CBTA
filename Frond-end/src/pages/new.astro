@@ -1033,55 +1033,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           </div>
         </section>
 
-        <!-- Nueva sección: Excepciones -->
-        <section x-show="!formData.allStudents && formData.scopeType !== 'tags'" x-cloak x-transition.opacity.duration.300ms class="bg-gradient-to-br from-white via-orange-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-orange-200/50 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b-2 border-orange-200/50">
-            <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 text-white font-extrabold text-sm shadow-lg">
-                <i class="fas fa-user-slash"></i>
-            </span>
-            <h2 class="text-xl font-extrabold text-orange-900">Excepciones de Estudiantes</h2>
-          </div>
-
-          <div class="space-y-5">
-            <!-- Excepciones de estudiantes -->
-            <div class="bg-red-50/50 p-4 rounded-xl border border-red-200">
-              <label class="block text-sm font-bold text-red-800 mb-2 flex items-center gap-2">
-                <i class="fas fa-ban text-red-600"></i>
-                Excepciones (Estudiantes que NO recibirán este concepto)
-              </label>
-              <p class="text-xs text-red-600 mb-3">Estos estudiantes quedarán excluidos del concepto, incluso si cumplen con los filtros de alcance.</p>
-              
-              <div class="relative" x-data="{ openException: false }" @click.away="openException = false">
-                <input type="text" x-model="searchTermException" @focus="openException = true" @input="openException = true"
-                  placeholder="Buscar estudiante a excluir..."
-                  class="w-full px-3 py-2 border border-red-300 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 transition duration-200 text-sm">
-                
-                <div x-show="openException && searchTermException.length > 0 && filteredExceptionStudents.length > 0" x-cloak
-                  class="absolute z-20 w-full mt-1 bg-white border border-red-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto p-2 space-y-1">
-                  <template x-for="student in filteredExceptionStudents" :key="student.id">
-                    <div @click="toggleExceptionStudent(student); openException = false" class="p-2 hover:bg-red-50 rounded-lg cursor-pointer text-sm flex justify-between items-center transition">
-                      <span x-text="student.name" class="text-gray-800 font-medium"></span>
-                      <span x-text="'Matrícula: ' + (student.control || student.id)" class="text-gray-500 text-xs"></span>
-                      <i x-show="formData.exceptionStudents.some(s => s.id === student.id)" class="fas fa-check-circle text-red-600"></i>
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <div class="flex flex-wrap gap-2 mt-3" x-show="formData.exceptionStudents.length > 0" x-transition.slide.up>
-                <template x-for="student in formData.exceptionStudents" :key="student.id">
-                  <div class="flex items-center gap-2 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold border border-red-300 shadow-sm">
-                    <span x-text="student.name + ' (Matrícula: ' + (student.control || student.id) + ')'"></span>
-                    <button type="button" @click="removeExceptionStudent(student.id)" class="text-red-600 hover:text-red-800 transition focus:outline-none">
-                      <i class="fas fa-times-circle text-xs"></i>
-                    </button>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- Nueva sección: Opciones de Actualización (solo en modo edición) -->
         <section x-show="formData.id && !formData.allStudents" x-cloak x-transition.opacity.duration.300ms class="bg-gradient-to-br from-white via-yellow-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-yellow-200/50 space-y-5">
           <div class="flex items-center gap-3 pb-3 border-b-2 border-yellow-200/50">
