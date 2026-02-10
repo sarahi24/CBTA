@@ -289,6 +289,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       addStudentByControl() {
         const input = this.searchTerm.trim();
         if (!input) return;
+
+        this.formData.allStudents = false;
+        this.formData.scopeType = 'estudiantes';
         
         // Verificar si ya existe
         const exists = this.formData.selectedSpecificStudents.some(s => 
@@ -479,6 +482,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return;
         }
 
+        this.formData.allStudents = false;
+        this.formData.scopeType = 'estudiantes';
+
         this.formData.selectedSpecificStudents.push({
           id: student.id,
           control: student.fullName || student.control,
@@ -496,6 +502,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       submitForm() {
         this.errorMessage = '';
         if (this.isSaving) return;
+
+        if (this.formData.scopeType === 'estudiantes') {
+          this.formData.allStudents = false;
+        }
         if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) <= 0) {
           this.errorMessage = '⚠️ Rellene Título y Monto (mayor a $0).';
           return;
