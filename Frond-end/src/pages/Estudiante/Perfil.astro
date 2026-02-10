@@ -219,8 +219,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                      x-transition:leave="ease-in duration-200" 
                      x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" 
                      x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
-                     @click.away="showEditModal = false"
-                     @keydown.escape.window="showEditModal = false"
+                     @click.stop
                      class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
                     
                     <!-- Header del Modal -->
@@ -259,27 +258,24 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Nombre</label>
                                     <input type="text" x-model="formData.name" 
-                                           class="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white transition-all"
-                                           :class="{'border-red-500': errors.name}">
-                                    <p x-show="errors.name" class="mt-1 text-sm text-red-600" x-text="errors.name?.[0]"></p>
+                                           class="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white transition-all">
+                                    <p x-show="errors.name" x-text="errors.name && errors.name[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
 
                                 <!-- Apellido -->
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Apellido</label>
                                     <input type="text" x-model="formData.last_name" 
-                                           class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all"
-                                           :class="{'border-red-500': errors.last_name}">
-                                    <p x-show="errors.last_name" class="mt-1 text-sm text-red-600" x-text="errors.last_name?.[0]"></p>
+                                           class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all">
+                                    <p x-show="errors.last_name" x-text="errors.last_name && errors.last_name[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
 
                                 <!-- Email -->
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Correo Electrónico</label>
                                     <input type="email" x-model="formData.email" 
-                                           class="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white transition-all"
-                                           :class="{'border-red-500': errors.email}">
-                                    <p x-show="errors.email" class="mt-1 text-sm text-red-600" x-text="errors.email?.[0]"></p>
+                                           class="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white transition-all">
+                                    <p x-show="errors.email" x-text="errors.email && errors.email[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
 
                                 <!-- Teléfono -->
@@ -287,40 +283,36 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Teléfono</label>
                                     <input type="tel" x-model="formData.phone_number" 
                                            class="w-full px-4 py-3 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-all"
-                                           :class="{'border-red-500': errors.phone_number}"
                                            placeholder="+5215512345678">
-                                    <p x-show="errors.phone_number" class="mt-1 text-sm text-red-600" x-text="errors.phone_number?.[0]"></p>
+                                    <p x-show="errors.phone_number" x-text="errors.phone_number && errors.phone_number[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
 
                                 <!-- Fecha de Nacimiento -->
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Fecha de Nacimiento</label>
                                     <input type="date" x-model="formData.birthdate" 
-                                           class="w-full px-4 py-3 border-2 border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white transition-all"
-                                           :class="{'border-red-500': errors.birthdate}">
-                                    <p x-show="errors.birthdate" class="mt-1 text-sm text-red-600" x-text="errors.birthdate?.[0]"></p>
+                                           class="w-full px-4 py-3 border-2 border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white transition-all">
+                                    <p x-show="errors.birthdate" x-text="errors.birthdate && errors.birthdate[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
 
                                 <!-- Género -->
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Género</label>
                                     <select x-model="formData.gender" 
-                                            class="w-full px-4 py-3 border-2 border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all"
-                                            :class="{'border-red-500': errors.gender}">
+                                            class="w-full px-4 py-3 border-2 border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all">
                                         <option value="">Seleccionar...</option>
                                         <option value="hombre">Hombre</option>
                                         <option value="mujer">Mujer</option>
                                         <option value="otro">Otro</option>
                                     </select>
-                                    <p x-show="errors.gender" class="mt-1 text-sm text-red-600" x-text="errors.gender?.[0]"></p>
+                                    <p x-show="errors.gender" x-text="errors.gender && errors.gender[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
 
                                 <!-- Tipo de Sangre -->
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Tipo de Sangre</label>
                                     <select x-model="formData.blood_type" 
-                                            class="w-full px-4 py-3 border-2 border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white transition-all"
-                                            :class="{'border-red-500': errors.blood_type}">
+                                            class="w-full px-4 py-3 border-2 border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white transition-all">
                                         <option value="">Seleccionar...</option>
                                         <option value="O+">O+</option>
                                         <option value="O-">O-</option>
@@ -331,7 +323,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                         <option value="AB+">AB+</option>
                                         <option value="AB-">AB-</option>
                                     </select>
-                                    <p x-show="errors.blood_type" class="mt-1 text-sm text-red-600" x-text="errors.blood_type?.[0]"></p>
+                                    <p x-show="errors.blood_type" x-text="errors.blood_type && errors.blood_type[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
                             </div>
 
@@ -340,9 +332,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Dirección</label>
                                 <textarea x-model="formData.address" rows="3"
                                           class="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all"
-                                          :class="{'border-red-500': errors.address}"
                                           placeholder="Calle, número, colonia, ciudad..."></textarea>
-                                <p x-show="errors.address" class="mt-1 text-sm text-red-600" x-text="errors.address?.[0]"></p>
+                                <p x-show="errors.address" x-text="errors.address && errors.address[0]" class="mt-1 text-sm text-red-600"></p>
                             </div>
 
                             <!-- Botones de acción -->
@@ -599,6 +590,9 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 },
 
                 editProfile() {
+                    this.successMessage = '';
+                    this.errorMessage = '';
+                    this.errors = {};
                     this.closeAllModals();
                     this.showEditModal = true;
                 },
