@@ -18,27 +18,31 @@ try {
   if (token && paymentId) {
     loading = true;
     try {
-      const response = await StudentAPI.getPaymentById(paymentId, token);
+      const response = await StudentAPI.getPaymentById(paymentId, token, 'student');
       
       if (response.success && response.data?.payment) {
         const payment = response.data.payment;
+        const methodDetails = payment.payment_method_details || {};
+        const methodLabel = methodDetails.brand && methodDetails.last4
+          ? `${methodDetails.brand.toUpperCase()} •••• ${methodDetails.last4}`
+          : (methodDetails.type || 'Método desconocido');
+        const normalizedStatus = payment.status === 'completed' ? 'paid' : payment.status;
+
         paymentDetail = {
           id: payment.id,
           concept: payment.concept_name || 'Pago',
           amount: payment.amount || '0',
           amountReceived: payment.amount_received || '0',
-          status: payment.status || 'unknown',
-          paymentMethod: Array.isArray(payment.payment_method_details) 
-            ? payment.payment_method_details[0] 
-            : 'Método desconocido',
+          status: normalizedStatus || 'unknown',
+          paymentMethod: methodLabel,
           userId: payment.user_id,
-          createdAt: payment.created_at,
+          createdAt: payment.created_at_human || payment.created_at,
           updatedAt: payment.updated_at,
           stripePaymentId: payment.stripe_payment_method_id,
           paymentIntentId: payment.payment_intent_id,
           url: payment.url,
           stripeSessionId: payment.stripe_session_id,
-          allMethods: payment.payment_method_details || []
+          allMethods: methodDetails.type ? [methodLabel] : []
         };
         console.log('✅ Detalle de pago cargado:', paymentDetail);
       } else {
