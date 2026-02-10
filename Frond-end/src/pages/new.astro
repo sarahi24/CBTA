@@ -261,6 +261,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             this.formData.scopeType = 'tags';
           }
           console.log('✅ Tipo de ámbito detectado:', this.formData.scopeType);
+
+          if (this.formData.scopeType === 'estudiantes') {
+            this.formData.exceptionStudents = [];
+            this.formData.removeAllExceptions = false;
+            this.formData.replaceExceptions = false;
+          }
         }
         
         console.log('✅ Formulario poblado completamente:', this.formData);
@@ -538,16 +544,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           is_global: Boolean(this.formData.allStudents)
         };
         
-        // Agregar excepciones si existen (solo en alcance restringido)
-        if (!this.formData.allStudents && this.formData.exceptionStudents.length > 0) {
+        // Agregar excepciones si existen (solo en alcance restringido y no estudiantes específicos)
+        if (!this.formData.allStudents && this.formData.scopeType !== 'estudiantes' && this.formData.exceptionStudents.length > 0) {
           payload.exceptionStudents = this.formData.exceptionStudents.map(s => String(s.id));
         }
         
         // Agregar booleanos de control solo en modo edición
         if (this.formData.id && !this.formData.allStudents) {
           payload.replaceRelations = Boolean(this.formData.replaceRelations);
-          payload.removeAllExceptions = Boolean(this.formData.removeAllExceptions);
-          payload.replaceExceptions = Boolean(this.formData.replaceExceptions);
+          if (this.formData.scopeType !== 'estudiantes') {
+            payload.removeAllExceptions = Boolean(this.formData.removeAllExceptions);
+            payload.replaceExceptions = Boolean(this.formData.replaceExceptions);
+          }
         }
         
         // Construir applies_to y campos relacionados según alcance
@@ -577,6 +585,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
+            delete payload.exceptionStudents;
+            delete payload.removeAllExceptions;
+            delete payload.replaceExceptions;
           } else if (this.formData.selectedSemesters.length > 0 && this.formData.selectedCareers.length > 0) {
             // Ambas carreras y semestres seleccionados
             payload.applies_to = 'carrera_semestre';
@@ -1058,7 +1069,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   </div>
                 </label>
                 <label class="cursor-pointer">
-                  <input type="radio" value="estudiantes" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSemesters = []" class="sr-only peer">
+                  <input type="radio" value="estudiantes" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSemesters = []; formData.exceptionStudents = []; formData.removeAllExceptions = false; formData.replaceExceptions = false" class="sr-only peer">
                   <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:ring-2 peer-checked:ring-orange-200 hover:shadow-md">
                     <i class="fas fa-user-check text-lg text-orange-600 mb-1"></i>
                     <p class="text-xs font-bold">Estudiantes Específicos</p>
@@ -1301,7 +1312,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               </label>
             </div>
 
-            <div class="bg-red-50/50 p-4 rounded-xl border border-red-200">
+            <div x-show="formData.scopeType !== 'estudiantes'" x-cloak class="bg-red-50/50 p-4 rounded-xl border border-red-200">
               <label class="flex items-start gap-3 cursor-pointer group">
                 <input type="checkbox" x-model="formData.removeAllExceptions" class="mt-1 w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-600 focus:ring-2">
                 <div class="flex-1">
@@ -1314,7 +1325,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               </label>
             </div>
 
-            <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-200">
+            <div x-show="formData.scopeType !== 'estudiantes'" x-cloak class="bg-orange-50/50 p-4 rounded-xl border border-orange-200">
               <label class="flex items-start gap-3 cursor-pointer group">
                 <input type="checkbox" x-model="formData.replaceExceptions" class="mt-1 w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-600 focus:ring-2">
                 <div class="flex-1">
