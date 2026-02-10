@@ -169,9 +169,48 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return Promise.resolve();
         }
 
-        // Si no hay localStorage, mostrar mensaje y no intentar API
-        // El usuario debe visitar /roles primero para cargar la lista
-        console.warn('⚠️ No hay estudiantes cargados. Visita /roles para cargar la lista de usuarios.');
+        // Si no hay localStorage, intentar cargar desde API como fallback
+        console.warn('⚠️ No hay estudiantes en localStorage. Intentando cargar desde API...');
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          console.warn('⚠️ No hay estudiantes cargados y sin token. Visita /roles para cargar la lista.');
+          mapStudents([]);
+          return Promise.resolve();
+        }
+
+        // Intentar cargar desde API /payments/students
+        try {
+          const url = new URL(this.apiBaseUrl + '/payments/students');
+          url.searchParams.set('perPage', '200');
+          url.searchParams.set('page', '1');
+
+          const res = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && json.data?.payments?.items) {
+              const items = json.data.payments.items;
+              console.log(`✅ Usuarios cargados desde API: ${items.length}`);
+              mapStudents(items);
+              // Guardar en localStorage para siguiente vez
+              localStorage.setItem('studentsList', JSON.stringify(items));
+              return Promise.resolve();
+            }
+          } else {
+            console.warn(`⚠️ Error al cargar desde API (${res.status}). Visita /roles para cargar manualmente.`);
+          }
+        } catch (err) {
+          console.warn('⚠️ Error en petición API:', err.message);
+        }
+
+        // Si todo falla, array vacío y esperar a que visite /roles
         console.info('💡 Tip: Visita /roles para cargar y cachear la lista de usuarios');
         mapStudents([]);
         return Promise.resolve();
