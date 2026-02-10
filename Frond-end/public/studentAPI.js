@@ -22,15 +22,21 @@ function handleAuthError(statusCode) {
 }
 
 window.StudentAPI = {
-  async getPaymentHistory(studentId, token) {
+  async getPaymentHistory(studentId, token, forceRefresh = false, role = 'student', perPage = 15, page = 1) {
     try {
-      const endpoint = studentId ? `${API_BASE}/dashboard/history/${studentId}` : `${API_BASE}/dashboard/history`;
-      const response = await fetch(endpoint, {
+      const url = new URL(studentId ? `${API_BASE}/payments/history/${studentId}` : `${API_BASE}/payments/history`);
+      if (perPage) url.searchParams.append('perPage', String(perPage));
+      if (page) url.searchParams.append('page', String(page));
+      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.payments.history'
         }
       });
       if (response.status === 401) handleAuthError(401);
@@ -38,6 +44,28 @@ window.StudentAPI = {
       return await response.json();
     } catch (err) {
       console.error('❌ StudentAPI.getPaymentHistory:', err);
+      throw err;
+    }
+  },
+
+  async getPaymentById(paymentId, token, role = 'student') {
+    try {
+      const endpoint = `${API_BASE}/payments/history/payment/${paymentId}`;
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.payments.history'
+        }
+      });
+      if (response.status === 401) handleAuthError(401);
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getPaymentById:', err);
       throw err;
     }
   },
