@@ -6,7 +6,9 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 ---
 
 <Layout title={pageTitle}>
-
+  <!-- Load StudentAPI globally before any module scripts -->
+  <script src="/studentAPI.js" is:inline></script>
+  
 <style is:global>
     :root { --cbta-green: #2E594D; }
     
@@ -150,6 +152,18 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 
 <script type="module">
 // StudentAPI is loaded globally via public/studentAPI.js
+
+// Wait for StudentAPI to be available
+async function ensureStudentAPI() {
+  let attempts = 0;
+  while (!window.StudentAPI && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  if (!window.StudentAPI) {
+    throw new Error('StudentAPI could not be loaded');
+  }
+}
 
 const ITEMS_PER_PAGE = 15;
 let currentPage = 1;
@@ -573,7 +587,9 @@ const tableBody = document.getElementById('payments-table-body');
         });
     };
 
-    // Cargar pagos al iniciar
-    loadPayments();
+    // Cargar pagos al iniciar (esperar a que StudentAPI esté disponible)
+    ensureStudentAPI()
+      .then(() => loadPayments())
+      .catch(err => console.error('❌ Error al inicializar:', err));
 </script>
 </Layout>

@@ -22,6 +22,9 @@ const CAREER_MAP = {
 const careerMapJSON = JSON.stringify(CAREER_MAP);
 ---
 <Layout title={pageTitle}>
+  <!-- Load StudentAPI globally before any module scripts -->
+  <script src="/studentAPI.js" is:inline></script>
+  
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5 min-h-screen">
     
     <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10 pb-6 bg-white rounded-2xl shadow-lg px-6 py-5">
@@ -237,6 +240,19 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
   <script type="module">
     // StudentAPI is loaded globally via public/studentAPI.js
+    
+    // Wait for StudentAPI to be available
+    async function ensureStudentAPI() {
+      let attempts = 0;
+      while (!window.StudentAPI && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      if (!window.StudentAPI) {
+        throw new Error('StudentAPI could not be loaded');
+      }
+    }
+    
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let pendingPayments = [];
@@ -839,7 +855,9 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       document.getElementById('validate-error-message').textContent = message;
     }
 
-    // Cargar datos inicialmente
-    loadPendingPayments();
+    // Cargar datos inicialmente (esperar a que StudentAPI esté disponible)
+    ensureStudentAPI()
+      .then(() => loadPendingPayments())
+      .catch(err => console.error('❌ Error al inicializar:', err));
   </script>
 </Layout>

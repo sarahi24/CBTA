@@ -10,6 +10,9 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
 ---
 
 <Layout title={pageTitle}>
+  <!-- Load StudentAPI globally before any module scripts -->
+  <script src="/studentAPI.js" is:inline></script>
+  
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
     <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10 pb-8 border-b-2 border-red-500/20">
@@ -92,6 +95,19 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
 
   <script type="module">
     // StudentAPI is loaded globally via public/studentAPI.js
+    
+    // Wait for StudentAPI to be available
+    async function ensureStudentAPI() {
+      let attempts = 0;
+      while (!window.StudentAPI && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      if (!window.StudentAPI) {
+        throw new Error('StudentAPI could not be loaded');
+      }
+    }
+    
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let overduePayments = [];
@@ -273,8 +289,10 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
       refreshBtn.addEventListener('click', () => loadOverduePayments(true));
     }
     
-    // Load data initially
-    loadOverduePayments();
+    // Load data initially (esperar a que StudentAPI esté disponible)
+    ensureStudentAPI()
+      .then(() => loadOverduePayments())
+      .catch(err => console.error('❌ Error al inicializar:', err));
   </script>
 
   <style>

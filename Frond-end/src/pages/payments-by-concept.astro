@@ -6,6 +6,8 @@ const pageTitle = "Pagos por Concepto - CBTA 71";
 ---
 
 <Layout title={pageTitle}>
+  <!-- Load StudentAPI globally before any module scripts -->
+  <script src="/studentAPI.js" is:inline></script>
 
 <style is:global>
     :root { --cbta-green: #2E594D; }
@@ -122,6 +124,18 @@ const pageTitle = "Pagos por Concepto - CBTA 71";
 
 <script type="module">
 // StudentAPI is loaded globally via public/studentAPI.js
+
+// Wait for StudentAPI to be available
+async function ensureStudentAPI() {
+  let attempts = 0;
+  while (!window.StudentAPI && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  if (!window.StudentAPI) {
+    throw new Error('StudentAPI could not be loaded');
+  }
+}
 
 (function() {
     let currentPage = 1;
@@ -419,8 +433,10 @@ const pageTitle = "Pagos por Concepto - CBTA 71";
     
     refreshBtn.onclick = () => loadConcepts(true);
 
-    // Cargar al iniciar
-    loadConcepts();
+    // Cargar al iniciar (esperar a que StudentAPI esté disponible)
+    ensureStudentAPI()
+      .then(() => loadConcepts())
+      .catch(err => console.error('❌ Error al inicializar:', err));
 })();
 </script>
 </Layout>
