@@ -827,47 +827,82 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         return;
                     }
 
-                    // Solo enviar campos que hayan cambiado
-                    const requestData = {};
-                    
-                    // Función auxiliar para validar, comparar y agregar campo
-                    const addIfChanged = (field, value, originalValue) => {
-                        if (value === null || value === undefined || value === '') {
-                            return;
-                        }
-
-                        const trimmed = typeof value === 'string' ? value.trim() : value;
-                        const trimmedOriginal = typeof originalValue === 'string' ? originalValue.trim() : originalValue;
-
-                        if (trimmed !== '' && trimmed !== trimmedOriginal) {
-                            requestData[field] = trimmed;
-                        }
+                    const normalize = (value) => {
+                        if (value === null || value === undefined) return '';
+                        return typeof value === 'string' ? value.trim() : value;
                     };
-                    
-                    addIfChanged('name', this.formData.name, this.originalFormData.name);
-                    addIfChanged('last_name', this.formData.last_name, this.originalFormData.last_name);
-                    addIfChanged('email', this.formData.email, this.originalFormData.email);
-                    addIfChanged('phone_number', this.formData.phone_number, this.originalFormData.phone_number);
-                    addIfChanged('birthdate', this.formData.birthdate, this.originalFormData.birthdate);
-                    addIfChanged('gender', this.formData.gender, this.originalFormData.gender);
-                    addIfChanged('blood_type', this.formData.blood_type, this.originalFormData.blood_type);
 
-                    if (this.formData.address) {
-                        const addressTrimmed = typeof this.formData.address === 'string' ? this.formData.address.trim() : '';
-                        const originalAddressTrimmed = typeof this.originalFormData.address === 'string' ? this.originalFormData.address.trim() : '';
-                        if (addressTrimmed && addressTrimmed !== originalAddressTrimmed) {
-                            const addressLines = addressTrimmed.split(/[\n,]+/).map(line => line.trim()).filter(line => line.length > 0);
-                            if (addressLines.length > 0) {
-                                requestData.address = addressLines;
-                            }
-                        }
-                    }
+                    const current = {
+                        name: normalize(this.formData.name),
+                        last_name: normalize(this.formData.last_name),
+                        email: normalize(this.formData.email),
+                        phone_number: normalize(this.formData.phone_number),
+                        birthdate: normalize(this.formData.birthdate),
+                        gender: normalize(this.formData.gender),
+                        blood_type: normalize(this.formData.blood_type),
+                        address: normalize(this.formData.address)
+                    };
 
-                    // Validar que hay al menos un campo para actualizar
-                    if (Object.keys(requestData).length === 0) {
-                        this.errorMessage = 'Por favor completa al menos un campo para actualizar';
+                    const original = {
+                        name: normalize(this.originalFormData.name),
+                        last_name: normalize(this.originalFormData.last_name),
+                        email: normalize(this.originalFormData.email),
+                        phone_number: normalize(this.originalFormData.phone_number),
+                        birthdate: normalize(this.originalFormData.birthdate),
+                        gender: normalize(this.originalFormData.gender),
+                        blood_type: normalize(this.originalFormData.blood_type),
+                        address: normalize(this.originalFormData.address)
+                    };
+
+                    const hasChanges =
+                        current.name !== original.name ||
+                        current.last_name !== original.last_name ||
+                        current.email !== original.email ||
+                        current.phone_number !== original.phone_number ||
+                        current.birthdate !== original.birthdate ||
+                        current.gender !== original.gender ||
+                        current.blood_type !== original.blood_type ||
+                        current.address !== original.address;
+
+                    if (!hasChanges) {
+                        this.errorMessage = 'No hay cambios para guardar';
                         this.isUpdating = false;
                         return;
+                    }
+
+                    const requestData = {
+                        name: current.name || original.name,
+                        last_name: current.last_name || original.last_name,
+                        phone_number: current.phone_number || original.phone_number
+                    };
+
+                    if (!requestData.name || !requestData.last_name || !requestData.phone_number) {
+                        this.errorMessage = 'Nombre, apellido y telefono son obligatorios.';
+                        this.isUpdating = false;
+                        return;
+                    }
+
+                    if (current.email && current.email !== original.email) {
+                        requestData.email = current.email;
+                    }
+
+                    if (current.birthdate && current.birthdate !== original.birthdate) {
+                        requestData.birthdate = current.birthdate;
+                    }
+
+                    if (current.gender && current.gender !== original.gender) {
+                        requestData.gender = current.gender;
+                    }
+
+                    if (current.blood_type && current.blood_type !== original.blood_type) {
+                        requestData.blood_type = current.blood_type;
+                    }
+
+                    if (current.address && current.address !== original.address) {
+                        const addressLines = current.address.split(/[\n,]+/).map(line => line.trim()).filter(line => line.length > 0);
+                        if (addressLines.length > 0) {
+                            requestData.address = addressLines;
+                        }
                     }
 
                     console.log('=== ENVIANDO ACTUALIZACIÓN DE PERFIL ===');
