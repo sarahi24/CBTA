@@ -253,8 +253,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           // Determinar el tipo de ámbito basado en los filtros cargados
           if (this.formData.selectedSpecificStudents.length > 0) {
             this.formData.scopeType = 'estudiantes';
-          } else if (this.formData.selectedCareers.length > 0 && this.formData.selectedSemesters.length > 0) {
-            this.formData.scopeType = 'carrera_semestre';
           } else if (this.formData.selectedSemesters.length > 0) {
             this.formData.scopeType = 'semestre';
           } else if (this.formData.selectedCareers.length > 0) {
@@ -841,7 +839,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 <i class="fas fa-bullseye text-amber-600"></i>
                 Selecciona el tipo de ámbito (solo uno):
               </label>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <label class="cursor-pointer">
                   <input type="radio" value="carrera" x-model="formData.scopeType" @change="formData.selectedSemesters = []; formData.selectedSpecificStudents = []" class="sr-only peer">
                   <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-2 peer-checked:ring-blue-200 hover:shadow-md">
@@ -854,13 +852,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 peer-checked:ring-2 peer-checked:ring-purple-200 hover:shadow-md">
                     <i class="fas fa-calendar-alt text-lg text-purple-600 mb-1"></i>
                     <p class="text-xs font-bold">Por Semestre</p>
-                  </div>
-                </label>
-                <label class="cursor-pointer">
-                  <input type="radio" value="carrera_semestre" x-model="formData.scopeType" @change="formData.selectedSpecificStudents = []" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:ring-2 peer-checked:ring-green-200 hover:shadow-md">
-                    <i class="fas fa-layer-group text-lg text-green-600 mb-1"></i>
-                    <p class="text-xs font-bold">Carrera + Semestre</p>
                   </div>
                 </label>
                 <label class="cursor-pointer">
@@ -916,46 +907,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                       </div>
                     </label>
                   </template>
-                </div>
-              </div>
-
-              <!-- Carreras + Semestres -->
-              <div x-show="formData.scopeType === 'carrera_semestre'" x-cloak class="space-y-4">
-                <div>
-                  <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <i class="fas fa-graduation-cap text-blue-600"></i>
-                    Selecciona las Carreras:
-                  </label>
-                  <div class="grid grid-cols-2 gap-3">
-                    <template x-for="career in careers" :key="career.id">
-                      <label class="cursor-pointer">
-                        <input type="checkbox" :value="career.id" x-model="formData.selectedCareers" class="sr-only peer">
-                        <div
-                          class="p-2 rounded-xl border-2 border-gray-300 text-center flex items-center justify-center min-h-[35px] text-xs transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
-                        >
-                          <span class="font-semibold" x-text="career.name"></span>
-                        </div>
-                      </label>
-                    </template>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <i class="fas fa-calendar-alt text-purple-600"></i>
-                    Selecciona los Semestres:
-                  </label>
-                  <div class="flex flex-wrap gap-2">
-                    <template x-for="sem in semesters" :key="sem.id">
-                      <label class="cursor-pointer">
-                        <input type="checkbox" :value="sem.id" x-model="formData.selectedSemesters" class="sr-only peer">
-                        <div
-                          class="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 text-sm font-bold transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
-                        >
-                          <span x-text="sem.id + '°'"></span>
-                        </div>
-                      </label>
-                    </template>
-                  </div>
                 </div>
               </div>
 
