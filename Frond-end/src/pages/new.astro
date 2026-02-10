@@ -381,7 +381,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         try {
-          const url = new URL(this.apiBaseUrl + '/v1/students');
+          const url = new URL(this.apiBaseUrl + '/payments/students');
           url.searchParams.set('search', input);
           url.searchParams.set('perPage', '5');
           url.searchParams.set('page', '1');
@@ -407,7 +407,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             this.searchResults = json.data.payments.items.map(item => ({
               id: item.userId,
               fullName: item.fullName,
-              control: item.num_control || item.fullName,
+              control: item.n_control || item.fullName,
               email: item.email,
               career_name: item.career_name,
               semestre: item.semestre
