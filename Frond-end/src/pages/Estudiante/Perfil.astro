@@ -585,40 +585,20 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 },
 
                 async loadStudentDetails() {
-                    const token = localStorage.getItem('access_token');
+                    // Los detalles del estudiante generalmente vienen en la respuesta de /v1/users/user
+                    // Por lo que intentamos cargarlos desde localStorage primero
+                    const detailsData = localStorage.getItem('student_details');
                     
-                    if (!token) {
-                        this.loadStudentDetailsFromStorage();
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(API_BASE_URL + '/v1/users/student-details', {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': 'Bearer ' + token,
-                                'Accept': 'application/json'
-                            }
-                        });
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.success && data.data?.student_details) {
-                                const details = data.data.student_details;
-                                localStorage.setItem('student_details', JSON.stringify(details));
-                                this.populateStudentDetails(details);
-                            } else {
-                                this.loadStudentDetailsFromStorage();
-                            }
-                        } else if (response.status === 401 || response.status === 403 || response.status === 404) {
-                            this.loadStudentDetailsFromStorage();
-                        } else {
-                            this.loadStudentDetailsFromStorage();
+                    if (detailsData) {
+                        try {
+                            const details = JSON.parse(detailsData);
+                            this.populateStudentDetails(details);
+                        } catch (e) {
+                            console.error('Error parsing student details from storage:', e);
                         }
-                    } catch (err) {
-                        console.error('Error fetching student details:', err);
-                        this.loadStudentDetailsFromStorage();
                     }
+                    
+                    // Si no hay detalles guardados, usamos los valores por defecto
                 },
 
                 loadStudentDetailsFromStorage() {
