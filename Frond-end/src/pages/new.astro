@@ -400,6 +400,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         try {
+          let userRole = 'financial-staff';
+          const rawUserData = localStorage.getItem('user_data');
+          if (rawUserData) {
+            try {
+              const parsedUser = JSON.parse(rawUserData);
+              if (parsedUser && Array.isArray(parsedUser.roles) && parsedUser.roles.length > 0) {
+                userRole = String(parsedUser.roles[0] || userRole);
+              }
+            } catch {
+              // If parsing fails, keep default role.
+            }
+          }
           // El endpoint busca por PREFIJO, no número completo
           const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
           url.searchParams.set('search', input);
@@ -410,9 +422,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             method: 'GET',
             headers: {
               'Accept': 'application/json',
-              'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
-              'X-User-Role': 'financial-staff'
+              'X-User-Role': userRole
             }
           });
 
