@@ -217,20 +217,41 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		const activeClass = 'nav-active';
 		const inactiveClass = 'nav-inactive';
 
-		// Función para obtener el rol del usuario desde localStorage
-		function getUserRole() {
-			const userData = localStorage.getItem('user_data'); // Corregido: era 'userData', debe ser 'user_data'
-			if (!userData) return null;
+		function decodeJwtPayload(token) {
+			if (!token || !token.includes('.')) return null;
 			try {
-				const parsed = JSON.parse(userData);
-				// roles es un array: ["admin"]
-				if (parsed.roles && Array.isArray(parsed.roles) && parsed.roles.length > 0) {
-					return parsed.roles[0]; // Devolver primer rol
-				}
-				return parsed.role || parsed.type || null;
+				const payload = token.split('.')[1];
+				const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+				const padded = base64 + '==='.slice((base64.length + 3) % 4);
+				return JSON.parse(atob(padded));
 			} catch {
 				return null;
 			}
+		}
+
+		// Función para obtener el rol del usuario desde localStorage o JWT
+		function getUserRole() {
+			const userData = localStorage.getItem('user_data'); // Corregido: era 'userData', debe ser 'user_data'
+			if (userData) {
+				try {
+					const parsed = JSON.parse(userData);
+					// roles es un array: ["admin"]
+					if (parsed.roles && Array.isArray(parsed.roles) && parsed.roles.length > 0) {
+						return parsed.roles[0]; // Devolver primer rol
+					}
+					return parsed.role || parsed.rol || parsed.type || null;
+				} catch {
+					return null;
+				}
+			}
+
+			const token = localStorage.getItem('access_token');
+			const payload = decodeJwtPayload(token);
+			if (!payload) return null;
+			if (payload.roles && Array.isArray(payload.roles) && payload.roles.length > 0) {
+				return payload.roles[0];
+			}
+			return payload.role || payload.rol || payload.type || null;
 		}
 
 		// Función para normalizar el rol a un formato estándar
