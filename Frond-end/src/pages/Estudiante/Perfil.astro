@@ -467,6 +467,16 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 successMessage: '',
                 errorMessage: '',
                 errors: {},
+                originalFormData: {
+                    name: '',
+                    last_name: '',
+                    email: '',
+                    phone_number: '',
+                    birthdate: '',
+                    gender: '',
+                    blood_type: '',
+                    address: ''
+                },
                 formData: {
                     name: '',
                     last_name: '',
@@ -696,6 +706,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     } else {
                         this.formData.address = '';
                     }
+
+                    this.originalFormData = { ...this.formData };
                 },
 
                 closeAllModals() {
@@ -815,30 +827,35 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         return;
                     }
 
-                    // Solo enviar campos que tengan valores
+                    // Solo enviar campos que hayan cambiado
                     const requestData = {};
                     
-                    // Función auxiliar para validar y agregar campo
-                    const addField = (field, value) => {
-                        if (value !== null && value !== undefined && value !== '') {
-                            const trimmed = typeof value === 'string' ? value.trim() : value;
-                            if (trimmed !== '') {
-                                requestData[field] = trimmed;
-                            }
+                    // Función auxiliar para validar, comparar y agregar campo
+                    const addIfChanged = (field, value, originalValue) => {
+                        if (value === null || value === undefined || value === '') {
+                            return;
+                        }
+
+                        const trimmed = typeof value === 'string' ? value.trim() : value;
+                        const trimmedOriginal = typeof originalValue === 'string' ? originalValue.trim() : originalValue;
+
+                        if (trimmed !== '' && trimmed !== trimmedOriginal) {
+                            requestData[field] = trimmed;
                         }
                     };
                     
-                    addField('name', this.formData.name);
-                    addField('last_name', this.formData.last_name);
-                    addField('email', this.formData.email);
-                    addField('phone_number', this.formData.phone_number);
-                    addField('birthdate', this.formData.birthdate);
-                    addField('gender', this.formData.gender);
-                    addField('blood_type', this.formData.blood_type);
+                    addIfChanged('name', this.formData.name, this.originalFormData.name);
+                    addIfChanged('last_name', this.formData.last_name, this.originalFormData.last_name);
+                    addIfChanged('email', this.formData.email, this.originalFormData.email);
+                    addIfChanged('phone_number', this.formData.phone_number, this.originalFormData.phone_number);
+                    addIfChanged('birthdate', this.formData.birthdate, this.originalFormData.birthdate);
+                    addIfChanged('gender', this.formData.gender, this.originalFormData.gender);
+                    addIfChanged('blood_type', this.formData.blood_type, this.originalFormData.blood_type);
 
                     if (this.formData.address) {
                         const addressTrimmed = typeof this.formData.address === 'string' ? this.formData.address.trim() : '';
-                        if (addressTrimmed) {
+                        const originalAddressTrimmed = typeof this.originalFormData.address === 'string' ? this.originalFormData.address.trim() : '';
+                        if (addressTrimmed && addressTrimmed !== originalAddressTrimmed) {
                             const addressLines = addressTrimmed.split(/[\n,]+/).map(line => line.trim()).filter(line => line.length > 0);
                             if (addressLines.length > 0) {
                                 requestData.address = addressLines;
