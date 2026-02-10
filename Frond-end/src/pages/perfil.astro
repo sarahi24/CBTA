@@ -423,12 +423,13 @@ import Layout from '../layouts/Layout.astro';
                 async loadUserData() {
                     const token = localStorage.getItem('token');
                     if (!token) {
-                        console.log('No token found, using localStorage fallback');
+                        console.warn('⚠️ No token found, using localStorage fallback');
                         this.loadUserDataFromStorage();
                         return;
                     }
 
                     try {
+                        console.log('🔄 Fetching user data from API...');
                         const response = await fetch(API_BASE_URL + '/v1/users/user', {
                             method: 'GET',
                             headers: {
@@ -439,25 +440,27 @@ import Layout from '../layouts/Layout.astro';
 
                         if (response.ok) {
                             const data = await response.json();
+                            console.log('📥 API Response:', data);
+                            
                             if (data.success && data.data?.user) {
                                 const user = data.data.user;
                                 localStorage.setItem('user_data', JSON.stringify(user));
                                 this.populateUserData(user);
-                                console.log('User data loaded from API');
+                                console.log('✅ User data loaded from API');
                             } else {
-                                console.log('Invalid API response, using localStorage fallback');
+                                console.warn('⚠️ Invalid API response structure, using localStorage fallback');
                                 this.loadUserDataFromStorage();
                             }
                         } else if (response.status === 401 || response.status === 403) {
-                            console.log('Unauthorized, using localStorage fallback');
+                            console.warn('⚠️ Unauthorized (401/403), using localStorage fallback');
                             this.loadUserDataFromStorage();
                         } else {
-                            console.log('API error, using localStorage fallback');
+                            console.warn(`⚠️ API error (${response.status}), using localStorage fallback`);
                             this.loadUserDataFromStorage();
                         }
                     } catch (err) {
-                        console.error('Error fetching user data from API:', err);
-                        console.log('Using localStorage fallback');
+                        console.error('❌ Error fetching user data from API:', err);
+                        console.log('📦 Using localStorage fallback');
                         this.loadUserDataFromStorage();
                     }
                 },
@@ -465,25 +468,45 @@ import Layout from '../layouts/Layout.astro';
                 loadUserDataFromStorage() {
                     const userData = localStorage.getItem('user_data');
                     if (!userData) {
-                        console.log('No user data found');
+                        console.warn('⚠️ No user data found in localStorage');
                         return;
                     }
 
                     try {
                         const user = JSON.parse(userData);
                         this.populateUserData(user);
+                        console.log('✅ User data loaded from localStorage');
                     } catch (e) {
-                        console.error('Error parsing user data:', e);
+                        console.error('❌ Error parsing user data from localStorage:', e);
                     }
                 },
 
                 populateUserData(user) {
-                    this.userName = user.name || user.username || 'Sin nombre';
+                    // Mapear nombre - usar name + last_name
+                    const firstName = user.name || '';
+                    const lastName = user.last_name || '';
+                    this.userName = `${firstName} ${lastName}`.trim() || 'Sin nombre';
+                    
                     this.userEmail = user.email || 'No disponible';
                     this.userId = user.id || 'No disponible';
-                    this.userRole = user.roles?.length > 0 ? user.roles[0] : 'Usuario';
-                    this.userRoles = user.roles || [];
-                    this.userPermissions = user.permissions || [];
+                    
+                    // Mapear roles correctamente - si son objetos con propiedades, extraer nombre
+                    if (user.roles && Array.isArray(user.roles)) {
+                        const roleNames = user.roles.map(r => typeof r === 'string' ? r : r.name || r).filter(Boolean);
+                        this.userRole = roleNames.length > 0 ? roleNames[0] : 'Usuario';
+                        this.userRoles = roleNames;
+                    } else {
+                        this.userRole = 'Usuario';
+                        this.userRoles = [];
+                    }
+                    
+                    // Mapear permisos - pueden no existir en todos los usuarios
+                    if (user.permissions && Array.isArray(user.permissions)) {
+                        this.userPermissions = user.permissions.map(p => typeof p === 'string' ? p : p.name || p).filter(Boolean);
+                    } else {
+                        this.userPermissions = [];
+                    }
+                    
                     this.lastLogin = new Date().toLocaleDateString('es-ES', {
                         year: 'numeric',
                         month: 'long',
@@ -497,15 +520,17 @@ import Layout from '../layouts/Layout.astro';
                     this.formData.last_name = user.last_name || '';
                     this.formData.email = user.email || '';
                     this.formData.phone_number = user.phone_number || '';
-                    this.formData.birthdate = user.birthdate || '';
+                    this.formData.birthdate = user.birthdate ? (user.birthdate.includes('T') ? user.birthdate.split('T')[0] : user.birthdate) : '';
                     this.formData.gender = user.gender || '';
                     this.formData.blood_type = user.blood_type || '';
-                    this.formData.address = Array.isArray(user.address) && user.address[0] ? user.address[0] : '';
+                    this.formData.address = Array.isArray(user.address) && user.address.length > 0 ? user.address.join(', ') : '';
 
-                    console.log('User data populated:', {
+                    console.log('✅ User data populated successfully:', {
                         name: this.userName,
                         email: this.userEmail,
-                        id: this.userId
+                        id: this.userId,
+                        roles: this.userRoles,
+                        permissions: this.userPermissions.length
                     });
                 },
 
@@ -521,14 +546,15 @@ import Layout from '../layouts/Layout.astro';
                                 last_name: user.last_name || '',
                                 email: user.email || '',
                                 phone_number: user.phone_number || '',
-                                birthdate: user.birthdate ? user.birthdate.split('T')[0] : '',
+                                birthdate: user.birthdate ? (user.birthdate.includes('T') ? user.birthdate.split('T')[0] : user.birthdate) : '',
                                 gender: user.gender || '',
                                 blood_type: user.blood_type || '',
-                                address: Array.isArray(user.address) ? user.address.join(', ') : (user.address || '')
+                                address: Array.isArray(user.address) && user.address.length > 0 ? user.address.join(', ') : (user.address || '')
                             };
-                            console.log('Form data loaded:', this.formData);
+                            console.log('📝 Form data loaded for editing:', this.formData);
                         } catch (e) {
-                            console.error('Error loading form data:', e);
+                            console.error('❌ Error loading form data:', e);
+                            this.errorMessage = 'Error al cargar los datos del perfil';
                         }
                     }
                     this.showEditModal = true;
@@ -544,26 +570,27 @@ import Layout from '../layouts/Layout.astro';
                     if (!token) {
                         this.errorMessage = 'No estás autenticado. Por favor inicia sesión.';
                         this.isUpdating = false;
+                        console.error('❌ No token found');
                         return;
                     }
 
                     // Preparar los datos para enviar
                     const requestData = {
-                        name: this.formData.name,
-                        last_name: this.formData.last_name,
-                        email: this.formData.email,
-                        phone_number: this.formData.phone_number,
-                        birthdate: this.formData.birthdate,
-                        gender: this.formData.gender,
-                        blood_type: this.formData.blood_type
+                        name: this.formData.name?.trim() || '',
+                        last_name: this.formData.last_name?.trim() || '',
+                        email: this.formData.email?.trim() || '',
+                        phone_number: this.formData.phone_number?.trim() || '',
+                        birthdate: this.formData.birthdate || '',
+                        gender: this.formData.gender || '',
+                        blood_type: this.formData.blood_type || ''
                     };
 
                     // Convertir dirección a array si es necesario
-                    if (this.formData.address) {
-                        requestData.address = [this.formData.address];
+                    if (this.formData.address?.trim()) {
+                        requestData.address = [this.formData.address.trim()];
                     }
 
-                    console.log('Sending update request:', requestData);
+                    console.log('📤 Sending profile update:', requestData);
 
                     try {
                         const response = await fetch(API_BASE_URL + '/v1/users/update', {
@@ -577,21 +604,19 @@ import Layout from '../layouts/Layout.astro';
                         });
 
                         const data = await response.json();
-                        console.log('Response status:', response.status);
-                        console.log('Response data:', data);
+                        console.log('📥 Response status:', response.status);
+                        console.log('📥 Response data:', data);
 
                         if (response.ok && data.success) {
                             this.successMessage = data.message || 'Perfil actualizado correctamente';
                             
-                            // Actualizar datos en localStorage
-                            const updatedUser = data.data.user;
-                            localStorage.setItem('user_data', JSON.stringify(updatedUser));
-                            
-                            // Actualizar la visualización
-                            this.userName = updatedUser.name || updatedUser.username || 'Sin nombre';
-                            this.userEmail = updatedUser.email || 'No disponible';
-                            
-                            console.log('✅ Perfil actualizado exitosamente');
+                            // Actualizar datos en localStorage - manejar estructura de respuesta
+                            const updatedUser = data.data?.user || data.user;
+                            if (updatedUser) {
+                                localStorage.setItem('user_data', JSON.stringify(updatedUser));
+                                this.populateUserData(updatedUser);
+                                console.log('✅ Perfil actualizado exitosamente');
+                            }
                             
                             // Cerrar modal después de 2 segundos
                             setTimeout(() => {
@@ -600,19 +625,19 @@ import Layout from '../layouts/Layout.astro';
                             }, 2000);
                         } else {
                             // Manejar errores de validación
-                            if (data.errors) {
+                            if (data.errors && typeof data.errors === 'object') {
                                 this.errors = data.errors;
                                 const firstErrorKey = Object.keys(data.errors)[0];
                                 const firstError = data.errors[firstErrorKey];
                                 this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
                             } else {
-                                this.errorMessage = data.message || 'Error al actualizar el perfil';
+                                this.errorMessage = data.message || 'Error al actualizar el perfil. Por favor, intenta de nuevo.';
                             }
                             console.error('❌ Error en la actualización:', data);
                         }
                     } catch (err) {
-                        console.error('Error updating profile:', err);
-                        this.errorMessage = 'Error de conexión con el servidor';
+                        console.error('❌ Error updating profile:', err);
+                        this.errorMessage = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
                     } finally {
                         this.isUpdating = false;
                     }
@@ -634,27 +659,31 @@ import Layout from '../layouts/Layout.astro';
                     this.passwordErrors = {};
 
                     // Validación del lado del cliente
-                    if (!this.passwordData.currentPassword) {
+                    if (!this.passwordData.currentPassword?.trim()) {
                         this.passwordErrorMessage = 'La contraseña actual es requerida';
                         this.isChangingPassword = false;
+                        console.warn('⚠️ Current password is empty');
                         return;
                     }
 
-                    if (!this.passwordData.newPassword) {
+                    if (!this.passwordData.newPassword?.trim()) {
                         this.passwordErrorMessage = 'La nueva contraseña es requerida';
                         this.isChangingPassword = false;
+                        console.warn('⚠️ New password is empty');
                         return;
                     }
 
                     if (this.passwordData.newPassword.length < 8) {
                         this.passwordErrorMessage = 'La contraseña debe tener al menos 8 caracteres';
                         this.isChangingPassword = false;
+                        console.warn('⚠️ New password is too short');
                         return;
                     }
 
                     if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
                         this.passwordErrorMessage = 'Las contraseñas no coinciden';
                         this.isChangingPassword = false;
+                        console.warn('⚠️ Passwords do not match');
                         return;
                     }
 
@@ -662,8 +691,11 @@ import Layout from '../layouts/Layout.astro';
                     if (!token) {
                         this.passwordErrorMessage = 'No estás autenticado. Por favor inicia sesión.';
                         this.isChangingPassword = false;
+                        console.error('❌ No token found');
                         return;
                     }
+
+                    console.log('🔐 Attempting to change password...');
 
                     try {
                         const response = await fetch(API_BASE_URL + '/v1/users/update/password', {
@@ -680,9 +712,11 @@ import Layout from '../layouts/Layout.astro';
                         });
 
                         const data = await response.json();
+                        console.log('📥 Password change response:', response.status);
 
                         if (response.ok && data.success) {
                             this.passwordSuccessMessage = data.message || 'Contraseña actualizada correctamente';
+                            console.log('✅ Contraseña actualizada exitosamente');
                             
                             setTimeout(() => {
                                 this.showPasswordModal = false;
@@ -690,7 +724,8 @@ import Layout from '../layouts/Layout.astro';
                                 this.passwordSuccessMessage = '';
                             }, 2000);
                         } else {
-                            if (data.errors) {
+                            // Manejar errores
+                            if (data.errors && typeof data.errors === 'object') {
                                 this.passwordErrors = data.errors;
                                 const firstErrorKey = Object.keys(data.errors)[0];
                                 const firstError = data.errors[firstErrorKey];
@@ -700,9 +735,10 @@ import Layout from '../layouts/Layout.astro';
                             } else {
                                 this.passwordErrorMessage = data.message || 'Error al cambiar la contraseña';
                             }
+                            console.error('❌ Error changing password:', data);
                         }
                     } catch (err) {
-                        console.error('Error changing password:', err);
+                        console.error('❌ Error changing password:', err);
                         this.passwordErrorMessage = 'Error de conexión con el servidor';
                     } finally {
                         this.isChangingPassword = false;
