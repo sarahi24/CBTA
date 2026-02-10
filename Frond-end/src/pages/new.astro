@@ -407,7 +407,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         
         if (!isValidControlFormat) {
           // Si no parece un número de control válido, no buscar en API
-          console.log(`💡 "${input}" no parece un número de control válido (debe tener al menos 6 dígitos)`);
           this.searchResults = [];
           this.isSearching = false;
           return;
@@ -416,7 +415,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         // Si no hay cache o no hubo resultados, buscar en API
         const token = localStorage.getItem('access_token');
         if (!token) {
-          console.log('⚠️ No hay token para buscar en API');
           this.searchResults = [];
           this.isSearching = false;
           return;
@@ -439,12 +437,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           });
 
           if (!res.ok) {
-            // 422 = validación fallida en el backend, silenciosamente no mostrar resultados
-            if (res.status === 422) {
-              console.log(`🔍 Sin resultados para "${input}"`);
-            } else {
-              console.log(`⚠️ Error en búsqueda: ${res.status}`);
-            }
+            // Manejar errores silenciosamente (422 = número no encontrado, es esperado)
             this.searchResults = [];
             this.isSearching = false;
             return;
@@ -470,7 +463,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             this.searchResults = [];
           }
         } catch (err) {
-          console.log('⚠️ Error al buscar estudiantes:', err.message);
+          // Error de red u otro - manejar silenciosamente
           this.searchResults = [];
         } finally {
           this.isSearching = false;
