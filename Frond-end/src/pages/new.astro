@@ -344,13 +344,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.errorMessage = '⚠️ Las fechas de inicio y fin son obligatorias.';
           return;
         }
+        
+        // Validación específica según el ámbito seleccionado
         if (!this.formData.allStudents) {
-          const hasCareer = this.formData.selectedCareers.length > 0;
-          const hasSemester = this.formData.selectedSemesters.length > 0;
-          const hasSpecific = this.formData.selectedSpecificStudents.length > 0;
-          if (!hasCareer && !hasSemester && !hasSpecific) {
-            this.errorMessage = '⚠️ Seleccione al menos una Carrera, Semestre o Alumno.';
-            return;
+          if (this.formData.scopeType === 'carrera') {
+            if (this.formData.selectedCareers.length === 0) {
+              this.errorMessage = '⚠️ Seleccione al menos una Carrera.';
+              return;
+            }
+          } else if (this.formData.scopeType === 'semestre') {
+            if (this.formData.selectedSemesters.length === 0) {
+              this.errorMessage = '⚠️ Seleccione al menos un Semestre.';
+              return;
+            }
+          } else if (this.formData.scopeType === 'carrera_semestre') {
+            if (this.formData.selectedCareers.length === 0 || this.formData.selectedSemesters.length === 0) {
+              this.errorMessage = '⚠️ Seleccione al menos una Carrera y un Semestre.';
+              return;
+            }
+          } else if (this.formData.scopeType === 'estudiantes') {
+            if (this.formData.selectedSpecificStudents.length === 0) {
+              this.errorMessage = '⚠️ Seleccione al menos un Estudiante.';
+              return;
+            }
+          } else if (this.formData.scopeType === 'tags') {
+            if (this.formData.applicantTags.length === 0) {
+              this.errorMessage = '⚠️ Seleccione al menos un Caso Especial.';
+              return;
+            }
           }
         }
         const payload = {
