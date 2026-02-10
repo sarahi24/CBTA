@@ -511,6 +511,7 @@ import Layout from '../layouts/Layout.astro';
 
                 editProfile() {
                     // Cargar datos actuales en el formulario
+                    this.showPasswordModal = false;
                     const userData = localStorage.getItem('user_data');
                     if (userData) {
                         try {
@@ -618,6 +619,7 @@ import Layout from '../layouts/Layout.astro';
                 },
 
                 changePassword() {
+                    this.showEditModal = false;
                     this.showPasswordModal = true;
                     this.passwordData = { currentPassword: '', newPassword: '', confirmPassword: '' };
                     this.passwordErrors = {};

@@ -657,10 +657,12 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 },
 
                 editProfile() {
+                    this.showPasswordModal = false;
                     this.showEditModal = true;
                 },
 
                 changePassword() {
+                    this.showEditModal = false;
                     this.showPasswordModal = true;
                     this.passwordData = { currentPassword: '', newPassword: '', confirmPassword: '' };
                     this.passwordErrors = {};
