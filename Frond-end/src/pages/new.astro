@@ -425,20 +425,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
           const json = await res.json();
           if (json.success && json.data) {
-            // La respuesta según documentación es un objeto singular con "concept"
-            const concept = json.data.concept;
+            // La respuesta real es data.search (array), no data.concept
+            const searchResults = json.data.search || [];
             
-            if (concept) {
-              // Convertir a formato array para consistencia
-              this.searchResults = [{
-                id: concept.id,
-                fullName: concept.name,
-                control: concept.n_control,
+            if (searchResults.length > 0) {
+              this.searchResults = searchResults.map(item => ({
+                id: item.id,
+                fullName: item.name,
+                control: item.n_control,
                 email: '',
                 career_name: '',
                 semestre: ''
-              }];
-              console.log('✅ Resultado desde API:', concept.n_control);
+              }));
+              console.log('✅ Resultados desde API:', this.searchResults.length);
             } else {
               this.searchResults = [];
             }
