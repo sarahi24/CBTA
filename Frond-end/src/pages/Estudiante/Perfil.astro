@@ -196,8 +196,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
         </div>
 
         <!-- Modal de Edición de Perfil -->
-        <div x-show="showEditModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div x-show="showEditModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="z-index: 9999;">
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
                 <!-- Overlay -->
                 <div x-show="showEditModal" 
                      x-transition:enter="ease-out duration-300" 
@@ -207,9 +207,9 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                      x-transition:leave-start="opacity-100" 
                      x-transition:leave-end="opacity-0" 
                      @click="showEditModal = false"
-                     class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                     class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" 
+                     style="z-index: 1;"
+                     aria-hidden="true"></div>
 
                 <!-- Modal Panel -->
                 <div x-show="showEditModal" 
@@ -220,7 +220,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                      x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" 
                      x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
                      @click.stop
-                     class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                     class="relative inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+                     style="z-index: 10;">
                     
                     <!-- Header del Modal -->
                     <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-5">
@@ -411,10 +412,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                 async loadStudentData() {
                     const token = localStorage.getItem('access_token');
-                    console.log('🔍 Loading student data - Token status:', token ? '✅ Present' : '❌ Missing');
                     
                     if (!token) {
-                        console.log('No token found, using localStorage fallback');
                         this.loadStudentDataFromStorage();
                         return;
                     }
@@ -434,37 +433,29 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 const student = data.data.user;
                                 localStorage.setItem('user_data', JSON.stringify(student));
                                 this.populateStudentData(student);
-                                console.log('Student data loaded from API');
                             } else {
-                                console.log('Invalid API response, using localStorage fallback');
                                 this.loadStudentDataFromStorage();
                             }
                         } else if (response.status === 401 || response.status === 403) {
-                            console.log('Unauthorized, using localStorage fallback');
                             this.loadStudentDataFromStorage();
                         } else {
-                            console.log('API error, using localStorage fallback');
                             this.loadStudentDataFromStorage();
                         }
                     } catch (err) {
-                        console.error('Error fetching student data from API:', err);
-                        console.log('Using localStorage fallback');
+                        console.error('Error fetching student data:', err);
                         this.loadStudentDataFromStorage();
                     }
                 },
 
                 loadStudentDataFromStorage() {
                     const userData = localStorage.getItem('user_data');
-                    console.log('📦 Checking localStorage - user_data status:', userData ? '✅ Found' : '❌ Missing');
                     
                     if (!userData) {
-                        console.log('No student data found');
                         return;
                     }
 
                     try {
                         const student = JSON.parse(userData);
-                        console.log('👤 Parsed student data:', { id: student.id, name: student.name, email: student.email });
                         this.populateStudentData(student);
                     } catch (e) {
                         console.error('Error parsing student data:', e);
@@ -473,10 +464,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                 async loadStudentDetails() {
                     const token = localStorage.getItem('access_token');
-                    console.log('🔍 Loading student details - Token status:', token ? '✅ Present' : '❌ Missing');
                     
                     if (!token) {
-                        console.log('No token found, using localStorage fallback for student details');
                         this.loadStudentDetailsFromStorage();
                         return;
                     }
@@ -496,37 +485,29 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 const details = data.data.student_details;
                                 localStorage.setItem('student_details', JSON.stringify(details));
                                 this.populateStudentDetails(details);
-                                console.log('Student details loaded from API');
                             } else {
-                                console.log('Invalid API response for student details, using localStorage fallback');
                                 this.loadStudentDetailsFromStorage();
                             }
                         } else if (response.status === 401 || response.status === 403 || response.status === 404) {
-                            console.log('Unauthorized or not found, using localStorage fallback');
                             this.loadStudentDetailsFromStorage();
                         } else {
-                            console.log('API error, using localStorage fallback');
                             this.loadStudentDetailsFromStorage();
                         }
                     } catch (err) {
-                        console.error('Error fetching student details from API:', err);
-                        console.log('Using localStorage fallback');
+                        console.error('Error fetching student details:', err);
                         this.loadStudentDetailsFromStorage();
                     }
                 },
 
                 loadStudentDetailsFromStorage() {
                     const detailsData = localStorage.getItem('student_details');
-                    console.log('📦 Checking localStorage - student_details status:', detailsData ? '✅ Found' : '❌ Missing');
                     
                     if (!detailsData) {
-                        console.log('No student details found in storage');
                         return;
                     }
 
                     try {
                         const details = JSON.parse(detailsData);
-                        console.log('🎓 Parsed student details:', { nControl: details.nControl, semestre: details.semestre });
                         this.populateStudentDetails(details);
                     } catch (e) {
                         console.error('Error parsing student details:', e);
@@ -539,14 +520,6 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     this.group = details.group || 'No disponible';
                     this.workshop = details.workshop || 'No disponible';
                     this.careerName = details.careerName || 'No disponible';
-
-                    console.log('Student details populated:', {
-                        nControl: this.nControl,
-                        semestre: this.semestre,
-                        group: this.group,
-                        workshop: this.workshop,
-                        careerName: this.careerName
-                    });
                 },
 
                 populateStudentData(student) {
@@ -576,12 +549,6 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     this.formData.gender = student.gender || '';
                     this.formData.blood_type = student.blood_type || '';
                     this.formData.address = Array.isArray(student.address) && student.address[0] ? student.address[0] : '';
-
-                    console.log('Student data populated:', {
-                        name: this.studentName,
-                        email: this.studentEmail,
-                        id: this.studentId
-                    });
                 },
 
                 closeAllModals() {
