@@ -165,85 +165,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return false;
         };
 
-        // Si hay datos en localStorage, usarlos y NO hacer petición API
+        // Si hay datos en localStorage, usarlos
         if (loadFromLocalStorage()) {
           return Promise.resolve();
         }
 
-        // Si no hay localStorage, cargar desde API usando el endpoint de búsqueda de controles
-        console.log('📡 Cargando estudiantes desde API /v1/concepts/search/controls...');
-        if (!token) {
-          console.warn('⚠️ No hay token de autenticación');
-          mapStudents([]);
-          return Promise.resolve();
-        }
-
-        try {
-          // Cargar estudiantes usando búsquedas por prefijos comunes de años completos
-          // Los números de control suelen empezar con el año (2026, 2025, 2024, etc)
-          const currentYear = new Date().getFullYear();
-          const searchPrefixes = [];
-          
-          // Buscar últimos 6 años de números de control (años completos de 4 dígitos)
-          for (let i = 0; i < 6; i++) {
-            searchPrefixes.push(String(currentYear - i)); // Año completo (ej: 2026, 2025, 2024...)
-          }
-          
-          const allStudents = [];
-          const studentIds = new Set();
-          
-          for (const prefix of searchPrefixes) {
-            const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
-            url.searchParams.set('search', prefix);
-            url.searchParams.set('limit', '50');
-            url.searchParams.set('forceRefresh', 'false');
-
-            const res = await fetch(url.toString(), {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-User-Role': 'financial-staff'
-              }
-            });
-
-            if (res.ok) {
-              const json = await res.json();
-              if (json.success && json.data) {
-                // La respuesta puede ser un objeto único o un array
-                const students = Array.isArray(json.data) ? json.data : 
-                               json.data.concept ? [json.data.concept] : 
-                               json.data.students || [];
-                
-                students.forEach(student => {
-                  // Evitar duplicados
-                  const studentId = student.id ?? student.user_id;
-                  if (studentId && !studentIds.has(studentId)) {
-                    studentIds.add(studentId);
-                    allStudents.push(student);
-                  }
-                });
-              }
-            } else {
-              console.log(`⚠️ Búsqueda '${prefix}': ${res.status} ${res.statusText}`);
-            }
-          }
-
-          if (allStudents.length > 0) {
-            console.log(`✅ ${allStudents.length} estudiantes cargados desde API`);
-            mapStudents(allStudents);
-            // Guardar en localStorage para siguiente vez
-            localStorage.setItem('studentsList', JSON.stringify(allStudents));
-          } else {
-            console.warn('⚠️ No se encontraron estudiantes en la API');
-            mapStudents([]);
-          }
-        } catch (err) {
-          console.error('❌ Error al cargar estudiantes desde API:', err.message);
-          mapStudents([]);
-        }
-
+        // Si no hay localStorage, inicializar vacío
+        // El formulario funcionará sin estudiantes para conceptos generales (carrera/semestre)
+        // La búsqueda en tiempo real funcionará cuando el usuario busque estudiantes específicos
+        console.log('💡 Lista de estudiantes vacía. Usa la búsqueda en tiempo real para agregar estudiantes específicos.');
+        mapStudents([]);
         return Promise.resolve();
       },
 
@@ -878,9 +809,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             await self.loadCareers();
             await self.loadStudents();
             console.log('✅ Carreras y estudiantes cargados');
-            // Mostrar alerta si no hay estudiantes
-            if (!self.allStudents || self.allStudents.length === 0) {
-              console.warn('⚠️ Sin estudiantes en memoria - usuario debe visitar /roles primero');
+            // Log informativo sobre estudiantes
+            if (self.allStudents && self.allStudents.length > 0) {
+              console.log(`📊 ${self.allStudents.length} estudiantes disponibles`);
+            } else {
+              console.log('💡 Usa la búsqueda en tiempo real para agregar estudiantes específicos');
             }
           } else {
             self.careers = self.CAREERS.map(c => ({ id: c.code, name: c.name }));
@@ -955,16 +888,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
       <!-- Alerta cuando no hay estudiantes cargados -->
       <div x-cloak x-show="allStudents.length === 0 && formData.scopeType === 'estudiantes'"
-        class="p-4 rounded-xl font-medium text-sm flex items-start border border-amber-300 bg-amber-50 text-amber-900 shadow-md mb-6"
+        class="p-4 rounded-xl font-medium text-sm flex items-start border border-blue-300 bg-blue-50 text-blue-900 shadow-md mb-6"
       >
-        <i class="fas fa-warning text-amber-600 text-xl mr-3 mt-0.5"></i>
+        <i class="fas fa-info-circle text-blue-600 text-xl mr-3 mt-0.5"></i>
         <div class="flex-1">
-          <p class="font-bold mb-2">⚠️ No hay estudiantes cargados</p>
-          <p class="text-sm mb-3">Para buscar y agregar estudiantes específicos, primero necesitas cargar la lista de usuarios.</p>
-          <a href="/roles" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-sm transition-colors">
-            <i class="fas fa-arrow-right"></i>
-            Ir a Cargar Usuarios
-          </a>
+          <p class="font-bold mb-2">💡 Búsqueda de estudiantes en tiempo real</p>
+          <p class="text-sm">Escribe en el campo de búsqueda (mínimo 3 caracteres) para encontrar estudiantes por nombre o número de control.</p>
         </div>
       </div>
 
@@ -1237,16 +1166,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   <i class="fas fa-user-check text-orange-600"></i>
                   Agregar Matrículas de Estudiantes:
                 </label>
-                <p class="text-sm text-gray-600 mb-3">Escribe la matrícula, email o nombre del estudiante. Selecciona de los resultados o presiona Enter para agregar manualmente.</p>
-                
-                <!-- Aviso si no hay estudiantes cargados -->
-                <div x-show="allStudents.length === 0" class="mb-3 p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2">
-                  <i class="fas fa-lightbulb text-amber-600 text-lg mt-0.5"></i>
-                  <div class="flex-1">
-                    <p class="font-semibold text-sm text-amber-900">💡 Carga estudiantes primero</p>
-                    <p class="text-xs text-amber-800 mt-1">Los resultados de búsqueda aparecerán aquí una vez que cargues la lista de usuarios desde <a href="/roles" class="font-bold underline hover:no-underline">/roles</a></p>
-                  </div>
-                </div>
+                <p class="text-sm text-gray-600 mb-3">Escribe el número de control, email o nombre del estudiante (mínimo 3 caracteres). Selecciona de los resultados o presiona Enter para agregar.</p>
                 
                 <div class="relative flex-1">
                   <div class="flex gap-2">
@@ -1256,9 +1176,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         x-model="searchTerm"
                         @input="searchStudentsRealTime()"
                         @keydown.enter.prevent="addStudentByControl(); searchTerm = ''"
-                        :disabled="allStudents.length === 0"
-                        placeholder="Ej: 21680118, email@cbta.edu.mx o nombre"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed">
+                        placeholder="Ej: 202, Juan, email@cbta.edu.mx (escribe al menos 3 caracteres)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm">
                       
                       <!-- Indicador de carga -->
                       <span x-show="isSearching" class="absolute right-3 top-2.5 text-orange-500">
