@@ -799,6 +799,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           await loadCareers();
           await loadStudents();
           console.log('✅ Carreras y estudiantes cargados');
+          // Mostrar alerta si no hay estudiantes
+          if (!allStudents || allStudents.length === 0) {
+            console.warn('⚠️ Sin estudiantes en memoria - usuario debe visitar /roles primero');
+          }
         } else {
           careers = CAREERS.map(c => ({ id: c.code, name: c.name }));
         }
@@ -867,6 +871,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       >
         <i :class="errorMessage.includes('✓') ? 'fas fa-check-circle text-emerald-500' : 'fas fa-exclamation-triangle text-red-500'" class="text-xl mr-3 mt-0.5"></i>
         <span x-text="errorMessage" class="flex-1"></span>
+      </div>
+
+      <!-- Alerta cuando no hay estudiantes cargados -->
+      <div x-cloak x-show="allStudents.length === 0 && formData.scopeType === 'estudiantes'"
+        class="p-4 rounded-xl font-medium text-sm flex items-start border border-amber-300 bg-amber-50 text-amber-900 shadow-md mb-6"
+      >
+        <i class="fas fa-warning text-amber-600 text-xl mr-3 mt-0.5"></i>
+        <div class="flex-1">
+          <p class="font-bold mb-2">⚠️ No hay estudiantes cargados</p>
+          <p class="text-sm mb-3">Para buscar y agregar estudiantes específicos, primero necesitas cargar la lista de usuarios.</p>
+          <a href="/roles" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-sm transition-colors">
+            <i class="fas fa-arrow-right"></i>
+            Ir a Cargar Usuarios
+          </a>
+        </div>
       </div>
 
       <form @submit.prevent="submitForm" class="space-y-6">
@@ -1140,6 +1159,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 </label>
                 <p class="text-sm text-gray-600 mb-3">Escribe la matrícula, email o nombre del estudiante. Selecciona de los resultados o presiona Enter para agregar manualmente.</p>
                 
+                <!-- Aviso si no hay estudiantes cargados -->
+                <div x-show="allStudents.length === 0" class="mb-3 p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2">
+                  <i class="fas fa-lightbulb text-amber-600 text-lg mt-0.5"></i>
+                  <div class="flex-1">
+                    <p class="font-semibold text-sm text-amber-900">💡 Carga estudiantes primero</p>
+                    <p class="text-xs text-amber-800 mt-1">Los resultados de búsqueda aparecerán aquí una vez que cargues la lista de usuarios desde <a href="/roles" class="font-bold underline hover:no-underline">/roles</a></p>
+                  </div>
+                </div>
+                
                 <div class="relative flex-1">
                   <div class="flex gap-2">
                     <div class="flex-1 relative">
@@ -1148,8 +1176,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         x-model="searchTerm"
                         @input="searchStudentsRealTime()"
                         @keydown.enter.prevent="addStudentByControl(); searchTerm = ''"
+                        :disabled="allStudents.length === 0"
                         placeholder="Ej: 21680118, email@cbta.edu.mx o nombre"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm">
+                        class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed">
                       
                       <!-- Indicador de carga -->
                       <span x-show="isSearching" class="absolute right-3 top-2.5 text-orange-500">
