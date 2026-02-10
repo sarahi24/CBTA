@@ -110,14 +110,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         const mapStudents = (items = []) => {
           this.allStudents = items.map(item => {
             const fullName = (
-              item.fullName || item.nombre || [
+              item.name || item.fullName || item.nombre || [
                 String(item.nombre ?? '').trim(),
                 String(item.apellidoP ?? item.apellidoPaterno ?? '').trim(),
                 String(item.apellidoM ?? item.apellidoMaterno ?? '').trim()
               ].filter(n => n).join(' ')
             ).trim();
-            const userId = item.userId ?? item.id ?? item.user_id ?? null;
-            const control = item.numControl ?? item.num_control ?? item.n_control ?? '';
+            const userId = item.id ?? item.userId ?? item.user_id ?? null;
+            const control = item.n_control ?? item.numControl ?? item.num_control ?? '';
             const careerId = item.career_id ?? item.careerId ?? null;
             const careerName = item.career_name ?? item.carrera ?? item.career ?? '';
             const normalizedCareerId = careerId !== null && careerId !== undefined ? String(careerId) : (careerName ? String(careerName) : '');
@@ -146,6 +146,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             .map(id => ({ id, name: id + '°' }));
           console.log(`📊 Total de estudiantes disponibles: ${this.allStudents.length}`);
         };
+        
         // Intentar cargar desde localStorage primero (más rápido)
         const loadFromLocalStorage = () => {
           const raw = localStorage.getItem('studentsList');
@@ -169,49 +170,78 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return Promise.resolve();
         }
 
-        // Si no hay localStorage, intentar cargar desde API como fallback
-        console.warn('⚠️ No hay estudiantes en localStorage. Intentando cargar desde API...');
+        // Si no hay localStorage, cargar desde API usando el endpoint de búsqueda de controles
+        console.log('📡 Cargando estudiantes desde API /v1/concepts/search/controls...');
         if (!token) {
-          console.warn('⚠️ No hay estudiantes cargados y sin token. Visita /roles para cargar la lista.');
+          console.warn('⚠️ No hay token de autenticación');
           mapStudents([]);
           return Promise.resolve();
         }
 
-        // Intentar cargar desde API /payments/students
         try {
-          const url = new URL(this.apiBaseUrl + '/payments/students');
-          url.searchParams.set('perPage', '200');
-          url.searchParams.set('page', '1');
+          // Cargar estudiantes usando búsquedas por prefijos comunes
+          // La mayoría de números de control empiezan con el año (20, 21, 22, 23, etc)
+          const currentYear = new Date().getFullYear();
+          const searchPrefixes = [];
+          
+          // Buscar últimos 6 años de números de control
+          for (let i = 0; i < 6; i++) {
+            searchPrefixes.push(String(currentYear - i).substring(2)); // Últimos 2 dígitos del año
+          }
+          
+          const allStudents = [];
+          const studentIds = new Set();
+          
+          for (const prefix of searchPrefixes) {
+            const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
+            url.searchParams.set('search', prefix);
+            url.searchParams.set('limit', '50');
+            url.searchParams.set('forceRefresh', 'false');
 
-          const res = await fetch(url.toString(), {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          });
+            const res = await fetch(url.toString(), {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-User-Role': 'financial-staff'
+              }
+            });
 
-          if (res.ok) {
-            const json = await res.json();
-            if (json.success && json.data?.payments?.items) {
-              const items = json.data.payments.items;
-              console.log(`✅ Usuarios cargados desde API: ${items.length}`);
-              mapStudents(items);
-              // Guardar en localStorage para siguiente vez
-              localStorage.setItem('studentsList', JSON.stringify(items));
-              return Promise.resolve();
+            if (res.ok) {
+              const json = await res.json();
+              if (json.success && json.data) {
+                // La respuesta puede ser un objeto único o un array
+                const students = Array.isArray(json.data) ? json.data : 
+                               json.data.concept ? [json.data.concept] : 
+                               json.data.students || [];
+                
+                students.forEach(student => {
+                  // Evitar duplicados
+                  const studentId = student.id ?? student.user_id;
+                  if (studentId && !studentIds.has(studentId)) {
+                    studentIds.add(studentId);
+                    allStudents.push(student);
+                  }
+                });
+              }
             }
+          }
+
+          if (allStudents.length > 0) {
+            console.log(`✅ ${allStudents.length} estudiantes cargados desde API`);
+            mapStudents(allStudents);
+            // Guardar en localStorage para siguiente vez
+            localStorage.setItem('studentsList', JSON.stringify(allStudents));
           } else {
-            console.warn(`⚠️ Error al cargar desde API (${res.status}). Visita /roles para cargar manualmente.`);
+            console.warn('⚠️ No se encontraron estudiantes en la API');
+            mapStudents([]);
           }
         } catch (err) {
-          console.warn('⚠️ Error en petición API:', err.message);
+          console.error('❌ Error al cargar estudiantes desde API:', err.message);
+          mapStudents([]);
         }
 
-        // Si todo falla, array vacío y esperar a que visite /roles
-        console.info('💡 Tip: Visita /roles para cargar y cachear la lista de usuarios');
-        mapStudents([]);
         return Promise.resolve();
       },
 
@@ -419,17 +449,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         try {
-          const url = new URL(this.apiBaseUrl + '/payments/students');
+          const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
           url.searchParams.set('search', input);
-          url.searchParams.set('perPage', '5');
-          url.searchParams.set('page', '1');
+          url.searchParams.set('limit', '15');
+          url.searchParams.set('forceRefresh', 'false');
 
           const res = await fetch(url.toString(), {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              'X-User-Role': 'financial-staff'
             }
           });
 
@@ -441,14 +472,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
 
           const json = await res.json();
-          if (json.success && json.data?.payments?.items) {
-            this.searchResults = json.data.payments.items.map(item => ({
-              id: item.userId,
-              fullName: item.fullName,
-              control: item.n_control || item.fullName,
-              email: item.email,
-              career_name: item.career_name,
-              semestre: item.semestre
+          if (json.success && json.data) {
+            // La respuesta puede ser un objeto único o un array
+            const students = Array.isArray(json.data) ? json.data : 
+                           json.data.concept ? [json.data.concept] : 
+                           json.data.students || [];
+            
+            this.searchResults = students.map(item => ({
+              id: item.id || item.userId,
+              fullName: item.name || item.fullName,
+              control: item.n_control || item.control,
+              email: item.email || '',
+              career_name: item.career_name || item.career || '',
+              semestre: item.semestre || item.semester || ''
             }));
             console.log('✅ Resultados de búsqueda:', this.searchResults.length);
           } else {
