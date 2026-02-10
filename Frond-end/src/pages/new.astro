@@ -827,51 +827,54 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   <div class="p-4 sm:p-6 min-h-screen font-sans"> 
     <div
       x-data="window.conceptFormData"
-      x-init="async function() {
-        console.log('🚀 Inicializando formulario de conceptos...');
-        this.apiBaseUrl = window.__API_BASE_URL__ || '';
-        const token = localStorage.getItem('access_token');
-        
-        // Cargar careers y students primero
-        if (token) {
-          await this.loadCareers();
-          await this.loadStudents();
-          console.log('✅ Carreras y estudiantes cargados');
-          // Mostrar alerta si no hay estudiantes
-          if (!this.allStudents || this.allStudents.length === 0) {
-            console.warn('⚠️ Sin estudiantes en memoria - usuario debe visitar /roles primero');
+      x-init="$nextTick(() => {
+        const self = $data;
+        (async () => {
+          console.log('🚀 Inicializando formulario de conceptos...');
+          self.apiBaseUrl = window.__API_BASE_URL__ || '';
+          const token = localStorage.getItem('access_token');
+          
+          // Cargar careers y students primero
+          if (token) {
+            await self.loadCareers();
+            await self.loadStudents();
+            console.log('✅ Carreras y estudiantes cargados');
+            // Mostrar alerta si no hay estudiantes
+            if (!self.allStudents || self.allStudents.length === 0) {
+              console.warn('⚠️ Sin estudiantes en memoria - usuario debe visitar /roles primero');
+            }
+          } else {
+            self.careers = self.CAREERS.map(c => ({ id: c.code, name: c.name }));
           }
-        } else {
-          this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-        }
-        
-        // Verificar si estamos editando
-        const urlParams = new URLSearchParams(window.location.search);
-        const editId = urlParams.get('edit');
-        const rawConcept = localStorage.getItem('editingConcept');
-        
-        console.log('🔍 Modo:', editId ? `Edición (ID: ${editId})` : 'Creación');
-        console.log('📦 localStorage editingConcept:', rawConcept ? 'Existe' : 'No existe');
-        
-        if (editId && rawConcept) {
-          try {
-            const concept = JSON.parse(rawConcept);
-            console.log('📋 Concepto parseado:', concept);
-            console.log('🎯 formData antes:', JSON.parse(JSON.stringify(this.formData)));
-            
-            // Esperar un tick más para asegurar reactividad de Alpine
-            await $nextTick();
-            this.populateForm(concept);
-            
-            console.log('🎯 formData después:', JSON.parse(JSON.stringify(this.formData)));
-          } catch (e) {
-            console.error('❌ Error parseando concepto:', e);
+          
+          // Verificar si estamos editando
+          const urlParams = new URLSearchParams(window.location.search);
+          const editId = urlParams.get('edit');
+          const rawConcept = localStorage.getItem('editingConcept');
+          
+          console.log('🔍 Modo:', editId ? `Edición (ID: ${editId})` : 'Creación');
+          console.log('📦 localStorage editingConcept:', rawConcept ? 'Existe' : 'No existe');
+          
+          if (editId && rawConcept) {
+            try {
+              const concept = JSON.parse(rawConcept);
+              console.log('📋 Concepto parseado:', concept);
+              console.log('🎯 formData antes:', JSON.parse(JSON.stringify(self.formData)));
+              
+              // Esperar un tick más para asegurar reactividad de Alpine
+              await $nextTick();
+              self.populateForm(concept);
+              
+              console.log('🎯 formData después:', JSON.parse(JSON.stringify(self.formData)));
+            } catch (e) {
+              console.error('❌ Error parseando concepto:', e);
+            }
+          } else {
+            localStorage.removeItem('editingConcept');
+            console.log('🆕 Modo creación - localStorage limpiado');
           }
-        } else {
-          localStorage.removeItem('editingConcept');
-          console.log('🆕 Modo creación - localStorage limpiado');
-        }
-      }.bind(this)()"
+        })();
+      })"
       class="space-y-5 max-w-4xl mx-auto"
     >
       
