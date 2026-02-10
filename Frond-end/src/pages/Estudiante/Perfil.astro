@@ -29,17 +29,17 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
             </div>
         </div>
 
-        <!-- Tarjeta de Información Académica (solo para estudiantes) -->
-        <div x-show="isStudent" class="perfil-card bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Tarjeta de Información Personal (siempre visible) -->
+        <div class="perfil-card bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="perfil-card__header bg-institucional text-white p-6 flex items-center gap-3">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17.25m20-11.002c5.5 0 10 4.748 10 11.002M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h2 class="text-2xl font-bold">Información Académica</h2>
+                <h2 class="text-2xl font-bold">Información Personal</h2>
             </div>
             
             <div class="p-6 md:p-8">
-                <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+                <div class="grid md:grid-cols-2 gap-6 md:gap-8">
                     <!-- Información Personal -->
                     <div>
                         <h3 class="text-xl font-bold text-institucional mb-6">Datos Personales</h3>
@@ -90,11 +90,23 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Información Académica -->
+        <!-- Tarjeta de Información Académica (solo para estudiantes) -->
+        <div x-show="isStudent" class="perfil-card bg-white rounded-xl shadow-lg overflow-hidden mt-8">
+            <div class="perfil-card__header bg-institucional text-white p-6 flex items-center gap-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17.25m20-11.002c5.5 0 10 4.748 10 11.002M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h2 class="text-2xl font-bold">Información Académica</h2>
+            </div>
+            
+            <div class="p-6 md:p-8">
+                <div class="grid md:grid-cols-2 gap-6 md:gap-8">
+                    <!-- Carrera y Grupo -->
                     <div>
-                        <h3 class="text-xl font-bold text-institucional mb-6">Información Académica</h3>
-                        
                         <div class="space-y-4">
                             <div class="border-l-4 border-violet-500 rounded-lg p-4 bg-gradient-to-r from-violet-50 to-purple-50">
                                 <label class="text-sm font-semibold text-violet-700">Número de Control</label>
@@ -110,7 +122,12 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 <label class="text-sm font-semibold text-rose-700">Grupo</label>
                                 <p class="text-lg mt-1 text-gray-800 font-medium" x-text="group"></p>
                             </div>
+                        </div>
+                    </div>
 
+                    <!-- Taller y Carrera -->
+                    <div>
+                        <div class="space-y-4">
                             <div class="border-l-4 border-amber-500 rounded-lg p-4 bg-gradient-to-r from-amber-50 to-yellow-50">
                                 <label class="text-sm font-semibold text-amber-700">Taller</label>
                                 <p class="text-lg mt-1 text-gray-800 font-medium" x-text="workshop"></p>
