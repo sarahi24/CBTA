@@ -179,14 +179,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         try {
-          // Cargar estudiantes usando búsquedas por prefijos comunes
-          // La mayoría de números de control empiezan con el año (20, 21, 22, 23, etc)
+          // Cargar estudiantes usando búsquedas por prefijos comunes de años completos
+          // Los números de control suelen empezar con el año (2026, 2025, 2024, etc)
           const currentYear = new Date().getFullYear();
           const searchPrefixes = [];
           
-          // Buscar últimos 6 años de números de control
+          // Buscar últimos 6 años de números de control (años completos de 4 dígitos)
           for (let i = 0; i < 6; i++) {
-            searchPrefixes.push(String(currentYear - i).substring(2)); // Últimos 2 dígitos del año
+            searchPrefixes.push(String(currentYear - i)); // Año completo (ej: 2026, 2025, 2024...)
           }
           
           const allStudents = [];
@@ -225,6 +225,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   }
                 });
               }
+            } else {
+              console.log(`⚠️ Búsqueda '${prefix}': ${res.status} ${res.statusText}`);
             }
           }
 
@@ -434,7 +436,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
       async searchStudentsRealTime() {
         const input = this.searchTerm.trim();
-        if (!input || input.length < 2) {
+        // El endpoint requiere mínimo 3 caracteres
+        if (!input || input.length < 3) {
           this.searchResults = [];
           return;
         }
@@ -1272,8 +1275,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </button>
                   </div>
                   
+                  <!-- Mensaje de ayuda cuando hay menos de 3 caracteres -->
+                  <div x-show="searchTerm.length > 0 && searchTerm.length < 3" x-cloak class="mt-1 text-xs text-gray-500 italic">
+                    <i class="fas fa-info-circle"></i> Escribe al menos 3 caracteres para buscar
+                  </div>
+                  
                   <!-- Dropdown de resultados -->
-                  <div x-show="searchResults.length > 0 && searchTerm.length >= 2" x-cloak @click.outside="searchResults = []" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 max-h-64 overflow-y-auto">
+                  <div x-show="searchResults.length > 0 && searchTerm.length >= 3" x-cloak @click.outside="searchResults = []" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 max-h-64 overflow-y-auto">
                     <template x-for="student in searchResults" :key="student.id">
                       <button 
                         type="button"
