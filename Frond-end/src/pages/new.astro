@@ -62,12 +62,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       apiBaseUrl: window.__API_BASE_URL__ || '',
       
       loadCareers() {
-        console.log('🔄 Cargando carreras...');
         const careersToken = localStorage.getItem('access_token');
         if (!careersToken) {
-          console.log('⚠️ No hay token, usando datos por defecto');
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-          console.log('✅ Carreras cargadas (fallback):', this.careers.length);
           return Promise.resolve();
         }
         const url = new URL(this.apiBaseUrl + '/v1/careers');
@@ -82,26 +79,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         })
         .then(res => {
           if (!res.ok) {
-            console.warn(`⚠️ Careers API returned ${res.status}, using fallback`);
+            // Token inválido o expirado - usar fallback silenciosamente
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
         })
         .then(json => {
-          console.log('📦 Respuesta API carreras:', json);
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
             console.log('✅ Carreras cargadas desde API:', this.careers.length);
           } else {
-            console.log('⚠️ Respuesta API sin estructura esperada, usando fallback');
             this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-            console.log('✅ Carreras cargadas (fallback):', this.careers.length);
           }
         })
         .catch(err => {
-          console.warn('❌ Error al cargar carreras desde API:', err.message);
+          // Error de API o token - usar fallback silenciosamente
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
-          console.log('✅ Carreras cargadas (fallback):', this.careers.length);
         });
       },
 
@@ -144,7 +137,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.semesters = Array.from(semesterSet)
             .sort((a, b) => Number(a) - Number(b))
             .map(id => ({ id, name: id + '°' }));
-          console.log(`📊 Total de estudiantes disponibles: ${this.allStudents.length}`);
         };
         
         // Intentar cargar desde localStorage primero (más rápido)
@@ -154,12 +146,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             try {
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed) && parsed.length) {
-                console.log(`✅ Usuarios cargados desde localStorage: ${parsed.length}`);
                 mapStudents(parsed);
                 return true;
               }
             } catch (e) {
-              console.error('Error parsing localStorage:', e);
+              // Error parsing - ignorar y retornar false
+              return false;
             }
           }
           return false;
@@ -171,9 +163,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         // Si no hay localStorage, inicializar vacío
-        // El formulario funcionará sin estudiantes para conceptos generales (carrera/semestre)
-        // La búsqueda en tiempo real funcionará cuando el usuario busque estudiantes específicos
-        console.log('💡 Lista de estudiantes vacía. Usa la búsqueda en tiempo real para agregar estudiantes específicos.');
+        // El formulario funcionará con búsqueda por API en tiempo real
         mapStudents([]);
         return Promise.resolve();
       },
@@ -839,12 +829,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (token) {
             await self.loadCareers();
             await self.loadStudents();
-            console.log('✅ Carreras y estudiantes cargados');
-            // Log informativo sobre estudiantes
+            // Log informativo sobre estudiantes si hay
             if (self.allStudents && self.allStudents.length > 0) {
-              console.log(`📊 ${self.allStudents.length} estudiantes disponibles`);
-            } else {
-              console.log('💡 Usa la búsqueda en tiempo real para agregar estudiantes específicos');
+              console.log(`✅ ${self.allStudents.length} estudiantes disponibles en cache`);
             }
           } else {
             self.careers = self.CAREERS.map(c => ({ id: c.code, name: c.name }));
