@@ -492,7 +492,10 @@ window.editConcept = (id) => {
       semesters: c.semesters || [],
       specificStudents: c.userIds || c.user_ids || [],
       exceptionStudents: c.exceptionStudents || c.exception_students || [],
-      applicantTags: c.applicantTags || c.applicant_tags || 'applicants'
+      applicantTags: (() => {
+        const tags = c.applicantTags || c.applicant_tags;
+        return Array.isArray(tags) ? tags : (tags ? [tags] : ['applicants']);
+      })()
     }
   }));
   window.location.href = '/new?edit='+encodeURIComponent(id);
