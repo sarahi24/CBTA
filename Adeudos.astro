@@ -1,9 +1,9 @@
-﻿---
+---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 
 const title = "Finanzas Estudiantiles";
 const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('result') : null;
-// Todo el manejo de datos se hará del lado del cliente
+// Todo el manejo de datos se haró¡ del lado del cliente
 ---
 
 <StudentLayout title={title}>
@@ -62,10 +62,10 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       },
 
       async init() {
-        // Mostrar modal si hay parámetro result=canceled
+        // Mostrar modal si hay paró¡metro result=canceled
         if (this.resultType === 'canceled') {
           this.showResultModal = true;
-          // Limpiar URL después de 3 segundos
+          // Limpiar URL despuó©s de 3 segundos
           setTimeout(() => {
             const url = new URL(window.location.href);
             url.searchParams.delete('result');
@@ -73,7 +73,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           }, 3000);
         }
 
-        // Obtener datos del usuario desde localStorage de forma más robusta
+        // Obtener datos del usuario desde localStorage de forma mó¡s robusta
         const userName = localStorage.getItem('userName');
         const userDataStr = localStorage.getItem('userData');
         
@@ -108,7 +108,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           // Cargar tarjetas desde API usando StudentAPI
           try {
             console.log('ðŸ“¥ Cargando tarjetas desde StudentAPI...');
-            // Pasar null para obtener m©todos de pago del usuario autenticado
+            // Pasar null para obtener mó©todos de pago del usuario autenticado
             const cardsData = await window.StudentAPI.getPaymentMethods(null, token);
             const cardsArray = Array.isArray(cardsData.data) ? cardsData.data : 
                                Array.isArray(cardsData) ? cardsData : [];
@@ -119,9 +119,9 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               terminacion: card.last4 || card.terminacion || '****',
               logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
             }));
-            console.log('… Tarjetas cargadas:', this.tarjetas.length);
+            console.log('œ… Tarjetas cargadas:', this.tarjetas.length);
           } catch (err) {
-            console.error(' Error al cargar tarjetas:', err);
+            console.error('Œ Error al cargar tarjetas:', err);
             this.tarjetas = [];
           }
         }
@@ -178,9 +178,9 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             status: payment.status || 'Pendiente',
             description: payment.description || payment.descripcion || ''
           }));
-          console.log('… Adeudos cargados:', this.adeudos.length);
+          console.log('œ… Adeudos cargados:', this.adeudos.length);
         } catch (err) {
-          console.error(' Error al cargar adeudos:', err);
+          console.error('Œ Error al cargar adeudos:', err);
           this.adeudos = [];
         } finally {
           this.loadingTab = false;
@@ -202,10 +202,10 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           
           // Verificar que window.StudentAPI existe
           if (!window.StudentAPI) {
-            throw new Error('window.StudentAPI no est¡ disponible');
+            throw new Error('window.StudentAPI no estó¡ disponible');
           }
           
-          console.log('… window.StudentAPI disponible');
+          console.log('œ… window.StudentAPI disponible');
           
           // Pasar el userId para que se construya el endpoint correcto
           const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, false, 'student');
@@ -217,10 +217,10 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           let overdueArray = [];
           if (overdueData?.data) {
             if (Array.isArray(overdueData.data)) {
-              console.log('… Respuesta es un array directo');
+              console.log('œ… Respuesta es un array directo');
               overdueArray = overdueData.data;
             } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
-              console.log('… Respuesta tiene estructura pending_payments');
+              console.log('œ… Respuesta tiene estructura pending_payments');
               overdueArray = overdueData.data.pending_payments;
             } else {
               console.log('š ï¸ Estructura de respuesta inesperada:', {
@@ -244,7 +244,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           }));
           
           this.showOverdueAlert = this.overdueAdeudos.length > 0;
-          console.log('… Pagos vencidos cargados:', this.overdueAdeudos.length);
+          console.log('œ… Pagos vencidos cargados:', this.overdueAdeudos.length);
         } catch (err) {
           console.error('š ï¸  Error al cargar pagos vencidos:', err);
           this.overdueAdeudos = [];
@@ -281,17 +281,17 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             token
           );
           
-          console.log('… Respuesta del servidor:', response);
+          console.log('œ… Respuesta del servidor:', response);
           
           if (response.success && response.data?.url_checkout) {
             // Redirigir al checkout de Stripe
             console.log('ðŸ”— Redirigiendo a checkout:', response.data.url_checkout);
             window.location.href = response.data.url_checkout;
           } else {
-            throw new Error(response.message || 'No se recibió URL de checkout');
+            throw new Error(response.message || 'No se recibió³ URL de checkout');
           }
         } catch (err) {
-          console.error(' Error al procesar el pago:', err);
+          console.error('Œ Error al procesar el pago:', err);
           alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
           this.loading = false;
         }
@@ -304,9 +304,9 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           <div class="alert-icon">š ï¸</div>
           <div class="alert-content">
             <h3>¡Tienes pagos vencidos!</h3>
-            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atención inmediata.'"></p>
+            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atenció³n inmediata.'"></p>
           </div>
-          <button @click="showOverdueAlert = false" class="alert-close">•</button>
+          <button @click="showOverdueAlert = false" class="alert-close">œ•</button>
         </div>
       </template>
       
@@ -347,20 +347,20 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             <h3>Pagos vencidos</h3>
             <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Por favor realiza el pago cuanto antes.'"></p>
           </div>
-          <button class="alert-close" @click="showOverdueAlert = false">—</button>
+          <button class="alert-close" @click="showOverdueAlert = false">ó—</button>
         </div>
       </template>
 
-      <!-- SECCI“N: PAGOS VENCIDOS -->
+      <!-- SECCIÓN: PAGOS VENCIDOS -->
       <section class="section-container overdue-section" x-show="activeTab === 'overdue'">
         <div class="section-header">
-          <h2 class="section-title">ðŸ”´ Pagos Vencidos</h2>
+          <h2 class="section-title"> Pagos Vencidos</h2>
           <span class="badge-danger" x-text="overdueAdeudos.length"></span>
         </div>
         
         <template x-if="overdueAdeudos.length === 0">
           <div class="empty-state">
-            <div class="empty-icon">³</div>
+            <div class="empty-icon"></div>
             <h3>No hay pagos vencidos</h3>
             <p>Estás al corriente. Excelente.</p>
           </div>
@@ -394,7 +394,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         </div>
       </section>
 
-      <!-- SECCI“N: PAGOS PENDIENTES -->
+      <!-- SECCIó“N: PAGOS PENDIENTES -->
       <section class="section-container" x-show="activeTab === 'pending'">
         <div class="section-header">
           <h2 class="section-title">Pagos Pendientes</h2>
@@ -1376,4 +1376,3 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
   .modal-btn:active {
     transform: translateY(0);
   }</style>
-
