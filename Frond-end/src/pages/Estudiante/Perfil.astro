@@ -5,31 +5,37 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 <LayoutEstu title="Mi Perfil">
     <div x-data="perfilEstudianteData" x-cloak class="perfil-shell max-w-5xl mx-auto">
         <!-- Encabezado -->
-        <div class="perfil-header flex items-center gap-6 mb-8">
-            <div class="w-24 h-24 bg-institucional rounded-full flex items-center justify-center shadow-lg">
+        <div class="perfil-header flex items-center gap-4 md:gap-6 mb-6 md:mb-8">
+            <div class="w-20 h-20 md:w-24 md:h-24 bg-institucional rounded-2xl flex items-center justify-center shadow-lg">
                 <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
             </div>
             <div>
-                <h1 class="text-4xl font-bold text-institucional mb-2" x-text="studentName || 'Cargando...'"></h1>
+                <h1 class="text-3xl md:text-4xl font-bold text-institucional mb-2" x-text="studentName || 'Cargando...'"></h1>
                 <p class="text-gray-600 text-lg">Estudiante</p>
                 <p class="text-gray-500 text-sm mt-1" x-text="'Correo: ' + (studentEmail || 'No disponible')"></p>
             </div>
+            <div class="ml-auto hidden sm:flex items-center gap-2 px-3 py-2 rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm7 9a7 7 0 0 0-14 0" />
+                </svg>
+                Perfil
+            </div>
         </div>
 
-        <!-- Tarjeta de Informaci�n Acad�mica -->
+        <!-- Tarjeta de Información Académica -->
         <div class="perfil-card bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="perfil-card__header bg-institucional text-white p-6 flex items-center gap-3">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17.25m20-11.002c5.5 0 10 4.748 10 11.002M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h2 class="text-2xl font-bold">Informaci�n Acad�mica</h2>
+                <h2 class="text-2xl font-bold">Información Académica</h2>
             </div>
             
-            <div class="p-8">
-                <div class="grid md:grid-cols-3 gap-8">
-                    <!-- Informaci�n Personal -->
+            <div class="p-6 md:p-8">
+                <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+                    <!-- Información Personal -->
                     <div>
                         <h3 class="text-xl font-bold text-institucional mb-6">Datos Personales</h3>
                         
@@ -40,18 +46,18 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             </div>
                             
                             <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">Correo Electr�nico</label>
+                                <label class="text-sm font-semibold text-gray-600">Correo Electrónico</label>
                                 <p class="text-lg mt-1" x-text="studentEmail || 'No disponible'"></p>
                             </div>
                             
                             <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">Matr�cula</label>
+                                <label class="text-sm font-semibold text-gray-600">Matrícula</label>
                                 <p class="text-lg mt-1 font-mono text-gray-600" x-text="studentId || 'No disponible'"></p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Informaci�n de Estatus -->
+                    <!-- Información de Estatus -->
                     <div>
                         <h3 class="text-xl font-bold text-institucional mb-6">Estatus de Cuenta</h3>
                         
@@ -64,12 +70,12 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             </div>
                             
                             <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">�ltimo Acceso</label>
+                                <label class="text-sm font-semibold text-gray-600">Último Acceso</label>
                                 <p class="text-lg mt-1" x-text="lastLogin"></p>
                             </div>
                             
                             <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">Nivel de Verificaci�n</label>
+                                <label class="text-sm font-semibold text-gray-600">Nivel de Verificación</label>
                                 <div class="mt-2 flex items-center gap-2">
                                     <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 013.066-3.066zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
@@ -80,13 +86,13 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         </div>
                     </div>
 
-                    <!-- Informacion Academica -->
+                    <!-- Información Académica -->
                     <div>
-                        <h3 class="text-xl font-bold text-institucional mb-6">Informacion Academica</h3>
+                        <h3 class="text-xl font-bold text-institucional mb-6">Información Académica</h3>
                         
                         <div class="space-y-4">
                             <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">Numero de Control</label>
+                                <label class="text-sm font-semibold text-gray-600">Número de Control</label>
                                 <p class="text-lg mt-1 font-mono text-gray-700" x-text="nControl"></p>
                             </div>
                             
@@ -124,8 +130,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 <h2 class="text-2xl font-bold">Estado de Pagos</h2>
             </div>
             
-            <div class="p-8">
-                <div class="grid md:grid-cols-3 gap-6">
+            <div class="p-6 md:p-8">
+                <div class="grid md:grid-cols-3 gap-4 md:gap-6">
                     <!-- Pagos Pendientes -->
                     <div class="bg-red-50 rounded-lg p-6 border border-red-200">
                         <div class="flex items-center justify-between">
@@ -510,7 +516,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                     const token = localStorage.getItem('access_token');
                     if (!token) {
-                        this.errorMessage = 'No est�s autenticado. Por favor inicia sesi�n.';
+                        this.errorMessage = 'No estás autenticado. Por favor inicia sesión.';
                         this.isUpdating = false;
                         return;
                     }
@@ -565,7 +571,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         }
                     } catch (err) {
                         console.error('Error updating profile:', err);
-                        this.errorMessage = 'Error de conexi�n con el servidor';
+                        this.errorMessage = 'Error de conexión con el servidor';
                     } finally {
                         this.isUpdating = false;
                     }
@@ -594,15 +600,15 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
         [x-cloak] { display: none !important; }
 
         .perfil-shell {
-            padding: 2.5rem 1.25rem 3.5rem;
+            padding: 1.75rem 1rem 2.5rem;
         }
 
         .perfil-header {
             background: linear-gradient(180deg, #ffffff 0%, #f6faf8 100%);
             border: 1px solid var(--perfil-border);
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-            border-radius: 1.5rem;
-            padding: 1.75rem 2rem;
+            border-radius: 1.25rem;
+            padding: 1.25rem 1.5rem;
         }
 
         .perfil-header .text-gray-600,
@@ -637,7 +643,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
         @media (min-width: 768px) {
             .perfil-shell {
-                padding: 3.25rem 1.5rem 4.25rem;
+                padding: 3rem 1.5rem 4rem;
             }
         }
     </style>
