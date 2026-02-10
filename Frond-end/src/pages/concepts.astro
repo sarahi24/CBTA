@@ -490,7 +490,9 @@ window.editConcept = (id) => {
       allStudents: (c.applies_to || c.appliesTo) === 'todos',
       careers: c.careerIds || c.careers || [],
       semesters: c.semesters || [],
-      specificStudents: c.userIds || c.user_ids || []
+      specificStudents: c.userIds || c.user_ids || [],
+      exceptionStudents: c.exceptionStudents || c.exception_students || [],
+      applicantTags: c.applicantTags || c.applicant_tags || 'applicants'
     }
   }));
   window.location.href = '/new?edit='+encodeURIComponent(id);

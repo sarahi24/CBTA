@@ -44,9 +44,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         allStudents: true,
         selectedCareers: [],
         selectedSemesters: [],
-        selectedSpecificStudents: []
+        selectedSpecificStudents: [],
+        exceptionStudents: [],
+        applicantTags: 'applicants',
+        replaceRelations: false,
+        removeAllExceptions: false,
+        replaceExceptions: false
       },
       searchTerm: '',
+      searchTermException: '',
       errorMessage: '',
       
       apiBaseUrl: window.__API_BASE_URL__ || '',
@@ -225,6 +231,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             });
             console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
           }
+          
+          // Cargar excepciones si existen
+          if (Array.isArray(concept.scopeRules.exceptionStudents)) {
+            this.formData.exceptionStudents = concept.scopeRules.exceptionStudents.map(id => {
+              const student = this.allStudents.find(s => String(s.id) === String(id));
+              return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
+            });
+            console.log('✅ Excepciones:', this.formData.exceptionStudents.length);
+          }
+          
+          // Cargar tags de aplicantes si existen
+          if (concept.scopeRules.applicantTags) {
+            this.formData.applicantTags = concept.scopeRules.applicantTags;
+            console.log('✅ Applicant Tags:', this.formData.applicantTags);
+          }
         }
         
         console.log('✅ Formulario poblado completamente:', this.formData);
@@ -243,6 +264,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
         this.searchTerm = '';
       },
+      
+      toggleExceptionStudent(student) {
+        const index = this.formData.exceptionStudents.findIndex(s => s.id === student.id);
+        if (index === -1) {
+          this.formData.exceptionStudents.push({
+            id: student.id,
+            name: student.name,
+            control: student.control
+          });
+        } else {
+          this.formData.exceptionStudents.splice(index, 1);
+        }
+        this.searchTermException = '';
+      },
 
       get filteredStudents() {
         if (!this.searchTerm) return [];
@@ -259,9 +294,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return matchesSearch && matchesCareer && matchesSemester;
         }).slice(0, 8);
       },
+      
+      get filteredExceptionStudents() {
+        if (!this.searchTermException) return [];
+        const searchLower = this.searchTermException.toLowerCase();
+        return this.allStudents.filter(student => {
+          const matchesSearch =
+            student.name.toLowerCase().includes(searchLower) ||
+            String(student.control || '').includes(searchLower) ||
+            String(student.id || '').includes(searchLower);
+          return matchesSearch;
+        }).slice(0, 8);
+      },
 
       removeSpecificStudent(studentId) {
         this.formData.selectedSpecificStudents = this.formData.selectedSpecificStudents.filter(s => s.id !== studentId);
+      },
+      
+      removeExceptionStudent(studentId) {
+        this.formData.exceptionStudents = this.formData.exceptionStudents.filter(s => s.id !== studentId);
       },
 
       submitForm() {
@@ -294,6 +345,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           is_global: Boolean(this.formData.allStudents)
         };
         
+        // Agregar excepciones si existen (solo en alcance restringido)
+        if (!this.formData.allStudents && this.formData.exceptionStudents.length > 0) {
+          payload.exceptionStudents = this.formData.exceptionStudents.map(s => String(s.id));
+        }
+        
+        // Agregar tags de aplicantes (solo en alcance restringido)
+        if (!this.formData.allStudents && this.formData.applicantTags) {
+          payload.applicantTags = this.formData.applicantTags;
+        }
+        
+        // Agregar booleanos de control solo en modo edición
+        if (this.formData.id && !this.formData.allStudents) {
+          payload.replaceRelations = Boolean(this.formData.replaceRelations);
+          payload.removeAllExceptions = Boolean(this.formData.removeAllExceptions);
+          payload.replaceExceptions = Boolean(this.formData.replaceExceptions);
+        }
+        
         // Construir applies_to y campos relacionados según alcance
         if (this.formData.allStudents) {
           // Para todos - NO incluir campos de filtro
@@ -307,6 +375,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           delete payload.carrera;
           delete payload.careers;
           delete payload.carreras;
+          delete payload.exceptionStudents;
+          delete payload.applicantTags;
+          delete payload.replaceRelations;
+          delete payload.removeAllExceptions;
+          delete payload.replaceExceptions;
         } else {
           // Alcance restringido - incluir solo los filtros especificados
           if (this.formData.selectedSpecificStudents.length > 0) {
@@ -433,6 +506,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               if (payload.students) relationsData.students = payload.students;
               if (payload.careers) relationsData.careers = payload.careers;
               if (payload.semestres) relationsData.semestres = payload.semestres;
+              
+              // Agregar excepciones si existen
+              if (payload.exceptionStudents) relationsData.exceptionStudents = payload.exceptionStudents;
+              
+              // Agregar tags si existen
+              if (payload.applicantTags) relationsData.applicantTags = payload.applicantTags;
+              
+              // Agregar booleanos de control si existen
+              if (payload.replaceRelations !== undefined) relationsData.replaceRelations = payload.replaceRelations;
+              if (payload.removeAllExceptions !== undefined) relationsData.removeAllExceptions = payload.removeAllExceptions;
+              if (payload.replaceExceptions !== undefined) relationsData.replaceExceptions = payload.replaceExceptions;
               
               console.log('📤 Actualizando relaciones:', relationsData);
               
@@ -807,6 +891,127 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           </div>
         </section>
 
+        <!-- Nueva sección: Excepciones y Tags -->
+        <section x-show="!formData.allStudents" x-cloak x-transition.opacity.duration.300ms class="bg-gradient-to-br from-white via-orange-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-orange-200/50 space-y-5">
+          <div class="flex items-center gap-3 pb-3 border-b-2 border-orange-200/50">
+            <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 text-white font-extrabold text-sm shadow-lg">
+                <i class="fas fa-user-slash"></i>
+            </span>
+            <h2 class="text-xl font-extrabold text-orange-900">Excepciones y Etiquetas Especiales</h2>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Excepciones de estudiantes -->
+            <div class="bg-red-50/50 p-4 rounded-xl border border-red-200">
+              <label class="block text-sm font-bold text-red-800 mb-2 flex items-center gap-2">
+                <i class="fas fa-ban text-red-600"></i>
+                Excepciones (Estudiantes que NO recibirán este concepto)
+              </label>
+              <p class="text-xs text-red-600 mb-3">Estos estudiantes quedarán excluidos del concepto, incluso si cumplen con los filtros de alcance.</p>
+              
+              <div class="relative" x-data="{ openException: false }" @click.away="openException = false">
+                <input type="text" x-model="searchTermException" @focus="openException = true" @input="openException = true"
+                  placeholder="Buscar estudiante a excluir..."
+                  class="w-full px-3 py-2 border border-red-300 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 transition duration-200 text-sm">
+                
+                <div x-show="openException && searchTermException.length > 0 && filteredExceptionStudents.length > 0" x-cloak
+                  class="absolute z-20 w-full mt-1 bg-white border border-red-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto p-2 space-y-1">
+                  <template x-for="student in filteredExceptionStudents" :key="student.id">
+                    <div @click="toggleExceptionStudent(student); openException = false" class="p-2 hover:bg-red-50 rounded-lg cursor-pointer text-sm flex justify-between items-center transition">
+                      <span x-text="student.name" class="text-gray-800 font-medium"></span>
+                      <span x-text="'Matrícula: ' + (student.control || student.id)" class="text-gray-500 text-xs"></span>
+                      <i x-show="formData.exceptionStudents.some(s => s.id === student.id)" class="fas fa-check-circle text-red-600"></i>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2 mt-3" x-show="formData.exceptionStudents.length > 0" x-transition.slide.up>
+                <template x-for="student in formData.exceptionStudents" :key="student.id">
+                  <div class="flex items-center gap-2 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold border border-red-300 shadow-sm">
+                    <span x-text="student.name + ' (Matrícula: ' + (student.control || student.id) + ')'"></span>
+                    <button type="button" @click="removeExceptionStudent(student.id)" class="text-red-600 hover:text-red-800 transition focus:outline-none">
+                      <i class="fas fa-times-circle text-xs"></i>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Tags de aplicantes -->
+            <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200">
+              <label class="block text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                <i class="fas fa-tags text-indigo-600"></i>
+                Etiqueta de Aplicación
+              </label>
+              <p class="text-xs text-indigo-600 mb-3">Define a qué tipo de usuarios aplica este concepto.</p>
+              
+              <div class="grid grid-cols-1 gap-2">
+                <label class="cursor-pointer">
+                  <input type="radio" name="applicantTags" value="applicants" x-model="formData.applicantTags" class="sr-only peer">
+                  <div class="p-3 rounded-xl border-2 border-indigo-300 peer-checked:border-indigo-600 peer-checked:bg-indigo-100 transition-all text-sm flex items-center gap-2">
+                    <i class="fas fa-user-graduate text-indigo-600"></i>
+                    <span class="font-semibold">Aplicantes/Aspirantes</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Nueva sección: Opciones de Actualización (solo en modo edición) -->
+        <section x-show="formData.id && !formData.allStudents" x-cloak x-transition.opacity.duration.300ms class="bg-gradient-to-br from-white via-yellow-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-yellow-200/50 space-y-5">
+          <div class="flex items-center gap-3 pb-3 border-b-2 border-yellow-200/50">
+            <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-700 text-white font-extrabold text-sm shadow-lg">
+                <i class="fas fa-sync-alt"></i>
+            </span>
+            <h2 class="text-xl font-extrabold text-yellow-900">Opciones de Actualización</h2>
+          </div>
+
+          <div class="space-y-4">
+            <div class="bg-yellow-50/50 p-4 rounded-xl border border-yellow-200">
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" x-model="formData.replaceRelations" class="mt-1 w-5 h-5 text-[#2E594D] border-gray-300 rounded focus:ring-[#2E594D] focus:ring-2">
+                <div class="flex-1">
+                  <p class="font-bold text-gray-800 text-sm group-hover:text-[#2E594D] transition">Reemplazar Relaciones</p>
+                  <p class="text-xs text-gray-600 mt-1">Si está activo: reemplaza las relaciones existentes (carreras/semestres). Si está desactivado: agrega las nuevas sin eliminar las anteriores.</p>
+                  <p class="text-xs text-yellow-700 mt-1 font-semibold">
+                    <i class="fas fa-info-circle"></i> Ejemplo: Si el concepto aplicaba a semestres 1 y 2, y agregas el 3:
+                    <br>• Con esta opción: solo aplicará al semestre 3
+                    <br>• Sin esta opción: aplicará a los semestres 1, 2 y 3
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div class="bg-red-50/50 p-4 rounded-xl border border-red-200">
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" x-model="formData.removeAllExceptions" class="mt-1 w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-600 focus:ring-2">
+                <div class="flex-1">
+                  <p class="font-bold text-gray-800 text-sm group-hover:text-red-600 transition">Eliminar Todas las Excepciones</p>
+                  <p class="text-xs text-gray-600 mt-1">Al activar esta opción, se eliminarán TODAS las excepciones existentes y el concepto aplicará a los estudiantes según los filtros definidos.</p>
+                  <p class="text-xs text-red-700 mt-1 font-semibold">
+                    <i class="fas fa-exclamation-triangle"></i> ¡Advertencia! Esta acción eliminará las excepciones previamente configuradas.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-200">
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" x-model="formData.replaceExceptions" class="mt-1 w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-600 focus:ring-2">
+                <div class="flex-1">
+                  <p class="font-bold text-gray-800 text-sm group-hover:text-orange-600 transition">Reemplazar Excepciones</p>
+                  <p class="text-xs text-gray-600 mt-1">Si está activo: reemplaza las excepciones existentes con las nuevas. Si está desactivado: agrega las nuevas excepciones sin eliminar las anteriores.</p>
+                  <p class="text-xs text-orange-700 mt-1 font-semibold">
+                    <i class="fas fa-info-circle"></i> Similar a "Reemplazar Relaciones", pero aplicado a las excepciones de estudiantes.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </section>
+
         <section class="bg-gradient-to-br from-white via-purple-50/30 to-white p-6 rounded-2xl shadow-2xl border-2 border-purple-200/50 space-y-5">
           <div class="flex items-center gap-3 pb-3 border-b-2 border-purple-200/50">
             <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 text-white font-extrabold text-sm shadow-lg">
@@ -840,7 +1045,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
   </div>
 
-  <script type="module" client:load>
+  <script type="module">
     // Inicialización y utilidades de almacenamiento local (simulación de base de datos)
     (function () {
       
