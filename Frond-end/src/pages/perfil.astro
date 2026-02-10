@@ -422,14 +422,21 @@ import Layout from '../layouts/Layout.astro';
 
                 async loadUserData() {
                     const token = localStorage.getItem('token');
+                    
+                    console.log('🔄 Starting user data load process...');
+                    console.log('📋 Token status:', token ? '✅ Present' : '❌ Missing');
+                    
                     if (!token) {
-                        console.warn('⚠️ No token found, using localStorage fallback');
-                        this.loadUserDataFromStorage();
+                        console.warn('⚠️ No token found, attempting to load from localStorage...');
+                        const hasLocalData = this.loadUserDataFromStorage();
+                        if (!hasLocalData) {
+                            this.showErrorState('Token no encontrado. Por favor inicia sesión.');
+                        }
                         return;
                     }
 
                     try {
-                        console.log('🔄 Fetching user data from API...');
+                        console.log('🔄 Fetching user data from API: ' + API_BASE_URL + '/v1/users/user');
                         const response = await fetch(API_BASE_URL + '/v1/users/user', {
                             method: 'GET',
                             headers: {
@@ -438,30 +445,50 @@ import Layout from '../layouts/Layout.astro';
                             }
                         });
 
+                        console.log('📡 API Response Status:', response.status);
+
                         if (response.ok) {
                             const data = await response.json();
-                            console.log('📥 API Response:', data);
+                            console.log('📥 API Response Data:', JSON.stringify(data).substring(0, 200) + '...');
                             
                             if (data.success && data.data?.user) {
                                 const user = data.data.user;
+                                console.log('✅ Valid user data received from API');
+                                console.log('👤 User Details:', {
+                                    id: user.id,
+                                    name: user.name,
+                                    last_name: user.last_name,
+                                    email: user.email,
+                                    hasRoles: Array.isArray(user.roles),
+                                    hasPermissions: Array.isArray(user.permissions)
+                                });
                                 localStorage.setItem('user_data', JSON.stringify(user));
                                 this.populateUserData(user);
-                                console.log('✅ User data loaded from API');
+                                console.log('✅ User data loaded and populated from API');
                             } else {
-                                console.warn('⚠️ Invalid API response structure, using localStorage fallback');
-                                this.loadUserDataFromStorage();
+                                console.warn('⚠️ Invalid API response structure');
+                                const hasLocalData = this.loadUserDataFromStorage();
+                                if (!hasLocalData) {
+                                    this.showErrorState('Error al cargar datos del perfil. Intenta de nuevo.');
+                                }
                             }
                         } else if (response.status === 401 || response.status === 403) {
-                            console.warn('⚠️ Unauthorized (401/403), using localStorage fallback');
-                            this.loadUserDataFromStorage();
+                            console.warn('⚠️ Unauthorized (status: ' + response.status + ') - Token may be expired');
+                            localStorage.removeItem('token');
+                            this.showErrorState('Tu sesión ha expirado. Por favor inicia sesión de nuevo.');
                         } else {
-                            console.warn(`⚠️ API error (${response.status}), using localStorage fallback`);
-                            this.loadUserDataFromStorage();
+                            console.warn('⚠️ API error (status: ' + response.status + ')');
+                            const hasLocalData = this.loadUserDataFromStorage();
+                            if (!hasLocalData) {
+                                this.showErrorState('Error al conectar con el servidor. Intenta de nuevo.');
+                            }
                         }
                     } catch (err) {
                         console.error('❌ Error fetching user data from API:', err);
-                        console.log('📦 Using localStorage fallback');
-                        this.loadUserDataFromStorage();
+                        const hasLocalData = this.loadUserDataFromStorage();
+                        if (!hasLocalData) {
+                            this.showErrorState('Error de conexión. Por favor verifica tu conexión a internet.');
+                        }
                     }
                 },
 
@@ -469,42 +496,100 @@ import Layout from '../layouts/Layout.astro';
                     const userData = localStorage.getItem('user_data');
                     if (!userData) {
                         console.warn('⚠️ No user data found in localStorage');
-                        return;
+                        return false;
                     }
 
                     try {
                         const user = JSON.parse(userData);
+                        
+                        // Validate that user object has required fields
+                        if (!user.id || !user.email) {
+                            console.warn('⚠️ Invalid user data in localStorage - missing required fields');
+                            return false;
+                        }
+                        
+                        console.log('✅ Loading user from localStorage');
+                        console.log('👤 User:', { id: user.id, name: user.name, email: user.email });
                         this.populateUserData(user);
-                        console.log('✅ User data loaded from localStorage');
+                        console.log('✅ User data loaded and populated from localStorage');
+                        return true;
                     } catch (e) {
                         console.error('❌ Error parsing user data from localStorage:', e);
+                        localStorage.removeItem('user_data');
+                        return false;
                     }
                 },
 
+                showErrorState(message) {
+                    this.userName = 'Error al cargar datos';
+                    this.userEmail = message;
+                    this.userId = 'N/A';
+                    this.userRole = 'Usuario';
+                    this.userRoles = [];
+                    this.userPermissions = [];
+                    console.error('🚨 ERROR STATE:', message);
+                },
+
                 populateUserData(user) {
+                    console.log('🔍 Populating user data from object:', {
+                        hasName: !!user.name,
+                        hasLastName: !!user.last_name,
+                        hasEmail: !!user.email,
+                        hasId: !!user.id
+                    });
+
                     // Mapear nombre - usar name + last_name
-                    const firstName = user.name || '';
-                    const lastName = user.last_name || '';
-                    this.userName = `${firstName} ${lastName}`.trim() || 'Sin nombre';
+                    const firstName = (user.name || '').trim();
+                    const lastName = (user.last_name || '').trim();
+                    const fullName = [firstName, lastName]
+                        .filter(n => n.length > 0)
+                        .join(' ')
+                        .trim();
                     
-                    this.userEmail = user.email || 'No disponible';
-                    this.userId = user.id || 'No disponible';
+                    this.userName = fullName || 'Usuario';
+                    this.userEmail = (user.email || '').trim() || 'No disponible';
+                    this.userId = user.id || 'N/A';
+                    
+                    console.log('📝 Name mapping:', {
+                        firstName,
+                        lastName,
+                        fullName: this.userName,
+                        email: this.userEmail,
+                        id: this.userId
+                    });
                     
                     // Mapear roles correctamente - si son objetos con propiedades, extraer nombre
-                    if (user.roles && Array.isArray(user.roles)) {
-                        const roleNames = user.roles.map(r => typeof r === 'string' ? r : r.name || r).filter(Boolean);
+                    if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+                        const roleNames = user.roles
+                            .map(r => {
+                                if (typeof r === 'string') return r;
+                                if (r && typeof r === 'object' && r.name) return r.name;
+                                return null;
+                            })
+                            .filter(r => r && r.length > 0);
+                        
                         this.userRole = roleNames.length > 0 ? roleNames[0] : 'Usuario';
                         this.userRoles = roleNames;
+                        console.log('👥 Roles loaded:', this.userRoles);
                     } else {
                         this.userRole = 'Usuario';
                         this.userRoles = [];
+                        console.log('👥 No roles found');
                     }
                     
                     // Mapear permisos - pueden no existir en todos los usuarios
-                    if (user.permissions && Array.isArray(user.permissions)) {
-                        this.userPermissions = user.permissions.map(p => typeof p === 'string' ? p : p.name || p).filter(Boolean);
+                    if (user.permissions && Array.isArray(user.permissions) && user.permissions.length > 0) {
+                        this.userPermissions = user.permissions
+                            .map(p => {
+                                if (typeof p === 'string') return p;
+                                if (p && typeof p === 'object' && p.name) return p.name;
+                                return null;
+                            })
+                            .filter(p => p && p.length > 0);
+                        console.log('🔐 Permissions loaded:', this.userPermissions.length, 'items');
                     } else {
                         this.userPermissions = [];
+                        console.log('🔐 No permissions found');
                     }
                     
                     this.lastLogin = new Date().toLocaleDateString('es-ES', {
@@ -516,21 +601,25 @@ import Layout from '../layouts/Layout.astro';
                     });
 
                     // Populate form data
-                    this.formData.name = user.name || '';
-                    this.formData.last_name = user.last_name || '';
-                    this.formData.email = user.email || '';
-                    this.formData.phone_number = user.phone_number || '';
-                    this.formData.birthdate = user.birthdate ? (user.birthdate.includes('T') ? user.birthdate.split('T')[0] : user.birthdate) : '';
-                    this.formData.gender = user.gender || '';
-                    this.formData.blood_type = user.blood_type || '';
-                    this.formData.address = Array.isArray(user.address) && user.address.length > 0 ? user.address.join(', ') : '';
+                    this.formData.name = firstName;
+                    this.formData.last_name = lastName;
+                    this.formData.email = (user.email || '').trim();
+                    this.formData.phone_number = (user.phone_number || '').trim();
+                    this.formData.birthdate = user.birthdate 
+                        ? (user.birthdate.includes('T') ? user.birthdate.split('T')[0] : user.birthdate)
+                        : '';
+                    this.formData.gender = (user.gender || '').trim();
+                    this.formData.blood_type = (user.blood_type || '').trim();
+                    this.formData.address = Array.isArray(user.address) && user.address.length > 0 
+                        ? user.address.join(', ')
+                        : (user.address || '');
 
-                    console.log('✅ User data populated successfully:', {
-                        name: this.userName,
-                        email: this.userEmail,
-                        id: this.userId,
-                        roles: this.userRoles,
-                        permissions: this.userPermissions.length
+                    console.log('✅ User data population complete:', {
+                        userName: this.userName,
+                        userEmail: this.userEmail,
+                        userId: this.userId,
+                        rolesCount: this.userRoles.length,
+                        permissionsCount: this.userPermissions.length
                     });
                 },
 
