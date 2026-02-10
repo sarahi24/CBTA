@@ -545,10 +545,10 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 passwordErrorMessage: '',
                 isStudent: true,
 
-                init() {
-                    this.detectRole();
-                    this.loadStudentData();
+                async init() {
+                    await this.loadStudentData();
                     this.loadStudentDetails();
+                    this.detectRole();
                 },
 
                 detectRole() {
