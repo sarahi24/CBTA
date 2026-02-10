@@ -668,18 +668,46 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         return;
                     }
 
-                    const requestData = {
-                        name: this.formData.name,
-                        last_name: this.formData.last_name,
-                        email: this.formData.email,
-                        phone_number: this.formData.phone_number,
-                        birthdate: this.formData.birthdate,
-                        gender: this.formData.gender,
-                        blood_type: this.formData.blood_type
-                    };
+                    // Solo enviar campos que tengan valores
+                    const requestData = {};
+                    
+                    if (this.formData.name && this.formData.name.trim()) {
+                        requestData.name = this.formData.name.trim();
+                    }
+                    
+                    if (this.formData.last_name && this.formData.last_name.trim()) {
+                        requestData.last_name = this.formData.last_name.trim();
+                    }
+                    
+                    if (this.formData.email && this.formData.email.trim()) {
+                        requestData.email = this.formData.email.trim();
+                    }
+                    
+                    if (this.formData.phone_number && this.formData.phone_number.trim()) {
+                        requestData.phone_number = this.formData.phone_number.trim();
+                    }
+                    
+                    if (this.formData.birthdate && this.formData.birthdate.trim()) {
+                        requestData.birthdate = this.formData.birthdate.trim();
+                    }
+                    
+                    if (this.formData.gender && this.formData.gender.trim()) {
+                        requestData.gender = this.formData.gender.trim();
+                    }
+                    
+                    if (this.formData.blood_type && this.formData.blood_type.trim()) {
+                        requestData.blood_type = this.formData.blood_type.trim();
+                    }
 
-                    if (this.formData.address) {
-                        requestData.address = [this.formData.address];
+                    if (this.formData.address && this.formData.address.trim()) {
+                        requestData.address = [this.formData.address.trim()];
+                    }
+
+                    // Validar que hay al menos un campo para actualizar
+                    if (Object.keys(requestData).length === 0) {
+                        this.errorMessage = 'Por favor completa al menos un campo para actualizar';
+                        this.isUpdating = false;
+                        return;
                     }
 
                     try {
@@ -705,15 +733,32 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             setTimeout(() => {
                                 this.showEditModal = false;
                                 this.successMessage = '';
+                                window.location.reload();
                             }, 2000);
                         } else {
+                            // Mostrar errores específicos de validación
                             if (data.errors) {
                                 this.errors = data.errors;
-                                const firstErrorKey = Object.keys(data.errors)[0];
-                                const firstError = data.errors[firstErrorKey];
-                                this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                                // Concatenar todos los errores
+                                let errorMessages = [];
+                                for (const [field, messages] of Object.entries(data.errors)) {
+                                    const fieldName = {
+                                        'name': 'Nombre',
+                                        'last_name': 'Apellido',
+                                        'email': 'Correo',
+                                        'phone_number': 'Teléfono',
+                                        'birthdate': 'Fecha de nacimiento',
+                                        'gender': 'Género',
+                                        'blood_type': 'Tipo de sangre',
+                                        'address': 'Dirección'
+                                    }[field] || field;
+                                    
+                                    const fieldErrors = Array.isArray(messages) ? messages : [messages];
+                                    errorMessages.push(fieldName + ': ' + fieldErrors.join(', '));
+                                }
+                                this.errorMessage = errorMessages.join(' | ');
                             } else {
-                                this.errorMessage = data.message || 'Error al actualizar el perfil';
+                                this.errorMessage = data.message || 'Error al actualizar el perfil. Verifica que todos los campos sean válidos.';
                             }
                         }
                     } catch (err) {
