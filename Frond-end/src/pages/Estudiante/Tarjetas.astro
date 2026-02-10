@@ -17,7 +17,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           token: null,
           userId: null,
           showResultModal: false,
-          resultType: '${resultParam || ''}',
+          resultType: `${resultParam || ''}`,
 
           closeResultModal() {
             this.showResultModal = false;
