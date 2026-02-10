@@ -3,18 +3,30 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Mi Perfil">
-    <div x-data="perfilData" x-cloak class="max-w-4xl mx-auto">
+    <div x-data="perfilData" x-cloak class="max-w-5xl mx-auto">
         <!-- Encabezado -->
-        <div class="flex items-center gap-6 mb-8">
-            <div class="w-24 h-24 bg-institucional rounded-full flex items-center justify-center shadow-lg">
-                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <div class="flex items-center gap-3 md:gap-5 mb-5 md:mb-8">
+            <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-xl">
+                <svg class="w-9 h-9 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.5 0-7 1.8-7 4v1h14v-1c0-2.2-3.5-4-7-4Z" />
                 </svg>
             </div>
             <div>
-                <h1 class="text-4xl font-bold text-institucional mb-2" x-text="userName || 'Cargando...'"></h1>
-                <p class="text-gray-600 text-lg" x-text="userRole || 'Usuario'"></p>
-                <p class="text-gray-500 text-sm mt-1" x-text="'Correo: ' + (userEmail || 'No disponible')"></p>
+                <h1 class="text-2xl md:text-4xl font-bold text-institucional mb-1" x-text="userName || 'Cargando...'"></h1>
+                <p class="text-gray-500 text-xs mt-1" x-text="'Correo: ' + (userEmail || 'No disponible')"></p>
+                <div class="flex flex-wrap items-center gap-2 mt-2">
+                    <template x-for="role in userRoles" :key="role">
+                        <span class="px-2.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full text-xs font-semibold shadow-md" x-text="role"></span>
+                    </template>
+                </div>
+            </div>
+            <div class="ml-auto flex flex-col gap-2">
+                <button @click="editProfile()" class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md text-sm font-semibold whitespace-nowrap">
+                    Editar Perfil
+                </button>
+                <button @click="changePassword()" class="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all shadow-md text-sm font-semibold whitespace-nowrap">
+                    Cambiar Contraseña
+                </button>
             </div>
         </div>
 
@@ -34,19 +46,19 @@ import Layout from '../layouts/Layout.astro';
                         <h3 class="text-xl font-bold text-institucional mb-6">Datos Personales</h3>
                         
                         <div class="space-y-4">
-                            <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">Nombre Completo</label>
-                                <p class="text-lg mt-1" x-text="userName || 'No disponible'"></p>
+                            <div class="border-l-4 border-purple-500 rounded-lg p-4 bg-gradient-to-r from-purple-50 to-pink-50">
+                                <label class="text-sm font-semibold text-purple-700">Nombre Completo</label>
+                                <p class="text-lg mt-1 text-gray-800 font-medium" x-text="userName || 'No disponible'"></p>
                             </div>
                             
-                            <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">Correo Electrónico</label>
-                                <p class="text-lg mt-1" x-text="userEmail || 'No disponible'"></p>
+                            <div class="border-l-4 border-blue-500 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-cyan-50">
+                                <label class="text-sm font-semibold text-blue-700">Correo Electrónico</label>
+                                <p class="text-lg mt-1 text-gray-800 font-medium" x-text="userEmail || 'No disponible'"></p>
                             </div>
                             
-                            <div class="border rounded-lg p-4 bg-gray-50">
-                                <label class="text-sm font-semibold text-gray-600">ID de Usuario</label>
-                                <p class="text-lg mt-1 font-mono text-gray-600" x-text="userId || 'No disponible'"></p>
+                            <div class="border-l-4 border-indigo-500 rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50">
+                                <label class="text-sm font-semibold text-indigo-700">ID de Usuario</label>
+                                <p class="text-lg mt-1 font-mono text-gray-700 font-semibold" x-text="userId || 'No disponible'"></p>
                             </div>
                         </div>
                     </div>
