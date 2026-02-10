@@ -17,13 +17,17 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           token: null,
           userId: null,
           showResultModal: false,
-          resultType: `${resultParam || ''}`,
+          resultType: '',
 
           closeResultModal() {
             this.showResultModal = false;
           },
 
           async init() {
+            // Obtener parámetro de resultado del URL
+            const urlParams = new URLSearchParams(window.location.search);
+            this.resultType = urlParams.get('result') || '';
+            
             // Mostrar modal si hay parÃ¡metro result
             if (this.resultType === 'added' || this.resultType === 'canceled') {
               this.showResultModal = true;
