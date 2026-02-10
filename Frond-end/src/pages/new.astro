@@ -374,9 +374,37 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         this.isSearching = true;
+        
+        // Primero buscar en localStorage si hay estudiantes cacheados
+        if (this.allStudents && this.allStudents.length > 0) {
+          const searchLower = input.toLowerCase();
+          const filtered = this.allStudents
+            .filter(student => 
+              student.name.toLowerCase().includes(searchLower) ||
+              String(student.control || '').toLowerCase().includes(searchLower) ||
+              String(student.id || '').includes(searchLower)
+            )
+            .slice(0, 15);
+          
+          if (filtered.length > 0) {
+            this.searchResults = filtered.map(s => ({
+              id: s.id,
+              fullName: s.name,
+              control: s.control,
+              email: s.email || '',
+              career_name: s.careerName || '',
+              semestre: s.semester || ''
+            }));
+            this.isSearching = false;
+            console.log('✅ Resultados desde cache:', this.searchResults.length);
+            return;
+          }
+        }
+        
+        // Si no hay cache o no hubo resultados, buscar en API
         const token = localStorage.getItem('access_token');
         if (!token) {
-          console.warn('⚠️ No hay token para buscar estudiantes');
+          console.log('⚠️ No hay token para buscar en API');
           this.searchResults = [];
           this.isSearching = false;
           return;
@@ -399,7 +427,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           });
 
           if (!res.ok) {
-            console.warn(`⚠️ Error en búsqueda: ${res.status}`);
+            // 422 = validación fallida en el backend, silenciosamente no mostrar resultados
+            if (res.status === 422) {
+              console.log(`🔍 Sin resultados para "${input}" (formato no válido o no encontrado)`);
+            } else {
+              console.log(`⚠️ Error en búsqueda: ${res.status}`);
+            }
             this.searchResults = [];
             this.isSearching = false;
             return;
@@ -420,12 +453,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               career_name: item.career_name || item.career || '',
               semestre: item.semestre || item.semester || ''
             }));
-            console.log('✅ Resultados de búsqueda:', this.searchResults.length);
+            console.log('✅ Resultados desde API:', this.searchResults.length);
           } else {
             this.searchResults = [];
           }
         } catch (err) {
-          console.error('❌ Error al buscar estudiantes:', err);
+          console.log('⚠️ Error al buscar estudiantes:', err.message);
           this.searchResults = [];
         } finally {
           this.isSearching = false;
@@ -1164,9 +1197,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               <div x-show="formData.scopeType === 'estudiantes'" x-cloak>
                 <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <i class="fas fa-user-check text-orange-600"></i>
-                  Agregar Matrículas de Estudiantes:
+                  Agregar Números de Control:
                 </label>
-                <p class="text-sm text-gray-600 mb-3">Escribe el número de control, email o nombre del estudiante (mínimo 3 caracteres). Selecciona de los resultados o presiona Enter para agregar.</p>
+                <p class="text-sm text-gray-600 mb-3">Escribe el número de control (mínimo 3 caracteres). Selecciona de los resultados o presiona Enter para agregar.</p>
                 
                 <div class="relative flex-1">
                   <div class="flex gap-2">
@@ -1176,7 +1209,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         x-model="searchTerm"
                         @input="searchStudentsRealTime()"
                         @keydown.enter.prevent="addStudentByControl(); searchTerm = ''"
-                        placeholder="Ej: 202, Juan, email@cbta.edu.mx (escribe al menos 3 caracteres)"
+                        placeholder="Ej: 20231001, 20240215 (escribe al menos 3 caracteres)"
                         class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm">
                       
                       <!-- Indicador de carga -->
@@ -1197,6 +1230,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   <!-- Mensaje de ayuda cuando hay menos de 3 caracteres -->
                   <div x-show="searchTerm.length > 0 && searchTerm.length < 3" x-cloak class="mt-1 text-xs text-gray-500 italic">
                     <i class="fas fa-info-circle"></i> Escribe al menos 3 caracteres para buscar
+                  </div>
+                  
+                  <!-- Mensaje cuando no hay resultados -->
+                  <div 
+                    x-show="!isSearching && searchResults.length === 0 && searchTerm.length >= 3" 
+                    x-cloak 
+                    @click.outside="searchTerm = ''" 
+                    class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 p-4 text-center">
+                    <i class="fas fa-search text-gray-400 text-2xl mb-2"></i>
+                    <p class="text-sm text-gray-600">No se encontró el número de control "<span class="font-semibold" x-text="searchTerm"></span>"</p>
+                    <p class="text-xs text-gray-500 mt-1">Presiona Enter para agregarlo manualmente</p>
                   </div>
                   
                   <!-- Dropdown de resultados -->
