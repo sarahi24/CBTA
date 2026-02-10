@@ -367,7 +367,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
       async searchStudentsRealTime() {
         const input = this.searchTerm.trim();
-        // El endpoint requiere mínimo 3 caracteres
+        // Requiere mínimo 3 caracteres
         if (!input || input.length < 3) {
           this.searchResults = [];
           return;
@@ -375,13 +375,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         this.isSearching = true;
         
-        // Primero buscar en localStorage si hay estudiantes cacheados
+        // Primero buscar en localStorage si hay estudiantes cacheados (más rápido)
         if (this.allStudents && this.allStudents.length > 0) {
           const searchLower = input.toLowerCase();
           const filtered = this.allStudents
             .filter(student => 
-              student.name.toLowerCase().includes(searchLower) ||
               String(student.control || '').toLowerCase().includes(searchLower) ||
+              student.name.toLowerCase().includes(searchLower) ||
               String(student.id || '').includes(searchLower)
             )
             .slice(0, 15);
@@ -401,18 +401,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         }
         
-        // Validar formato de número de control antes de buscar en API
-        // Los números de control típicamente tienen 6-8 dígitos, empiezan con año
-        const isValidControlFormat = /^\d{6,}$/.test(input);
-        
-        if (!isValidControlFormat) {
-          // Si no parece un número de control válido, no buscar en API
-          this.searchResults = [];
-          this.isSearching = false;
-          return;
-        }
-        
-        // Si no hay cache o no hubo resultados, buscar en API
+        // Si no hay cache o no encontró, buscar en API por prefijo
         const token = localStorage.getItem('access_token');
         if (!token) {
           this.searchResults = [];
@@ -421,6 +410,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
 
         try {
+          // El endpoint busca por PREFIJO, no número completo
           const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
           url.searchParams.set('search', input);
           url.searchParams.set('limit', '15');
@@ -437,7 +427,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           });
 
           if (!res.ok) {
-            // Manejar errores silenciosamente (422 = número no encontrado, es esperado)
+            // Si no encuentra, simplemente no hay resultados (no mostrar en consola)
             this.searchResults = [];
             this.isSearching = false;
             return;
@@ -445,25 +435,28 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
           const json = await res.json();
           if (json.success && json.data) {
-            // La respuesta puede ser un objeto único o un array
-            const students = Array.isArray(json.data) ? json.data : 
-                           json.data.concept ? [json.data.concept] : 
-                           json.data.students || [];
+            // La respuesta según documentación es un objeto singular con "concept"
+            const concept = json.data.concept;
             
-            this.searchResults = students.map(item => ({
-              id: item.id || item.userId,
-              fullName: item.name || item.fullName,
-              control: item.n_control || item.control,
-              email: item.email || '',
-              career_name: item.career_name || item.career || '',
-              semestre: item.semestre || item.semester || ''
-            }));
-            console.log('✅ Resultados desde API:', this.searchResults.length);
+            if (concept) {
+              // Convertir a formato array para consistencia
+              this.searchResults = [{
+                id: concept.id,
+                fullName: concept.name,
+                control: concept.n_control,
+                email: '',
+                career_name: '',
+                semestre: ''
+              }];
+              console.log('✅ Resultado desde API:', concept.n_control);
+            } else {
+              this.searchResults = [];
+            }
           } else {
             this.searchResults = [];
           }
         } catch (err) {
-          // Error de red u otro - manejar silenciosamente
+          // Error de red - manejar silenciosamente
           this.searchResults = [];
         } finally {
           this.isSearching = false;
@@ -930,8 +923,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       >
         <i class="fas fa-info-circle text-blue-600 text-xl mr-3 mt-0.5"></i>
         <div class="flex-1">
-          <p class="font-bold mb-2">💡 Búsqueda de estudiantes en tiempo real</p>
-          <p class="text-sm">Escribe en el campo de búsqueda (mínimo 3 caracteres) para encontrar estudiantes por nombre o número de control.</p>
+          <p class="font-bold mb-2">💡 Búsqueda por API disponible</p>
+          <p class="text-sm mb-2">Escribe un prefijo de número de control (ej: "2023") para buscar en la base de datos, o escribe el número completo y presiona Enter para agregarlo manualmente.</p>
         </div>
       </div>
 
@@ -1204,7 +1197,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   <i class="fas fa-user-check text-orange-600"></i>
                   Agregar Números de Control:
                 </label>
-                <p class="text-sm text-gray-600 mb-3">Escribe el número de control (mínimo 6 dígitos). Selecciona de los resultados o presiona Enter para agregar.</p>
+                <p class="text-sm text-gray-600 mb-3">Escribe el número de control (la búsqueda funciona por prefijo). Selecciona del resultado o presiona Enter para agregar.</p>
                 
                 <div class="relative flex-1">
                   <div class="flex gap-2">
@@ -1214,7 +1207,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         x-model="searchTerm"
                         @input="searchStudentsRealTime()"
                         @keydown.enter.prevent="addStudentByControl(); searchTerm = ''"
-                        placeholder="Ej: 20231001, 20240215 (mínimo 6 dígitos)"
+                        placeholder="Ej: 2023, 2024 (busca por prefijo) - presiona Enter para agregar"
                         class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm">
                       
                       <!-- Indicador de carga -->
@@ -1234,23 +1227,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   
                   <!-- Mensaje de ayuda cuando hay menos de 3 caracteres -->
                   <div x-show="searchTerm.length > 0 && searchTerm.length < 3" x-cloak class="mt-1 text-xs text-gray-500 italic">
-                    <i class="fas fa-info-circle"></i> Escribe al menos 3 caracteres para buscar
+                    <i class="fas fa-keyboard"></i> Escribe al menos 3 caracteres para buscar o presiona Enter para agregar
                   </div>
                   
-                  <!-- Mensaje cuando el formato no es válido (números de control tienen al menos 6 dígitos) -->
-                  <div x-show="searchTerm.length >= 3 && searchTerm.length < 6 && /^\d+$/.test(searchTerm)" x-cloak class="mt-1 text-xs text-blue-600 italic">
-                    <i class="fas fa-info-circle"></i> Los números de control tienen al menos 6 dígitos. Sigue escribiendo o presiona Enter para agregar.
-                  </div>
-                  
-                  <!-- Mensaje cuando no hay resultados -->
-                  <div 
-                    x-show="!isSearching && searchResults.length === 0 && searchTerm.length >= 6" 
-                    x-cloak 
-                    @click.outside="searchTerm = ''" 
-                    class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 p-4 text-center">
-                    <i class="fas fa-search text-gray-400 text-2xl mb-2"></i>
-                    <p class="text-sm text-gray-600">No se encontró el número de control "<span class="font-semibold" x-text="searchTerm"></span>"</p>
-                    <p class="text-xs text-gray-500 mt-1">Presiona Enter para agregarlo manualmente</p>
+                  <!-- Mensaje cuando no hay resultados pero cumple mínimo -->
+                  <div x-show="!isSearching && searchResults.length === 0 && searchTerm.length >= 3" x-cloak class="mt-1 text-xs text-blue-600 italic">
+                    <i class="fas fa-info-circle"></i> No se encontró. Presiona Enter para agregar "<span x-text="searchTerm"></span>"
                   </div>
                   
                   <!-- Dropdown de resultados -->
