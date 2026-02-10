@@ -354,7 +354,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       <!-- SECCI“N: PAGOS VENCIDOS -->
       <section class="section-container overdue-section" x-show="activeTab === 'overdue'">
         <div class="section-header">
-          <h2 class="section-title">ðŸ”´ Pagos Vencidos</h2>
+          <h2 class="section-title">🔴 Pagos Vencidos</h2>
           <span class="badge-danger" x-text="overdueAdeudos.length"></span>
         </div>
         
@@ -454,7 +454,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           
           <template x-if="!loading">
             <div class="confirm-payment-ui">
-              <div class="payment-icon-circle">ðŸ’³</div>
+              <div class="payment-icon-circle">💳</div>
               <h2 style="margin: 1rem 0 0.5rem; color: var(--primary);">Confirmar Pago</h2>
               <p style="color: var(--text-muted); margin-bottom: 2rem;">Serás redirigido a Stripe para completar el pago de forma segura</p>
               
@@ -475,7 +475,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               
               <button @click="processPayment()" class="btn-primary-action">
                 <span>Proceder al Pago</span>
-                <span style="margin-left: 8px;">†’</span>
+                <span style="margin-left: 8px;">→</span>
               </button>
               <button @click="showModal = false" class="btn-link-action">Cancelar</button>
             </div>
