@@ -204,7 +204,7 @@ const pageTitle = "Pagos por Concepto - CBTA 71";
                 return;
             }
 
-            const response = await StudentAPI.getPaymentsByConcept(token, {
+            const response = await window.StudentAPI.getPaymentsByConcept(token, {
                 search: searchTerm,
                 page: currentPage,
                 perPage: itemsPerPage,

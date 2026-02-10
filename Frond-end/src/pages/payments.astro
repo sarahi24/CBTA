@@ -216,7 +216,7 @@ const tableBody = document.getElementById('payments-table-body');
             }
 
             // Usar endpoint /api/v1/payments/by-concept
-            const response = await StudentAPI.getPaymentsByConcept(token, {
+            const response = await window.StudentAPI.getPaymentsByConcept(token, {
                 search: searchTerm,
                 page: currentPage,
                 perPage: ITEMS_PER_PAGE,
@@ -397,7 +397,7 @@ const tableBody = document.getElementById('payments-table-body');
             }
 
             // Llamar endpoint /payments (pagos individuales) filtrado por concepto
-            const response = await StudentAPI.getAllPayments(token, {
+            const response = await window.StudentAPI.getAllPayments(token, {
                 search: conceptName,
                 page: 1,
                 perPage: 100,

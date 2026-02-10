@@ -296,7 +296,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
         try {
           // Usar GET /api/v1/debts (máximo 200 items por página)
-          const response = await StudentAPI.getAllPendingDebts(token, {
+          const response = await window.StudentAPI.getAllPendingDebts(token, {
             search: searchInput.value.trim(),
             page: 1,
             perPage: 200,
@@ -741,7 +741,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
                            selectedStudentForValidation.nControl || 
                            selectedStudentForValidation.name;
 
-        const response = await StudentAPI.validateStripePayment(searchQuery, paymentIntentId, token);
+        const response = await window.StudentAPI.validateStripePayment(searchQuery, paymentIntentId, token);
 
         if (!response.success) {
           showValidationError(response.message || 'Error al validar el pago');

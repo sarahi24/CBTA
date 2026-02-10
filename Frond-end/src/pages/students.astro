@@ -218,7 +218,7 @@ async function loadStudents(forceRefresh = false) {
             return;
         }
 
-        const response = await StudentAPI.getPaymentStudents(token, {
+        const response = await window.StudentAPI.getPaymentStudents(token, {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
@@ -541,7 +541,7 @@ async function loadCareers() {
             return;
         }
 
-        const response = await StudentAPI.getCareers(token, { role, permission: 'view.careers' });
+        const response = await window.StudentAPI.getCareers(token, { role, permission: 'view.careers' });
         console.log('📡 Respuesta de carreras:', response);
 
         if (response.success && response.data && response.data.careers) {

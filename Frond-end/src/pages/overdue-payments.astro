@@ -143,7 +143,7 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
         // Obtener role del usuario
         const userRole = localStorage.getItem('user_role') || 'student';
         
-        const response = await StudentAPI.getOverduePayments(null, token, forceRefresh, userRole);
+        const response = await window.StudentAPI.getOverduePayments(null, token, forceRefresh, userRole);
         
         if (response.success && response.data?.pending_payments) {
           overduePayments = response.data.pending_payments.map(payment => ({

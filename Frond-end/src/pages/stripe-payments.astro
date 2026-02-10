@@ -165,7 +165,7 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
         const search = searchInput.value;
         const year = yearFilter.value ? parseInt(yearFilter.value) : null;
         
-        const response = await StudentAPI.getStripePayments(token, search, year, forceRefresh);
+        const response = await window.StudentAPI.getStripePayments(token, search, year, forceRefresh);
         
         if (response.success && response.data?.payments) {
           stripePayments = response.data.payments.map(normalizeStripePayment);
