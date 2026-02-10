@@ -126,11 +126,11 @@ import Layout from '../layouts/Layout.astro';
     </div>
 
     <!-- Modal de Edición -->
-    <div x-show="showEditModal" @click="$event.target === $el && (showEditModal = false)" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div x-show="showEditModal" @click="$event.target === $el && closeAllModals()" @keydown.escape.window="closeAllModals()" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-xl max-w-2xl w-full p-8 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-bold text-institucional">Editar Perfil</h3>
-                <button @click="showEditModal = false" class="text-gray-500 hover:text-gray-700">
+                <button @click="closeAllModals()" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -273,7 +273,7 @@ import Layout from '../layouts/Layout.astro';
                 <div class="flex gap-4 justify-end pt-6 border-t">
                     <button 
                         type="button"
-                        @click="showEditModal = false" 
+                        @click="closeAllModals()" 
                         class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition-all"
                     >
                         Cancelar
@@ -292,11 +292,11 @@ import Layout from '../layouts/Layout.astro';
     </div>
 
     <!-- Modal de Cambiar Contraseña -->
-    <div x-show="showPasswordModal" @click="$event.target === $el && (showPasswordModal = false)" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div x-show="showPasswordModal" @click="$event.target === $el && closeAllModals()" @keydown.escape.window="closeAllModals()" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-xl max-w-md w-full p-8 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-bold text-institucional">Cambiar Contraseña</h3>
-                <button @click="showPasswordModal = false" class="text-gray-500 hover:text-gray-700">
+                <button @click="closeAllModals()" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -360,7 +360,7 @@ import Layout from '../layouts/Layout.astro';
                 <div class="flex gap-4 justify-end pt-6 border-t">
                     <button 
                         type="button"
-                        @click="showPasswordModal = false" 
+                        @click="closeAllModals()" 
                         class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition-all"
                     >
                         Cancelar
@@ -625,9 +625,14 @@ import Layout from '../layouts/Layout.astro';
                     });
                 },
 
+                closeAllModals() {
+                    this.showEditModal = false;
+                    this.showPasswordModal = false;
+                },
+
                 editProfile() {
                     // Cargar datos actuales en el formulario
-                    this.showPasswordModal = false;
+                    this.closeAllModals();
                     const userData = localStorage.getItem('user_data');
                     if (userData) {
                         try {
@@ -735,7 +740,7 @@ import Layout from '../layouts/Layout.astro';
                 },
 
                 changePassword() {
-                    this.showEditModal = false;
+                    this.closeAllModals();
                     this.showPasswordModal = true;
                     this.passwordData = { currentPassword: '', newPassword: '', confirmPassword: '' };
                     this.passwordErrors = {};
