@@ -151,7 +151,7 @@ const forceRefresh = forceRefreshParam === 'true';
     <header class="history-header">
       <div class="header-main">
         <div class="title-group">
-          <p class="pre-title">GestiÃ³n Financiera</p>
+          <p class="pre-title">Gestión Financiera</p>
           <div style="display: flex; align-items: baseline; gap: 12px;">
             <h1>Mi Historial</h1>
             <span class="total-badge" x-text="'(' + total + ' pagos)'"></span>
@@ -174,7 +174,7 @@ const forceRefresh = forceRefreshParam === 'true';
     <main class="history-content">
       <template x-if="loading">
         <div class="empty-state">
-          <div class="empty-icon">â³</div>
+          <div class="empty-icon">⏳</div>
           <h3>Cargando...</h3>
           <p>Obteniendo historial de pagos.</p>
         </div>
@@ -182,7 +182,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
       <template x-if="!loading && errorMessage">
         <div class="empty-state">
-          <div class="empty-icon">âš ï¸</div>
+          <div class="empty-icon">⚠️</div>
           <h3>Sin resultados</h3>
           <p x-text="errorMessage"></p>
         </div>
@@ -190,7 +190,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
       <template x-if="!loading && !errorMessage && pagosFiltrados.length === 0">
         <div class="empty-state">
-          <div class="empty-icon">ðŸ“œ</div>
+          <div class="empty-icon">📜</div>
           <h3>Sin registros</h3>
           <p>No se encontraron pagos.</p>
         </div>
@@ -222,7 +222,7 @@ const forceRefresh = forceRefreshParam === 'true';
                       <span class="value reference" x-text="pago.reference"></span>
                     </div>
                     <div class="detail-row">
-                      <span class="label">MÃ©todo</span>
+                      <span class="label">Método</span>
                       <span class="value">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; margin-right: 4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                         <span x-text="pago.paymentMethod"></span>
@@ -270,10 +270,10 @@ const forceRefresh = forceRefreshParam === 'true';
       </template>
     </main>
 
-    <!-- PAGINACIÃ“N -->
+    <!-- PAGINACIÓN -->
     <div class="pagination-section">
       <div class="pagination-info">
-        <span class="info-text">PÃ¡gina <strong x-text="currentPage"></strong> de <strong x-text="lastPage"></strong> â€¢ <strong x-text="total"></strong> registros total</span>
+        <span class="info-text">Página <strong x-text="currentPage"></strong> de <strong x-text="lastPage"></strong> • <strong x-text="total"></strong> registros total</span>
       </div>
 
       <div class="pagination-controls">
@@ -317,7 +317,7 @@ const forceRefresh = forceRefreshParam === 'true';
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
           </div>
-          <h3 class="modal-title">Â¡Pago Exitoso!</h3>
+          <h3 class="modal-title">¡Pago Exitoso!</h3>
           <p class="modal-message">Tu pago se ha procesado correctamente. Puedes ver los detalles en tu historial.</p>
           <button @click="closeResultModal()" class="modal-btn success">Entendido</button>
         </div>
@@ -695,7 +695,7 @@ const forceRefresh = forceRefreshParam === 'true';
     transform: scale(0.95);
   }
 
-  /* PAGINACIÃ“N */
+  /* PAGINACIÓN */
   .pagination-section {
     background: white;
     border-radius: 16px;

@@ -1,7 +1,7 @@
 ﻿---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 
-const title = "Mis MÃ©todos de Pago";
+const title = "Mis Métodos de Pago";
 const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('result') : null;
 ---
 
@@ -50,7 +50,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           async cargarTarjetas(forceRefresh = false) {
             if (!this.token || !this.userId) {
               console.error('âŒ Token o userId vacÃ­os:', { token: !!this.token, userId: this.userId });
-              this.error = 'Por favor inicia sesiÃ³n';
+              this.error = 'Por favor inicia sesión';
               return;
             }
 
@@ -143,7 +143,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               const errorData = await response.json().catch(() => ({}));
               
               if (response.status === 429) {
-                throw new Error('Has excedido el lÃ­mite de solicitudes, intenta nuevamente en unos segundos');
+                throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
               }
               
               throw new Error(errorData.message || 'Error al obtener URL de Stripe');
@@ -162,7 +162,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               window.location.href = checkoutUrl;
             } else {
               console.error('âŒ Estructura de respuesta:', JSON.stringify(data, null, 2));
-              throw new Error('No se recibiÃ³ URL de Stripe del backend');
+              throw new Error('No se recibió URL de Stripe del backend');
             }
           } catch (err) {
             console.error('âŒ Error:', err);
@@ -172,7 +172,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         },
 
         async eliminarTarjeta(paymentMethodId) {
-          if (!confirm('Â¿EstÃ¡s seguro de que deseas eliminar esta tarjeta?')) return;
+          if (!confirm('¿Estás seguro de que deseas eliminar esta tarjeta?')) return;
 
           this.isLoading = true;
           this.error = '';
@@ -194,7 +194,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               throw new Error(errorData.message || 'Error al eliminar tarjeta');
             }
 
-            this.success = 'âœ… Tarjeta eliminada correctamente';
+            this.success = '✅ Tarjeta eliminada correctamente';
             this.tarjetas = this.tarjetas.filter(t => t.id !== paymentMethodId);
             localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
             
@@ -243,7 +243,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               </svg>
             </div>
             <div class="welcome-text">
-              <span class="greeting">MÃ©todos de Pago</span>
+              <span class="greeting">Métodos de Pago</span>
               <h1 x-text="`Hola, ${alumno.split(' ')[0]}`"></h1>
             </div>
           </div>
@@ -261,7 +261,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         <div class="section-header">
           <h2 class="section-title">Mis Tarjetas</h2>
           <button @click="showModal = true" class="add-inline-btn">
-            + AÃ±adir Nueva
+            + Añadir Nueva
           </button>
         </div>
 
@@ -273,7 +273,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                    <img :src="tarjeta.logo" alt="logo" class="bank-logo">
                 </div>
                 <div class="details">
-                  <h3 x-text="'â€¢â€¢â€¢â€¢ ' + tarjeta.masked_card.slice(-4)"></h3>
+                  <h3 x-text="'•••• ' + tarjeta.masked_card.slice(-4)"></h3>
                   <p class="date">
                     <span x-text="tarjeta.tipo"></span> | Exp: <span x-text="tarjeta.vencimiento"></span>
                   </p>
@@ -287,7 +287,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
           <template x-if="tarjetas.length === 0">
             <div class="empty-state" @click="showModal = true" style="text-align: center; padding: 3rem; background: white; border-radius: 24px; cursor: pointer; border: 2px dashed #e2e8f0;">
-                <p style="color: #64748b; font-weight: 600;">No tienes tarjetas registradas. Toca para aÃ±adir una.</p>
+                <p style="color: #64748b; font-weight: 600;">No tienes tarjetas registradas. Toca para añadir una.</p>
             </div>
           </template>
         </div>
@@ -301,7 +301,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         <div class="sheet-body">
           <div class="payment-header">
             <h2 class="grand-total">Vincular Tarjeta</h2>
-            <p class="subtitle">SerÃ¡s redirigido a Stripe para completar la vinculaciÃ³n</p>
+            <p class="subtitle">Serás redirigido a Stripe para completar la vinculación</p>
           </div>
           <div x-show="error" class="alert alert-error" x-text="error" x-cloak></div>
           <div class="button-group">
@@ -324,8 +324,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
           </div>
-          <h3 class="modal-title">Â¡Tarjeta Agregada!</h3>
-          <p class="modal-message">Tu mÃ©todo de pago ha sido vinculado exitosamente. Ya puedes usarlo para realizar tus pagos.</p>
+          <h3 class="modal-title">¡Tarjeta Agregada!</h3>
+          <p class="modal-message">Tu método de pago ha sido vinculado exitosamente. Ya puedes usarlo para realizar tus pagos.</p>
           <button @click="closeResultModal()" class="modal-btn success">Entendido</button>
         </div>
       </div>
@@ -343,7 +343,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             </svg>
           </div>
           <h3 class="modal-title">Proceso Cancelado</h3>
-          <p class="modal-message">Has cancelado la vinculaciÃ³n de la tarjeta. No se realizÃ³ ningÃºn cargo. Puedes intentar nuevamente cuando desees.</p>
+          <p class="modal-message">Has cancelado la vinculación de la tarjeta. No se realizó ningún cargo. Puedes intentar nuevamente cuando desees.</p>
           <button @click="closeResultModal()" class="modal-btn canceled">Cerrar</button>
         </div>
       </div>
