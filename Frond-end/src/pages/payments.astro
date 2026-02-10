@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { StudentAPI } from "../utils/studentAPI.js";
+// Note: StudentAPI is available as window.StudentAPI from public/studentAPI.js
 
 const pageTitle = "Gestión de Pagos - CBTA 71";
 ---
@@ -149,8 +149,7 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 </div>
 
 <script type="module">
-import { StudentAPI } from '../utils/studentAPI.js';
-window.StudentAPI = StudentAPI;
+// StudentAPI is loaded globally via public/studentAPI.js
 
 const ITEMS_PER_PAGE = 15;
 let currentPage = 1;

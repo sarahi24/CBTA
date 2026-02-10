@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { StudentAPI } from '../utils/studentAPI.js';
+// Note: StudentAPI is available as window.StudentAPI from public/studentAPI.js
 
 const pageTitle = "Pagos por Concepto - CBTA 71";
 ---
@@ -121,8 +121,7 @@ const pageTitle = "Pagos por Concepto - CBTA 71";
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" defer></script>
 
 <script type="module">
-import { StudentAPI } from '../utils/studentAPI.js';
-window.StudentAPI = StudentAPI;
+// StudentAPI is loaded globally via public/studentAPI.js
 
 (function() {
     let currentPage = 1;

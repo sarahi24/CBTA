@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { StudentAPI } from '../utils/studentAPI.js';
 
 const pageTitle = "Pagos Vencidos - CBTA 71";
 
@@ -92,8 +91,7 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 
   <script type="module">
-    import { StudentAPI } from '../utils/studentAPI.js';
-    window.StudentAPI = StudentAPI;
+    // StudentAPI is loaded globally via public/studentAPI.js
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let overduePayments = [];

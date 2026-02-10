@@ -1,6 +1,6 @@
 ---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
-import { StudentAPI } from '../../utils/studentAPI.js';
+// Note: StudentAPI is available as window.StudentAPI from public/studentAPI.js in the client
 
 // Obtener ID del query parameter
 const paymentId = Astro.url.searchParams.get('id');

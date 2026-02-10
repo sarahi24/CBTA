@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { StudentAPI } from '../utils/studentAPI.js';
 
 const pageTitle = "Estado de Adeudos - CBTA 71";
 
@@ -237,8 +236,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
   </script>
 
   <script type="module">
-    import { StudentAPI } from '../utils/studentAPI.js';
-    window.StudentAPI = StudentAPI;
+    // StudentAPI is loaded globally via public/studentAPI.js
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let pendingPayments = [];
