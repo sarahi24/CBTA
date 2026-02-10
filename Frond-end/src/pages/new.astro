@@ -228,10 +228,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           console.log('✅ Semestres seleccionados:', this.formData.selectedSemesters);
           
           if (Array.isArray(concept.scopeRules.specificStudents)) {
-            this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => {
-              const student = this.allStudents.find(s => String(s.id) === String(id));
-              return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
-            });
+            this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => ({
+              id: String(id),
+              control: String(id),
+              name: String(id)
+            }));
             console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
           }
           
@@ -283,6 +284,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.formData.selectedSpecificStudents.splice(index, 1);
         }
         this.searchTerm = '';
+      },
+      
+      addStudentByControl() {
+        const input = this.searchTerm.trim();
+        if (!input) return;
+        
+        // Verificar si ya existe
+        const exists = this.formData.selectedSpecificStudents.some(s => 
+          s.id === input || s.control === input
+        );
+        
+        if (exists) {
+          this.errorMessage = '⚠️ Esta matrícula ya fue agregada.';
+          setTimeout(() => this.errorMessage = '', 2000);
+          return;
+        }
+        
+        // Agregar el estudiante con la matrícula/ID ingresada
+        this.formData.selectedSpecificStudents.push({
+          id: input,
+          control: input,
+          name: input
+        });
+        
+        console.log('✅ Estudiante agregado:', input);
       },
       
       toggleExceptionStudent(student) {
@@ -419,8 +445,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         } else {
           // Alcance restringido - incluir solo los filtros especificados
           if (this.formData.scopeType === 'tags') {
-            // Tags especiales - aplica solo a usuarios con esos tags
-            payload.applies_to = 'todos';
+            // Casos especiales - aplica solo a usuarios con esos tags
+            payload.applies_to = 'tag';
             payload.applicantTags = this.formData.applicantTags.length > 0 ? this.formData.applicantTags : [];
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
@@ -1022,52 +1048,32 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               <div x-show="formData.scopeType === 'estudiantes'" x-cloak>
                 <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <i class="fas fa-user-check text-orange-600"></i>
-                  Buscar y Seleccionar Estudiantes:
+                  Agregar Matrículas de Estudiantes:
                 </label>
+                <p class="text-sm text-gray-600 mb-3">Escribe la matrícula o ID del estudiante y presiona Enter o el botón Agregar.</p>
                 
-                <div x-show="allStudents.length === 0" class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-3">
-                  <p class="text-sm text-yellow-800 flex items-center gap-2">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>No se cargaron estudiantes. Visita la página <a href="/roles" class="underline font-bold">Roles y Usuarios</a> primero para cargar la lista.</span>
-                  </p>
-                </div>
-                
-                <div class="relative" x-data="{ open: false }" @click.away="open = false">
-                  <input type="text" x-model="searchTerm" @focus="open = true" @input="open = true"
-                    placeholder="Buscar por nombre o matrícula..."
-                    class="w-full px-3 py-2 border border-gray-300 rounded-xl input-focus-style transition duration-200 text-sm"
-                    :disabled="allStudents.length === 0">
+                <div class="flex gap-2">
+                  <input 
+                    type="text" 
+                    x-model="searchTerm" 
+                    @keydown.enter.prevent="addStudentByControl(); searchTerm = ''"
+                    placeholder="Ej: 21680118 o nombre del estudiante"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm">
                   
-                  <div x-show="open && searchTerm.length > 0" x-cloak
-                    class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto p-2">
-                    
-                    <template x-if="filteredStudents.length > 0">
-                      <div class="space-y-1">
-                        <template x-for="student in filteredStudents" :key="student.id">
-                          <div @click="toggleSpecificStudent(student); open = false" class="p-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm flex justify-between items-center transition">
-                            <span x-text="student.name" class="text-gray-800 font-medium"></span>
-                            <span x-text="'Matrícula: ' + (student.control || student.id)" class="text-gray-500 text-xs"></span>
-                            <i x-show="formData.selectedSpecificStudents.some(s => s.id === student.id)" class="fas fa-check-circle text-active"></i>
-                          </div>
-                        </template>
-                      </div>
-                    </template>
-                    
-                    <template x-if="filteredStudents.length === 0">
-                      <div class="p-3 text-center text-sm text-gray-500">
-                        <i class="fas fa-search mb-2 text-lg"></i>
-                        <p>No se encontraron estudiantes con "<span x-text="searchTerm" class="font-bold"></span>"</p>
-                      </div>
-                    </template>
-                  </div>
+                  <button 
+                    type="button" 
+                    @click="addStudentByControl(); searchTerm = ''"
+                    class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition-all flex items-center gap-2">
+                    <i class="fas fa-plus"></i>
+                    Agregar
+                  </button>
                 </div>
                 
                 <div x-show="formData.selectedSpecificStudents.length > 0" class="mt-3 flex flex-wrap gap-2">
-                  <template x-for="student in formData.selectedSpecificStudents" :key="student.id">
-                    <span class="inline-flex items-center gap-2 px-3 py-1 bg-active text-white rounded-lg text-xs font-medium">
-                      <span x-text="student.name"></span>
-                      <span x-text="'(' + (student.control || student.id) + ')'" class="opacity-75"></span>
-                      <button type="button" @click="removeSpecificStudent(student.id)" class="hover:text-red-200">
+                  <template x-for="(student, index) in formData.selectedSpecificStudents" :key="index">
+                    <span class="inline-flex items-center gap-2 px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium">
+                      <span x-text="student.control || student.id"></span>
+                      <button type="button" @click="formData.selectedSpecificStudents.splice(index, 1)" class="hover:text-red-200">
                         <i class="fas fa-times"></i>
                       </button>
                     </span>
