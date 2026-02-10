@@ -818,39 +818,31 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     // Solo enviar campos que tengan valores
                     const requestData = {};
                     
-                    if (this.formData.name && this.formData.name.trim()) {
-                        requestData.name = this.formData.name.trim();
-                    }
+                    // Función auxiliar para validar y agregar campo
+                    const addField = (field, value) => {
+                        if (value !== null && value !== undefined && value !== '') {
+                            const trimmed = typeof value === 'string' ? value.trim() : value;
+                            if (trimmed !== '') {
+                                requestData[field] = trimmed;
+                            }
+                        }
+                    };
                     
-                    if (this.formData.last_name && this.formData.last_name.trim()) {
-                        requestData.last_name = this.formData.last_name.trim();
-                    }
-                    
-                    if (this.formData.email && this.formData.email.trim()) {
-                        requestData.email = this.formData.email.trim();
-                    }
-                    
-                    if (this.formData.phone_number && this.formData.phone_number.trim()) {
-                        requestData.phone_number = this.formData.phone_number.trim();
-                    }
-                    
-                    if (this.formData.birthdate && this.formData.birthdate.trim()) {
-                        requestData.birthdate = this.formData.birthdate.trim();
-                    }
-                    
-                    if (this.formData.gender && this.formData.gender.trim()) {
-                        requestData.gender = this.formData.gender.trim();
-                    }
-                    
-                    if (this.formData.blood_type && this.formData.blood_type.trim()) {
-                        requestData.blood_type = this.formData.blood_type.trim();
-                    }
+                    addField('name', this.formData.name);
+                    addField('last_name', this.formData.last_name);
+                    addField('email', this.formData.email);
+                    addField('phone_number', this.formData.phone_number);
+                    addField('birthdate', this.formData.birthdate);
+                    addField('gender', this.formData.gender);
+                    addField('blood_type', this.formData.blood_type);
 
-                    if (this.formData.address && this.formData.address.trim()) {
-                        // Dividir dirección por saltos de línea o comas
-                        const addressLines = this.formData.address.trim().split(/[\n,]+/).map(line => line.trim()).filter(line => line.length > 0);
-                        if (addressLines.length > 0) {
-                            requestData.address = addressLines;
+                    if (this.formData.address) {
+                        const addressTrimmed = typeof this.formData.address === 'string' ? this.formData.address.trim() : '';
+                        if (addressTrimmed) {
+                            const addressLines = addressTrimmed.split(/[\n,]+/).map(line => line.trim()).filter(line => line.length > 0);
+                            if (addressLines.length > 0) {
+                                requestData.address = addressLines;
+                            }
                         }
                     }
 
@@ -861,7 +853,10 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         return;
                     }
 
-                    console.log('Datos a enviar:', requestData);
+                    console.log('=== ENVIANDO ACTUALIZACIÓN DE PERFIL ===');
+                    console.log('Objeto requestData:', requestData);
+                    console.log('JSON a enviar:', JSON.stringify(requestData));
+                    console.log('Cantidad de campos:', Object.keys(requestData).length);
 
                     try {
                         const response = await fetch(API_BASE_URL + '/v1/users/update', {
@@ -875,6 +870,12 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         });
 
                         const data = await response.json();
+                        console.log('=== RESPUESTA DEL SERVIDOR ===');
+                        console.log('Status HTTP:', response.status);
+                        console.log('Respuesta completa:', data);
+                        console.log('Success:', data.success);
+                        console.log('Message:', data.message);
+                        console.log('Errors:', data.errors);
 
                         if (response.ok && data.success) {
                             this.successMessage = data.message || 'Perfil actualizado correctamente';
@@ -892,6 +893,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         } else {
                             // Mostrar errores específicos de validación
                             if (data.errors) {
+                                console.error('Errores de validación detallados:', data.errors);
                                 this.errors = data.errors;
                                 // Concatenar todos los errores
                                 let errorMessages = [];
