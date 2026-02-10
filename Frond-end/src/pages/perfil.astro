@@ -372,8 +372,22 @@ import Layout from '../layouts/Layout.astro';
                                     hasRoles: Array.isArray(user.roles),
                                     hasPermissions: Array.isArray(user.permissions)
                                 });
-                                localStorage.setItem('user_data', JSON.stringify(user));
-                                this.populateUserData(user);
+                                const storedRaw = localStorage.getItem('user_data');
+                                const storedUser = storedRaw ? JSON.parse(storedRaw) : {};
+                                const mergedUser = { ...storedUser, ...user };
+
+                                if ((!mergedUser.roles || mergedUser.roles.length === 0) && storedUser?.roles?.length) {
+                                    mergedUser.roles = storedUser.roles;
+                                }
+                                if (!mergedUser.role && storedUser?.role) {
+                                    mergedUser.role = storedUser.role;
+                                }
+                                if ((!mergedUser.permissions || mergedUser.permissions.length === 0) && storedUser?.permissions?.length) {
+                                    mergedUser.permissions = storedUser.permissions;
+                                }
+
+                                localStorage.setItem('user_data', JSON.stringify(mergedUser));
+                                this.populateUserData(mergedUser);
                                 console.log('✅ User data loaded and populated from API');
                             } else {
                                 console.warn('⚠️ Invalid API response structure');
@@ -607,11 +621,23 @@ import Layout from '../layouts/Layout.astro';
                         return;
                     }
 
+                    const normalizePhoneNumber = (value) => {
+                        if (!value) return '';
+                        const trimmed = value.trim();
+                        if (!trimmed) return '';
+                        if (trimmed.startsWith('+')) return trimmed;
+                        const digits = trimmed.replace(/\D/g, '');
+                        if (digits.length === 10) return `+52${digits}`;
+                        if (digits.length === 12 && digits.startsWith('52')) return `+${digits}`;
+                        if (digits.length === 13 && digits.startsWith('521')) return `+${digits}`;
+                        return trimmed;
+                    };
+
                     const requestData = {};
                     const nameValue = this.formData.name?.trim();
                     const lastNameValue = this.formData.last_name?.trim();
                     const emailValue = this.formData.email?.trim();
-                    const phoneValue = this.formData.phone_number?.trim();
+                    const phoneValue = normalizePhoneNumber(this.formData.phone_number);
                     const birthdateValue = this.formData.birthdate?.trim();
                     const genderValue = this.formData.gender?.trim();
                     const bloodTypeValue = this.formData.blood_type?.trim();
@@ -619,7 +645,15 @@ import Layout from '../layouts/Layout.astro';
                     if (nameValue) requestData.name = nameValue;
                     if (lastNameValue) requestData.last_name = lastNameValue;
                     if (emailValue) requestData.email = emailValue;
-                    if (phoneValue) requestData.phone_number = phoneValue;
+                    if (phoneValue) {
+                        const phoneValid = /^\+\d{10,15}$/.test(phoneValue);
+                        if (!phoneValid) {
+                            this.errorMessage = 'El telefono debe incluir codigo de pais. Ejemplo: +5215512345678.';
+                            this.isUpdating = false;
+                            return;
+                        }
+                        requestData.phone_number = phoneValue;
+                    }
                     if (birthdateValue) requestData.birthdate = birthdateValue;
                     if (genderValue) requestData.gender = genderValue;
                     if (bloodTypeValue) requestData.blood_type = bloodTypeValue;
