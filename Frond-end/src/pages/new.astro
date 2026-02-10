@@ -416,7 +416,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
           url.searchParams.set('search', input);
           url.searchParams.set('limit', '15');
-          url.searchParams.set('forceRefresh', 'false');
 
           const res = await fetch(url.toString(), {
             method: 'GET',
