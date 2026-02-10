@@ -1,8 +1,9 @@
----
+﻿---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 
 const title = "Finanzas Estudiantiles";
-// Todo el manejo de datos se hará del lado del cliente
+const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('result') : null;
+// Todo el manejo de datos se harÃ¡ del lado del cliente
 ---
 
 <StudentLayout title={title}>
@@ -25,6 +26,8 @@ const title = "Finanzas Estudiantiles";
       showOverdueAlert: false,
       activeTab: 'pending',
       userId: null,
+      showResultModal: false,
+      resultType: '${resultParam || ''}',
 
       async ensureStudentAPI() {
         if (window.StudentAPI) return true;
@@ -54,8 +57,23 @@ const title = "Finanzas Estudiantiles";
         });
       },
 
+      closeResultModal() {
+        this.showResultModal = false;
+      },
+
       async init() {
-        // Obtener datos del usuario desde localStorage de forma más robusta
+        // Mostrar modal si hay parÃ¡metro result=canceled
+        if (this.resultType === 'canceled') {
+          this.showResultModal = true;
+          // Limpiar URL despuÃ©s de 3 segundos
+          setTimeout(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('result');
+            window.history.replaceState({}, '', url);
+          }, 3000);
+        }
+
+        // Obtener datos del usuario desde localStorage de forma mÃ¡s robusta
         const userName = localStorage.getItem('userName');
         const userDataStr = localStorage.getItem('userData');
         
@@ -76,11 +94,11 @@ const title = "Finanzas Estudiantiles";
         const userId = localStorage.getItem('userId');
         this.userId = userId;  // Guardar en el estado
         
-        console.log('🔍 [Adeudos] Usuario cargado:', this.alumnoNombre);
-        console.log('🔍 [Adeudos] Token disponible:', !!token);
-        console.log('🔍 [Adeudos] UserId:', userId);
+        console.log('ðŸ” [Adeudos] Usuario cargado:', this.alumnoNombre);
+        console.log('ðŸ” [Adeudos] Token disponible:', !!token);
+        console.log('ðŸ” [Adeudos] UserId:', userId);
         const apiReady = await this.ensureStudentAPI();
-        console.log('🔍 [Adeudos] StudentAPI disponible:', apiReady);
+        console.log('ðŸ” [Adeudos] StudentAPI disponible:', apiReady);
         
         if (token && apiReady) {
           await this.loadPendingPayments();
@@ -89,8 +107,8 @@ const title = "Finanzas Estudiantiles";
         if (token && apiReady) {
           // Cargar tarjetas desde API usando StudentAPI
           try {
-            console.log('📥 Cargando tarjetas desde StudentAPI...');
-            // Pasar null para obtener métodos de pago del usuario autenticado
+            console.log('ðŸ“¥ Cargando tarjetas desde StudentAPI...');
+            // Pasar null para obtener mÃ©todos de pago del usuario autenticado
             const cardsData = await window.StudentAPI.getPaymentMethods(null, token);
             const cardsArray = Array.isArray(cardsData.data) ? cardsData.data : 
                                Array.isArray(cardsData) ? cardsData : [];
@@ -101,16 +119,16 @@ const title = "Finanzas Estudiantiles";
               terminacion: card.last4 || card.terminacion || '****',
               logo: card.brand === 'visa' ? 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
             }));
-            console.log('✅ Tarjetas cargadas:', this.tarjetas.length);
+            console.log('âœ… Tarjetas cargadas:', this.tarjetas.length);
           } catch (err) {
-            console.error('❌ Error al cargar tarjetas:', err);
+            console.error('âŒ Error al cargar tarjetas:', err);
             this.tarjetas = [];
           }
         }
         
         // Fallback a localStorage si no hay datos de API
         if (this.adeudos.length === 0) {
-          console.log('⚠️ Usando fallback de localStorage para adeudos');
+          console.log('âš ï¸ Usando fallback de localStorage para adeudos');
           const adeudosGuardados = localStorage.getItem('mis_adeudos');
           if (adeudosGuardados) {
             this.adeudos = JSON.parse(adeudosGuardados);
@@ -118,7 +136,7 @@ const title = "Finanzas Estudiantiles";
         }
         
         if (this.tarjetas.length === 0) {
-          console.log('⚠️ Usando fallback de localStorage para tarjetas');
+          console.log('âš ï¸ Usando fallback de localStorage para tarjetas');
           const guardadas = localStorage.getItem('mis_tarjetas');
           if (guardadas) {
             this.tarjetas = JSON.parse(guardadas);
@@ -132,13 +150,13 @@ const title = "Finanzas Estudiantiles";
 
         this.loadingTab = true;
         try {
-          console.log('📥 Cargando adeudos desde StudentAPI...');
-          console.log('🔍 UserId:', this.userId);
+          console.log('ðŸ“¥ Cargando adeudos desde StudentAPI...');
+          console.log('ðŸ” UserId:', this.userId);
           
           // Pasar el userId para que se construya el endpoint correcto
           const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, false, 'student');
           
-          console.log('📊 [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
+          console.log('ðŸ“Š [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
           
           // El backend retorna: { success: true, data: [...] } donde data es un array
           let paymentsArray = [];
@@ -150,7 +168,7 @@ const title = "Finanzas Estudiantiles";
             }
           }
           
-          console.log('📊 [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
+          console.log('ðŸ“Š [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
           
           this.adeudos = paymentsArray.map(payment => ({
             id: payment.id,
@@ -160,9 +178,9 @@ const title = "Finanzas Estudiantiles";
             status: payment.status || 'Pendiente',
             description: payment.description || payment.descripcion || ''
           }));
-          console.log('✅ Adeudos cargados:', this.adeudos.length);
+          console.log('âœ… Adeudos cargados:', this.adeudos.length);
         } catch (err) {
-          console.error('❌ Error al cargar adeudos:', err);
+          console.error('âŒ Error al cargar adeudos:', err);
           this.adeudos = [];
         } finally {
           this.loadingTab = false;
@@ -172,50 +190,50 @@ const title = "Finanzas Estudiantiles";
       async loadOverduePayments() {
         const token = localStorage.getItem('access_token');
         if (!token) {
-          console.warn('⚠️ No token available for overdue payments');
+          console.warn('âš ï¸ No token available for overdue payments');
           return;
         }
 
         this.loadingTab = true;
         try {
-          console.log('📥 Cargando pagos vencidos desde StudentAPI...');
-          console.log('🔍 Token disponible:', token.substring(0, 10) + '...');
-          console.log('🔍 UserId:', this.userId);
+          console.log('ðŸ“¥ Cargando pagos vencidos desde StudentAPI...');
+          console.log('ðŸ” Token disponible:', token.substring(0, 10) + '...');
+          console.log('ðŸ” UserId:', this.userId);
           
           // Verificar que window.StudentAPI existe
           if (!window.StudentAPI) {
-            throw new Error('window.StudentAPI no está disponible');
+            throw new Error('window.StudentAPI no estÃ¡ disponible');
           }
           
-          console.log('✅ window.StudentAPI disponible');
+          console.log('âœ… window.StudentAPI disponible');
           
           // Pasar el userId para que se construya el endpoint correcto
           const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, false, 'student');
           
-          console.log('📊 [Adeudos] Respuesta completa del servidor:', overdueData);
-          console.log('📊 [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
+          console.log('ðŸ“Š [Adeudos] Respuesta completa del servidor:', overdueData);
+          console.log('ðŸ“Š [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
           
           // El backend retorna: { success: true, data: [...] } donde data es un array
           let overdueArray = [];
           if (overdueData?.data) {
             if (Array.isArray(overdueData.data)) {
-              console.log('✅ Respuesta es un array directo');
+              console.log('âœ… Respuesta es un array directo');
               overdueArray = overdueData.data;
             } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
-              console.log('✅ Respuesta tiene estructura pending_payments');
+              console.log('âœ… Respuesta tiene estructura pending_payments');
               overdueArray = overdueData.data.pending_payments;
             } else {
-              console.log('⚠️ Estructura de respuesta inesperada:', {
+              console.log('âš ï¸ Estructura de respuesta inesperada:', {
                 tieneData: !!overdueData.data,
                 tienePendingPayments: !!overdueData.data?.pending_payments,
                 estructuraDatos: Object.keys(overdueData.data || {})
               });
             }
           } else {
-            console.log('📭 No data received from API');
+            console.log('ðŸ“­ No data received from API');
           }
           
-          console.log('📊 [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
+          console.log('ðŸ“Š [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
           
           this.overdueAdeudos = overdueArray.map(payment => ({
             id: payment.id,
@@ -226,9 +244,9 @@ const title = "Finanzas Estudiantiles";
           }));
           
           this.showOverdueAlert = this.overdueAdeudos.length > 0;
-          console.log('✅ Pagos vencidos cargados:', this.overdueAdeudos.length);
+          console.log('âœ… Pagos vencidos cargados:', this.overdueAdeudos.length);
         } catch (err) {
-          console.error('⚠️  Error al cargar pagos vencidos:', err);
+          console.error('âš ï¸  Error al cargar pagos vencidos:', err);
           this.overdueAdeudos = [];
         } finally {
           this.loadingTab = false;
@@ -255,7 +273,7 @@ const title = "Finanzas Estudiantiles";
         const token = localStorage.getItem('access_token');
         
         try {
-          console.log('🔄 Creando intento de pago para concepto ID:', this.selectedItem.id);
+          console.log('ðŸ”„ Creando intento de pago para concepto ID:', this.selectedItem.id);
           
           // Usar StudentAPI para crear el intento de pago
           const response = await window.StudentAPI.createPaymentIntent(
@@ -263,17 +281,17 @@ const title = "Finanzas Estudiantiles";
             token
           );
           
-          console.log('✅ Respuesta del servidor:', response);
+          console.log('âœ… Respuesta del servidor:', response);
           
           if (response.success && response.data?.url_checkout) {
             // Redirigir al checkout de Stripe
-            console.log('🔗 Redirigiendo a checkout:', response.data.url_checkout);
+            console.log('ðŸ”— Redirigiendo a checkout:', response.data.url_checkout);
             window.location.href = response.data.url_checkout;
           } else {
-            throw new Error(response.message || 'No se recibió URL de checkout');
+            throw new Error(response.message || 'No se recibiÃ³ URL de checkout');
           }
         } catch (err) {
-          console.error('❌ Error al procesar el pago:', err);
+          console.error('âŒ Error al procesar el pago:', err);
           alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
           this.loading = false;
         }
@@ -283,12 +301,12 @@ const title = "Finanzas Estudiantiles";
     <header class="main-header">
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
         <div class="overdue-alert-banner">
-          <div class="alert-icon">⚠️</div>
+          <div class="alert-icon">âš ï¸</div>
           <div class="alert-content">
-            <h3>¡Tienes pagos vencidos!</h3>
-            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atención inmediata.'"></p>
+            <h3>Â¡Tienes pagos vencidos!</h3>
+            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atenciÃ³n inmediata.'"></p>
           </div>
-          <button @click="showOverdueAlert = false" class="alert-close">✕</button>
+          <button @click="showOverdueAlert = false" class="alert-close">âœ•</button>
         </div>
       </template>
       
@@ -324,27 +342,27 @@ const title = "Finanzas Estudiantiles";
       <!-- Alerta de pagos vencidos -->
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
         <div class="overdue-alert-banner" x-transition>
-          <div class="alert-icon">⚠️</div>
+          <div class="alert-icon">âš ï¸</div>
           <div class="alert-content">
             <h3>Pagos vencidos</h3>
             <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Por favor realiza el pago cuanto antes.'"></p>
           </div>
-          <button class="alert-close" @click="showOverdueAlert = false">×</button>
+          <button class="alert-close" @click="showOverdueAlert = false">Ã—</button>
         </div>
       </template>
 
-      <!-- SECCIÓN: PAGOS VENCIDOS -->
+      <!-- SECCIÃ“N: PAGOS VENCIDOS -->
       <section class="section-container overdue-section" x-show="activeTab === 'overdue'">
         <div class="section-header">
-          <h2 class="section-title">🔴 Pagos Vencidos</h2>
+          <h2 class="section-title">ðŸ”´ Pagos Vencidos</h2>
           <span class="badge-danger" x-text="overdueAdeudos.length"></span>
         </div>
         
         <template x-if="overdueAdeudos.length === 0">
           <div class="empty-state">
-            <div class="empty-icon">⏳</div>
+            <div class="empty-icon">â³</div>
             <h3>No hay pagos vencidos</h3>
-            <p>Estás al corriente. Excelente.</p>
+            <p>EstÃ¡s al corriente. Excelente.</p>
           </div>
         </template>
 
@@ -376,7 +394,7 @@ const title = "Finanzas Estudiantiles";
         </div>
       </section>
 
-      <!-- SECCIÓN: PAGOS PENDIENTES -->
+      <!-- SECCIÃ“N: PAGOS PENDIENTES -->
       <section class="section-container" x-show="activeTab === 'pending'">
         <div class="section-header">
           <h2 class="section-title">Pagos Pendientes</h2>
@@ -385,9 +403,9 @@ const title = "Finanzas Estudiantiles";
         
         <template x-if="adeudos.length === 0">
           <div class="empty-state">
-            <div class="empty-icon">✨</div>
+            <div class="empty-icon">âœ¨</div>
             <h3>No tienes pagos pendientes</h3>
-            <p>Todos tus pagos están al día.</p>
+            <p>Todos tus pagos estÃ¡n al dÃ­a.</p>
           </div>
         </template>
 
@@ -430,15 +448,15 @@ const title = "Finanzas Estudiantiles";
             <div style="padding: 2rem 0;">
               <div class="custom-loader"></div>
               <p><strong>Generando pago seguro...</strong></p>
-              <p style="font-size: 0.9rem; color: var(--text-muted);">Serás redirigido a Stripe Checkout</p>
+              <p style="font-size: 0.9rem; color: var(--text-muted);">SerÃ¡s redirigido a Stripe Checkout</p>
             </div>
           </template>
           
           <template x-if="!loading">
             <div class="confirm-payment-ui">
-              <div class="payment-icon-circle">💳</div>
+              <div class="payment-icon-circle">ðŸ’³</div>
               <h2 style="margin: 1rem 0 0.5rem; color: var(--primary);">Confirmar Pago</h2>
-              <p style="color: var(--text-muted); margin-bottom: 2rem;">Serás redirigido a Stripe para completar el pago de forma segura</p>
+              <p style="color: var(--text-muted); margin-bottom: 2rem;">SerÃ¡s redirigido a Stripe para completar el pago de forma segura</p>
               
               <div class="payment-details-card">
                 <div class="detail-row">
@@ -457,7 +475,7 @@ const title = "Finanzas Estudiantiles";
               
               <button @click="processPayment()" class="btn-primary-action">
                 <span>Proceder al Pago</span>
-                <span style="margin-left: 8px;">→</span>
+                <span style="margin-left: 8px;">â†’</span>
               </button>
               <button @click="showModal = false" class="btn-link-action">Cancelar</button>
             </div>
@@ -466,6 +484,24 @@ const title = "Finanzas Estudiantiles";
         </div>
       </div>
     </div>
+
+    <!-- Modal de Resultado -->
+    <template x-if="showResultModal && resultType === 'canceled'">
+      <div class="modal-overlay" @click="closeResultModal()">
+        <div class="modal-content canceled" @click.stop>
+          <div class="modal-icon canceled">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h3 class="modal-title">Pago Cancelado</h3>
+          <p class="modal-message">Has cancelado el proceso de pago. No se realizÃ³ ningÃºn cargo. Puedes intentar nuevamente cuando desees.</p>
+          <button @click="closeResultModal()" class="modal-btn canceled">Cerrar</button>
+        </div>
+      </div>
+    </template>
   </div>
 </StudentLayout>
 
@@ -1242,4 +1278,101 @@ const title = "Finanzas Estudiantiles";
     .payment-card { padding: 1rem; }
     .card-right { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
   }
-</style>
+
+  /* Estilos del Modal de Resultado */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to { 
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .modal-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+  }
+
+  .modal-icon.canceled {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+  }
+
+  .modal-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 0.75rem;
+  }
+
+  .modal-message {
+    font-size: 1rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0 0 2rem;
+  }
+
+  .modal-btn {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .modal-btn.canceled {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+  }
+
+  .modal-btn.canceled:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+  }
+
+  .modal-btn:active {
+    transform: translateY(0);
+  }</style>

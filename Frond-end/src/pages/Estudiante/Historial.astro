@@ -1,4 +1,4 @@
----
+﻿---
 import StudentLayout from '../../layouts/LayoutEstu.astro';
 
 let alumnoBackend = "Estudiante";
@@ -19,6 +19,7 @@ let loading = false;
 const pageParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('page') : null;
 const perPageParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('perPage') : null;
 const forceRefreshParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('forceRefresh') : null;
+const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('result') : null;
 const page = pageParam ? Number(pageParam) : 1;
 const perPage = perPageParam ? Number(perPageParam) : 15;
 const forceRefresh = forceRefreshParam === 'true';
@@ -43,9 +44,25 @@ const forceRefresh = forceRefreshParam === 'true';
       loading: true,
       errorMessage: '',
       alumnoBackend: '${alumnoBackend}',
+      showResultModal: false,
+      resultType: '${resultParam || ''}',
 
       async init() {
         await this.loadHistory();
+        // Mostrar modal si hay parÃ¡metro result
+        if (this.resultType === 'paid') {
+          this.showResultModal = true;
+          // Limpiar URL despuÃ©s de 3 segundos
+          setTimeout(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('result');
+            window.history.replaceState({}, '', url);
+          }, 3000);
+        }
+      },
+
+      closeResultModal() {
+        this.showResultModal = false;
       },
 
       async loadHistory() {
@@ -103,7 +120,7 @@ const forceRefresh = forceRefreshParam === 'true';
           this.nextPage = paymentData?.nextPage ?? null;
           this.previousPage = paymentData?.previousPage ?? null;
         } catch (err) {
-          console.error('❌ Error fetching payment history:', err);
+          console.error('âŒ Error fetching payment history:', err);
           this.errorMessage = err?.message || 'Error al cargar el historial de pagos';
           this.pagos = [];
         } finally {
@@ -134,7 +151,7 @@ const forceRefresh = forceRefreshParam === 'true';
     <header class="history-header">
       <div class="header-main">
         <div class="title-group">
-          <p class="pre-title">Gestión Financiera</p>
+          <p class="pre-title">GestiÃ³n Financiera</p>
           <div style="display: flex; align-items: baseline; gap: 12px;">
             <h1>Mi Historial</h1>
             <span class="total-badge" x-text="'(' + total + ' pagos)'"></span>
@@ -157,7 +174,7 @@ const forceRefresh = forceRefreshParam === 'true';
     <main class="history-content">
       <template x-if="loading">
         <div class="empty-state">
-          <div class="empty-icon">⏳</div>
+          <div class="empty-icon">â³</div>
           <h3>Cargando...</h3>
           <p>Obteniendo historial de pagos.</p>
         </div>
@@ -165,7 +182,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
       <template x-if="!loading && errorMessage">
         <div class="empty-state">
-          <div class="empty-icon">⚠️</div>
+          <div class="empty-icon">âš ï¸</div>
           <h3>Sin resultados</h3>
           <p x-text="errorMessage"></p>
         </div>
@@ -173,7 +190,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
       <template x-if="!loading && !errorMessage && pagosFiltrados.length === 0">
         <div class="empty-state">
-          <div class="empty-icon">📜</div>
+          <div class="empty-icon">ðŸ“œ</div>
           <h3>Sin registros</h3>
           <p>No se encontraron pagos.</p>
         </div>
@@ -205,7 +222,7 @@ const forceRefresh = forceRefreshParam === 'true';
                       <span class="value reference" x-text="pago.reference"></span>
                     </div>
                     <div class="detail-row">
-                      <span class="label">Método</span>
+                      <span class="label">MÃ©todo</span>
                       <span class="value">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; margin-right: 4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                         <span x-text="pago.paymentMethod"></span>
@@ -234,7 +251,7 @@ const forceRefresh = forceRefreshParam === 'true';
                   </template>
 
                   <div class="action-buttons">
-                    <a :href="'/estudiante/detallepago?id=' + pago.id" class="view-detail-btn" title="Ver detalle">
+                    <a :href="'/Estudiante/DetallePago?id=' + pago.id" class="view-detail-btn" title="Ver detalle">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                       Detalle
                     </a>
@@ -253,10 +270,10 @@ const forceRefresh = forceRefreshParam === 'true';
       </template>
     </main>
 
-    <!-- PAGINACIÓN -->
+    <!-- PAGINACIÃ“N -->
     <div class="pagination-section">
       <div class="pagination-info">
-        <span class="info-text">Página <strong x-text="currentPage"></strong> de <strong x-text="lastPage"></strong> • <strong x-text="total"></strong> registros total</span>
+        <span class="info-text">PÃ¡gina <strong x-text="currentPage"></strong> de <strong x-text="lastPage"></strong> â€¢ <strong x-text="total"></strong> registros total</span>
       </div>
 
       <div class="pagination-controls">
@@ -290,6 +307,22 @@ const forceRefresh = forceRefreshParam === 'true';
         </button>
       </div>
     </div>
+
+    <!-- Modal de Resultado --><template x-if="showResultModal && resultType === 'paid'">
+      <div class="modal-overlay" @click="closeResultModal()">
+        <div class="modal-content success" @click.stop>
+          <div class="modal-icon success">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h3 class="modal-title">Â¡Pago Exitoso!</h3>
+          <p class="modal-message">Tu pago se ha procesado correctamente. Puedes ver los detalles en tu historial.</p>
+          <button @click="closeResultModal()" class="modal-btn success">Entendido</button>
+        </div>
+      </div>
+    </template>
   </div>
 </StudentLayout>
 
@@ -662,7 +695,7 @@ const forceRefresh = forceRefreshParam === 'true';
     transform: scale(0.95);
   }
 
-  /* PAGINACIÓN */
+  /* PAGINACIÃ“N */
   .pagination-section {
     background: white;
     border-radius: 16px;
@@ -817,5 +850,103 @@ const forceRefresh = forceRefreshParam === 'true';
     .search-box input { font-size: 0.85rem; }
     .payment-card { padding: 14px; }
     .detail-row { gap: 6px; }
+  }
+
+  /* Estilos del Modal de Resultado */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to { 
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .modal-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+  }
+
+  .modal-icon.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+  }
+
+  .modal-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 0.75rem;
+  }
+
+  .modal-message {
+    font-size: 1rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0 0 2rem;
+  }
+
+  .modal-btn {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .modal-btn.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+  }
+
+  .modal-btn.success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+  }
+
+  .modal-btn:active {
+    transform: translateY(0);
   }
 </style>
