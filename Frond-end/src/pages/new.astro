@@ -401,6 +401,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         }
         
+        // Validar formato de número de control antes de buscar en API
+        // Los números de control típicamente tienen 6-8 dígitos, empiezan con año
+        const isValidControlFormat = /^\d{6,}$/.test(input);
+        
+        if (!isValidControlFormat) {
+          // Si no parece un número de control válido, no buscar en API
+          console.log(`💡 "${input}" no parece un número de control válido (debe tener al menos 6 dígitos)`);
+          this.searchResults = [];
+          this.isSearching = false;
+          return;
+        }
+        
         // Si no hay cache o no hubo resultados, buscar en API
         const token = localStorage.getItem('access_token');
         if (!token) {
@@ -429,7 +441,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (!res.ok) {
             // 422 = validación fallida en el backend, silenciosamente no mostrar resultados
             if (res.status === 422) {
-              console.log(`🔍 Sin resultados para "${input}" (formato no válido o no encontrado)`);
+              console.log(`🔍 Sin resultados para "${input}"`);
             } else {
               console.log(`⚠️ Error en búsqueda: ${res.status}`);
             }
@@ -1199,7 +1211,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   <i class="fas fa-user-check text-orange-600"></i>
                   Agregar Números de Control:
                 </label>
-                <p class="text-sm text-gray-600 mb-3">Escribe el número de control (mínimo 3 caracteres). Selecciona de los resultados o presiona Enter para agregar.</p>
+                <p class="text-sm text-gray-600 mb-3">Escribe el número de control (mínimo 6 dígitos). Selecciona de los resultados o presiona Enter para agregar.</p>
                 
                 <div class="relative flex-1">
                   <div class="flex gap-2">
@@ -1209,7 +1221,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         x-model="searchTerm"
                         @input="searchStudentsRealTime()"
                         @keydown.enter.prevent="addStudentByControl(); searchTerm = ''"
-                        placeholder="Ej: 20231001, 20240215 (escribe al menos 3 caracteres)"
+                        placeholder="Ej: 20231001, 20240215 (mínimo 6 dígitos)"
                         class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition duration-200 text-sm">
                       
                       <!-- Indicador de carga -->
@@ -1232,9 +1244,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <i class="fas fa-info-circle"></i> Escribe al menos 3 caracteres para buscar
                   </div>
                   
+                  <!-- Mensaje cuando el formato no es válido (números de control tienen al menos 6 dígitos) -->
+                  <div x-show="searchTerm.length >= 3 && searchTerm.length < 6 && /^\d+$/.test(searchTerm)" x-cloak class="mt-1 text-xs text-blue-600 italic">
+                    <i class="fas fa-info-circle"></i> Los números de control tienen al menos 6 dígitos. Sigue escribiendo o presiona Enter para agregar.
+                  </div>
+                  
                   <!-- Mensaje cuando no hay resultados -->
                   <div 
-                    x-show="!isSearching && searchResults.length === 0 && searchTerm.length >= 3" 
+                    x-show="!isSearching && searchResults.length === 0 && searchTerm.length >= 6" 
                     x-cloak 
                     @click.outside="searchTerm = ''" 
                     class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 p-4 text-center">
