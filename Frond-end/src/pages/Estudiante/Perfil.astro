@@ -606,13 +606,6 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             if (data.success && data.data?.user) {
                                 const student = data.data.user;
                                 console.log('Objeto user recibido:', student);
-                                console.log('¿Tiene studentDetail?:', !!student.studentDetail);
-                                
-                                if (student.studentDetail) {
-                                    console.log('studentDetail encontrado:', student.studentDetail);
-                                } else {
-                                    console.warn('⚠️ NO se encontró studentDetail en la respuesta');
-                                }
                                 
                                 localStorage.setItem('user_data', JSON.stringify(student));
                                 this.populateStudentData(student);
@@ -651,24 +644,45 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 async loadStudentDetails() {
                     console.log('=== loadStudentDetails ejecutándose ===');
                     
-                    // Los detalles del estudiante generalmente vienen en la respuesta de /v1/users/user
-                    // Por lo que intentamos cargarlos desde localStorage primero
-                    const detailsData = localStorage.getItem('student_details');
-                    console.log('student_details en localStorage:', detailsData);
+                    const token = localStorage.getItem('access_token');
                     
-                    if (detailsData) {
-                        try {
-                            const details = JSON.parse(detailsData);
-                            console.log('student_details parseado:', details);
-                            this.populateStudentDetails(details);
-                        } catch (e) {
-                            console.error('Error parsing student details from storage:', e);
-                        }
-                    } else {
-                        console.warn('⚠️ NO hay student_details en localStorage');
+                    if (!token) {
+                        console.warn('No hay token, intentando cargar desde localStorage');
+                        this.loadStudentDetailsFromStorage();
+                        return;
                     }
-                    
-                    // Si no hay detalles guardados, usamos los valores por defecto
+
+                    try {
+                        const response = await fetch(API_BASE_URL + '/v1/users/student-details', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('Respuesta de /v1/users/student-details:', data);
+                            
+                            if (data.success && data.data?.student_details) {
+                                const details = data.data.student_details;
+                                console.log('student_details recibido:', details);
+                                
+                                localStorage.setItem('student_details', JSON.stringify(details));
+                                this.populateStudentDetails(details);
+                            } else {
+                                console.warn('Respuesta sin student_details, cargando desde localStorage');
+                                this.loadStudentDetailsFromStorage();
+                            }
+                        } else {
+                            console.warn('Error en respuesta student-details:', response.status);
+                            this.loadStudentDetailsFromStorage();
+                        }
+                    } catch (err) {
+                        console.error('Error fetching student details:', err);
+                        this.loadStudentDetailsFromStorage();
+                    }
                 },
 
                 loadStudentDetailsFromStorage() {
@@ -690,7 +704,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     console.log('=== populateStudentDetails ejecutándose ===');
                     console.log('Detalles recibidos:', details);
                     
-                    this.nControl = details.nControl || details.n_control || 'No disponible';
+                    // Mapeo según la documentación de la API: nControl, semestre, group, workshop, careerName
+                    this.nControl = details.nControl || 'No disponible';
                     this.semestre = details.semestre ? 'Semestre ' + details.semestre : 'No disponible';
                     this.group = details.group || 'No disponible';
                     this.workshop = details.workshop || 'No disponible';
@@ -719,16 +734,6 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         hour: '2-digit',
                         minute: '2-digit'
                     });
-
-                    // Si vienen detalles del estudiante en la respuesta, guardarlos y mostrarlos
-                    if (student.studentDetail) {
-                        console.log('✅ studentDetail encontrado, guardando en localStorage:', student.studentDetail);
-                        localStorage.setItem('student_details', JSON.stringify(student.studentDetail));
-                        this.populateStudentDetails(student.studentDetail);
-                    } else {
-                        console.warn('⚠️ NO se encontró student.studentDetail en populateStudentData');
-                        console.log('Propiedades disponibles en student:', Object.keys(student));
-                    }
 
                     // Valores de ejemplo - pueden ser actualizados con datos reales de la API
                     this.pendingPayments = student.pendingPayments || '0';
@@ -936,12 +941,6 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             this.successMessage = data.message || 'Perfil actualizado correctamente';
                             const updatedUser = data.data.user;
                             localStorage.setItem('user_data', JSON.stringify(updatedUser));
-                            
-                            // Guardar detalles del estudiante si existen en la respuesta
-                            if (updatedUser.studentDetail) {
-                                localStorage.setItem('student_details', JSON.stringify(updatedUser.studentDetail));
-                                this.populateStudentDetails(updatedUser.studentDetail);
-                            }
                             
                             this.studentName = updatedUser.name || updatedUser.username || 'Sin nombre';
                             this.studentEmail = updatedUser.email || 'No disponible';
