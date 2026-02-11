@@ -50,7 +50,7 @@ const pageTitle = "Dashboard - SIGE";
       <CardInfo title="Total Estudiantes" icon="students" />
       <CardInfo title="Pagos Pendientes" icon="pending" />
       <CardInfo title="Total Recaudado" icon="recaudado" />
-      <CardInfo title="Pagos Vencidos" icon="overdue" />
+      <CardInfo title="Balance Pendiente" icon="balance" />
     </section>
 
     {/* GRÁFICOS */}
@@ -142,43 +142,36 @@ const pageTitle = "Dashboard - SIGE";
       }
     };
 
-    // Función para cargar datos de pagos vencidos
-    const loadOverdueData = async () => {
+    // Función para cargar Balance Pendiente
+    const loadBalancePendingData = async () => {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) {
-          console.warn('No token available for overdue payments data');
+          console.warn('No token available for balance pending data');
           return;
         }
 
-        const data = await DashboardAPI.getOverduePayments(token, true, false);
-        console.log('📤 Datos completos de overdue:', JSON.stringify(data, null, 2));
+        const data = await DashboardAPI.getPaymentsMade(token, true, false);
         
-        if (data.success && data.data?.total_overdue) {
-          const overdueData = data.data.total_overdue;
-          
-          // Actualizar card de "Pagos Vencidos"
+        if (data.success && data.data?.payments_data) {
+          const paymentsData = data.data.payments_data;
           const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
           
-          const overdueEl = document.getElementById('count-overdue');
-          const overdueDesc = document.getElementById('desc-overdue');
+          const balanceEl = document.getElementById('count-balance');
+          const balanceDesc = document.getElementById('desc-balance');
           
-          if (overdueEl) {
-            overdueEl.textContent = formatMX(overdueData.totalAmount);
+          if (balanceEl) {
+            balanceEl.textContent = formatMX(paymentsData.totalBalancePending || 0);
           }
-          if (overdueDesc) {
-            const count = overdueData.totalCount || 0;
-            overdueDesc.textContent = count === 1 ? '1 Pago vencido' : `${count} Pagos vencidos`;
+          if (balanceDesc) {
+            const percentage = paymentsData.pendingPercentage || 0;
+            balanceDesc.textContent = `${percentage}% del total`;
           }
           
-          console.log('✅ Datos de pagos vencidos cargados:', overdueData);
+          console.log('✅ Datos de balance pendiente cargados - Pendiente:', paymentsData.totalBalancePending, 'Porcentaje:', percentage);
         }
       } catch (error) {
-        console.error('❌ Error cargando datos de pagos vencidos:', error);
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        if (errorMsg.includes('permisos') || errorMsg.includes('403')) {
-          showToast('error', 'No tienes permisos para ver datos de pagos vencidos');
-        }
+        console.error('❌ Error cargando datos de balance pendiente:', error);
       }
     };
 
@@ -194,10 +187,10 @@ const pageTitle = "Dashboard - SIGE";
         const data = await DashboardAPI.getStudentsCount(token, true, false);
         console.log('📤 Datos completos de students:', JSON.stringify(data, null, 2));
         
-        if (data.success && data.data) {
-          const studentsData = data.data;
+        if (data.success && data.data?.total_students) {
+          // Los datos están en data.total_students como {totalStudents, totalApplicants}
+          const studentsData = data.data.total_students;
           
-          // Backend envía: totalStudents, totalApplicants
           const studentCount = studentsData.totalStudents || 0;
           const applicantCount = studentsData.totalApplicants || 0;
           const totalStudents = studentCount + applicantCount;
@@ -239,26 +232,22 @@ const pageTitle = "Dashboard - SIGE";
         const data = await DashboardAPI.getPaymentsMade(token, true, false);
         console.log('📤 Datos completos de payments:', JSON.stringify(data, null, 2));
         
-        if (data.success && data.data) {
-          // Los datos vienen directamente en data, no en data.payments_data
-          const paymentsData = data.data;
+        if (data.success && data.data?.payments_data) {
+          // Los datos están en data.payments_data
+          const paymentsData = data.data.payments_data;
           
-          // Actualizar card de "Total Recaudado"
           const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
           
           const recaudadoEl = document.getElementById('count-recaudado');
           const recaudadoDesc = document.getElementById('desc-recaudado');
           
           if (recaudadoEl) {
-            // Backend envía: totalPayouts, totalPayments, etc.
-            recaudadoEl.textContent = formatMX(paymentsData.totalPayouts || paymentsData.totalPayments || 0);
+            recaudadoEl.textContent = formatMX(paymentsData.totalPayouts || 0);
           }
           if (recaudadoDesc) {
-            // Backend envía: totalBalanceAvailable
-            recaudadoDesc.textContent = `Balance disponible: ${formatMX(paymentsData.totalBalanceAvailable)}`;
+            recaudadoDesc.textContent = `Balance disponible: ${formatMX(paymentsData.totalBalanceAvailable || 0)}`;
           }
           
-          // Guardar balance disponible para validación de payout
           availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
           
           console.log('✅ Datos de pagos cargados - Payouts:', paymentsData.totalPayouts, 'Balance:', paymentsData.totalBalanceAvailable);
@@ -272,11 +261,11 @@ const pageTitle = "Dashboard - SIGE";
       }
     };
 
-    // Cargar datos de estudiantes, pagos, pagos pendientes y vencidos al iniciar
+    // Cargar datos de estudiantes, pagos y pagos pendientes al iniciar
     loadStudentsData();
     loadPaymentsData();
     loadPendingData();
-    loadOverdueData();
+    loadBalancePendingData();
     
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
