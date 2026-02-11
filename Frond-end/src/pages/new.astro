@@ -68,14 +68,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
           return Promise.resolve();
         }
-        const url = new URL(this.apiBaseUrl + '/v1/careers');
+        const url = new URL('/api/careers', window.location.origin);
         url.searchParams.set('forceRefresh', 'false');
         return fetch(url.toString(), {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${careersToken}`
+            'Authorization': `Bearer ${careersToken}`,
+            'X-User-Role': 'financial-staff'
           }
         })
         .then(res => {
