@@ -67,6 +67,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
           return Promise.resolve();
         }
+        
+        // Get user role from localStorage
+        let userRole = 'financial-staff';
+        const rawUserData = localStorage.getItem('user_data');
+        if (rawUserData) {
+          try {
+            const parsedUser = JSON.parse(rawUserData);
+            if (parsedUser && Array.isArray(parsedUser.roles) && parsedUser.roles.length > 0) {
+              userRole = String(parsedUser.roles[0] || userRole);
+            }
+          } catch {
+            // Keep default role
+          }
+        }
+        
         const url = new URL(this.apiBaseUrl + '/v1/careers');
         url.searchParams.set('forceRefresh', 'false');
         return fetch(url.toString(), {
@@ -74,12 +89,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${careersToken}`
+            'Authorization': `Bearer ${careersToken}`,
+            'X-User-Role': userRole
           }
         })
         .then(res => {
           if (!res.ok) {
             // Token inválido o expirado - usar fallback silenciosamente
+            console.warn(`⚠️ Careers API returned ${res.status}, using fallback`);
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
@@ -94,6 +111,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         })
         .catch(err => {
           // Error de API o token - usar fallback silenciosamente
+          console.warn('⚠️ Error loading careers, using fallback:', err.message);
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
         });
       },
