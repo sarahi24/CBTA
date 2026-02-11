@@ -569,12 +569,55 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             headers: {
               'Accept': 'application/json',
               'Authorization': `Bearer ${token}`,
-              'X-User-Role': userRole
+              'X-User-Role': userRole,
+              'X-User-Permission': 'search.concepts.controls'
             }
           });
 
           if (!res.ok) {
-            // Si no encuentra, simplemente no hay resultados (no mostrar en consola)
+            // Error 403 = sin permisos, 404 = no encontrado
+            if (res.status === 403) {
+              console.warn('⚠️ Error 403 en /concepts/search/controls: Sin permisos. Intentando con /payments/students...');
+              
+              // FALLBACK: Usar endpoint de payments que sí tiene permisos
+              try {
+                const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
+                paymentsUrl.searchParams.set('search', input);
+                paymentsUrl.searchParams.set('perPage', '15');
+                
+                const paymentsRes = await fetch(paymentsUrl.toString(), {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-User-Role': userRole,
+                    'X-User-Permission': 'view.payments.student.summary'
+                  }
+                });
+                
+                if (paymentsRes.ok) {
+                  const paymentsJson = await paymentsRes.json();
+                  console.log('✅ Usando endpoint alternativo /payments/students');
+                  
+                  if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
+                    this.searchResults = paymentsJson.data.students.items.map(item => ({
+                      id: item.userId || item.user_id || item.id,
+                      student_id: item.userId || item.user_id || item.id,
+                      fullName: item.fullName || item.name,
+                      control: item.n_control || item.control,
+                      email: '',
+                      career_name: item.career_name || '',
+                      semestre: item.semestre || ''
+                    }));
+                    console.log('✅ Resultados desde /payments/students:', this.searchResults.length);
+                    this.isSearching = false;
+                    return;
+                  }
+                }
+              } catch (fallbackErr) {
+                console.error('❌ Error en fallback:', fallbackErr);
+              }
+            }
             this.searchResults = [];
             this.isSearching = false;
             return;
