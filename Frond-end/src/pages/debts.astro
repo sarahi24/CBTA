@@ -111,9 +111,12 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
       <!-- Formulario de búsqueda -->
       <div id="validate-form-section" class="space-y-4">
-        <div>
+        <div class="relative">
           <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Buscar Alumno (Nombre, No. Control, Email o CURP)</label>
-          <input id="validate-search-input" type="text" placeholder="Ej: juan.perez@example.com o SAQ890101HDFLRR99" class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-purple-600 outline-none" />
+          <input id="validate-search-input" type="text" placeholder="Ej: camilo, 2168, juan.perez@example.com" class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-purple-600 outline-none" autocomplete="off" />
+          
+          <!-- Lista de autocompletado -->
+          <div id="validate-autocomplete-list" class="absolute z-50 w-full bg-white border-2 border-purple-200 rounded-xl mt-1 shadow-2xl max-h-60 overflow-y-auto hidden"></div>
         </div>
 
         <div>
@@ -420,12 +423,79 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const validateFormSection = document.getElementById('validate-form-section');
     const validateResultSection = document.getElementById('validate-result-section');
     const validateErrorSection = document.getElementById('validate-error-section');
+    const validateAutocompleteList = document.getElementById('validate-autocomplete-list');
+
+    // Autocompletado para búsqueda de estudiantes
+    validateSearchInput.addEventListener('input', () => {
+      const val = validateSearchInput.value.toLowerCase().trim();
+      validateAutocompleteList.innerHTML = '';
+      
+      if (!val || val.length < 2) {
+        validateAutocompleteList.classList.add('hidden');
+        return;
+      }
+
+      // Obtener estudiantes únicos de los adeudos pendientes
+      const allPending = getCharges();
+      const uniqueStudents = new Map();
+      
+      allPending.forEach(charge => {
+        const key = charge.nControl || charge.userName;
+        if (!uniqueStudents.has(key)) {
+          uniqueStudents.set(key, {
+            name: charge.userName || 'N/A',
+            nControl: charge.nControl || '',
+            email: '' // No tenemos email en los adeudos, se puede dejar vacío
+          });
+        }
+      });
+
+      // Filtrar estudiantes que coincidan con el término de búsqueda
+      const filtered = Array.from(uniqueStudents.values()).filter(student => {
+        const fullName = student.name.toLowerCase();
+        const nControl = String(student.nControl).toLowerCase();
+        return fullName.includes(val) || nControl.includes(val);
+      }).slice(0, 8);
+
+      if (filtered.length > 0) {
+        filtered.forEach(student => {
+          const item = document.createElement('div');
+          item.className = 'px-4 py-3 hover:bg-purple-50 cursor-pointer border-b last:border-0 transition-colors';
+          item.innerHTML = `
+            <div class="text-[11px] font-bold text-gray-900">${student.name}</div>
+            ${student.nControl ? `<div class="text-[10px] text-purple-600 font-mono mt-1">📋 ${student.nControl}</div>` : ''}
+          `;
+          item.onclick = () => {
+            validateSearchInput.value = student.nControl || student.name;
+            validateAutocompleteList.classList.add('hidden');
+            validateSearchInput.focus();
+          };
+          validateAutocompleteList.appendChild(item);
+        });
+        validateAutocompleteList.classList.remove('hidden');
+      } else {
+        validateAutocompleteList.innerHTML = `
+          <div class="px-4 py-3 text-[10px] text-gray-400 italic">
+            No se encontraron coincidencias para "${val}"
+          </div>
+        `;
+        validateAutocompleteList.classList.remove('hidden');
+      }
+    });
+
+    // Cerrar autocompletado al hacer click fuera
+    document.addEventListener('click', (e) => {
+      if (!validateSearchInput.contains(e.target) && !validateAutocompleteList.contains(e.target)) {
+        validateAutocompleteList.classList.add('hidden');
+      }
+    });
 
     // Abrir modal de validación
     document.getElementById('open-validate-modal-btn').onclick = () => {
       validateModal.classList.replace('hidden', 'flex');
       validateSearchInput.value = '';
       validatePaymentIntentInput.value = '';
+      validateAutocompleteList.classList.add('hidden');
       validateFormSection.classList.remove('hidden');
       validateResultSection.classList.add('hidden');
       validateErrorSection.classList.add('hidden');
@@ -434,6 +504,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     // Cerrar modal de validación
     const closeValidateModal = () => {
       validateModal.classList.replace('flex', 'hidden');
+      validateAutocompleteList.classList.add('hidden');
     };
     document.getElementById('validate-close-x').onclick = closeValidateModal;
     document.getElementById('validate-close-btn').onclick = closeValidateModal;
@@ -442,6 +513,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     document.getElementById('validate-new-btn').onclick = () => {
       validateSearchInput.value = '';
       validatePaymentIntentInput.value = '';
+      validateAutocompleteList.classList.add('hidden');
       validateFormSection.classList.remove('hidden');
       validateResultSection.classList.add('hidden');
       validateErrorSection.classList.add('hidden');
@@ -450,6 +522,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
     // Botón cerrar error
     document.getElementById('validate-error-close-btn').onclick = () => {
+      validateAutocompleteList.classList.add('hidden');
       validateFormSection.classList.remove('hidden');
       validateErrorSection.classList.add('hidden');
       validateSearchInput.focus();
