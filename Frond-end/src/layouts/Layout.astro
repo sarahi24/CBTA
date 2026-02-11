@@ -275,6 +275,9 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 				roleLower === 'financiero' || roleLower === 'caja') {
 				return 'financiero';
 			}
+			if (roleLower === 'supervisor') {
+				return 'administrador';
+			}
 			
 			return roleLower;
 		}
