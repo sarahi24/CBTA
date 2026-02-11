@@ -805,6 +805,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               esArray: Array.isArray(payload.applicantTags),
               length: payload.applicantTags.length
             });
+            // Verificar cada valor individual
+            if (payload.applicantTags.length > 0) {
+              payload.applicantTags.forEach((tag, index) => {
+                console.log(`🏷️  Tag[${index}]:`, {
+                  valor: tag,
+                  tipo: typeof tag,
+                  length: tag?.length,
+                  esAplicant: tag === 'applicant',
+                  esNoStudentDetails: tag === 'no_student_details',
+                  charCodes: tag ? Array.from(tag).map(c => c.charCodeAt(0)) : []
+                });
+              });
+            }
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             
