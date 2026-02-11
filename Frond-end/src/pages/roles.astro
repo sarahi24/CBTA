@@ -1754,7 +1754,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         return;
                     }
                     
-                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/show-users`;
+                    const params = new URLSearchParams({
+                        page: '1',
+                        perPage: '2000',
+                        forceRefresh: 'true'
+                    });
+                    const endpoint = `${this.apiBaseUrl}/v1/admin-actions/show-users?${params}`;
                     console.log('========================================');
                     console.log('🔄 CARGANDO USUARIOS DESDE LA API');
                     console.log('========================================');
