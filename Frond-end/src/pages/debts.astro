@@ -238,8 +238,10 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     window.__API_PAYMENTS = 'https://nginx-production-728f.up.railway.app/api/payments';
   </script>
 
+  <!-- Load StudentAPI global -->
+  <script src="/studentAPI.js"></script>
+
   <script type="module">
-    import { StudentAPI } from '../utils/studentAPI.js';
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let pendingPayments = [];
