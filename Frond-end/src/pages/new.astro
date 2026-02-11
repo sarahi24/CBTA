@@ -630,76 +630,105 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       async selectStudentFromSearch(student) {
         console.log('🎯 Estudiante seleccionado del dropdown (completo):', student);
         
-        // SIEMPRE buscar el user_id real en /payments/students
-        // porque /concepts/search/controls devuelve student_details.id, no users.id
+        // Buscar el student_id real desde la tabla student_details usando el control number
         let studentId = null;
+        let realStudentDetailsId = null;
         
         if (student.control) {
-          console.log('🔍 Buscando user_id real en /payments/students...');
           try {
             const token = localStorage.getItem('access_token');
             const userDataRaw = localStorage.getItem('user_data');
             const userData = userDataRaw ? JSON.parse(userDataRaw) : null;
             const userRole = userData?.roles?.[0] || 'financial-staff';
             
-            const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
-            paymentsUrl.searchParams.set('search', student.control);
-            paymentsUrl.searchParams.set('perPage', '1');
-            
-            const paymentsRes = await fetch(paymentsUrl.toString(), {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-User-Role': userRole,
-                'X-User-Permission': 'view.payments.student.summary'
-              }
-            });
-            
-            if (paymentsRes.ok) {
-              const paymentsJson = await paymentsRes.json();
-              console.log('📊 Respuesta /payments/students completa:', paymentsJson);
+            // PRIMERO: Intentar obtener el student_details.id desde /students
+            console.log('🔍 Buscando student_details.id en /students...');
+            try {
+              const studentsUrl = new URL(this.apiBaseUrl + '/v1/students');
+              studentsUrl.searchParams.set('search', student.control);
+              studentsUrl.searchParams.set('perPage', '1');
               
-              // La estructura es: {success: true, data: {students: {items: [...], ...}}}
-              let paymentData = null;
+              const studentsRes = await fetch(studentsUrl.toString(), {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                  'X-User-Role': userRole
+                }
+              });
               
-              if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
-                paymentData = paymentsJson.data.students.items[0];
-              }
-              
-              if (paymentData) {
-                console.log('💾 Payment data extraído:', paymentData);
-                console.log('💾 Campos disponibles:', Object.keys(paymentData));
-                console.log('💾 Valores de IDs:', {
-                  student_id: paymentData.student_id,
-                  studentId: paymentData.studentId,
-                  id: paymentData.id,
-                  user_id: paymentData.user_id,
-                  userId: paymentData.userId
-                });
+              if (studentsRes.ok) {
+                const studentsJson = await studentsRes.json();
+                console.log('📊 Respuesta /students completa:', studentsJson);
                 
-                // Priorizar student_id sobre userId ya que el backend de conceptos usa student_id
-                studentId = paymentData.student_id || paymentData.studentId || paymentData.id || paymentData.user_id || paymentData.userId;
-                console.log('✅ student_id (ID para enviar) obtenido:', studentId);
-              } else {
-                console.warn('⚠️ No hay estudiantes en la respuesta de /payments/students');
+                // Buscar en la respuesta el student_details.id
+                if (studentsJson.data?.students?.items && studentsJson.data.students.items.length > 0) {
+                  const studentData = studentsJson.data.students.items[0];
+                  console.log('💾 Student data extraído:', studentData);
+                  console.log('💾 Campos disponibles:', Object.keys(studentData));
+                  
+                  // El campo student_details.id podría estar como id, student_id, o studentId
+                  realStudentDetailsId = studentData.id || studentData.student_id || studentData.studentId;
+                  console.log('✅ student_details.id obtenido:', realStudentDetailsId);
+                } else if (studentsJson.data?.items && studentsJson.data.items.length > 0) {
+                  const studentData = studentsJson.data.items[0];
+                  console.log('💾 Student data extraído (alt path):', studentData);
+                  realStudentDetailsId = studentData.id || studentData.student_id || studentData.studentId;
+                  console.log('✅ student_details.id obtenido:', realStudentDetailsId);
+                }
               }
-            } else {
-              console.error('❌ /payments/students respondió con error:', paymentsRes.status);
+            } catch (err) {
+              console.warn('⚠️ Error buscando en /students:', err);
             }
+            
+            // SEGUNDO: Si no se encontró, buscar en /payments/students como fallback
+            if (!realStudentDetailsId) {
+              console.log('🔍 Buscando en /payments/students como fallback...');
+              const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
+              paymentsUrl.searchParams.set('search', student.control);
+              paymentsUrl.searchParams.set('perPage', '1');
+              
+              const paymentsRes = await fetch(paymentsUrl.toString(), {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                  'X-User-Role': userRole,
+                  'X-User-Permission': 'view.payments.student.summary'
+                }
+              });
+              
+              if (paymentsRes.ok) {
+                const paymentsJson = await paymentsRes.json();
+                console.log('📊 Respuesta /payments/students completa:', paymentsJson);
+                
+                if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
+                  const paymentData = paymentsJson.data.students.items[0];
+                  console.log('💾 Payment data extraído:', paymentData);
+                  console.log('💾 Campos disponibles:', Object.keys(paymentData));
+                  
+                  studentId = paymentData.student_id || paymentData.studentId || paymentData.userId;
+                  console.log('✅ ID obtenido de payments:', studentId);
+                }
+              }
+            }
+            
+            // Usar el student_details.id si se encontró, sino usar el userId de payments
+            studentId = realStudentDetailsId || studentId;
+            
           } catch (err) {
-            console.error('❌ Error buscando en /payments/students:', err);
+            console.error('❌ Error buscando student_id:', err);
           }
         }
         
-        // Validar que obtuvimos el user_id real
+        // Validar que obtuvimos el student_id real
         if (!studentId) {
-          console.error('❌ No se pudo obtener el user_id real del estudiante');
-          this.errorMessage = '❌ No se pudo obtener el ID del usuario. El estudiante puede no existir como usuario activo en el sistema o fue dado de baja.';
+          console.error('❌ No se pudo obtener el student_id del estudiante');
+          this.errorMessage = '❌ No se pudo obtener el ID del estudiante. El estudiante puede no existir en la tabla student_details o fue dado de baja.';
           setTimeout(() => this.errorMessage = '', 5000);
           return;
         }
-        console.log('🆔 ID a usar (user_id real):', studentId);
+        console.log('🆔 student_id final a usar:', studentId, '(realStudentDetailsId:', realStudentDetailsId, ')');
         
         const exists = this.formData.selectedSpecificStudents.some(s => 
           String(s.id) === String(studentId)
@@ -716,7 +745,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         this.formData.selectedSpecificStudents.push({
           id: studentId,
-          student_id: student.student_id || studentId,  // Guardar student_id por separado si existe
+          student_id: studentId,  // Usar el student_id real
           control: student.control || student.n_control || student.fullName,
           name: student.fullName || student.name || student.control,
           email: student.email || '',
@@ -727,8 +756,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.searchTerm = '';
         this.searchResults = [];
         console.log('✅ Estudiante seleccionado desde dropdown:', {
-          user_id: studentId,
-          student_id: student.student_id || studentId,
+          student_id: studentId,
           name: student.fullName || student.name,
           control: student.control || student.n_control
         });
@@ -832,15 +860,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('📄 Estudiantes antes de procesar:', this.formData.selectedSpecificStudents);
             
-            // El API espera strings, no números
+            // El API espera el student_details.id (student_id) como strings
             payload.students = this.formData.selectedSpecificStudents
               .map(s => {
-                // Priorizar student_id si existe, sino usar id (user_id)
+                // Usar student_id que ya debe ser el ID correcto de student_details
                 const studentId = String(s.student_id || s.id);
                 console.log('📋 Procesando estudiante:', { 
                   original_id: s.id,
                   original_student_id: s.student_id,
-                  id_a_enviar: studentId,
+                  id_final_a_enviar: studentId,
                   name: s.name,
                   control: s.control,
                   fullObject: s
@@ -849,7 +877,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               })
               .filter(id => id && id !== 'undefined' && id !== 'null' && id.trim() !== '');
             
-            console.log('📤 IDs de estudiantes a enviar (strings):', payload.students);
+            console.log('📤 student_ids a enviar (strings):', payload.students);
             console.log('🔍 Tipo de cada ID:', payload.students.map(id => typeof id));
             
             if (payload.students.length === 0) {
@@ -921,16 +949,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.log('📥 Response URL:', res.url);
                 const data = await res.json().catch(() => ({}));
                 console.log('📥 Response data:', data);
+                console.log('📤 Payload que se envió:', payload);
+                
                 if (!res.ok) {
                   let errorMsg = data.message || res.statusText || 'Error desconocido';
                   
                   // Mensaje más específico si es error de estudiantes no encontrados
                   if (data.error_code === 'STUDENTS_NOT_FOUND' || errorMsg.includes('estudiantes') || errorMsg.includes('dado de baja')) {
-                    errorMsg = '❌ Los estudiantes seleccionados no existen como usuarios activos o fueron dados de baja. Por favor:\n\n' +
-                               '1. Elimine los estudiantes agregados (clic en X)\n' +
-                               '2. Búsquelos nuevamente usando el campo de búsqueda\n' +
-                               '3. Seleccione SOLO estudiantes que aparezcan en los resultados\n\n' +
-                               'Nota: Los estudiantes deben estar registrados como usuarios activos en el sistema.';
+                    const studentIds = payload.students || [];
+                    errorMsg = `❌ Los student_ids enviados [${studentIds.join(', ')}] no existen en la tabla student_details o fueron dados de baja.\n\n` +
+                               'Esto significa que:\n' +
+                               '• El estudiante tiene una cuenta de usuario (puede iniciar sesión)\n' +
+                               '• Pero NO tiene un registro en la tabla student_details\n' +
+                               '• Los conceptos requieren que el estudiante tenga un registro completo\n\n' +
+                               'Posibles soluciones:\n' +
+                               '1. Verificar que el estudiante esté completamente registrado en el sistema\n' +
+                               '2. Contactar al administrador para que complete el registro del estudiante\n' +
+                               '3. Si el estudiante fue dado de baja, reactivarlo primero';
                   } else if (data.errors && typeof data.errors === 'object') {
                     const errorList = Object.entries(data.errors)
                       .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
