@@ -741,7 +741,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           name: student.fullName || student.name || student.control,
           email: student.email || '',
           career: student.career_name || '',
-          semestre: student.semestre || ''
+          semestre: student.semestre || '',
+          _warning: !student.career_name || !student.semestre ? '⚠️ Estudiante sin carrera/semestre asignado' : null
         });
 
         this.searchTerm = '';
@@ -749,8 +750,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         console.log('✅ Estudiante seleccionado desde dropdown:', {
           student_id: studentId,
           name: student.fullName || student.name,
-          control: student.control || student.n_control
+          control: student.control || student.n_control,
+          has_career: !!student.career_name,
+          has_semester: !!student.semestre
         });
+        
+        // Advertencia si el estudiante no tiene carrera o semestre
+        if (!student.career_name || !student.semestre) {
+          console.warn('⚠️ ADVERTENCIA: Este estudiante no tiene carrera o semestre asignado. Puede no tener registro completo en student_details.');
+          this.errorMessage = '⚠️ ADVERTENCIA: El estudiante seleccionado no tiene carrera o semestre asignado. Es posible que no tenga un registro completo y falle al crear el concepto.';
+          setTimeout(() => this.errorMessage = '', 5000);
+        }
       },
 
       submitForm() {
@@ -964,18 +974,48 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (!res.ok) {
                   let errorMsg = data.message || res.statusText || 'Error desconocido';
                   
+                  // Mensaje más específico para RECIPIENTS_NOT_FOUND
+                  if (data.error_code === 'RECIPIENTS_NOT_FOUND') {
+                    const details = [];
+                    if (payload.applies_to === 'carrera_semestre') {
+                      const carrerasStr = payload.careers?.join(', ') || 'N/A';
+                      const semestresStr = payload.semestres?.join(', ') || 'N/A';
+                      details.push(`Carrera(s) ID: ${carrerasStr}`);
+                      details.push(`Semestre(s): ${semestresStr}`);
+                    } else if (payload.applies_to === 'carrera') {
+                      details.push(`Carrera(s) ID: ${payload.careers?.join(', ') || 'N/A'}`);
+                    } else if (payload.applies_to === 'semestre') {
+                      details.push(`Semestre(s): ${payload.semestres?.join(', ') || 'N/A'}`);
+                    } else if (payload.applies_to === 'estudiantes' && payload.students) {
+                      details.push(`Estudiante(s) ID: ${payload.students.join(', ')}`);
+                    }
+                    
+                    errorMsg = `❌ No se encontraron estudiantes activos con los filtros seleccionados.\n\n` +
+                               `Filtros aplicados:\n${details.join('\n')}\n\n` +
+                               `Posibles causas:\n` +
+                               `• No hay estudiantes registrados con esa combinación\n` +
+                               `• Los estudiantes con esos filtros están inactivos o dados de baja\n` +
+                               `• El semestre o carrera seleccionados no existen en el sistema\n\n` +
+                               `Soluciones:\n` +
+                               `• Verifique que existan estudiantes activos con esos filtros\n` +
+                               `• Intente con otros semestres o carreras\n` +
+                               `• Use "Todos los Estudiantes" si desea aplicar sin filtros`;
+                  }
+                  
                   // Mensaje más específico si es error de estudiantes no encontrados
                   if (data.error_code === 'STUDENTS_NOT_FOUND' || errorMsg.includes('estudiantes') || errorMsg.includes('dado de baja')) {
                     const studentIds = payload.students || [];
-                    errorMsg = `❌ Los student_ids enviados [${studentIds.join(', ')}] no existen en la tabla student_details o fueron dados de baja.\n\n` +
-                               'Esto significa que:\n' +
-                               '• El estudiante tiene una cuenta de usuario (puede iniciar sesión)\n' +
-                               '• Pero NO tiene un registro en la tabla student_details\n' +
-                               '• Los conceptos requieren que el estudiante tenga un registro completo\n\n' +
-                               'Posibles soluciones:\n' +
-                               '1. Verificar que el estudiante esté completamente registrado en el sistema\n' +
-                               '2. Contactar al administrador para que complete el registro del estudiante\n' +
-                               '3. Si el estudiante fue dado de baja, reactivarlo primero';
+                    errorMsg = `❌ ERROR DE BASE DE DATOS: Los student_ids [${studentIds.join(', ')}] no existen en la tabla student_details.\n\n` +
+                               'DIAGNÓSTICO:\n' +
+                               '✅ El/los estudiante(s) tienen cuenta de usuario (por eso aparecen en búsqueda)\n' +
+                               '❌ NO tienen registro en la tabla student_details (por eso falla al crear concepto)\n\n' +
+                               'ESTE ES UN PROBLEMA DE DATOS EN EL BACKEND que debe resolver un ADMINISTRADOR.\n\n' +
+                               'SOLUCIÓN REQUERIDA:\n' +
+                               '1. El administrador debe verificar la tabla student_details en la base de datos\n' +
+                               '2. Crear/completar el registro del estudiante en student_details\n' +
+                               '3. Asegurar que el campo "deleted_at" sea NULL (no esté dado de baja)\n' +
+                               `4. Verificar que user_id tenga su correspondiente student_details.id\n\n` +
+                               'Mientras tanto, pruebe seleccionar otros estudiantes con registro completo.';
                   } else if (data.errors && typeof data.errors === 'object') {
                     const errorList = Object.entries(data.errors)
                       .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
