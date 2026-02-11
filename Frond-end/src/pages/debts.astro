@@ -297,11 +297,12 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         const term = searchInput.value.toLowerCase();
         const allPending = getCharges().filter(c => !['paid', 'pagado'].includes(String(c.status).toLowerCase()));
         
-        // Filtrar localmente por nombre de estudiante o concepto
+        // Filtrar por nombre de estudiante, número de control o concepto
         const filtered = allPending.filter(ch => {
             const fullName = (ch.userName || '').toLowerCase();
+            const nControl = String(ch.nControl || '').toLowerCase();
             const concept = (ch.concept || '').toLowerCase();
-            return !term || fullName.includes(term) || concept.includes(term);
+            return !term || fullName.includes(term) || nControl.includes(term) || concept.includes(term);
         });
 
         const totalItems = filtered.length;
