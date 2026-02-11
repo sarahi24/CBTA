@@ -335,8 +335,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           });
 
           if (!res.ok) {
-            this.errorMessage = '⚠️ No se encontró el estudiante con esa matrícula.';
-            setTimeout(() => this.errorMessage = '', 2000);
+            this.errorMessage = '❌ No se encontró el estudiante con esa matrícula. Verifique el número de control o intente buscar con menos dígitos (búsqueda por prefijo).';
+            setTimeout(() => this.errorMessage = '', 4000);
             this.isSearching = false;
             return;
           }
@@ -681,11 +681,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         // Validar que obtuvimos el user_id real
         if (!studentId) {
           console.error('❌ No se pudo obtener el user_id real del estudiante');
-          this.errorMessage = '⚠️ No se pudo obtener el ID del usuario. El estudiante puede no existir en el sistema.';
-          setTimeout(() => this.errorMessage = '', 3000);
-          return;
-        }
-        
+          this.errorMessage = '❌ No se pudo obtener el ID del usuario. El estudiante puede no existir como usuario activo en el sistema o fue dado de baja.';
+          setTimeout(() => this.errorMessage = '', 5000);
         console.log('🆔 ID a usar (user_id real):', studentId);
         
         const exists = this.formData.selectedSpecificStudents.some(s => 
@@ -754,7 +751,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             }
           } else if (this.formData.scopeType === 'estudiantes') {
             if (this.formData.selectedSpecificStudents.length === 0) {
-              this.errorMessage = '⚠️ Seleccione al menos un Estudiante.';
+              this.errorMessage = '⚠️ Debe agregar al menos un estudiante. Use el campo de búsqueda abajo ingresando el número de control y seleccionando del resultado (mínimo 3 caracteres).';
               return;
             }
           } else if (this.formData.scopeType === 'tags') {
@@ -836,7 +833,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             console.log('🔍 Tipo de cada ID:', payload.students.map(id => typeof id));
             
             if (payload.students.length === 0) {
-              this.errorMessage = '⚠️ No se pudo obtener los IDs válidos de los estudiantes. Intenta buscarlos nuevamente.';
+              this.errorMessage = '❌ No se pudo obtener los IDs válidos de los estudiantes. Por favor, elimine los estudiantes agregados y búsquelos nuevamente usando el campo de búsqueda.';
               this.isSaving = false;
               return;
             }
@@ -906,7 +903,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.log('📥 Response data:', data);
                 if (!res.ok) {
                   let errorMsg = data.message || res.statusText || 'Error desconocido';
-                  if (data.errors && typeof data.errors === 'object') {
+                  
+                  // Mensaje más específico si es error de estudiantes no encontrados
+                  if (data.error_code === 'STUDENTS_NOT_FOUND' || errorMsg.includes('estudiantes') || errorMsg.includes('dado de baja')) {
+                    errorMsg = '❌ Los estudiantes seleccionados no existen como usuarios activos o fueron dados de baja. Por favor:\n\n' +
+                               '1. Elimine los estudiantes agregados (clic en X)\n' +
+                               '2. Búsquelos nuevamente usando el campo de búsqueda\n' +
+                               '3. Seleccione SOLO estudiantes que aparezcan en los resultados\n\n' +
+                               'Nota: Los estudiantes deben estar registrados como usuarios activos en el sistema.';
+                  } else if (data.errors && typeof data.errors === 'object') {
                     const errorList = Object.entries(data.errors)
                       .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
                       .join(' | ');
@@ -1181,8 +1186,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         :class="errorMessage.includes('✓') ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-red-50 text-red-800 border-red-300'"
         class="p-4 rounded-xl font-medium text-sm flex items-start border shadow-md"
       >
-        <i :class="errorMessage.includes('✓') ? 'fas fa-check-circle text-emerald-500' : 'fas fa-exclamation-triangle text-red-500'" class="text-xl mr-3 mt-0.5"></i>
-        <span x-text="errorMessage" class="flex-1"></span>
+        <i :class="errorMessage.includes('✓') ? 'fas fa-check-circle text-emerald-500' : 'fas fa-exclamation-triangle text-red-500'" class="text-xl mr-3 mt-0.5 flex-shrink-0"></i>
+        <span x-text="errorMessage" class="flex-1 whitespace-pre-wrap"></span>
       </div>
 
       <!-- Alerta cuando no hay estudiantes cargados -->
@@ -1461,11 +1466,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
               <!-- Solo Estudiantes Específicos -->
               <div x-show="formData.scopeType === 'estudiantes'" x-cloak>
+                <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-4">
+                  <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-600 text-xl flex-shrink-0 mt-0.5"></i>
+                    <div class="flex-1">
+                      <p class="text-sm font-bold text-blue-900 mb-1">ℹ️ Cómo buscar estudiantes</p>
+                      <ul class="text-xs text-blue-800 space-y-1">
+                        <li>• Escribe <strong>mínimo 3 caracteres</strong> del número de control (busca por prefijo, ej: "202")</li>
+                        <li>• <strong>Selecciona del dropdown</strong> que aparece o presiona <strong>Enter</strong> para buscar</li>
+                        <li>• Solo se pueden agregar estudiantes que <strong>existan como usuarios activos</strong> en el sistema</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
                 <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <i class="fas fa-user-check text-orange-600"></i>
-                  Agregar Números de Control:
+                  Buscar y Agregar Estudiantes:
                 </label>
-                <p class="text-sm text-gray-600 mb-3">Escribe el número de control (la búsqueda funciona por prefijo). Selecciona del resultado o presiona Enter para agregar.</p>
                 
                 <div class="relative flex-1">
                   <div class="flex gap-2">
