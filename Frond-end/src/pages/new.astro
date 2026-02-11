@@ -794,19 +794,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.scopeType === 'tags') {
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
-            // EL BACKEND ESPERA UN STRING EN PLURAL según doc vieja
+            // EL BACKEND ESPERA UN STRING EN PLURAL: "applicants" o "unverified"
             payload.applicantTags = this.formData.applicantTags.length > 0 
               ? this.formData.applicantTags[0]  // Tomar solo el primer valor como string
               : 'applicants';  // Valor por defecto EN PLURAL
-            // TAMBIÉN enviar en snake_case por si el backend espera ese formato
-            payload.applicant_tags = payload.applicantTags;
-            console.log('🏷️  Agregando applicantTags al payload (COMO STRING EN PLURAL):', {
+            console.log('🏷️  Agregando applicantTags al payload:', {
               arrayOriginal: this.formData.applicantTags,
-              stringEnviado: payload.applicantTags,
-              camelCase: payload.applicantTags,
-              snake_case: payload.applicant_tags,
-              tipo: typeof payload.applicantTags,
-              esString: typeof payload.applicantTags === 'string'
+              valorEnviado: payload.applicantTags,
+              tipo: typeof payload.applicantTags
             });
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
