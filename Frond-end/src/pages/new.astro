@@ -754,6 +754,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       },
 
       submitForm() {
+        console.log('🚀 Iniciando submitForm...');
+        console.log('📋 Estado del formulario:', {
+          allStudents: this.formData.allStudents,
+          scopeType: this.formData.scopeType,
+          selectedCareers: this.formData.selectedCareers,
+          selectedSemesters: this.formData.selectedSemesters,
+          selectedSpecificStudents: this.formData.selectedSpecificStudents.length,
+          title: this.formData.title,
+          amount: this.formData.amount
+        });
+        
         this.errorMessage = '';
         if (this.isSaving) return;
 
@@ -825,6 +836,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         // Construir applies_to y campos relacionados según alcance
         if (this.formData.allStudents) {
           // Para todos - NO incluir campos de filtro
+          console.log('✅ Modo: Aplicar a TODOS los estudiantes (sin filtros)');
           payload.applies_to = 'todos';
           // Explícitamente NO incluir campos de filtro
           delete payload.students;
@@ -870,6 +882,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('📤 student_ids a enviar (strings):', payload.students);
             console.log('🔍 Tipo de cada ID:', payload.students.map(id => typeof id));
+            console.log('📊 Total de estudiantes a enviar:', payload.students.length);
             
             if (payload.students.length === 0) {
               this.errorMessage = '❌ No se pudo obtener los IDs válidos de los estudiantes. Por favor, elimine los estudiantes agregados y búsquelos nuevamente usando el campo de búsqueda.';
@@ -880,20 +893,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             delete payload.exceptionStudents;
             delete payload.removeAllExceptions;
             delete payload.replaceExceptions;
+            console.log('✅ Modo: Estudiantes Específicos');
           } else if (this.formData.selectedSemesters.length > 0 && this.formData.selectedCareers.length > 0) {
             // Ambas carreras y semestres seleccionados
             payload.applies_to = 'carrera_semestre';
             payload.careers = this.formData.selectedCareers.map(c => parseInt(c));
             payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+            console.log('✅ Modo: Carrera + Semestre | Carreras:', payload.careers, '| Semestres:', payload.semestres);
           } else if (this.formData.selectedSemesters.length > 0) {
             payload.applies_to = 'semestre';
             payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+            console.log('✅ Modo: Semestre | Semestres seleccionados:', payload.semestres);
           } else if (this.formData.selectedCareers.length > 0) {
             payload.applies_to = 'carrera';
             payload.careers = this.formData.selectedCareers.map(c => parseInt(c));
+            console.log('✅ Modo: Carrera | Carreras seleccionadas:', payload.careers);
           } else {
             // Sin filtros seleccionados - aplicar a todos por defecto
             payload.applies_to = 'todos';
+            console.log('✅ Modo: Todos los estudiantes');
             // Explícitamente NO incluir campos de filtro
             delete payload.students;
             delete payload.student;
@@ -905,7 +923,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             delete payload.carreras;
           }
         }
-        console.log('Sending payload:', payload);
+        console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
+        console.log('📋 Payload object:', payload);
         const token = localStorage.getItem('access_token');
         console.log('🎯 URL del API:', this.apiBaseUrl + '/v1/concepts');
         console.log('🔑 Token presente:', !!token);
@@ -939,8 +958,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.log('📥 Response status:', res.status, res.statusText);
                 console.log('📥 Response URL:', res.url);
                 const data = await res.json().catch(() => ({}));
-                console.log('📥 Response data:', data);
-                console.log('📤 Payload que se envió:', payload);
+                console.log('📥 Response data:', JSON.stringify(data, null, 2));
+                console.log('📤 Payload que se envió:', JSON.stringify(payload, null, 2));
                 
                 if (!res.ok) {
                   let errorMsg = data.message || res.statusText || 'Error desconocido';
