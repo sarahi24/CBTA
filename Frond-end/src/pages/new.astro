@@ -64,12 +64,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       
       loadCareers() {
         const careersToken = localStorage.getItem('access_token');
+        console.log('🔑 Token para carreras:', careersToken ? `${careersToken.substring(0, 20)}...` : 'NO HAY TOKEN');
+        
         if (!careersToken) {
+          console.warn('⚠️ No hay token, usando carreras de fallback');
           this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
           return Promise.resolve();
         }
+        
         const url = new URL('/api/careers', window.location.origin);
         url.searchParams.set('forceRefresh', 'false');
+        
+        console.log('📞 Llamando a:', url.toString());
+        console.log('📤 Headers a enviar:', {
+          'Authorization': `Bearer ${careersToken.substring(0, 20)}...`,
+          'X-User-Role': 'financial-staff'
+        });
+        
         return fetch(url.toString(), {
           method: 'GET',
           headers: {

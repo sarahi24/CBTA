@@ -7,6 +7,10 @@ export async function GET({ request }) {
   const auth = request.headers.get('authorization') || '';
   const userRole = request.headers.get('x-user-role') || '';
 
+  console.log('[PROXY] /api/careers llamado');
+  console.log('[PROXY] Authorization header recibido:', auth ? `Bearer ${auth.substring(7, 20)}...` : 'NO PRESENTE');
+  console.log('[PROXY] X-User-Role header:', userRole || 'NO PRESENTE');
+
   const upstreamRes = await fetch(upstreamUrl.toString(), {
     method: 'GET',
     headers: {
@@ -16,7 +20,11 @@ export async function GET({ request }) {
     }
   });
 
+  console.log('[PROXY] Backend respondió:', upstreamRes.status, upstreamRes.statusText);
+  
   const body = await upstreamRes.text();
+  console.log('[PROXY] Body:', body.substring(0, 200));
+  
   return new Response(body, {
     status: upstreamRes.status,
     headers: {
