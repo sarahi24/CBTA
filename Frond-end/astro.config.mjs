@@ -5,15 +5,20 @@ import react from '@astrojs/react';
 import alpinejs from '@astrojs/alpinejs';
 
 // https://astro.build/config
-// REBUILD TIMESTAMP: 2026-02-10 - Force Vercel clean build
+// REBUILD TIMESTAMP: 2026-02-10T20:54 - Force Vercel clean build v2
 export default defineConfig({
   integrations: [react(), alpinejs()],
 
   vite: {
     plugins: [tailwindcss()],
     build: {
-      minify: 'terser', // Force terser minification
-      sourcemap: false
+      minify: 'esbuild', // Use esbuild minification (default)
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: undefined // Disable code splitting to avoid cache issues
+        }
+      }
     }
   },
 
