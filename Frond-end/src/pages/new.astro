@@ -9,21 +9,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   <script is:inline define:vars={{ API_BASE_URL }}>
     window.__API_BASE_URL__ = API_BASE_URL;
     window.conceptFormData = {
-      __version: '2.2.0_REBUILD', // Force complete rebuild with new hash
+      __version: '2.2.1_NUMERIC_IDS', // Updated to use numeric IDs matching API
       CAREERS: [
-        { code: 'TAG-E', name: 'Técnico Agropecuario' },
-        { code: 'TOF', name: 'Técnico en Ofimática' },
-        { code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
-        { code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
-        { code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+        { id: 1, code: 'TAG-E', name: 'Técnico Agropecuario' },
+        { id: 2, code: 'TOF', name: 'Técnico en Ofimática' },
+        { id: 3, code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
+        { id: 4, code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
+        { id: 5, code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
       ],
-      // Inicializar con datos de fallback para asegurar que siempre haya carreras
+      // Inicializar con datos de fallback usando IDs numéricos (estructura compatible con API)
       careers: [
-        { id: 'TAG-E', name: 'Técnico Agropecuario' },
-        { id: 'TOF', name: 'Técnico en Ofimática' },
-        { id: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
-        { id: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
-        { id: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+        { id: 1, name: 'Técnico Agropecuario' },
+        { id: 2, name: 'Técnico en Ofimática' },
+        { id: 3, name: 'Técnico en Admón. de Emprendimiento' },
+        { id: 4, name: 'Técnico Agropecuario (modalidad mixta)' },
+        { id: 5, name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
       ],
       // Inicializar con semestres 1-12
       semesters: [
@@ -65,7 +65,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       loadCareers() {
         const careersToken = localStorage.getItem('access_token');
         if (!careersToken) {
-          this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
           return Promise.resolve();
         }
         const url = new URL('/api/careers', window.location.origin);
@@ -91,12 +91,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
             console.log('✅ Carreras cargadas desde API:', this.careers.length);
           } else {
-            this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+            this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
           }
         })
         .catch(err => {
-          // Error de API o token - usar fallback silenciosamente
-          this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
+          // Error de API o token - usar fallback con IDs numéricos
+          this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
         });
       },
 
@@ -1003,24 +1003,48 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else if (this.formData.selectedSemesters.length > 0 && this.formData.selectedCareers.length > 0) {
             // Ambas carreras y semestres seleccionados
             payload.applies_to = 'carrera_semestre';
+            console.log('🧩 Selecciones crudas (carrera+semestre):', {
+              selectedCareers: this.formData.selectedCareers,
+              selectedSemesters: this.formData.selectedSemesters
+            });
             payload.careers = this.formData.selectedCareers
               .map(c => parseInt(c, 10))
               .filter(id => Number.isInteger(id));
             payload.semestres = this.formData.selectedSemesters
               .map(s => parseInt(s, 10))
               .filter(id => Number.isInteger(id));
+            if (payload.careers.length === 0) {
+              this.errorMessage = '❌ Debes seleccionar al menos una carrera valida (ID numerico). Si no aparecen IDs, recarga la pagina.';
+              this.isSaving = false;
+              return;
+            }
+            if (payload.semestres.length === 0) {
+              this.errorMessage = '❌ Debes seleccionar al menos un semestre valido.';
+              this.isSaving = false;
+              return;
+            }
             console.log('✅ Modo: Carrera + Semestre | Carreras:', payload.careers, '| Semestres:', payload.semestres);
           } else if (this.formData.selectedSemesters.length > 0) {
             payload.applies_to = 'semestre';
             payload.semestres = this.formData.selectedSemesters
               .map(s => parseInt(s, 10))
               .filter(id => Number.isInteger(id));
+            if (payload.semestres.length === 0) {
+              this.errorMessage = '❌ Debes seleccionar al menos un semestre valido.';
+              this.isSaving = false;
+              return;
+            }
             console.log('✅ Modo: Semestre | Semestres seleccionados:', payload.semestres);
           } else if (this.formData.selectedCareers.length > 0) {
             payload.applies_to = 'carrera';
             payload.careers = this.formData.selectedCareers
               .map(c => parseInt(c, 10))
               .filter(id => Number.isInteger(id));
+            if (payload.careers.length === 0) {
+              this.errorMessage = '❌ Debes seleccionar al menos una carrera valida (ID numerico). Si no aparecen IDs, recarga la pagina.';
+              this.isSaving = false;
+              return;
+            }
             console.log('✅ Modo: Carrera | Carreras seleccionadas:', payload.careers);
           } else {
             // Sin filtros seleccionados - aplicar a todos por defecto
