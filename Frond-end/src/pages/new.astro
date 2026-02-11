@@ -345,6 +345,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           
           if (searchResults.length > 0) {
             const student = searchResults[0];
+            
+            // Validar que el estudiante tenga un ID válido
+            if (!student.id) {
+              console.error('❌ El estudiante no tiene ID:', student);
+              this.errorMessage = '⚠️ Error: el estudiante no tiene un ID válido.';
+              setTimeout(() => this.errorMessage = '', 2000);
+              this.isSearching = false;
+              return;
+            }
+            
             // Verificar nuevamente con el ID real
             const existsById = this.formData.selectedSpecificStudents.some(s => 
               String(s.id) === String(student.id)
@@ -360,14 +370,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             // Agregar con el ID real del usuario
             this.formData.selectedSpecificStudents.push({
               id: student.id,
-              control: student.n_control,
-              name: student.name,
+              control: student.n_control || input,
+              name: student.name || student.n_control || input,
               email: '',
               career: '',
               semestre: ''
             });
             
-            console.log('✅ Estudiante agregado:', student.name, '(ID:', student.id, ')');
+            console.log('✅ Estudiante agregado por Enter:', {
+              id: student.id,
+              name: student.name,
+              control: student.n_control
+            });
             this.searchTerm = '';
           } else {
             this.errorMessage = '⚠️ No se encontró el estudiante con esa matrícula.';
@@ -540,8 +554,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       },
 
       selectStudentFromSearch(student) {
+        // Validar que el estudiante tenga un ID válido
+        if (!student.id) {
+          console.error('❌ El estudiante no tiene ID:', student);
+          this.errorMessage = '⚠️ Error: el estudiante no tiene un ID válido.';
+          setTimeout(() => this.errorMessage = '', 2000);
+          return;
+        }
+        
         const exists = this.formData.selectedSpecificStudents.some(s => 
-          s.id === student.id || s.control === student.control
+          String(s.id) === String(student.id)
         );
         
         if (exists) {
@@ -555,16 +577,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         this.formData.selectedSpecificStudents.push({
           id: student.id,
-          control: student.fullName || student.control,
-          name: student.fullName || student.control,
-          email: student.email,
-          career: student.career_name,
-          semestre: student.semestre
+          control: student.control || student.n_control || student.fullName,
+          name: student.fullName || student.name || student.control,
+          email: student.email || '',
+          career: student.career_name || '',
+          semestre: student.semestre || ''
         });
 
         this.searchTerm = '';
         this.searchResults = [];
-        console.log('✅ Estudiante seleccionado:', student.fullName);
+        console.log('✅ Estudiante seleccionado desde dropdown:', {
+          id: student.id,
+          name: student.fullName || student.name,
+          control: student.control || student.n_control
+        });
       },
 
       submitForm() {
@@ -662,16 +688,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             payload.applicantTags = this.formData.applicantTags.length > 0 ? this.formData.applicantTags : [];
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
-            // Convertir a números enteros, filtrando valores inválidos
+            // El API espera strings, no números
             payload.students = this.formData.selectedSpecificStudents
               .map(s => {
-                const id = parseInt(s.id);
-                console.log('📋 Procesando estudiante:', { original: s.id, parsed: id, name: s.name });
+                const id = String(s.id);
+                console.log('📋 Procesando estudiante:', { original: s.id, asString: id, name: s.name });
                 return id;
               })
-              .filter(id => !isNaN(id) && id > 0);
+              .filter(id => id && id !== 'undefined' && id !== 'null' && id.trim() !== '');
             
-            console.log('📤 IDs de estudiantes a enviar:', payload.students);
+            console.log('📤 IDs de estudiantes a enviar (strings):', payload.students);
             
             if (payload.students.length === 0) {
               this.errorMessage = '⚠️ No se pudo obtener los IDs válidos de los estudiantes. Intenta buscarlos nuevamente.';
