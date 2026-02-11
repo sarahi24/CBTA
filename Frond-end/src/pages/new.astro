@@ -1003,16 +1003,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else if (this.formData.selectedSemesters.length > 0 && this.formData.selectedCareers.length > 0) {
             // Ambas carreras y semestres seleccionados
             payload.applies_to = 'carrera_semestre';
-            payload.careers = this.formData.selectedCareers.map(c => parseInt(c));
-            payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+            payload.careers = this.formData.selectedCareers
+              .map(c => parseInt(c, 10))
+              .filter(id => Number.isInteger(id));
+            payload.semestres = this.formData.selectedSemesters
+              .map(s => parseInt(s, 10))
+              .filter(id => Number.isInteger(id));
             console.log('✅ Modo: Carrera + Semestre | Carreras:', payload.careers, '| Semestres:', payload.semestres);
           } else if (this.formData.selectedSemesters.length > 0) {
             payload.applies_to = 'semestre';
-            payload.semestres = this.formData.selectedSemesters.map(s => parseInt(s));
+            payload.semestres = this.formData.selectedSemesters
+              .map(s => parseInt(s, 10))
+              .filter(id => Number.isInteger(id));
             console.log('✅ Modo: Semestre | Semestres seleccionados:', payload.semestres);
           } else if (this.formData.selectedCareers.length > 0) {
             payload.applies_to = 'carrera';
-            payload.careers = this.formData.selectedCareers.map(c => parseInt(c));
+            payload.careers = this.formData.selectedCareers
+              .map(c => parseInt(c, 10))
+              .filter(id => Number.isInteger(id));
             console.log('✅ Modo: Carrera | Carreras seleccionadas:', payload.careers);
           } else {
             // Sin filtros seleccionados - aplicar a todos por defecto
