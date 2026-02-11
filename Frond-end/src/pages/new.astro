@@ -9,21 +9,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
   <script is:inline define:vars={{ API_BASE_URL }}>
     window.__API_BASE_URL__ = API_BASE_URL;
     window.conceptFormData = {
-      __version: '2.2.1_NUMERIC_IDS', // Updated to use numeric IDs matching API
+      __version: '2.2.2_REAL_IDS', // IDs actualizados con los reales de la BD
       CAREERS: [
-        { id: 1, code: 'TAG-E', name: 'Técnico Agropecuario' },
-        { id: 2, code: 'TOF', name: 'Técnico en Ofimática' },
-        { id: 3, code: 'TEM', name: 'Técnico en Admón. de Emprendimiento' },
-        { id: 4, code: 'TAG-M', name: 'Técnico Agropecuario (modalidad mixta)' },
-        { id: 5, code: 'TRH', name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+        { id: 13, code: 'TAG-E', name: 'Técnico Agropecuario' },
+        { id: 7, code: 'TOF', name: 'Téc. en Ofimática' },
+        { id: 12, code: 'TEM', name: 'Técnico en Administración para el Emprendimiento' },
+        { id: 9, code: 'TAG-M', name: 'Téc. Agropecuario (Mixta)' },
+        { id: 10, code: 'TRH', name: 'Téc. Admón. R. Humanos (Mixta)' },
+        { id: 11, code: 'TI', name: 'Técnico en Informática' },
       ],
-      // Inicializar con datos de fallback usando IDs numéricos (estructura compatible con API)
+      // Inicializar con IDs numéricos reales (coinciden con la BD)
       careers: [
-        { id: 1, name: 'Técnico Agropecuario' },
-        { id: 2, name: 'Técnico en Ofimática' },
-        { id: 3, name: 'Técnico en Admón. de Emprendimiento' },
-        { id: 4, name: 'Técnico Agropecuario (modalidad mixta)' },
-        { id: 5, name: 'Técnico en Admón. de Recursos Humanos (modalidad mixta)' },
+        { id: 13, name: 'Técnico Agropecuario' },
+        { id: 7, name: 'Téc. en Ofimática' },
+        { id: 12, name: 'Técnico en Administración para el Emprendimiento' },
+        { id: 9, name: 'Téc. Agropecuario (Mixta)' },
+        { id: 10, name: 'Téc. Admón. R. Humanos (Mixta)' },
+        { id: 11, name: 'Técnico en Informática' },
       ],
       // Inicializar con semestres 1-12
       semesters: [
@@ -64,7 +66,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       
       loadCareers() {
         const careersToken = localStorage.getItem('access_token');
-        console.log('🔑 Token para carreras:', careersToken ? `${careersToken.substring(0, 20)}...` : 'NO HAY TOKEN');
         
         if (!careersToken) {
           console.warn('⚠️ No hay token, usando carreras de fallback');
@@ -72,24 +73,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return Promise.resolve();
         }
         
-        // Verificar que el token funciona con otro endpoint primero
-        console.log('🧪 Probando token con endpoint /v1/dashboard/staff/metrics...');
-        fetch(this.apiBaseUrl + '/v1/dashboard/staff/metrics', {
-          headers: {
-            'Authorization': `Bearer ${careersToken}`,
-            'X-User-Role': 'financial-staff'
-          }
-        }).then(r => console.log('🧪 Test dashboard:', r.status, r.ok ? '✅ Token válido' : '❌ Token inválido'));
-        
-        // Llamar directamente al backend de Railway (CORS ya está configurado)
         const url = new URL(this.apiBaseUrl + '/v1/careers');
         url.searchParams.set('forceRefresh', 'false');
-        
-        console.log('📞 Llamando directamente a Railway:', url.toString());
-        console.log('📤 Headers a enviar:', {
-          'Authorization': `Bearer ${careersToken.substring(0, 20)}...`,
-          'X-User-Role': 'financial-staff'
-        });
         
         return fetch(url.toString(), {
           method: 'GET',
@@ -101,41 +86,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         })
         .then(res => {
-          console.log('🌐 Status del API de carreras:', res.status, res.statusText);
           if (!res.ok) {
-            console.error('❌ Error del backend:', res.status);
-            if (res.status === 401) {
-              console.error('🔒 Token rechazado - posibles causas:');
-              console.error('   1. Token expirado (cierra sesión y vuelve a iniciar)');
-              console.error('   2. Token inválido o corrupto');
-              console.error('   3. Backend no reconoce el token');
-              console.error('📋 Token usado:', careersToken ? `${careersToken.substring(0, 30)}...` : 'NO TOKEN');
-            }
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
         })
         .then(json => {
-          console.log('📥 Respuesta completa del API de carreras:', json);
-          console.log('📥 json.success:', json.success);
-          console.log('📥 json.data:', json.data);
-          console.log('📥 json.data (stringified):', JSON.stringify(json.data, null, 2));
-          console.log('📥 json.data?.careers:', json.data?.careers);
-          console.log('📥 Tipo de json.data:', typeof json.data);
-          console.log('📥 Keys de json.data:', json.data ? Object.keys(json.data) : 'null');
-          
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
             console.log('✅ Carreras cargadas desde API:', this.careers.length);
-            console.log('📋 IDs de carreras disponibles:', this.careers.map(c => `${c.id}: ${c.name}`));
+            console.log('📋 IDs disponibles:', this.careers.map(c => c.id).join(', '));
           } else {
-            console.warn('⚠️ Respuesta del API no tiene careers, usando fallback');
-            console.warn('⚠️ Datos recibidos:', { success: json.success, data: json.data });
+            console.warn('⚠️ Respuesta del API sin careers, usando fallback');
             this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
           }
         })
         .catch(err => {
-          console.warn('⚠️ Error cargando carreras, usando fallback:', err);
+          console.warn('⚠️ Error cargando carreras desde API, usando fallback:', err.message);
           this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
         });
       },
