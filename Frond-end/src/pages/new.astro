@@ -785,6 +785,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           delete payload.carreras;
           delete payload.exceptionStudents;
           delete payload.applicantTags;
+          delete payload.applicant_tags;
           delete payload.replaceRelations;
           delete payload.removeAllExceptions;
           delete payload.replaceExceptions;
@@ -794,6 +795,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
             payload.applicantTags = this.formData.applicantTags.length > 0 ? this.formData.applicantTags : [];
+            // TAMBIÉN enviar en snake_case por si el backend espera ese formato
+            payload.applicant_tags = payload.applicantTags;
+            console.log('🏷️  Agregando applicantTags al payload:', {
+              original: this.formData.applicantTags,
+              camelCase: payload.applicantTags,
+              snake_case: payload.applicant_tags,
+              tipo: typeof payload.applicantTags,
+              esArray: Array.isArray(payload.applicantTags),
+              length: payload.applicantTags.length
+            });
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             
@@ -911,6 +922,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
         console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
         console.log('📋 Payload object:', payload);
+        console.log('🏷️  applicantTags específicamente:', payload.applicantTags);
+        console.log('🏷️  Tipo de applicantTags:', typeof payload.applicantTags, Array.isArray(payload.applicantTags) ? 'ARRAY' : 'NO ARRAY');
         const token = localStorage.getItem('access_token');
         console.log('🎯 URL del API:', this.apiBaseUrl + '/v1/concepts');
         console.log('🔑 Token presente:', !!token);
@@ -930,6 +943,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else {
             // CREAR nuevo concepto: enviar todo junto en POST
             if (!self.formData.id) {
+              console.log('📤 JUSTO ANTES de stringify - applicantTags en payload:', payload.applicantTags);
+              const bodyString = JSON.stringify(payload);
+              console.log('📤 Body stringificado:', bodyString);
+              console.log('📤 ¿Contiene applicantTags?', bodyString.includes('applicantTags'));
+              
               return fetch(`${self.apiBaseUrl}/v1/concepts`, {
                 method: 'POST',
                 headers: {
@@ -939,7 +957,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   'X-User-Role': 'financial-staff',
                   'X-User-Permission': 'create.concepts'
                 },
-                body: JSON.stringify(payload)
+                body: bodyString
               }).then(async res => {
                 console.log('📥 Response status:', res.status, res.statusText);
                 console.log('📥 Response URL:', res.url);
@@ -1002,7 +1020,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (errorList.includes('applicantTags') || errorList.includes('applicantTag')) {
                       console.error('💡 HINT: Los valores enviados fueron:', payload.applicantTags);
                       console.error('💡 Pregunta al backend qué valores son permitidos para applicantTags');
+                      console.error('💡 SEGÚN DOCUMENTACIÓN: Los valores deben ser ["applicant", "no_student_details"]');
+                      console.error('💡 Verifica también si el backend espera "applicant_tags" (snake_case) en lugar de "applicantTags" (camelCase)');
                       errorMsg += '\n\n💡 Valores enviados: [' + (payload.applicantTags || []).join(', ') + ']';
+                      errorMsg += '\n💡 Valores permitidos según docs: ["applicant", "no_student_details"]';
                       errorMsg += '\nContacta al desarrollador del backend para conocer los valores permitidos.';
                     }
                   }
@@ -1073,6 +1094,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               // Agregar tags si existen
               if (payload.applicantTags && payload.applicantTags.length > 0) {
                 relationsData.applicantTags = payload.applicantTags;
+                // TAMBIÉN enviar en snake_case por si el backend espera ese formato
+                relationsData.applicant_tags = payload.applicantTags;
               }
               
               // Agregar booleanos de control si existen
