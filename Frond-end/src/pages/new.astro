@@ -798,10 +798,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             payload.applicantTags = this.formData.applicantTags.length > 0 
               ? this.formData.applicantTags[0]  // Tomar solo el primer valor como string
               : 'applicants';  // Valor por defecto EN PLURAL
+            
+            // LIMPIAR TODOS LOS OTROS CAMPOS de filtro para evitar conflictos
+            delete payload.students;
+            delete payload.student;
+            delete payload.semestre;
+            delete payload.semestres;
+            delete payload.career;
+            delete payload.carrera;
+            delete payload.careers;
+            delete payload.carreras;
+            delete payload.exceptionStudents;
+            delete payload.applicant_tags; // Eliminar versión snake_case si existe
+            delete payload.replaceRelations;
+            delete payload.removeAllExceptions;
+            delete payload.replaceExceptions;
+            
             console.log('🏷️  Agregando applicantTags al payload:', {
               arrayOriginal: this.formData.applicantTags,
               valorEnviado: payload.applicantTags,
-              tipo: typeof payload.applicantTags
+              tipo: typeof payload.applicantTags,
+              payloadFinal: payload
             });
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
