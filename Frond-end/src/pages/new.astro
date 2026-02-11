@@ -286,7 +286,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.searchTerm = '';
       },
       
-      addStudentByControl() {
+      async addStudentByControl() {
         const input = this.searchTerm.trim();
         if (!input) return;
 
@@ -295,7 +295,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         
         // Verificar si ya existe
         const exists = this.formData.selectedSpecificStudents.some(s => 
-          s.id === input || s.control === input
+          s.id === input || s.control === input || String(s.control) === input
         );
         
         if (exists) {
@@ -304,14 +304,82 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return;
         }
         
-        // Agregar el estudiante con la matrícula/ID ingresada
-        this.formData.selectedSpecificStudents.push({
-          id: input,
-          control: input,
-          name: input
-        });
-        
-        console.log('✅ Estudiante agregado:', input);
+        // Buscar el estudiante en el API para obtener su ID real
+        this.isSearching = true;
+        try {
+          const token = localStorage.getItem('access_token');
+          if (!token) {
+            this.errorMessage = '⚠️ No hay sesión activa.';
+            setTimeout(() => this.errorMessage = '', 2000);
+            this.isSearching = false;
+            return;
+          }
+
+          const userDataRaw = localStorage.getItem('user_data');
+          const userData = userDataRaw ? JSON.parse(userDataRaw) : null;
+          const userRole = userData?.roles?.[0] || 'student';
+
+          const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
+          url.searchParams.set('search', input);
+          url.searchParams.set('limit', '1');
+
+          const res = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'X-User-Role': userRole
+            }
+          });
+
+          if (!res.ok) {
+            this.errorMessage = '⚠️ No se encontró el estudiante con esa matrícula.';
+            setTimeout(() => this.errorMessage = '', 2000);
+            this.isSearching = false;
+            return;
+          }
+
+          const json = await res.json();
+          const searchResults = json.data?.search || [];
+          
+          if (searchResults.length > 0) {
+            const student = searchResults[0];
+            // Verificar nuevamente con el ID real
+            const existsById = this.formData.selectedSpecificStudents.some(s => 
+              String(s.id) === String(student.id)
+            );
+            
+            if (existsById) {
+              this.errorMessage = '⚠️ Este estudiante ya fue agregado.';
+              setTimeout(() => this.errorMessage = '', 2000);
+              this.isSearching = false;
+              return;
+            }
+
+            // Agregar con el ID real del usuario
+            this.formData.selectedSpecificStudents.push({
+              id: student.id,
+              control: student.n_control,
+              name: student.name,
+              email: '',
+              career: '',
+              semestre: ''
+            });
+            
+            console.log('✅ Estudiante agregado:', student.name, '(ID:', student.id, ')');
+            this.searchTerm = '';
+          } else {
+            this.errorMessage = '⚠️ No se encontró el estudiante con esa matrícula.';
+            setTimeout(() => this.errorMessage = '', 2000);
+          }
+        } catch (err) {
+          console.error('Error buscando estudiante:', err);
+          this.errorMessage = '⚠️ Error al buscar el estudiante.';
+          setTimeout(() => this.errorMessage = '', 2000);
+        } finally {
+          this.isSearching = false;
+        }
       },
       
       toggleExceptionStudent(student) {
@@ -594,7 +662,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             payload.applicantTags = this.formData.applicantTags.length > 0 ? this.formData.applicantTags : [];
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
-            payload.students = this.formData.selectedSpecificStudents.map(s => String(s.id));
+            // Convertir a números enteros, filtrando valores inválidos
+            payload.students = this.formData.selectedSpecificStudents
+              .map(s => {
+                const id = parseInt(s.id);
+                console.log('📋 Procesando estudiante:', { original: s.id, parsed: id, name: s.name });
+                return id;
+              })
+              .filter(id => !isNaN(id) && id > 0);
+            
+            console.log('📤 IDs de estudiantes a enviar:', payload.students);
+            
+            if (payload.students.length === 0) {
+              this.errorMessage = '⚠️ No se pudo obtener los IDs válidos de los estudiantes. Intenta buscarlos nuevamente.';
+              this.isSaving = false;
+              return;
+            }
+            
             delete payload.exceptionStudents;
             delete payload.removeAllExceptions;
             delete payload.replaceExceptions;
