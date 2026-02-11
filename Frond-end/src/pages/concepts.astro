@@ -407,26 +407,31 @@ function renderConcepts(){
           
           <!-- Botones de acciones -->
           <div class="grid grid-cols-4 gap-1.5">
-            <button onclick="window.editConcept('${c.id}')" class="group/btn py-2 text-[10px] font-bold bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 text-white rounded hover:shadow-lg hover:scale-105 transition-all duration-300 relative overflow-hidden" title="Editar">
+            <button onclick="window.editConcept('${c.id}')" class="group/btn py-2 px-2 text-[10px] font-bold bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 text-white rounded hover:shadow-lg hover:scale-105 transition-all duration-300 relative overflow-hidden flex flex-col items-center gap-0.5">
               <i class="fas fa-edit text-sm group-hover/btn:rotate-12 transition-transform"></i>
+              <span>Editar</span>
             </button>
 
             ${!isInactive ? `
-              <button onclick="window.finalizeConcept('${c.id}')" class="group/btn py-2 text-[10px] font-bold bg-gradient-to-br from-amber-100 to-orange-100 text-amber-800 rounded hover:shadow-lg hover:scale-105 border border-amber-300 transition-all duration-300 relative overflow-hidden" title="Finalizar">
+              <button onclick="window.finalizeConcept('${c.id}')" class="group/btn py-2 px-2 text-[10px] font-bold bg-gradient-to-br from-amber-100 to-orange-100 text-amber-800 rounded hover:shadow-lg hover:scale-105 border border-amber-300 transition-all duration-300 relative overflow-hidden flex flex-col items-center gap-0.5">
                 <i class="fas fa-check-double text-sm group-hover/btn:scale-110 transition-transform"></i>
+                <span>Finalizar</span>
               </button>
             ` : `
-              <button onclick="window.activateConcept('${c.id}')" class="group/btn py-2 text-[10px] font-bold bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-800 rounded hover:shadow-lg hover:scale-105 border border-emerald-300 transition-all duration-300 relative overflow-hidden" title="Activar">
+              <button onclick="window.activateConcept('${c.id}')" class="group/btn py-2 px-2 text-[10px] font-bold bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-800 rounded hover:shadow-lg hover:scale-105 border border-emerald-300 transition-all duration-300 relative overflow-hidden flex flex-col items-center gap-0.5">
                 <i class="fas fa-play text-sm group-hover/btn:translate-x-1 transition-transform"></i>
+                <span>Activar</span>
               </button>
             `}
 
-            <button onclick="window.deleteConcept('${c.id}')" class="group/btn py-2 text-[10px] font-bold bg-gradient-to-br from-red-100 to-rose-100 text-red-800 rounded hover:shadow-lg hover:scale-105 border border-red-300 transition-all duration-300 relative overflow-hidden" title="Borrar">
+            <button onclick="window.deleteConcept('${c.id}')" class="group/btn py-2 px-2 text-[10px] font-bold bg-gradient-to-br from-red-100 to-rose-100 text-red-800 rounded hover:shadow-lg hover:scale-105 border border-red-300 transition-all duration-300 relative overflow-hidden flex flex-col items-center gap-0.5">
               <i class="fas fa-trash-alt text-sm group-hover/btn:rotate-12 transition-transform"></i>
+              <span>Borrar</span>
             </button>
 
-            <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="py-2 text-[10px] text-[#2E594D] hover:text-white font-bold bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-[#2E594D] hover:to-emerald-700 rounded border border-emerald-200 hover:border-emerald-600 shadow-sm hover:shadow-lg transition-all relative z-10 group/info" title="Ver Descripción">
+            <button onclick="document.getElementById('details-${c.id}').classList.toggle('hidden')" class="py-2 px-2 text-[10px] text-[#2E594D] hover:text-white font-bold bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-[#2E594D] hover:to-emerald-700 rounded border border-emerald-200 hover:border-emerald-600 shadow-sm hover:shadow-lg transition-all relative z-10 group/info flex flex-col items-center gap-0.5">
               <i class="fas fa-info-circle group-hover/info:rotate-180 transition-transform duration-500"></i>
+              <span>Info</span>
             </button>
           </div>
         </div>
