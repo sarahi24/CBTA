@@ -794,13 +794,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.scopeType === 'tags') {
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
-            // EL BACKEND ESPERA UN STRING, NO UN ARRAY
+            // EL BACKEND ESPERA UN STRING EN PLURAL según doc vieja
             payload.applicantTags = this.formData.applicantTags.length > 0 
               ? this.formData.applicantTags[0]  // Tomar solo el primer valor como string
-              : 'applicant';  // Valor por defecto
+              : 'applicants';  // Valor por defecto EN PLURAL
             // TAMBIÉN enviar en snake_case por si el backend espera ese formato
             payload.applicant_tags = payload.applicantTags;
-            console.log('🏷️  Agregando applicantTags al payload (COMO STRING):', {
+            console.log('🏷️  Agregando applicantTags al payload (COMO STRING EN PLURAL):', {
               arrayOriginal: this.formData.applicantTags,
               stringEnviado: payload.applicantTags,
               camelCase: payload.applicantTags,
@@ -1561,7 +1561,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 <p class="text-sm text-gray-600 mb-3">Estos conceptos aplicarán a usuarios con características especiales.</p>
                 <div class="grid grid-cols-2 gap-3">
                   <label class="cursor-pointer">
-                    <input type="checkbox" value="applicant" x-model="formData.applicantTags" class="sr-only peer">
+                    <input type="checkbox" value="applicants" x-model="formData.applicantTags" class="sr-only peer">
                     <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
                       <i class="fas fa-user-graduate text-lg text-pink-600 mb-1"></i>
                       <p class="text-xs font-bold">Aplicantes/Aspirantes</p>
@@ -1569,7 +1569,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
                   </label>
                   <label class="cursor-pointer">
-                    <input type="checkbox" value="no_student_details" x-model="formData.applicantTags" class="sr-only peer">
+                    <input type="checkbox" value="unverified" x-model="formData.applicantTags" class="sr-only peer">
                     <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
                       <i class="fas fa-user-slash text-lg text-pink-600 mb-1"></i>
                       <p class="text-xs font-bold">Sin Detalles de Estudiante</p>
