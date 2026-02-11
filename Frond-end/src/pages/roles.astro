@@ -1741,6 +1741,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             async loadUsers(token, isRetry = false) {
                 try {
+                    // Si no hay token, obtenerlo del localStorage
+                    if (!token) {
+                        token = localStorage.getItem('access_token');
+                        console.log('⚠️ Token no pasado como parámetro, obteniendo del localStorage');
+                    }
+                    
+                    if (!token) {
+                        console.error('❌ No hay token de autenticación disponible');
+                        this.apiError = 'No hay token de autenticación';
+                        this.showNotify('No hay token de autenticación. Por favor, inicia sesión nuevamente.', 'error');
+                        return;
+                    }
+                    
                     const endpoint = `${this.apiBaseUrl}/v1/admin-actions/show-users`;
                     console.log('========================================');
                     console.log('🔄 CARGANDO USUARIOS DESDE LA API');
@@ -1750,7 +1763,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     console.log('🔑 Token (últimos 10 chars):', '...' + token.substring(token.length - 10));
                     console.log('📏 Longitud del token:', token.length);
                     console.log('🔄 Es reintento después de refresh:', isRetry ? 'SÍ' : 'NO');
-                    console.log('� Timestamp:', new Date().toISOString());
+                    console.log('⏰ Timestamp:', new Date().toISOString());
                     
                     console.log('📡 Enviando petición GET con auto-refresh...');
                     const requestStartTime = Date.now();
