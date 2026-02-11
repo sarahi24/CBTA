@@ -125,5 +125,9 @@ import { Fragment } from 'astro/jsx-runtime';
     document.addEventListener('DOMContentLoaded', initChartDonut);
     window.addEventListener('storage', window.updateChartDonut);
     window.addEventListener('chargesUpdated', window.updateChartDonut);
+    window.addEventListener('paymentsDataLoaded', () => {
+      console.log('📊 ChartDonut escuchó evento paymentsDataLoaded');
+      setTimeout(window.updateChartDonut, 50);
+    });
   </script>
 </Fragment>

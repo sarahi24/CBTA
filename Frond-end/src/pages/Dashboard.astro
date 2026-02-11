@@ -261,10 +261,15 @@ const pageTitle = "Dashboard - SIGE";
           }));
           
           // Disparar eventos para actualizar gráficos
+          const updateEvent = new Event('paymentsDataLoaded');
+          window.dispatchEvent(updateEvent);
+          
           if (typeof window.updateChartLine === 'function') {
+            console.log('🔄 Llamando updateChartLine desde loadPaymentsData');
             window.updateChartLine();
           }
           if (typeof window.updateChartDonut === 'function') {
+            console.log('🔄 Llamando updateChartDonut desde loadPaymentsData');
             window.updateChartDonut();
           }
           

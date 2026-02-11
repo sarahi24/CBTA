@@ -11,7 +11,6 @@ import { Fragment } from 'astro/jsx-runtime';
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script is:inline>
-    // Función global para que pueda ser llamada desde fuera si es necesario
     window.updateChartLine = function() {
       const ctx = document.getElementById('chartLine');
       if (!ctx) return;
@@ -27,32 +26,27 @@ import { Fragment } from 'astro/jsx-runtime';
         let dashboardPayments = null;
         try {
           dashboardPayments = JSON.parse(localStorage.getItem('dashboardPayments') || 'null');
+          console.log('📊 ChartLine - dashboardPayments desde localStorage:', dashboardPayments);
         } catch (e) {
-          console.warn('No dashboard payments data available');
+          console.warn('No dashboard payments data available:', e);
         }
 
         if (dashboardPayments && dashboardPayments.totalPayments !== undefined) {
-          // Usar datos del Dashboard: mostrar totalPayments distribuido uniformemente
+          // Usar datos del Dashboard: mostrar totalPayments y totalBalanceAvailable
           const totalPayments = parseFloat(dashboardPayments.totalPayments || 0);
           const totalBalanceAvailable = parseFloat(dashboardPayments.totalBalanceAvailable || 0);
           
-          // Llenar recaudado con el total de pagos (distribuido por mes o mostrado donde hay datos)
-          // Como tenemos un total anual, lo mostramos como una línea constante
-          if (totalPayments > 0) {
-            // Mostrar el total recaudado en el mes actual (febrero)
-            const currentMonth = new Date().getMonth();
-            recaudado[currentMonth] = totalPayments;
-          }
+          console.log('📊 ChartLine usando Dashboard - Pagos:', totalPayments, 'Disponible:', totalBalanceAvailable);
           
-          // Mostrar balance disponible/pendiente en el mes actual también
-          if (totalBalanceAvailable > 0) {
-            const currentMonth = new Date().getMonth();
-            pendientes[currentMonth] = totalBalanceAvailable;
-          }
+          // Mostrar los valores en febrero (mes actual)
+          const currentMonth = new Date().getMonth();
+          recaudado[currentMonth] = totalPayments;
+          pendientes[currentMonth] = totalBalanceAvailable;
           
-          console.log('📊 ChartLine usando datos del Dashboard - Total Recaudado:', totalPayments, 'Disponible:', totalBalanceAvailable);
+          console.log('📊 ChartLine arrays - Février [' + currentMonth + '] - Recaudado:', recaudado[currentMonth], 'Pendiente:', pendientes[currentMonth]);
         } else {
           // Fallback a chargesList
+          console.log('📊 ChartLine usando chargesList como fallback');
           const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
 
           charges.forEach(c => {
@@ -70,8 +64,10 @@ import { Fragment } from 'astro/jsx-runtime';
             }
           });
           
-          console.log('📊 ChartLine usando chargesList - Recaudado:', recaudado);
+          console.log('📊 ChartLine chargesList - Recaudado:', recaudado, 'Pendiente:', pendientes);
         }
+
+        console.log('📊 ChartLine final arrays - Recaudado:', recaudado, 'Pendiente:', pendientes);
 
         if (window.myLineChart) window.myLineChart.destroy();
 
@@ -141,6 +137,8 @@ import { Fragment } from 'astro/jsx-runtime';
     
     document.addEventListener('DOMContentLoaded', initChartLine);
     window.addEventListener('storage', window.updateChartLine);
-    window.addEventListener('chargesUpdated', window.updateChartLine);
-  </script>
+    window.addEventListener('chargesUpdated', window.updateChartLine);    window.addEventListener('paymentsDataLoaded', () => {
+      console.log('📊 ChartLine escuchó evento paymentsDataLoaded');
+      setTimeout(window.updateChartLine, 50);
+    });  </script>
 </Fragment>
