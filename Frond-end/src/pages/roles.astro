@@ -4373,6 +4373,33 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 this.importResult = null;
 
                 try {
+                    // Preflight: verificar que el archivo tenga filas con datos en la primera hoja
+                    if (window.XLSX) {
+                        const buffer = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+                            reader.readAsArrayBuffer(this.importFile);
+                        });
+
+                        const workbook = window.XLSX.read(buffer, { type: 'array' });
+                        const sheetName = workbook.SheetNames?.[0];
+                        const sheet = sheetName ? workbook.Sheets[sheetName] : null;
+                        const rows = sheet ? window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) : [];
+
+                        const dataRows = rows.slice(1).filter(row =>
+                            Array.isArray(row) && row.some(cell => String(cell).trim() !== '')
+                        );
+
+                        if (dataRows.length === 0) {
+                            this.showNotify('El archivo no tiene filas con datos en la primera hoja', 'error');
+                            this.isImporting = false;
+                            return;
+                        }
+                    } else {
+                        console.warn('⚠️ XLSX no esta disponible; se omite validacion previa de filas');
+                    }
+
                     // Crear FormData para enviar el archivo
                     const formData = new FormData();
                     formData.append('file', this.importFile);
@@ -4400,7 +4427,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     const result = await response.json();
 
                     if (response.ok && result.success) {
-                        this.importResult = result.data?.summary || result.data;
+                        // Conservar summary y errores completos si vienen en el payload
+                        this.importResult = result.data || result;
+                        console.log('✅ Importación exitosa (payload completo):', result);
                         this.showNotify('✓ Usuarios importados correctamente', 'success');
                         
                         // Recargar usuarios después de la importación
