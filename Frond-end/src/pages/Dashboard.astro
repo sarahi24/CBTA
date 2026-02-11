@@ -50,7 +50,7 @@ const pageTitle = "Dashboard - SIGE";
       <CardInfo title="Total Estudiantes" icon="students" />
       <CardInfo title="Pagos Pendientes" icon="pending" />
       <CardInfo title="Total Recaudado" icon="recaudado" />
-      <CardInfo title="Gestión de Personal" icon="students" />
+      <CardInfo title="Pagos Vencidos" icon="overdue" />
     </section>
 
     {/* GRÁFICOS */}
@@ -112,6 +112,8 @@ const pageTitle = "Dashboard - SIGE";
         }
 
         const data = await DashboardAPI.getPendingPayments(token, true, false);
+        console.log('📤 Datos completos de pending:', JSON.stringify(data, null, 2));
+        
         if (data.success && data.data?.total_pending) {
           const pendingData = data.data.total_pending;
           
@@ -140,6 +142,46 @@ const pageTitle = "Dashboard - SIGE";
       }
     };
 
+    // Función para cargar datos de pagos vencidos
+    const loadOverdueData = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token available for overdue payments data');
+          return;
+        }
+
+        const data = await DashboardAPI.getOverduePayments(token, true, false);
+        console.log('📤 Datos completos de overdue:', JSON.stringify(data, null, 2));
+        
+        if (data.success && data.data?.total_overdue) {
+          const overdueData = data.data.total_overdue;
+          
+          // Actualizar card de "Pagos Vencidos"
+          const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+          
+          const overdueEl = document.getElementById('count-overdue');
+          const overdueDesc = document.getElementById('desc-overdue');
+          
+          if (overdueEl) {
+            overdueEl.textContent = formatMX(overdueData.totalAmount);
+          }
+          if (overdueDesc) {
+            const count = overdueData.totalCount || 0;
+            overdueDesc.textContent = count === 1 ? '1 Pago vencido' : `${count} Pagos vencidos`;
+          }
+          
+          console.log('✅ Datos de pagos vencidos cargados:', overdueData);
+        }
+      } catch (error) {
+        console.error('❌ Error cargando datos de pagos vencidos:', error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('permisos') || errorMsg.includes('403')) {
+          showToast('error', 'No tienes permisos para ver datos de pagos vencidos');
+        }
+      }
+    };
+
     // Función para cargar datos de estudiantes
     const loadStudentsData = async () => {
       try {
@@ -150,8 +192,19 @@ const pageTitle = "Dashboard - SIGE";
         }
 
         const data = await DashboardAPI.getStudentsCount(token, true, false);
-        if (data.success && data.data?.total_students !== undefined) {
-          const totalStudents = data.data.total_students;
+        console.log('📤 Datos completos de students:', JSON.stringify(data, null, 2));
+        
+        if (data.success && data.data) {
+          const studentsData = data.data;
+          
+          // Backend envía: totalStudents, totalApplicants
+          const studentCount = studentsData.totalStudents || 0;
+          const applicantCount = studentsData.totalApplicants || 0;
+          const totalStudents = studentCount + applicantCount;
+          
+          const description = applicantCount > 0 
+            ? `${studentCount} Estudiantes, ${applicantCount} Aspirantes`
+            : `Actualizado: ${new Date().toLocaleDateString('es-MX')}`;
           
           const estudiantesEl = document.getElementById('count-students');
           const estudiantesDesc = document.getElementById('desc-students');
@@ -160,11 +213,10 @@ const pageTitle = "Dashboard - SIGE";
             estudiantesEl.textContent = String(totalStudents);
           }
           if (estudiantesDesc) {
-            const today = new Date().toLocaleDateString('es-MX');
-            estudiantesDesc.textContent = `Actualizado: ${today}`;
+            estudiantesDesc.textContent = description;
           }
           
-          console.log('✅ Datos de estudiantes cargados:', totalStudents);
+          console.log('✅ Datos de estudiantes cargados - Total:', totalStudents, '(', studentCount, 'estudiantes +', applicantCount, 'aspirantes)');
         }
       } catch (error) {
         console.error('❌ Error cargando datos de estudiantes:', error);
@@ -185,8 +237,11 @@ const pageTitle = "Dashboard - SIGE";
         }
 
         const data = await DashboardAPI.getPaymentsMade(token, true, false);
-        if (data.success && data.data?.payments_data) {
-          const paymentsData = data.data.payments_data;
+        console.log('📤 Datos completos de payments:', JSON.stringify(data, null, 2));
+        
+        if (data.success && data.data) {
+          // Los datos vienen directamente en data, no en data.payments_data
+          const paymentsData = data.data;
           
           // Actualizar card de "Total Recaudado"
           const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
@@ -195,16 +250,18 @@ const pageTitle = "Dashboard - SIGE";
           const recaudadoDesc = document.getElementById('desc-recaudado');
           
           if (recaudadoEl) {
-            recaudadoEl.textContent = formatMX(paymentsData.totalPayouts);
+            // Backend envía: totalPayouts, totalPayments, etc.
+            recaudadoEl.textContent = formatMX(paymentsData.totalPayouts || paymentsData.totalPayments || 0);
           }
           if (recaudadoDesc) {
+            // Backend envía: totalBalanceAvailable
             recaudadoDesc.textContent = `Balance disponible: ${formatMX(paymentsData.totalBalanceAvailable)}`;
           }
           
           // Guardar balance disponible para validación de payout
           availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
           
-          console.log('✅ Datos de pagos cargados:', paymentsData);
+          console.log('✅ Datos de pagos cargados - Payouts:', paymentsData.totalPayouts, 'Balance:', paymentsData.totalBalanceAvailable);
         }
       } catch (error) {
         console.error('❌ Error cargando datos de pagos:', error);
@@ -215,10 +272,11 @@ const pageTitle = "Dashboard - SIGE";
       }
     };
 
-    // Cargar datos de estudiantes, pagos y pagos pendientes al iniciar
+    // Cargar datos de estudiantes, pagos, pagos pendientes y vencidos al iniciar
     loadStudentsData();
     loadPaymentsData();
     loadPendingData();
+    loadOverdueData();
     
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {

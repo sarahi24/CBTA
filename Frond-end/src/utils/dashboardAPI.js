@@ -198,6 +198,25 @@ export const DashboardAPI = {
   },
 
   /**
+   * Obtener cantidad y monto total de pagos vencidos
+   */
+  async getOverduePayments(token, onlyThisYear = true, forceRefresh = false) {
+    try {
+      const url = new URL(`${API_BASE}/dashboard-staff/overdue`);
+      url.searchParams.append('only_this_year', onlyThisYear);
+      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+      const data = await _fetchWithTokenRefresh(url.toString(), {
+        method: 'GET',
+      });
+      return data;
+    } catch (err) {
+      console.error('❌ Error fetching overdue payments:', err);
+      throw err;
+    }
+  },
+
+  /**
    * Crear un payout con todo el balance disponible
    */
   async createPayout(token) {
@@ -217,18 +236,20 @@ export const DashboardAPI = {
    */
   async getAllDashboardData(token, onlyThisYear = true) {
     try {
-      const [concepts, payments, students, pending] = await Promise.all([
+      const [concepts, payments, students, pending, overdue] = await Promise.all([
         this.getConcepts(token, onlyThisYear),
         this.getPaymentsMade(token, onlyThisYear),
         this.getStudentsCount(token, onlyThisYear),
-        this.getPendingPayments(token, onlyThisYear)
+        this.getPendingPayments(token, onlyThisYear),
+        this.getOverduePayments(token, onlyThisYear)
       ]);
 
       return {
         concepts,
         payments,
         students,
-        pending
+        pending,
+        overdue
       };
     } catch (err) {
       console.error('❌ Error fetching all dashboard data:', err);
