@@ -600,10 +600,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   fullItem: item
                 });
                 
+                // El endpoint /concepts/search/controls devuelve student_details.id en 'id'
                 return {
-                  // Incluir tanto student_id como user_id para decidir después
-                  id: item.user_id || item.userId || item.id,
-                  student_id: item.student_id || item.id,  // Guardar student_id por separado
+                  id: item.id,  // Este es el student_details.id
+                  student_id: item.id,  // Guardar como student_id también
                   fullName: item.name,
                   control: item.n_control,
                   email: item.email || '',
@@ -630,105 +630,96 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       async selectStudentFromSearch(student) {
         console.log('🎯 Estudiante seleccionado del dropdown (completo):', student);
         
-        // Buscar el student_id real desde la tabla student_details usando el control number
+        // Buscar el student_id real desde la tabla student_details
         let studentId = null;
-        let realStudentDetailsId = null;
         
         if (student.control) {
           try {
             const token = localStorage.getItem('access_token');
-            const userDataRaw = localStorage.getItem('user_data');
-            const userData = userDataRaw ? JSON.parse(userDataRaw) : null;
-            const userRole = userData?.roles?.[0] || 'financial-staff';
             
-            // PRIMERO: Intentar obtener el student_details.id desde /students
-            console.log('🔍 Buscando student_details.id en /students...');
+            // Buscar en /debts/student endpoint que usa student_details.id
+            console.log('🔍 Buscando student_details.id usando /debts/student...');
             try {
-              const studentsUrl = new URL(this.apiBaseUrl + '/v1/students');
-              studentsUrl.searchParams.set('search', student.control);
-              studentsUrl.searchParams.set('perPage', '1');
+              const debtsUrl = new URL(this.apiBaseUrl + '/v1/debts/student');
+              debtsUrl.searchParams.set('control', student.control);
               
-              const studentsRes = await fetch(studentsUrl.toString(), {
+              const debtsRes = await fetch(debtsUrl.toString(), {
                 method: 'GET',
                 headers: {
                   'Accept': 'application/json',
                   'Authorization': `Bearer ${token}`,
-                  'X-User-Role': userRole
+                  'X-User-Role': 'financial-staff',
+                  'X-User-Permission': 'view.debts'
                 }
               });
               
-              if (studentsRes.ok) {
-                const studentsJson = await studentsRes.json();
-                console.log('📊 Respuesta /students completa:', studentsJson);
+              if (debtsRes.ok) {
+                const debtsJson = await debtsRes.json();
+                console.log('📊 Respuesta /debts/student completa:', debtsJson);
                 
-                // Buscar en la respuesta el student_details.id
-                if (studentsJson.data?.students?.items && studentsJson.data.students.items.length > 0) {
-                  const studentData = studentsJson.data.students.items[0];
+                // El endpoint debería devolver info del estudiante incluyendo student_details.id
+                if (debtsJson.data?.student) {
+                  const studentData = debtsJson.data.student;
                   console.log('💾 Student data extraído:', studentData);
                   console.log('💾 Campos disponibles:', Object.keys(studentData));
                   
-                  // El campo student_details.id podría estar como id, student_id, o studentId
-                  realStudentDetailsId = studentData.id || studentData.student_id || studentData.studentId;
-                  console.log('✅ student_details.id obtenido:', realStudentDetailsId);
-                } else if (studentsJson.data?.items && studentsJson.data.items.length > 0) {
-                  const studentData = studentsJson.data.items[0];
-                  console.log('💾 Student data extraído (alt path):', studentData);
-                  realStudentDetailsId = studentData.id || studentData.student_id || studentData.studentId;
-                  console.log('✅ student_details.id obtenido:', realStudentDetailsId);
+                  // Buscar el ID de student_details
+                  studentId = studentData.student_id || studentData.id || studentData.studentId;
+                  console.log('✅ student_details.id obtenido:', studentId);
+                } else if (debtsJson.data?.student_id) {
+                  studentId = debtsJson.data.student_id;
+                  console.log('✅ student_details.id obtenido (directo):', studentId);
                 }
+              } else {
+                console.warn('⚠️ /debts/student respondió con:', debtsRes.status);
               }
             } catch (err) {
-              console.warn('⚠️ Error buscando en /students:', err);
+              console.warn('⚠️ Error buscando en /debts/student:', err);
             }
             
-            // SEGUNDO: Si no se encontró, buscar en /payments/students como fallback
-            if (!realStudentDetailsId) {
-              console.log('🔍 Buscando en /payments/students como fallback...');
-              const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
-              paymentsUrl.searchParams.set('search', student.control);
-              paymentsUrl.searchParams.set('perPage', '1');
+            // Si el endpoint de debts no funcionó, intentar buscar directamente el estudiante por control
+            if (!studentId) {
+              console.log('🔍 Intentando buscar student_id usando el ID del search inicial...');
+              // El endpoint /concepts/search/controls devuelve student_details.id en el campo 'id'
+              // Así que podríamos usar ese ID directamente si está disponible
+              const searchUrl = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
+              searchUrl.searchParams.set('search', student.control);
               
-              const paymentsRes = await fetch(paymentsUrl.toString(), {
+              const searchRes = await fetch(searchUrl.toString(), {
                 method: 'GET',
                 headers: {
                   'Accept': 'application/json',
                   'Authorization': `Bearer ${token}`,
-                  'X-User-Role': userRole,
-                  'X-User-Permission': 'view.payments.student.summary'
+                  'X-User-Role': 'financial-staff'
                 }
               });
               
-              if (paymentsRes.ok) {
-                const paymentsJson = await paymentsRes.json();
-                console.log('📊 Respuesta /payments/students completa:', paymentsJson);
+              if (searchRes.ok) {
+                const searchJson = await searchRes.json();
+                console.log('📊 Respuesta re-búsqueda /search/controls:', searchJson);
                 
-                if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
-                  const paymentData = paymentsJson.data.students.items[0];
-                  console.log('💾 Payment data extraído:', paymentData);
-                  console.log('💾 Campos disponibles:', Object.keys(paymentData));
-                  
-                  studentId = paymentData.student_id || paymentData.studentId || paymentData.userId;
-                  console.log('✅ ID obtenido de payments:', studentId);
+                if (searchJson.data?.search && searchJson.data.search.length > 0) {
+                  const found = searchJson.data.search[0];
+                  // Este 'id' es el student_details.id
+                  studentId = found.id;
+                  console.log('✅ student_details.id obtenido del search:', studentId);
                 }
               }
             }
-            
-            // Usar el student_details.id si se encontró, sino usar el userId de payments
-            studentId = realStudentDetailsId || studentId;
             
           } catch (err) {
             console.error('❌ Error buscando student_id:', err);
           }
         }
         
-        // Validar que obtuvimos el student_id real
+        // Validar que obtuvimos el student_id
         if (!studentId) {
           console.error('❌ No se pudo obtener el student_id del estudiante');
-          this.errorMessage = '❌ No se pudo obtener el ID del estudiante. El estudiante puede no existir en la tabla student_details o fue dado de baja.';
+          this.errorMessage = '❌ No se pudo obtener el ID del estudiante. El estudiante puede no tener un registro completo en student_details.';
           setTimeout(() => this.errorMessage = '', 5000);
           return;
         }
-        console.log('🆔 student_id final a usar:', studentId, '(realStudentDetailsId:', realStudentDetailsId, ')');
+        console.log('🆔 student_id final a usar:', studentId);
         
         const exists = this.formData.selectedSpecificStudents.some(s => 
           String(s.id) === String(studentId)
@@ -745,7 +736,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         this.formData.selectedSpecificStudents.push({
           id: studentId,
-          student_id: studentId,  // Usar el student_id real
+          student_id: studentId,
           control: student.control || student.n_control || student.fullName,
           name: student.fullName || student.name || student.control,
           email: student.email || '',
