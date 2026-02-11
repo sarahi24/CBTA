@@ -72,6 +72,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return Promise.resolve();
         }
         
+        // Verificar que el token funciona con otro endpoint primero
+        console.log('🧪 Probando token con endpoint /v1/dashboard/staff/metrics...');
+        fetch(this.apiBaseUrl + '/v1/dashboard/staff/metrics', {
+          headers: {
+            'Authorization': `Bearer ${careersToken}`,
+            'X-User-Role': 'financial-staff'
+          }
+        }).then(r => console.log('🧪 Test dashboard:', r.status, r.ok ? '✅ Token válido' : '❌ Token inválido'));
+        
         // Llamar directamente al backend de Railway (CORS ya está configurado)
         const url = new URL(this.apiBaseUrl + '/v1/careers');
         url.searchParams.set('forceRefresh', 'false');
@@ -94,6 +103,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         .then(res => {
           console.log('🌐 Status del API de carreras:', res.status, res.statusText);
           if (!res.ok) {
+            console.error('❌ Error del backend:', res.status);
+            if (res.status === 401) {
+              console.error('🔒 Token rechazado - posibles causas:');
+              console.error('   1. Token expirado (cierra sesión y vuelve a iniciar)');
+              console.error('   2. Token inválido o corrupto');
+              console.error('   3. Backend no reconoce el token');
+              console.error('📋 Token usado:', careersToken ? `${careersToken.substring(0, 30)}...` : 'NO TOKEN');
+            }
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
