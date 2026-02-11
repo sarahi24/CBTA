@@ -794,10 +794,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.scopeType === 'tags') {
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
-            // Según API documentation: enum ["applicant", "no_student_details"]
+            // Según Ángel: applicantTags DEBE SER UN ARRAY
+            // Valores válidos: ["applicant", "no_student_details"]
             payload.applicantTags = this.formData.applicantTags.length > 0 
-              ? this.formData.applicantTags[0]  // Tomar solo el primer valor como string
-              : 'applicant';  // Valor por defecto SINGULAR
+              ? this.formData.applicantTags  // Mantener como array
+              : ['applicant'];  // Valor por defecto como array
             
             // LIMPIAR TODOS LOS OTROS CAMPOS de filtro para evitar conflictos
             delete payload.students;
@@ -814,11 +815,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             delete payload.removeAllExceptions;
             delete payload.replaceExceptions;
             
-            console.log('🏷️  Agregando applicantTags al payload:', {
-              arrayOriginal: this.formData.applicantTags,
+            console.log('🏷️  Agregando applicantTags al payload (COMO ARRAY):', {
               valorEnviado: payload.applicantTags,
-              tipo: typeof payload.applicantTags,
-              payloadFinal: payload
+              esArray: Array.isArray(payload.applicantTags),
+              length: payload.applicantTags.length,
+              valores: payload.applicantTags
             });
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
