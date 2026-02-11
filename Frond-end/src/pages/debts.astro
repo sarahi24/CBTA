@@ -205,7 +205,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const fmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
     const normalizePendingPayment = (payment) => {
-      return {
+      const normalized = {
         id: payment.id || `debt-${Date.now()}`,
         userId: payment.userId || payment.user_id || payment.student_id || payment.studentId || null,
         studentId: payment.student_id || payment.studentId || payment.userId || payment.user_id || null,
@@ -217,6 +217,18 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         amount: payment.amount || payment.amount_total || 0,
         status: payment.status || 'pending'
       };
+      
+      // Debug: mostrar los primeros 3 pagos normalizados
+      if (!window.__debugCount) window.__debugCount = 0;
+      if (window.__debugCount < 3) {
+        console.log('📋 Payment normalizado #' + (window.__debugCount + 1) + ':', {
+          original: payment,
+          normalized: normalized
+        });
+        window.__debugCount++;
+      }
+      
+      return normalized;
     };
 
     const tableBody = document.getElementById('payments-table-body');
@@ -294,16 +306,33 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     }
 
     function renderTable() {
-        const term = searchInput.value.toLowerCase();
+        const term = searchInput.value.toLowerCase().trim();
         const allPending = getCharges().filter(c => !['paid', 'pagado'].includes(String(c.status).toLowerCase()));
+        
+        console.log('🔍 Búsqueda:', term || '(vacío)');
+        console.log('📦 Total de adeudos pendientes:', allPending.length);
         
         // Filtrar por nombre de estudiante, número de control o concepto
         const filtered = allPending.filter(ch => {
             const fullName = (ch.userName || '').toLowerCase();
             const nControl = String(ch.nControl || '').toLowerCase();
             const concept = (ch.concept || '').toLowerCase();
-            return !term || fullName.includes(term) || nControl.includes(term) || concept.includes(term);
+            
+            const matches = !term || fullName.includes(term) || nControl.includes(term) || concept.includes(term);
+            
+            if (term && matches) {
+              console.log('✅ Coincidencia:', { 
+                nombre: ch.userName, 
+                nControl: ch.nControl, 
+                concepto: ch.concept,
+                term: term
+              });
+            }
+            
+            return matches;
         });
+
+        console.log('✨ Adeudos filtrados:', filtered.length);
 
         const totalItems = filtered.length;
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
