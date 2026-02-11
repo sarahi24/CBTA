@@ -819,26 +819,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('📄 Estudiantes antes de procesar:', this.formData.selectedSpecificStudents);
             
-            // El API espera strings, no números
+            // El API espera NÚMEROS DE CONTROL (n_control), no IDs
             payload.students = this.formData.selectedSpecificStudents
               .map(s => {
-                const id = String(s.id);
+                const control = String(s.control);
                 console.log('📋 Procesando estudiante:', { 
-                  original: s.id, 
-                  asString: id, 
+                  id: s.id, 
+                  control: control,
                   name: s.name,
-                  control: s.control,
                   fullObject: s
                 });
-                return id;
+                return control;
               })
-              .filter(id => id && id !== 'undefined' && id !== 'null' && id.trim() !== '');
+              .filter(control => control && control !== 'undefined' && control !== 'null' && control.trim() !== '');
             
-            console.log('📤 IDs de estudiantes a enviar (strings):', payload.students);
-            console.log('🔍 Tipo de cada ID:', payload.students.map(id => typeof id));
+            console.log('📤 NÚMEROS DE CONTROL a enviar (strings):', payload.students);
+            console.log('🔍 Tipo de cada control:', payload.students.map(c => typeof c));
             
             if (payload.students.length === 0) {
-              this.errorMessage = '⚠️ No se pudo obtener los IDs válidos de los estudiantes. Intenta buscarlos nuevamente.';
+              this.errorMessage = '⚠️ No se pudo obtener los números de control válidos de los estudiantes. Intenta buscarlos nuevamente.';
               this.isSaving = false;
               return;
             }
