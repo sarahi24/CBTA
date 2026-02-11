@@ -43,15 +43,14 @@ import { Fragment } from 'astro/jsx-runtime';
         if (dashboardPayments && dashboardPayments.totalPayments !== undefined) {
           // Usar datos del Dashboard
           const totalPayments = parseFloat(dashboardPayments.totalPayments || 0);
-          const totalBalancePending = parseFloat(dashboardPayments.totalBalancePending || 0);
           const totalBalanceAvailable = parseFloat(dashboardPayments.totalBalanceAvailable || 0);
           
-          // Total es pagos + balance pendiente
-          totalMeta = totalPayments + totalBalancePending;
+          // Total es todos los pagos: recaudado + disponible por cobrar
+          totalMeta = totalPayments + totalBalanceAvailable;
           paid = totalPayments;
-          pending = totalBalancePending;
+          pending = totalBalanceAvailable;
           
-          console.log('📊 Donut usando datos del Dashboard - Pagado:', paid, 'Pendiente:', pending);
+          console.log('📊 Donut usando datos del Dashboard - Total:', totalMeta, 'Pagado:', paid, 'Pendiente:', pending);
         } else {
           // Fallback a chargesList
           const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
