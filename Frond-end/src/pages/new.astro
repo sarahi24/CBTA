@@ -684,6 +684,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           console.error('❌ No se pudo obtener el user_id real del estudiante');
           this.errorMessage = '❌ No se pudo obtener el ID del usuario. El estudiante puede no existir como usuario activo en el sistema o fue dado de baja.';
           setTimeout(() => this.errorMessage = '', 5000);
+          return;
+        }
         console.log('🆔 ID a usar (user_id real):', studentId);
         
         const exists = this.formData.selectedSpecificStudents.some(s => 
