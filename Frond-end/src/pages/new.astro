@@ -67,21 +67,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
           return Promise.resolve();
         }
-        
-        // Get user role from localStorage
-        let userRole = 'financial-staff';
-        const rawUserData = localStorage.getItem('user_data');
-        if (rawUserData) {
-          try {
-            const parsedUser = JSON.parse(rawUserData);
-            if (parsedUser && Array.isArray(parsedUser.roles) && parsedUser.roles.length > 0) {
-              userRole = String(parsedUser.roles[0] || userRole);
-            }
-          } catch {
-            // Keep default role
-          }
-        }
-        
         const url = new URL(this.apiBaseUrl + '/v1/careers');
         url.searchParams.set('forceRefresh', 'false');
         return fetch(url.toString(), {
@@ -89,14 +74,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${careersToken}`,
-            'X-User-Role': userRole
+            'Authorization': `Bearer ${careersToken}`
           }
         })
         .then(res => {
           if (!res.ok) {
             // Token inválido o expirado - usar fallback silenciosamente
-            console.warn(`⚠️ Careers API returned ${res.status}, using fallback`);
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
@@ -111,7 +94,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         })
         .catch(err => {
           // Error de API o token - usar fallback silenciosamente
-          console.warn('⚠️ Error loading careers, using fallback:', err.message);
           this.careers = this.CAREERS.map(c => ({ id: c.code, name: c.name }));
         });
       },
@@ -792,8 +774,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           is_global: Boolean(this.formData.allStudents)
         };
         
-        console.log('🎯 Construyendo payload. scopeType:', this.formData.scopeType, ', someStudents:', this.formData.selectedSpecificStudents.length);
-        
         // Agregar excepciones si existen (solo en alcance restringido y no estudiantes específicos)
         if (!this.formData.allStudents && this.formData.scopeType !== 'estudiantes' && this.formData.exceptionStudents.length > 0) {
           payload.exceptionStudents = this.formData.exceptionStudents.map(s => String(s.id));
@@ -837,25 +817,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('📄 Estudiantes antes de procesar:', this.formData.selectedSpecificStudents);
             
-            // El API espera NÚMEROS DE CONTROL (n_control), no IDs
+            // El API espera strings, no números
             payload.students = this.formData.selectedSpecificStudents
               .map(s => {
-                const control = String(s.control);
+                const id = String(s.id);
                 console.log('📋 Procesando estudiante:', { 
-                  id: s.id, 
-                  control: control,
+                  original: s.id, 
+                  asString: id, 
                   name: s.name,
+                  control: s.control,
                   fullObject: s
                 });
-                return control;
+                return id;
               })
-              .filter(control => control && control !== 'undefined' && control !== 'null' && control.trim() !== '');
+              .filter(id => id && id !== 'undefined' && id !== 'null' && id.trim() !== '');
             
-            console.log('📤 NÚMEROS DE CONTROL a enviar (strings):', payload.students);
-            console.log('🔍 Tipo de cada control:', payload.students.map(c => typeof c));
+            console.log('📤 IDs de estudiantes a enviar (strings):', payload.students);
+            console.log('🔍 Tipo de cada ID:', payload.students.map(id => typeof id));
             
             if (payload.students.length === 0) {
-              this.errorMessage = '⚠️ No se pudo obtener los números de control válidos de los estudiantes. Intenta buscarlos nuevamente.';
+              this.errorMessage = '⚠️ No se pudo obtener los IDs válidos de los estudiantes. Intenta buscarlos nuevamente.';
               this.isSaving = false;
               return;
             }
@@ -908,8 +889,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else {
             // CREAR nuevo concepto: enviar todo junto en POST
             if (!self.formData.id) {
-              console.log('🎯 Enviando payload:', JSON.stringify(payload, null, 2));
-              
               return fetch(`${self.apiBaseUrl}/v1/concepts`, {
                 method: 'POST',
                 headers: {
@@ -925,15 +904,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.log('📥 Response URL:', res.url);
                 const data = await res.json().catch(() => ({}));
                 console.log('📥 Response data:', data);
-                
-                // Log specific details for students error
-                if (data.error_code === 'STUDENTS_NOT_FOUND') {
-                  console.error('❌ STUDENTS_NOT_FOUND - Detalles:');
-                  console.error('   - IDs enviados:', payload.students);
-                  console.error('   - Tipos:', payload.students.map(id => `${id} (${typeof id})`));
-                  console.error('   - Mensaje completo:', data.message);
-                }
-                
                 if (!res.ok) {
                   let errorMsg = data.message || res.statusText || 'Error desconocido';
                   if (data.errors && typeof data.errors === 'object') {
