@@ -346,7 +346,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
 
           const json = await res.json();
-          const searchResults = json.data?.search || [];
+          const searchResults = json.data?.search || (json.data?.concept ? [json.data.concept] : []);
           
           console.log('🔍 Búsqueda Enter - Respuesta API:', json.data);
           console.log('🔍 Búsqueda Enter - Primer resultado:', searchResults[0]);
@@ -643,8 +643,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
           const json = await res.json();
           if (json.success && json.data) {
-            // La respuesta real es data.search (array), no data.concept
-            const searchResults = json.data.search || [];
+            const searchResults = json.data.search || (json.data.concept ? [json.data.concept] : []);
             
             console.log('🔍 Respuesta del API de búsqueda:', json.data);
             console.log('🔍 Primer resultado completo:', searchResults[0]);
