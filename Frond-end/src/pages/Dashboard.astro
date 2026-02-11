@@ -250,6 +250,24 @@ const pageTitle = "Dashboard - SIGE";
           
           availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
           
+          // Almacenar datos de pagos para los gráficos
+          localStorage.setItem('dashboardPayments', JSON.stringify({
+            totalPayments: paymentsData.totalPayments,
+            totalBalancePending: paymentsData.totalBalancePending,
+            totalBalanceAvailable: paymentsData.totalBalanceAvailable,
+            paymentsBySemester: paymentsData.paymentsBySemester || {},
+            pendingPercentage: paymentsData.pendingPercentage || 0,
+            availablePercentage: paymentsData.availablePercentage || 0
+          }));
+          
+          // Disparar eventos para actualizar gráficos
+          if (typeof window.updateChartLine === 'function') {
+            window.updateChartLine();
+          }
+          if (typeof window.updateChartDonut === 'function') {
+            window.updateChartDonut();
+          }
+          
           console.log('✅ Datos de pagos cargados - Pagos:', paymentsData.totalPayments, 'Balance:', paymentsData.totalBalanceAvailable);
         }
       } catch (error) {

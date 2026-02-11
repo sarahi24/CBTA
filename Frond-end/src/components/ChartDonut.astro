@@ -30,19 +30,44 @@ import { Fragment } from 'astro/jsx-runtime';
       if (typeof Chart === 'undefined') return;
 
       try {
-        // Obtener la lista de cargos desde localStorage
-        const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
-        
-        // Calcular totales
-        const totalMeta = charges.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-        
-        const paid = charges
-          .filter(c => ['paid', 'pagado'].includes(String(c.status).toLowerCase()))
-          .reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+        // Intentar obtener datos del Dashboard primero
+        let dashboardPayments = null;
+        try {
+          dashboardPayments = JSON.parse(localStorage.getItem('dashboardPayments') || 'null');
+        } catch (e) {
+          console.warn('No dashboard payments data available');
+        }
 
-        const pending = totalMeta - paid;
+        let paid, pending, totalMeta;
 
-        // 3. Actualizar el texto de Meta Total con formato de moneda
+        if (dashboardPayments && dashboardPayments.totalPayments !== undefined) {
+          // Usar datos del Dashboard
+          const totalPayments = parseFloat(dashboardPayments.totalPayments || 0);
+          const totalBalancePending = parseFloat(dashboardPayments.totalBalancePending || 0);
+          const totalBalanceAvailable = parseFloat(dashboardPayments.totalBalanceAvailable || 0);
+          
+          // Total es pagos + balance pendiente
+          totalMeta = totalPayments + totalBalancePending;
+          paid = totalPayments;
+          pending = totalBalancePending;
+          
+          console.log('📊 Donut usando datos del Dashboard - Pagado:', paid, 'Pendiente:', pending);
+        } else {
+          // Fallback a chargesList
+          const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+          
+          totalMeta = charges.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+          
+          paid = charges
+            .filter(c => ['paid', 'pagado'].includes(String(c.status).toLowerCase()))
+            .reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+          pending = totalMeta - paid;
+          
+          console.log('📊 Donut usando chargesList - Pagado:', paid, 'Pendiente:', pending);
+        }
+
+        // Actualizar el texto de Meta Total con formato de moneda
         if (metaEl) {
           metaEl.textContent = new Intl.NumberFormat('es-MX', { 
             style: 'currency', 
@@ -50,12 +75,11 @@ import { Fragment } from 'astro/jsx-runtime';
           }).format(totalMeta);
         }
 
-        // 4. Manejo de estados visuales
-        // 5. Actualizar porcentaje central
+        // Actualizar porcentaje central
         const pct = totalMeta > 0 ? ((paid / totalMeta) * 100).toFixed(1) : '0.0';
         document.getElementById('donut-pct').textContent = pct + '%';
 
-        // 6. Dibujar o refrescar la gráfica
+        // Dibujar o refrescar la gráfica
         if (window.myDonutChart) window.myDonutChart.destroy();
 
         window.myDonutChart = new Chart(ctx, {
@@ -91,7 +115,15 @@ import { Fragment } from 'astro/jsx-runtime';
     };
 
     // Ejecución inicial y escucha de cambios
-    document.addEventListener('DOMContentLoaded', () => setTimeout(window.updateChartDonut, 150));
+    const initChartDonut = () => {
+      if (typeof Chart !== 'undefined') {
+        setTimeout(window.updateChartDonut, 150);
+      } else {
+        setTimeout(initChartDonut, 100);
+      }
+    };
+    
+    document.addEventListener('DOMContentLoaded', initChartDonut);
     window.addEventListener('storage', window.updateChartDonut);
     window.addEventListener('chargesUpdated', window.updateChartDonut);
   </script>

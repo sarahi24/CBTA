@@ -21,26 +21,69 @@ import { Fragment } from 'astro/jsx-runtime';
       const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
       const recaudado = new Array(12).fill(0);
       const pendientes = new Array(12).fill(0);
-      const estudiantes = new Array(12).fill(0);
 
       try {
-        const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+        // Intentar obtener datos del Dashboard primero
+        let dashboardPayments = null;
+        try {
+          dashboardPayments = JSON.parse(localStorage.getItem('dashboardPayments') || 'null');
+        } catch (e) {
+          console.warn('No dashboard payments data available');
+        }
 
-        charges.forEach(c => {
-          const date = new Date(c.createdAt || c.date);
-          if (date.getFullYear() === currentYear) {
-            const m = date.getMonth();
-            const amount = parseFloat(c.amount) || 0;
-            const status = String(c.status).toLowerCase();
-
-            if (['paid', 'pagado'].includes(status)) {
-              recaudado[m] += amount;
-            } else {
-              pendientes[m] += amount;
+        if (dashboardPayments && dashboardPayments.paymentsBySemester) {
+          // Usar datos del Dashboard
+          const paymentsBySemester = dashboardPayments.paymentsBySemester;
+          
+          // Procesar datos por semestre
+          Object.entries(paymentsBySemester).forEach(([semester, data]) => {
+            const months_array = data.months || [];
+            const semesterMonths = semester.includes('H1') ? [0, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11];
+            
+            months_array.forEach((amount, idx) => {
+              if (idx < semesterMonths.length) {
+                const monthIdx = semesterMonths[idx];
+                recaudado[monthIdx] = parseFloat(amount || 0);
+              }
+            });
+          });
+          
+          // Cargar pendientes desde chargesList como fallback
+          const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+          charges.forEach(c => {
+            const date = new Date(c.createdAt || c.date);
+            if (date.getFullYear() === currentYear) {
+              const m = date.getMonth();
+              const amount = parseFloat(c.amount) || 0;
+              const status = String(c.status).toLowerCase();
+              if (!['paid', 'pagado'].includes(status)) {
+                pendientes[m] += amount;
+              }
             }
-            estudiantes[m] += 1;
-          }
-        });
+          });
+          
+          console.log('📊 ChartLine usando datos del Dashboard - Recaudado:', recaudado);
+        } else {
+          // Fallback a chargesList
+          const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
+
+          charges.forEach(c => {
+            const date = new Date(c.createdAt || c.date);
+            if (date.getFullYear() === currentYear) {
+              const m = date.getMonth();
+              const amount = parseFloat(c.amount) || 0;
+              const status = String(c.status).toLowerCase();
+
+              if (['paid', 'pagado'].includes(status)) {
+                recaudado[m] += amount;
+              } else {
+                pendientes[m] += amount;
+              }
+            }
+          });
+          
+          console.log('📊 ChartLine usando chargesList - Recaudado:', recaudado);
+        }
 
         if (window.myLineChart) window.myLineChart.destroy();
 
@@ -94,11 +137,21 @@ import { Fragment } from 'astro/jsx-runtime';
             interaction: { mode: 'index', intersect: false }
           }
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error('Error en ChartLine:', e); 
+      }
     };
 
     // Ejecución inmediata y tras carga
-    document.addEventListener('DOMContentLoaded', window.updateChartLine);
+    const initChartLine = () => {
+      if (typeof Chart !== 'undefined') {
+        window.updateChartLine();
+      } else {
+        setTimeout(initChartLine, 100);
+      }
+    };
+    
+    document.addEventListener('DOMContentLoaded', initChartLine);
     window.addEventListener('storage', window.updateChartLine);
     window.addEventListener('chargesUpdated', window.updateChartLine);
   </script>
