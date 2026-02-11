@@ -592,14 +592,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               this.searchResults = searchResults.map(item => {
                 console.log('👤 Mapeando estudiante:', {
                   id: item.id,
+                  student_id: item.student_id,
                   user_id: item.user_id,
+                  userId: item.userId,
                   name: item.name,
                   n_control: item.n_control,
                   fullItem: item
                 });
                 
                 return {
-                  id: item.user_id || item.userId || item.id,  // Probar user_id, userId, luego id
+                  // Incluir tanto student_id como user_id para decidir después
+                  id: item.user_id || item.userId || item.id,
+                  student_id: item.student_id || item.id,  // Guardar student_id por separado
                   fullName: item.name,
                   control: item.n_control,
                   email: item.email || '',
@@ -666,8 +670,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               if (paymentData) {
                 console.log('💾 Payment data extraído:', paymentData);
                 console.log('💾 Campos disponibles:', Object.keys(paymentData));
-                studentId = paymentData.student_id || paymentData.id || paymentData.user_id || paymentData.userId;
-                console.log('✅ student_id (user_id real) obtenido:', studentId);
+                console.log('💾 Valores de IDs:', {
+                  student_id: paymentData.student_id,
+                  studentId: paymentData.studentId,
+                  id: paymentData.id,
+                  user_id: paymentData.user_id,
+                  userId: paymentData.userId
+                });
+                
+                // Priorizar student_id sobre userId ya que el backend de conceptos usa student_id
+                studentId = paymentData.student_id || paymentData.studentId || paymentData.id || paymentData.user_id || paymentData.userId;
+                console.log('✅ student_id (ID para enviar) obtenido:', studentId);
               } else {
                 console.warn('⚠️ No hay estudiantes en la respuesta de /payments/students');
               }
@@ -703,6 +716,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         this.formData.selectedSpecificStudents.push({
           id: studentId,
+          student_id: student.student_id || studentId,  // Guardar student_id por separado si existe
           control: student.control || student.n_control || student.fullName,
           name: student.fullName || student.name || student.control,
           email: student.email || '',
@@ -714,6 +728,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.searchResults = [];
         console.log('✅ Estudiante seleccionado desde dropdown:', {
           user_id: studentId,
+          student_id: student.student_id || studentId,
           name: student.fullName || student.name,
           control: student.control || student.n_control
         });
@@ -820,15 +835,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             // El API espera strings, no números
             payload.students = this.formData.selectedSpecificStudents
               .map(s => {
-                const id = String(s.id);
+                // Priorizar student_id si existe, sino usar id (user_id)
+                const studentId = String(s.student_id || s.id);
                 console.log('📋 Procesando estudiante:', { 
-                  original: s.id, 
-                  asString: id, 
+                  original_id: s.id,
+                  original_student_id: s.student_id,
+                  id_a_enviar: studentId,
                   name: s.name,
                   control: s.control,
                   fullObject: s
                 });
-                return id;
+                return studentId;
               })
               .filter(id => id && id !== 'undefined' && id !== 'null' && id.trim() !== '');
             
