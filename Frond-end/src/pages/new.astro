@@ -1056,6 +1056,81 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   console.error('Backend validation errors:', data.errors);
                   return Promise.reject(new Error(errorMsg));
                 }
+                
+                // ✅ ÉXITO en POST - Ahora guardar relaciones si existen
+                const conceptId = data.data?.concept?.id || data.data?.id;
+                console.log('✅ Concepto creado exitosamente ID:', conceptId);
+                
+                // Verificar si hay relaciones que guardar (PATCH update-relations)
+                const needsRelationsUpdate = 
+                  !self.formData.allStudents || 
+                  self.formData.selectedCareers.length > 0 || 
+                  self.formData.selectedSemesters.length > 0 || 
+                  self.formData.selectedSpecificStudents.length > 0 || 
+                  self.formData.exceptionStudents.length > 0 || 
+                  self.formData.applicantTags.length > 0;
+                
+                if (needsRelationsUpdate && conceptId) {
+                  console.log('🔗 Guardando relaciones del concepto...');
+                  
+                  // Construir payload para PATCH update-relations
+                  const relationsPayload = {
+                    applies_to: payload.applies_to || 'todos',
+                    replaceRelations: true,
+                    replaceExceptions: self.formData.replaceExceptions,
+                    removeAllExceptions: self.formData.removeAllExceptions
+                  };
+                  
+                  // Agregar campos según el tipo de scope
+                  if (self.formData.selectedCareers.length > 0) {
+                    relationsPayload.careers = self.formData.selectedCareers.map(c => parseInt(c));
+                  }
+                  if (self.formData.selectedSemesters.length > 0) {
+                    relationsPayload.semestres = self.formData.selectedSemesters.map(s => parseInt(s));
+                  }
+                  if (self.formData.selectedSpecificStudents.length > 0) {
+                    relationsPayload.students = self.formData.selectedSpecificStudents.map(s => String(s.control || s.id));
+                  }
+                  if (self.formData.exceptionStudents.length > 0) {
+                    relationsPayload.exceptionStudents = self.formData.exceptionStudents.map(e => String(e.id || e));
+                  }
+                  if (self.formData.applicantTags.length > 0) {
+                    relationsPayload.applicantTags = self.formData.applicantTags;
+                  }
+                  
+                  console.log('🔗 Payload para PATCH update-relations:', relationsPayload);
+                  
+                  return fetch(`${self.apiBaseUrl}/v1/concepts/update-relations/${conceptId}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Accept': 'application/json',
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
+                      'X-User-Role': 'financial-staff',
+                      'X-User-Permission': 'update.concepts'
+                    },
+                    body: JSON.stringify(relationsPayload)
+                  })
+                  .then(async patchRes => {
+                    const patchData = await patchRes.json().catch(() => ({}));
+                    console.log('📥 PATCH Response status:', patchRes.status);
+                    if (!patchRes.ok) {
+                      let patchError = patchData.message || 'Error al guardar relaciones';
+                      if (patchData.errors) {
+                        const errorList = Object.entries(patchData.errors)
+                          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                          .join(' | ');
+                        patchError = `${patchError} - ${errorList}`;
+                      }
+                      console.error('⚠️ Error en PATCH, pero concepto ya fue creado:', patchError);
+                      // No rechazar porque el concepto ya existe, solo avisar
+                      return { ...data, relationsUpdate: { error: patchError } };
+                    }
+                    console.log('✅ Relaciones guardadas correctamente');
+                    return patchData;
+                  });
+                }
+                
                 return data;
               });
             }
