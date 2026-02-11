@@ -316,6 +316,28 @@ function renderConcepts(){
     const amount = Number(c.amount)||0;
     const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
     
+    // Determinar y mostrar el tipo de alcance
+    const appliesTo = (c.applies_to || c.appliesTo || '').toLowerCase();
+    let scopeTypeLabel = 'Para todos';
+    let scopeTypeColor = 'bg-blue-100 text-blue-800 border-blue-300';
+    
+    if (appliesTo === 'carrera') {
+      scopeTypeLabel = 'Por carrera';
+      scopeTypeColor = 'bg-purple-100 text-purple-800 border-purple-300';
+    } else if (appliesTo === 'semestre') {
+      scopeTypeLabel = 'Por semestre';
+      scopeTypeColor = 'bg-indigo-100 text-indigo-800 border-indigo-300';
+    } else if (appliesTo === 'carrera_semestre') {
+      scopeTypeLabel = 'Por carrera + semestre';
+      scopeTypeColor = 'bg-violet-100 text-violet-800 border-violet-300';
+    } else if (appliesTo === 'estudiantes') {
+      scopeTypeLabel = 'Estudiantes específicos';
+      scopeTypeColor = 'bg-orange-100 text-orange-800 border-orange-300';
+    } else if (appliesTo === 'tag') {
+      scopeTypeLabel = 'Por tags especiales';
+      scopeTypeColor = 'bg-pink-100 text-pink-800 border-pink-300';
+    }
+    
     // Usar expiration_human del API si está disponible, o construir desde fechas
     const vigenciaRaw = c.expiration_human || c.expirationHuman || (() => {
       const startDate = c.start_date || c.startDate || '';
@@ -342,7 +364,12 @@ function renderConcepts(){
               </div>
               <h3 class="font-black text-base sm:text-lg lg:text-xl text-gray-900 leading-tight line-clamp-2 group-hover:text-[#2E594D] transition-colors flex-1">${escapeHtml(c.concept_name || c.conceptName || c.title || '')}</h3>
             </div>
-            ${getStatusBadge(c.status)}
+            <div class="flex flex-col gap-1.5 sm:gap-2">
+              ${getStatusBadge(c.status)}
+              <span class="inline-flex items-center gap-1.5 text-[9px] border ${scopeTypeColor} px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full font-bold uppercase shadow-md hover:scale-105 transition-transform w-fit">
+                <i class="fas fa-bullseye"></i> ${escapeHtml(scopeTypeLabel)}
+              </span>
+            </div>
           </div>
           <div class="flex flex-col items-center sm:items-end bg-gradient-to-br from-[#2E594D] via-emerald-700 to-teal-700 px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300 w-full sm:w-auto">
             <span class="text-[9px] sm:text-[10px] text-white/80 font-bold uppercase tracking-widest mb-1">💰 Monto</span>
@@ -482,18 +509,33 @@ window.editConcept = (id) => {
   let scopeType = 'all'; // por defecto
   const appliesTo = (c.applies_to || c.appliesTo || '').toLowerCase();
   
-  if (appliesTo === 'carrera') scopeType = 'carrera';
-  else if (appliesTo === 'semestre') scopeType = 'semestre';
-  else if (appliesTo === 'carrera_semestre') scopeType = 'carrera_semestre';
-  else if (appliesTo === 'estudiantes') scopeType = 'estudiantes';
-  else if (appliesTo === 'tag') scopeType = 'tags';
-  else if (appliesTo === 'todos') scopeType = 'all';
+  // Mapeo explícito de applies_to a scopeType
+  const scopeTypeMap = {
+    'todos': 'all',
+    'carrera': 'carrera',
+    'semestre': 'semestre',
+    'carrera_semestre': 'carrera_semestre',
+    'estudiantes': 'estudiantes',
+    'tag': 'tags'
+  };
+  
+  scopeType = scopeTypeMap[appliesTo] || 'all';
+  
+  // Si appliesTo está vacío pero el nombre sugiere algo específico
+  if (!appliesTo && c.concept_name) {
+    const name = (c.concept_name || '').toLowerCase();
+    if (name.includes('estudiante')) scopeType = 'estudiantes';
+    else if (name.includes('carrera') && name.includes('semestre')) scopeType = 'carrera_semestre';
+    else if (name.includes('carrera')) scopeType = 'carrera';
+    else if (name.includes('semestre')) scopeType = 'semestre';
+    else if (name.includes('tag') || name.includes('especial')) scopeType = 'tags';
+  }
   
   console.log('🔍 Concepto a editar:', {
     id: c.id,
     título: c.concept_name,
-    applies_to: appliesTo,
-    scopeType_detectado: scopeType,
+    applies_to_raw: appliesTo,
+    scopeType_final: scopeType,
     careers: c.careerIds || c.careers,
     semesters: c.semesters,
     students: c.userIds || c.user_ids,
@@ -509,8 +551,8 @@ window.editConcept = (id) => {
     status: c.status,
     start_date: c.start_date,
     end_date: c.end_date,
-    applies_to: appliesTo,  // ← NUEVO: guardar applies_to
-    scopeType: scopeType,   // ← NUEVO: guardar scopeType detectado
+    applies_to: appliesTo,  // aplicación especifica del backend
+    scopeType: scopeType,   // tipo de ámbito normalizado
     scopeRules: {
       allStudents: appliesTo === 'todos',
       careers: c.careerIds || c.careers || [],
