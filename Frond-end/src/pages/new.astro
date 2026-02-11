@@ -649,10 +649,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             if (paymentsRes.ok) {
               const paymentsJson = await paymentsRes.json();
-              console.log('📊 Respuesta /payments/students:', paymentsJson);
+              console.log('📊 Respuesta /payments/students completa:', paymentsJson);
+              console.log('📊 paymentsJson.data:', paymentsJson.data);
+              console.log('📊 Tipo de paymentsJson.data:', typeof paymentsJson.data);
+              console.log('📊 Es array?:', Array.isArray(paymentsJson.data));
               
-              if (paymentsJson.data && paymentsJson.data.length > 0) {
-                studentId = paymentsJson.data[0].student_id || paymentsJson.data[0].id;
+              // La respuesta puede tener data como array O como objeto único
+              let paymentData = null;
+              
+              if (Array.isArray(paymentsJson.data) && paymentsJson.data.length > 0) {
+                paymentData = paymentsJson.data[0];
+              } else if (paymentsJson.data && typeof paymentsJson.data === 'object') {
+                // Si es un objeto, usarlo directamente
+                paymentData = paymentsJson.data;
+              }
+              
+              if (paymentData) {
+                console.log('💾 Payment data extraído:', paymentData);
+                studentId = paymentData.student_id || paymentData.id || paymentData.user_id;
                 console.log('✅ student_id (user_id real) obtenido:', studentId);
               }
             } else {
