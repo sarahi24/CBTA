@@ -156,6 +156,7 @@ const pageTitle = "Dashboard - SIGE";
         if (data.success && data.data?.payments_data) {
           const paymentsData = data.data.payments_data;
           const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+          const percentage = paymentsData.pendingPercentage || 0;
           
           const balanceEl = document.getElementById('count-balance');
           const balanceDesc = document.getElementById('desc-balance');
@@ -164,7 +165,6 @@ const pageTitle = "Dashboard - SIGE";
             balanceEl.textContent = formatMX(paymentsData.totalBalancePending || 0);
           }
           if (balanceDesc) {
-            const percentage = paymentsData.pendingPercentage || 0;
             balanceDesc.textContent = `${percentage}% del total`;
           }
           
@@ -242,7 +242,7 @@ const pageTitle = "Dashboard - SIGE";
           const recaudadoDesc = document.getElementById('desc-recaudado');
           
           if (recaudadoEl) {
-            recaudadoEl.textContent = formatMX(paymentsData.totalPayouts || 0);
+            recaudadoEl.textContent = formatMX(paymentsData.totalPayments || 0);
           }
           if (recaudadoDesc) {
             recaudadoDesc.textContent = `Balance disponible: ${formatMX(paymentsData.totalBalanceAvailable || 0)}`;
@@ -250,7 +250,7 @@ const pageTitle = "Dashboard - SIGE";
           
           availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
           
-          console.log('✅ Datos de pagos cargados - Payouts:', paymentsData.totalPayouts, 'Balance:', paymentsData.totalBalanceAvailable);
+          console.log('✅ Datos de pagos cargados - Pagos:', paymentsData.totalPayments, 'Balance:', paymentsData.totalBalanceAvailable);
         }
       } catch (error) {
         console.error('❌ Error cargando datos de pagos:', error);
