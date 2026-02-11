@@ -4382,7 +4382,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             reader.readAsArrayBuffer(this.importFile);
                         });
 
-                        const workbook = window.XLSX.read(buffer, { type: 'array' });
+                        if (!buffer) {
+                            throw new Error('No se pudo leer el contenido del archivo');
+                        }
+
+                        const data = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+                        const workbook = window.XLSX.read(data, { type: 'array' });
                         const sheetName = workbook.SheetNames?.[0];
                         const sheet = sheetName ? workbook.Sheets[sheetName] : null;
                         const rows = sheet ? window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) : [];
