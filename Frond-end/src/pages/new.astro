@@ -90,7 +90,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           console.log('📥 Respuesta completa del API de carreras:', json);
           console.log('📥 json.success:', json.success);
           console.log('📥 json.data:', json.data);
+          console.log('📥 json.data (stringified):', JSON.stringify(json.data, null, 2));
           console.log('📥 json.data?.careers:', json.data?.careers);
+          console.log('📥 Tipo de json.data:', typeof json.data);
+          console.log('📥 Keys de json.data:', json.data ? Object.keys(json.data) : 'null');
           
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
