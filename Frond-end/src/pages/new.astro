@@ -80,6 +80,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         })
         .then(res => {
+          console.log('🌐 Status del API de carreras:', res.status, res.statusText);
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
           }
@@ -87,12 +88,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         })
         .then(json => {
           console.log('📥 Respuesta completa del API de carreras:', json);
+          console.log('📥 json.success:', json.success);
+          console.log('📥 json.data:', json.data);
+          console.log('📥 json.data?.careers:', json.data?.careers);
+          
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
             console.log('✅ Carreras cargadas desde API:', this.careers.length);
             console.log('📋 IDs de carreras disponibles:', this.careers.map(c => `${c.id}: ${c.name}`));
           } else {
             console.warn('⚠️ Respuesta del API no tiene careers, usando fallback');
+            console.warn('⚠️ Datos recibidos:', { success: json.success, data: json.data });
             this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
           }
         })
