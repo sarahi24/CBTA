@@ -794,11 +794,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.scopeType === 'tags') {
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
-            // Según Ángel: applicantTags DEBE SER UN ARRAY
-            // Valores válidos: ["applicant", "no_student_details"]
-            payload.applicantTags = this.formData.applicantTags.length > 0 
-              ? this.formData.applicantTags  // Mantener como array
-              : ['applicant'];  // Valor por defecto como array
+            // Según Ángel: applicantTags es un array de valores válidos: ["applicant", "no_student_details"]
+            // Si no seleccionan nada, enviar ambos por defecto
+            if (this.formData.applicantTags.length === 0) {
+              payload.applicantTags = ['applicant', 'no_student_details'];
+            } else {
+              payload.applicantTags = this.formData.applicantTags;
+            }
             
             // LIMPIAR TODOS LOS OTROS CAMPOS de filtro para evitar conflictos
             delete payload.students;
@@ -815,11 +817,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             delete payload.removeAllExceptions;
             delete payload.replaceExceptions;
             
-            console.log('🏷️  Agregando applicantTags al payload (COMO ARRAY):', {
-              valorEnviado: payload.applicantTags,
+            console.log('🏷️  Agregando applicantTags al payload:', {
+              valoresEnviados: payload.applicantTags,
               esArray: Array.isArray(payload.applicantTags),
-              length: payload.applicantTags.length,
-              valores: payload.applicantTags
+              cantidad: payload.applicantTags.length
             });
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
