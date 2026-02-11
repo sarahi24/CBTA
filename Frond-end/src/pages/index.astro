@@ -579,38 +579,13 @@ const pageTitle = "Acceso al Sistema - SIGE";
 
             <form class="space-y-6" x-show="mode === 'login'" @submit.prevent="handleLogin">
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="email" x-model="email" placeholder="Correo Electrónico" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="email" x-model="email" placeholder="Correo Electrónico" autocomplete="email" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="password" x-model="password" placeholder="Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="password" x-model="password" placeholder="Contraseña" autocomplete="current-password" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
                 </div>
                 <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 mt-6 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50">
                     <span x-text="isLoading ? 'Cargando...' : 'Entrar'"></span>
-                </button>
-                
-                <button type="button" @click="
-                    console.clear();
-                    console.log('🔍 DIAGNÓSTICO DE CONEXIÓN');
-                    console.log('================================');
-                    console.log('📍 API URL:', window.AuthService.API_BASE_URL);
-                    console.log('📧 Email:', email);
-                    console.log('🌐 Navegador:', navigator.userAgent);
-                    console.log('📶 En línea:', navigator.onLine);
-                    (async () => {
-                        try {
-                            console.log('🧪 Probando conexión...');
-                            const start = Date.now();
-                            const test = await fetch(window.AuthService.API_BASE_URL + '/v1/login', { method: 'OPTIONS' });
-                            const time = Date.now() - start;
-                            console.log('✅ Respuesta recibida en', time, 'ms');
-                            console.log('📊 Status:', test.status);
-                            console.log('📋 Headers:', [...test.headers.entries()]);
-                        } catch (e) {
-                            console.error('❌ Error de conexión:', e);
-                        }
-                    })();
-                " class="w-full py-2 px-4 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
-                    🔧 Diagnóstico de Conexión (ver consola F12)
                 </button>
                 
                 <div class="text-center mt-4 text-xs space-y-3">
@@ -649,10 +624,10 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     </select>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="password" x-model="password" placeholder="Nueva Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="password" x-model="password" placeholder="Nueva Contraseña" autocomplete="new-password" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="password" x-model="confirmPassword" placeholder="Confirmar Contraseña" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="password" x-model="confirmPassword" placeholder="Confirmar Contraseña" autocomplete="new-password" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50">
                     <span x-text="isLoading ? 'Creando cuenta...' : 'Registrarme'"></span>
