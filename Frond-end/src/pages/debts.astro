@@ -22,9 +22,6 @@ const CAREER_MAP = {
 const careerMapJSON = JSON.stringify(CAREER_MAP);
 ---
 <Layout title={pageTitle}>
-  <!-- Load StudentAPI globally before any module scripts -->
-  <script src="/studentAPI.js" is:inline></script>
-  
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5 min-h-screen">
     
     <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10 pb-6 bg-white rounded-2xl shadow-lg px-6 py-5">
@@ -50,13 +47,14 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         <div class="relative w-full lg:w-[320px]">
           <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
           <input type="text" id="search-input" placeholder="Buscar alumno por nombre o matrícula..." class="w-full pl-11 pr-4 h-[48px] border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-[#2D584C] focus:ring-4 focus:ring-[#2D584C]/10 bg-white shadow-sm transition-all" />
-          <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors hidden">
-            <i class="fas fa-times-circle"></i>
-          </button>
         </div>
         <button id="refresh-debts-btn" class="h-[48px] px-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center text-xs font-bold gap-2 shrink-0">
           <i class="fas fa-sync-alt"></i>
           <span>Actualizar</span>
+        </button>
+        <button id="open-pay-modal-btn" class="h-[48px] px-5 bg-gradient-to-r from-[#2D584C] to-[#1e3d35] text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center text-xs font-bold gap-2 shrink-0">
+          <i class="fas fa-dollar-sign"></i>
+          <span>Registrar Pago</span>
         </button>
         <button id="open-validate-modal-btn" class="h-[48px] px-5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center text-xs font-bold gap-2 shrink-0">
           <i class="fas fa-check-circle"></i>
@@ -64,25 +62,6 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         </button>
       </div>
     </header>
-
-    <!-- Indicador de búsqueda activa -->
-    <div id="search-indicator" class="hidden mb-4 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <i class="fas fa-search text-blue-600 text-lg"></i>
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-blue-900">Buscando: "<span id="search-term" class="font-black text-blue-700"></span>"</span>
-            <span id="search-results-count" class="px-2 py-1 bg-blue-600 text-white text-xs font-black rounded-full"></span>
-          </div>
-          <p class="text-[10px] text-blue-600 mt-1">
-            <i class="fas fa-info-circle"></i> Se busca en: nombre, matrícula y concepto
-          </p>
-        </div>
-      </div>
-      <button id="clear-search-badge" class="text-blue-600 hover:text-blue-800 font-bold text-sm flex items-center gap-2 px-3 py-2 hover:bg-blue-100 rounded-lg transition">
-        <i class="fas fa-times"></i> Limpiar
-      </button>
-    </div>
 
     <div class="bg-gradient-to-br from-white via-[#2D584C]/5 to-white rounded-2xl shadow-2xl border-2 border-[#2D584C]/20 overflow-hidden">
       <div class="overflow-x-auto">
@@ -123,6 +102,53 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     </div>
   </div>
 
+  <div id="pay-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-left">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <h3 class="text-lg font-black text-gray-900">Registrar Pago</h3>
+        <button id="pay-close-x" class="text-gray-400">✕</button>
+      </div>
+      <form id="pay-form" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[9px] font-black text-gray-400 uppercase mb-1">Referencia / Folio</label>
+            <input id="pay-code" type="text" placeholder="Ej: 4567" class="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-xs font-bold uppercase" required />
+          </div>
+          <div>
+            <label class="block text-[9px] font-black text-gray-400 uppercase mb-1">Método</label>
+            <select id="pay-method" class="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-xs font-bold" required>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Depósito">Depósito</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="relative">
+          <label class="block text-[9px] font-black text-gray-400 uppercase mb-1">Buscar Alumno</label>
+          <input id="pay-student-search" type="text" autocomplete="off" placeholder="Nombre o No. Control..." class="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-xs" />
+          <div id="autocomplete-list" class="absolute z-20 w-full bg-white border rounded-xl mt-1 shadow-2xl max-h-40 overflow-y-auto hidden"></div>
+        </div>
+
+        <div id="selected-student-info" class="hidden p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+            <div id="display-student-name" class="text-[11px] font-black text-[#2D584C] uppercase"></div>
+            <div id="display-student-control" class="text-[9px] font-mono font-bold text-emerald-600/70"></div>
+        </div>
+
+        <div>
+          <label class="block text-[9px] font-black text-gray-400 uppercase mb-1">Adeudo Correspondiente</label>
+          <select id="pay-charge-id" class="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-50" disabled required>
+            <option value="">Primero selecciona un alumno</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t mt-4">
+          <button type="button" id="pay-cancel" class="px-4 py-2 text-gray-400 font-bold text-[9px] uppercase">Cancelar</button>
+          <button type="submit" class="px-6 py-2 bg-[#2D584C] text-white rounded-lg font-black text-[9px] uppercase tracking-widest">Confirmar Pago</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- VALIDACIÓN DE PAGOS STRIPE -->
   <div id="validate-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-left">
     <div class="bg-white rounded-3xl w-full max-w-2xl p-8 shadow-2xl max-h-screen overflow-y-auto">
@@ -136,35 +162,9 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
       <!-- Formulario de búsqueda -->
       <div id="validate-form-section" class="space-y-4">
-        <div class="relative">
-          <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">
-            Buscar Alumno (Nombre, No. Control, Email o CURP)
-            <span class="ml-2 text-[9px] text-purple-600 font-normal">
-              <i class="fas fa-info-circle"></i> Escribe para ver sugerencias
-            </span>
-          </label>
-          <input id="validate-search-input" type="text" placeholder="Ej: camilo, 2168, juan.perez@example.com..." class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-purple-600 outline-none" autocomplete="off" />
-          
-          <!-- Dropdown de sugerencias -->
-          <div id="validate-suggestions" class="hidden absolute z-50 w-full mt-2 bg-white border-2 border-purple-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-            <div class="p-4 text-center text-sm text-gray-500">
-              <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
-              <p>Escribe para buscar estudiantes</p>
-            </div>
-          </div>
-          
-          <!-- Estudiante seleccionado -->
-          <div id="validate-selected-student" class="hidden mt-2 p-3 bg-purple-50 border-2 border-purple-200 rounded-lg">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm font-black text-purple-900" id="validate-selected-name"></div>
-                <div class="text-xs text-purple-600 font-mono" id="validate-selected-control"></div>
-              </div>
-              <button type="button" id="validate-clear-selection" class="text-purple-600 hover:text-purple-800">
-                <i class="fas fa-times-circle text-lg"></i>
-              </button>
-            </div>
-          </div>
+        <div>
+          <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Buscar Alumno (Nombre, No. Control, Email o CURP)</label>
+          <input id="validate-search-input" type="text" placeholder="Ej: juan.perez@example.com o SAQ890101HDFLRR99" class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-purple-600 outline-none" />
         </div>
 
         <div>
@@ -239,20 +239,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
   </script>
 
   <script type="module">
-    // StudentAPI is loaded globally via public/studentAPI.js
-    
-    // Wait for StudentAPI to be available
-    async function ensureStudentAPI() {
-      let attempts = 0;
-      while (!window.StudentAPI && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      if (!window.StudentAPI) {
-        throw new Error('StudentAPI could not be loaded');
-      }
-    }
-    
+    import { StudentAPI } from '/studentAPI.js';
     const ITEMS_PER_PAGE = 50;
     let currentPage = 1;
     let pendingPayments = [];
@@ -312,7 +299,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
         try {
           // Usar GET /api/v1/debts (máximo 200 items por página)
-          const response = await window.StudentAPI.getAllPendingDebts(token, {
+          const response = await StudentAPI.getAllPendingDebts(token, {
             search: searchInput.value.trim(),
             page: 1,
             perPage: 200,
@@ -355,37 +342,15 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     }
 
     function renderTable() {
-        const term = searchInput.value.toLowerCase().trim();
+        const term = searchInput.value.toLowerCase();
         const allPending = getCharges().filter(c => !['paid', 'pagado'].includes(String(c.status).toLowerCase()));
         
-        // Filtrar localmente por nombre de estudiante, matrícula o concepto (búsqueda parcial)
+        // Filtrar localmente por nombre de estudiante o concepto
         const filtered = allPending.filter(ch => {
-            if (!term) return true; // Mostrar todos si no hay término de búsqueda
-            
-            // Convertir todo a string y lowercase para búsqueda case-insensitive
-            const fullName = String(ch.userName || '').toLowerCase();
-            const nControl = String(ch.nControl || '').toLowerCase();
-            const concept = String(ch.concept || '').toLowerCase();
-            
-            // Buscar coincidencias parciales en cualquier campo
-            return fullName.includes(term) || nControl.includes(term) || concept.includes(term);
+            const fullName = (ch.userName || '').toLowerCase();
+            const concept = (ch.concept || '').toLowerCase();
+            return !term || fullName.includes(term) || concept.includes(term);
         });
-
-        // Mostrar/ocultar indicador de búsqueda
-        const searchIndicator = document.getElementById('search-indicator');
-        const searchTermElement = document.getElementById('search-term');
-        const searchResultsCount = document.getElementById('search-results-count');
-        const clearSearchBtn = document.getElementById('clear-search');
-
-        if (term) {
-            searchIndicator.classList.remove('hidden');
-            searchTermElement.textContent = searchInput.value;
-            searchResultsCount.textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`;
-            clearSearchBtn.classList.remove('hidden');
-        } else {
-            searchIndicator.classList.add('hidden');
-            clearSearchBtn.classList.add('hidden');
-        }
 
         const totalItems = filtered.length;
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -394,56 +359,18 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
         const pageData = filtered.slice(start, start + ITEMS_PER_PAGE);
 
-        if (pageData.length === 0) {
-            tableBody.innerHTML = `
-              <tr>
-                <td colspan="3" class="px-8 py-16 text-center">
-                  <div class="flex flex-col items-center gap-4">
-                    <i class="fas fa-search text-6xl text-gray-300"></i>
-                    <div>
-                      <p class="text-lg font-black text-gray-900 mb-2">
-                        ${term ? 'No se encontraron resultados' : 'No hay adeudos pendientes'}
-                      </p>
-                      <p class="text-sm text-gray-500">
-                        ${term ? `No hay coincidencias para "${searchInput.value}"` : 'Todos los pagos están al corriente'}
-                      </p>
-                      ${term ? `<button onclick="document.getElementById('search-input').value=''; document.getElementById('search-input').dispatchEvent(new Event('input'));" class="mt-4 px-4 py-2 bg-[#2D584C] text-white rounded-lg font-bold text-sm hover:bg-[#1e3d35] transition">Limpiar búsqueda</button>` : ''}
-                    </div>
-                  </div>
+        tableBody.innerHTML = pageData.map((ch) => {
+            return `
+              <tr class="hover:bg-gray-50 transition-all border-l-4 border-transparent hover:border-[#2D584C]">
+                <td class="px-8 py-5">
+                  <div class="text-[12px] font-black text-gray-900 uppercase">${ch.userName || 'N/A'}</div>
+                  ${ch.nControl ? `<div class="text-[10px] text-gray-400 font-mono">${ch.nControl}</div>` : ''}
                 </td>
+                <td class="px-8 py-5 text-[11px] text-gray-500 font-bold uppercase">${ch.concept || 'CARGO'}</td>
+                <td class="px-8 py-5 text-right text-sm font-black text-red-600 font-mono">${fmt(ch.amount)}</td>
               </tr>
             `;
-        } else {
-            tableBody.innerHTML = pageData.map((ch) => {
-                // Highlight del término de búsqueda con escape de caracteres especiales
-                const highlightText = (text, term) => {
-                    if (!term || !text) return text;
-                    try {
-                        // Escapar caracteres especiales de regex
-                        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`(${escapedTerm})`, 'gi');
-                        return text.replace(regex, '<mark class="bg-yellow-300 text-gray-900 font-extrabold px-1 rounded">$1</mark>');
-                    } catch (e) {
-                        return text;
-                    }
-                };
-
-                const userName = ch.userName || 'N/A';
-                const nControl = ch.nControl || '';
-                const concept = ch.concept || 'CARGO';
-
-                return `
-                  <tr class="hover:bg-gray-50 transition-all border-l-4 border-transparent hover:border-[#2D584C]">
-                    <td class="px-8 py-5">
-                      <div class="text-[12px] font-black text-gray-900 uppercase">${highlightText(userName, term)}</div>
-                      ${nControl ? `<div class="text-[10px] text-gray-400 font-mono">${highlightText(nControl, term)}</div>` : ''}
-                    </td>
-                    <td class="px-8 py-5 text-[11px] text-gray-500 font-bold uppercase">${highlightText(concept, term)}</td>
-                    <td class="px-8 py-5 text-right text-sm font-black text-red-600 font-mono">${fmt(ch.amount)}</td>
-                  </tr>
-                `;
-            }).join('');
-        }
+        }).join('');
 
         updatePaginationControls(totalItems, totalPages);
     }
@@ -494,39 +421,101 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       };
     }
 
-    // Búsqueda con debounce para mejor rendimiento
-    let searchTimeout = null;
-    searchInput.addEventListener('input', () => { 
-        clearTimeout(searchTimeout);
-        
-        // Mostrar indicador de "buscando..."
-        const searchIndicator = document.getElementById('search-indicator');
-        if (searchInput.value.trim()) {
-            searchIndicator.classList.remove('hidden');
-            document.getElementById('search-term').textContent = searchInput.value;
-            document.getElementById('search-results-count').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        }
-        
-        searchTimeout = setTimeout(() => {
-            currentPage = 1; 
-            renderTable();
-        }, 300); // Espera 300ms después de que el usuario deja de escribir
-    });
+    // --- LÓGICA DEL MODAL Y AUTOCOMPLETADO ---
+    const modal = document.getElementById('pay-modal');
+    const paySearchInput = document.getElementById('pay-student-search');
+    const autocompleteList = document.getElementById('autocomplete-list');
+    const selectedInfo = document.getElementById('selected-student-info');
+    const chargeSelect = document.getElementById('pay-charge-id');
+
+    document.getElementById('open-pay-modal-btn').onclick = () => {
+        document.getElementById('pay-form').reset();
+        selectedInfo.classList.add('hidden');
+        chargeSelect.disabled = true;
+        modal.classList.replace('hidden', 'flex');
+    };
     
-    // Limpiar búsqueda
-    document.getElementById('clear-search').addEventListener('click', () => {
-        searchInput.value = '';
-        currentPage = 1;
-        renderTable();
-        searchInput.focus();
+    const closeModal = () => modal.classList.replace('flex', 'hidden');
+    document.getElementById('pay-close-x').onclick = closeModal;
+    document.getElementById('pay-cancel').onclick = closeModal;
+
+    paySearchInput.addEventListener('input', () => {
+        const val = paySearchInput.value.toLowerCase();
+        autocompleteList.innerHTML = '';
+        if (!val) return autocompleteList.classList.add('hidden');
+
+        const students = getStudents();
+        const filtered = students.filter(s => {
+            const full = `${s.nombre} ${s.apellidoP} ${s.apellidoM}`.toLowerCase();
+            return full.includes(val) || String(s.numControl).includes(val);
+        }).slice(0, 5);
+
+        if (filtered.length > 0) {
+            filtered.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-0';
+                item.innerHTML = `<div class="text-[10px] font-bold">${s.nombre} ${s.apellidoP}</div><div class="text-[9px] text-gray-400">${s.numControl}</div>`;
+                item.onclick = () => selectStudent(s);
+                autocompleteList.appendChild(item);
+            });
+            autocompleteList.classList.remove('hidden');
+        } else {
+            autocompleteList.classList.add('hidden');
+        }
     });
 
-    document.getElementById('clear-search-badge').addEventListener('click', () => {
-        searchInput.value = '';
-        currentPage = 1;
-        renderTable();
-        searchInput.focus();
-    });
+    function selectStudent(student) {
+        paySearchInput.value = '';
+        autocompleteList.classList.add('hidden');
+        selectedInfo.classList.remove('hidden');
+        document.getElementById('display-student-name').innerText = `${student.nombre} ${student.apellidoP} ${student.apellidoM}`;
+        document.getElementById('display-student-control').innerText = `No. Control: ${student.numControl}`;
+        
+        const allCharges = getCharges();
+        const concepts = getConcepts();
+        const studentCharges = allCharges.filter(c => 
+            (String(c.studentId) === String(student.id) || String(c.studentId) === String(student.numControl)) &&
+            !['paid', 'pagado'].includes(String(c.status).toLowerCase())
+        );
+
+        chargeSelect.innerHTML = '<option value="">Seleccione un adeudo...</option>';
+        if (studentCharges.length > 0) {
+            studentCharges.forEach(ch => {
+                const c = concepts.find(con => String(con.id) === String(ch.conceptId));
+                const name = c ? (c.title || c.concept) : (ch.conceptTitle || ch.concept);
+                const opt = document.createElement('option');
+                opt.value = ch.id;
+                opt.innerText = `${name} - ${fmt(ch.amount)}`;
+                chargeSelect.appendChild(opt);
+            });
+            chargeSelect.disabled = false;
+        } else {
+            chargeSelect.innerHTML = '<option>Sin adeudos pendientes</option>';
+            chargeSelect.disabled = true;
+        }
+    }
+
+    document.getElementById('pay-form').onsubmit = (e) => {
+        e.preventDefault();
+        const chargeId = chargeSelect.value;
+        const ref = document.getElementById('pay-code').value;
+        const method = document.getElementById('pay-method').value;
+
+        let charges = getCharges();
+        const idx = charges.findIndex(c => String(c.id) === String(chargeId));
+
+        if (idx !== -1) {
+            charges[idx].status = 'paid';
+            charges[idx].paymentDate = new Date().toISOString();
+            charges[idx].reference = ref;
+            charges[idx].method = method;
+            saveCharges(charges);
+            closeModal();
+            renderTable();
+        }
+    };
+
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
     
     // Event listener para el botón de actualizar
     if (refreshBtn) {
@@ -543,10 +532,6 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const validateFormSection = document.getElementById('validate-form-section');
     const validateResultSection = document.getElementById('validate-result-section');
     const validateErrorSection = document.getElementById('validate-error-section');
-    const validateSuggestions = document.getElementById('validate-suggestions');
-    const validateSelectedStudent = document.getElementById('validate-selected-student');
-    let selectedStudentForValidation = null;
-    let validateSearchTimeout = null;
 
     // Abrir modal de validación
     document.getElementById('open-validate-modal-btn').onclick = () => {
@@ -556,135 +541,11 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       validateFormSection.classList.remove('hidden');
       validateResultSection.classList.add('hidden');
       validateErrorSection.classList.add('hidden');
-      validateSuggestions.classList.add('hidden');
-      validateSelectedStudent.classList.add('hidden');
-      selectedStudentForValidation = null;
     };
-
-    // Búsqueda de estudiantes con autocompletado
-    validateSearchInput.addEventListener('input', () => {
-      clearTimeout(validateSearchTimeout);
-      
-      const searchTerm = validateSearchInput.value.trim().toLowerCase();
-      
-      if (searchTerm.length === 0) {
-        validateSuggestions.classList.add('hidden');
-        return;
-      }
-
-      validateSearchTimeout = setTimeout(() => {
-        // Obtener todos los estudiantes de los adeudos
-        const allPending = getCharges();
-        const uniqueStudents = [];
-        const seen = new Set();
-        
-        allPending.forEach(payment => {
-          const key = payment.userName + '|' + payment.nControl;
-          if (!seen.has(key)) {
-            seen.add(key);
-            uniqueStudents.push({
-              name: payment.userName,
-              nControl: payment.nControl,
-              email: payment.email || '',
-              studentId: payment.studentId
-            });
-          }
-        });
-
-        // Filtrar estudiantes que coincidan con la búsqueda
-        const filtered = uniqueStudents.filter(student => {
-          const name = String(student.name || '').toLowerCase();
-          const nControl = String(student.nControl || '').toLowerCase();
-          const email = String(student.email || '').toLowerCase();
-          
-          return name.includes(searchTerm) || 
-                 nControl.includes(searchTerm) || 
-                 email.includes(searchTerm);
-        }).slice(0, 8); // Máximo 8 sugerencias
-
-        // Función para resaltar coincidencias
-        const highlightMatch = (text, term) => {
-          if (!text || !term) return text;
-          try {
-            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`(${escapedTerm})`, 'gi');
-            return text.replace(regex, '<mark class="bg-yellow-300 font-black px-1 rounded">$1</mark>');
-          } catch (e) {
-            return text;
-          }
-        };
-
-        // Mostrar sugerencias
-        if (filtered.length > 0) {
-          validateSuggestions.innerHTML = `
-            <div class="p-2 bg-purple-50 border-b-2 border-purple-200">
-              <p class="text-[9px] font-bold text-purple-700 uppercase">
-                <i class="fas fa-users"></i> ${filtered.length} estudiante${filtered.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            ${filtered.map((student, idx) => `
-              <div class="validate-suggestion-item p-3 hover:bg-purple-50 cursor-pointer border-b border-gray-200 transition-colors" data-index="${idx}">
-                <div class="font-bold text-sm text-gray-900">${highlightMatch(student.name, searchTerm)}</div>
-                <div class="text-xs text-gray-500 font-mono">${highlightMatch(student.nControl, searchTerm)}</div>
-                ${student.email ? `<div class="text-[10px] text-purple-600">${highlightMatch(student.email, searchTerm)}</div>` : ''}
-              </div>
-            `).join('')}
-          `;
-          
-          validateSuggestions.classList.remove('hidden');
-          
-          // Agregar event listeners a las sugerencias
-          document.querySelectorAll('.validate-suggestion-item').forEach((item, idx) => {
-            item.onclick = () => selectStudentForValidation(filtered[idx]);
-          });
-        } else {
-          validateSuggestions.innerHTML = `
-            <div class="p-4 text-center">
-              <i class="fas fa-search-minus text-gray-300 text-3xl mb-2"></i>
-              <p class="text-sm text-gray-500 font-bold">No se encontraron estudiantes</p>
-              <p class="text-xs text-gray-400">Intenta con otro término</p>
-            </div>
-          `;
-          validateSuggestions.classList.remove('hidden');
-        }
-      }, 300); // Debounce de 300ms
-    });
-
-    // Seleccionar estudiante de las sugerencias
-    function selectStudentForValidation(student) {
-      selectedStudentForValidation = student;
-      validateSearchInput.value = '';
-      validateSuggestions.classList.add('hidden');
-      validateSelectedStudent.classList.remove('hidden');
-      
-      document.getElementById('validate-selected-name').textContent = student.name;
-      document.getElementById('validate-selected-control').textContent = `Matrícula: ${student.nControl}`;
-      
-      // Enfocar el campo de Payment Intent
-      validatePaymentIntentInput.focus();
-    }
-
-    // Limpiar selección
-    document.getElementById('validate-clear-selection').onclick = () => {
-      selectedStudentForValidation = null;
-      validateSelectedStudent.classList.add('hidden');
-      validateSearchInput.value = '';
-      validateSearchInput.focus();
-    };
-
-    // Cerrar sugerencias al hacer click fuera
-    document.addEventListener('click', (e) => {
-      if (!validateSearchInput.contains(e.target) && !validateSuggestions.contains(e.target)) {
-        validateSuggestions.classList.add('hidden');
-      }
-    });
 
     // Cerrar modal de validación
     const closeValidateModal = () => {
       validateModal.classList.replace('flex', 'hidden');
-      selectedStudentForValidation = null;
-      validateSelectedStudent.classList.add('hidden');
-      validateSuggestions.classList.add('hidden');
     };
     document.getElementById('validate-close-x').onclick = closeValidateModal;
     document.getElementById('validate-close-btn').onclick = closeValidateModal;
@@ -696,9 +557,6 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       validateFormSection.classList.remove('hidden');
       validateResultSection.classList.add('hidden');
       validateErrorSection.classList.add('hidden');
-      validateSelectedStudent.classList.add('hidden');
-      validateSuggestions.classList.add('hidden');
-      selectedStudentForValidation = null;
       validateSearchInput.focus();
     };
 
@@ -728,11 +586,12 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
     // Validar pago
     validateSubmitBtn.onclick = async () => {
+      const search = validateSearchInput.value.trim();
       const paymentIntentId = validatePaymentIntentInput.value.trim();
 
       // Validación de campos
-      if (!selectedStudentForValidation) {
-        showValidationError('Por favor selecciona un estudiante de las sugerencias');
+      if (!search) {
+        showValidationError('Por favor ingresa un término de búsqueda (email, No. Control, CURP, nombre)');
         return;
       }
 
@@ -752,12 +611,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
           return;
         }
 
-        // Usar email, nControl o nombre del estudiante seleccionado
-        const searchQuery = selectedStudentForValidation.email || 
-                           selectedStudentForValidation.nControl || 
-                           selectedStudentForValidation.name;
-
-        const response = await window.StudentAPI.validateStripePayment(searchQuery, paymentIntentId, token);
+        const response = await StudentAPI.validateStripePayment(search, paymentIntentId, token);
 
         if (!response.success) {
           showValidationError(response.message || 'Error al validar el pago');
@@ -854,10 +708,8 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       validateErrorSection.classList.remove('hidden');
       document.getElementById('validate-error-message').textContent = message;
     }
-
-    // Cargar datos inicialmente (esperar a que StudentAPI esté disponible)
-    ensureStudentAPI()
-      .then(() => loadPendingPayments())
-      .catch(err => console.error('❌ Error al inicializar:', err));
+    
+    // Cargar datos inicialmente
+    loadPendingPayments();
   </script>
 </Layout>
