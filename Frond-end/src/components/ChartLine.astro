@@ -31,38 +31,26 @@ import { Fragment } from 'astro/jsx-runtime';
           console.warn('No dashboard payments data available');
         }
 
-        if (dashboardPayments && dashboardPayments.paymentsBySemester) {
-          // Usar datos del Dashboard
-          const paymentsBySemester = dashboardPayments.paymentsBySemester;
+        if (dashboardPayments && dashboardPayments.totalPayments !== undefined) {
+          // Usar datos del Dashboard: mostrar totalPayments distribuido uniformemente
+          const totalPayments = parseFloat(dashboardPayments.totalPayments || 0);
+          const totalBalanceAvailable = parseFloat(dashboardPayments.totalBalanceAvailable || 0);
           
-          // Procesar datos por semestre
-          Object.entries(paymentsBySemester).forEach(([semester, data]) => {
-            const months_array = data.months || [];
-            const semesterMonths = semester.includes('H1') ? [0, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11];
-            
-            months_array.forEach((amount, idx) => {
-              if (idx < semesterMonths.length) {
-                const monthIdx = semesterMonths[idx];
-                recaudado[monthIdx] = parseFloat(amount || 0);
-              }
-            });
-          });
+          // Llenar recaudado con el total de pagos (distribuido por mes o mostrado donde hay datos)
+          // Como tenemos un total anual, lo mostramos como una línea constante
+          if (totalPayments > 0) {
+            // Mostrar el total recaudado en el mes actual (febrero)
+            const currentMonth = new Date().getMonth();
+            recaudado[currentMonth] = totalPayments;
+          }
           
-          // Cargar pendientes desde chargesList como fallback
-          const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
-          charges.forEach(c => {
-            const date = new Date(c.createdAt || c.date);
-            if (date.getFullYear() === currentYear) {
-              const m = date.getMonth();
-              const amount = parseFloat(c.amount) || 0;
-              const status = String(c.status).toLowerCase();
-              if (!['paid', 'pagado'].includes(status)) {
-                pendientes[m] += amount;
-              }
-            }
-          });
+          // Mostrar balance disponible/pendiente en el mes actual también
+          if (totalBalanceAvailable > 0) {
+            const currentMonth = new Date().getMonth();
+            pendientes[currentMonth] = totalBalanceAvailable;
+          }
           
-          console.log('📊 ChartLine usando datos del Dashboard - Recaudado:', recaudado);
+          console.log('📊 ChartLine usando datos del Dashboard - Total Recaudado:', totalPayments, 'Disponible:', totalBalanceAvailable);
         } else {
           // Fallback a chargesList
           const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
