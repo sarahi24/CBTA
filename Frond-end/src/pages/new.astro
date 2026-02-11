@@ -794,30 +794,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.scopeType === 'tags') {
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
-            payload.applicantTags = this.formData.applicantTags.length > 0 ? this.formData.applicantTags : [];
+            // EL BACKEND ESPERA UN STRING, NO UN ARRAY
+            payload.applicantTags = this.formData.applicantTags.length > 0 
+              ? this.formData.applicantTags[0]  // Tomar solo el primer valor como string
+              : 'applicant';  // Valor por defecto
             // TAMBIÉN enviar en snake_case por si el backend espera ese formato
             payload.applicant_tags = payload.applicantTags;
-            console.log('🏷️  Agregando applicantTags al payload:', {
-              original: this.formData.applicantTags,
+            console.log('🏷️  Agregando applicantTags al payload (COMO STRING):', {
+              arrayOriginal: this.formData.applicantTags,
+              stringEnviado: payload.applicantTags,
               camelCase: payload.applicantTags,
               snake_case: payload.applicant_tags,
               tipo: typeof payload.applicantTags,
-              esArray: Array.isArray(payload.applicantTags),
-              length: payload.applicantTags.length
+              esString: typeof payload.applicantTags === 'string'
             });
-            // Verificar cada valor individual
-            if (payload.applicantTags.length > 0) {
-              payload.applicantTags.forEach((tag, index) => {
-                console.log(`🏷️  Tag[${index}]:`, {
-                  valor: tag,
-                  tipo: typeof tag,
-                  length: tag?.length,
-                  esAplicant: tag === 'applicant',
-                  esNoStudentDetails: tag === 'no_student_details',
-                  charCodes: tag ? Array.from(tag).map(c => c.charCodeAt(0)) : []
-                });
-              });
-            }
           } else if (this.formData.selectedSpecificStudents.length > 0) {
             payload.applies_to = 'estudiantes';
             
