@@ -494,7 +494,7 @@ window.editConcept = (id) => {
       exceptionStudents: c.exceptionStudents || c.exception_students || [],
       applicantTags: (() => {
         const tags = c.applicantTags || c.applicant_tags;
-        return Array.isArray(tags) ? tags : (tags ? [tags] : ['applicants']);
+        return Array.isArray(tags) ? tags : (tags ? [tags] : ['applicant']);
       })()
     }
   }));
