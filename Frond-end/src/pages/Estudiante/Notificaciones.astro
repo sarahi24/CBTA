@@ -366,7 +366,7 @@ const pageTitle = "Notificaciones";
                   <span class="text-xs ${colors.text} font-semibold">${formatRelativeTime(notif.date)}</span>
                 </div>
                 <p class="text-sm text-gray-600 mb-3">${notif.message}</p>
-                ${notif.metadata.amount ? `<div class="text-xs font-bold text-emerald-600">💵 $${notif.metadata.amount.toFixed(2)}</div>` : ''}
+                ${notif.metadata.amount && !isNaN(parseFloat(notif.metadata.amount)) ? `<div class="text-xs font-bold text-emerald-600">💵 $${parseFloat(notif.metadata.amount).toFixed(2)}</div>` : ''}
                 <div class="flex gap-3 mt-2">
                   ${!notif.read ? `
                     <button class="mark-read-btn text-xs font-bold text-[#2e594d] hover:text-[#86efad] transition-colors" data-id="${notif.id}">
