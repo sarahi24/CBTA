@@ -4397,9 +4397,32 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const sheet = sheetName ? workbook.Sheets[sheetName] : null;
                         const rows = sheet ? window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) : [];
 
+                        const headerRow = Array.isArray(rows[0]) ? rows[0] : [];
+                        const headerCount = headerRow.filter(cell => String(cell).trim() !== '').length;
+
                         const dataRows = rows.slice(1).filter(row =>
                             Array.isArray(row) && row.some(cell => String(cell).trim() !== '')
                         );
+
+                        console.log('📄 Import preflight:', {
+                            sheetName,
+                            totalRows: rows.length,
+                            headerCount,
+                            dataRows: dataRows.length,
+                            firstDataRow: dataRows[0] || null
+                        });
+
+                        if (!sheetName || rows.length === 0) {
+                            this.showNotify('No se pudo leer la primera hoja del Excel', 'error');
+                            this.isImporting = false;
+                            return;
+                        }
+
+                        if (headerCount < 19) {
+                            this.showNotify('El archivo no tiene las 19 columnas requeridas en la primera fila', 'error');
+                            this.isImporting = false;
+                            return;
+                        }
 
                         if (dataRows.length === 0) {
                             this.showNotify('El archivo no tiene filas con datos en la primera hoja', 'error');
