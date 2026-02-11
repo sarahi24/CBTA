@@ -220,6 +220,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.formData.endDate = formatDate(concept.end_date || concept.endDate);
         console.log('✅ Fechas formateadas:', this.formData.startDate, '→', this.formData.endDate);
         
+        // 🔑 IMPORTANTE: Si viene scopeType en el concepto (desde editingConcept), usarlo
+        if (concept.scopeType) {
+          this.formData.scopeType = concept.scopeType;
+          console.log('🎯 scopeType cargado desde editingConcept:', this.formData.scopeType);
+        }
+        
         // Procesar scopeRules
         if (concept.scopeRules) {
           this.formData.allStudents = concept.scopeRules.allStudents || false;
@@ -260,19 +266,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
           
           // Determinar el tipo de ámbito basado en los filtros cargados
-          if (this.formData.selectedSpecificStudents.length > 0) {
-            this.formData.scopeType = 'estudiantes';
-          } else if (this.formData.selectedCareers.length > 0 && this.formData.selectedSemesters.length > 0) {
-            this.formData.scopeType = 'carrera_semestre';
-          } else if (this.formData.selectedSemesters.length > 0) {
-            this.formData.scopeType = 'semestre';
-          } else if (this.formData.selectedCareers.length > 0) {
-            this.formData.scopeType = 'carrera';
-          } else if (this.formData.applicantTags.length > 0) {
-            // Si solo tiene tags sin otros filtros, es un concepto de tags
-            this.formData.scopeType = 'tags';
+          // PERO: Si ya viene scopeType, NO sobreescribir
+          if (!concept.scopeType) {
+            if (this.formData.selectedSpecificStudents.length > 0) {
+              this.formData.scopeType = 'estudiantes';
+            } else if (this.formData.selectedCareers.length > 0 && this.formData.selectedSemesters.length > 0) {
+              this.formData.scopeType = 'carrera_semestre';
+            } else if (this.formData.selectedSemesters.length > 0) {
+              this.formData.scopeType = 'semestre';
+            } else if (this.formData.selectedCareers.length > 0) {
+              this.formData.scopeType = 'carrera';
+            } else if (this.formData.applicantTags.length > 0) {
+              // Si solo tiene tags sin otros filtros, es un concepto de tags
+              this.formData.scopeType = 'tags';
+            }
           }
-          console.log('✅ Tipo de ámbito detectado:', this.formData.scopeType);
+          console.log('✅ Tipo de ámbito final:', this.formData.scopeType);
 
           if (this.formData.scopeType === 'estudiantes') {
             this.formData.exceptionStudents = [];

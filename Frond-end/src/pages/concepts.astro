@@ -477,6 +477,30 @@ async function mutateConcept(id, action){
 /* --- EXPOSICIÓN GLOBAL --- */
 window.editConcept = (id) => {
   const c = conceptsCache.find(x=>String(x.id)===String(id));
+  
+  // Determinar el tipo de scope basado en applies_to
+  let scopeType = 'all'; // por defecto
+  const appliesTo = (c.applies_to || c.appliesTo || '').toLowerCase();
+  
+  if (appliesTo === 'carrera') scopeType = 'carrera';
+  else if (appliesTo === 'semestre') scopeType = 'semestre';
+  else if (appliesTo === 'carrera_semestre') scopeType = 'carrera_semestre';
+  else if (appliesTo === 'estudiantes') scopeType = 'estudiantes';
+  else if (appliesTo === 'tag') scopeType = 'tags';
+  else if (appliesTo === 'todos') scopeType = 'all';
+  
+  console.log('🔍 Concepto a editar:', {
+    id: c.id,
+    título: c.concept_name,
+    applies_to: appliesTo,
+    scopeType_detectado: scopeType,
+    careers: c.careerIds || c.careers,
+    semesters: c.semesters,
+    students: c.userIds || c.user_ids,
+    exceptions: c.exceptionStudents || c.exception_students,
+    applicantTags: c.applicantTags || c.applicant_tags
+  });
+  
   localStorage.setItem('editingConcept', JSON.stringify({
     id: c.id,
     title: c.concept_name || c.conceptName,
@@ -485,8 +509,10 @@ window.editConcept = (id) => {
     status: c.status,
     start_date: c.start_date,
     end_date: c.end_date,
+    applies_to: appliesTo,  // ← NUEVO: guardar applies_to
+    scopeType: scopeType,   // ← NUEVO: guardar scopeType detectado
     scopeRules: {
-      allStudents: (c.applies_to || c.appliesTo) === 'todos',
+      allStudents: appliesTo === 'todos',
       careers: c.careerIds || c.careers || [],
       semesters: c.semesters || [],
       specificStudents: c.userIds || c.user_ids || [],
