@@ -997,6 +997,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                       .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
                       .join(' | ');
                     errorMsg = `${errorMsg} - ${errorList}`;
+                    
+                    // Si es error de applicantTags, agregar más detalles
+                    if (errorList.includes('applicantTags') || errorList.includes('applicantTag')) {
+                      console.error('💡 HINT: Los valores enviados fueron:', payload.applicantTags);
+                      console.error('💡 Pregunta al backend qué valores son permitidos para applicantTags');
+                      errorMsg += '\n\n💡 Valores enviados: [' + (payload.applicantTags || []).join(', ') + ']';
+                      errorMsg += '\nContacta al desarrollador del backend para conocer los valores permitidos.';
+                    }
                   }
                   console.error('Backend validation errors:', data.errors);
                   return Promise.reject(new Error(errorMsg));
@@ -1535,7 +1543,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
                   </label>
                   <label class="cursor-pointer">
-                    <input type="checkbox" value="no_student_details" x-model="formData.applicantTags" class="sr-only peer">
+                    <input type="checkbox" value="unverified" x-model="formData.applicantTags" class="sr-only peer">
                     <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
                       <i class="fas fa-user-slash text-lg text-pink-600 mb-1"></i>
                       <p class="text-xs font-bold">Sin Detalles de Estudiante</p>
