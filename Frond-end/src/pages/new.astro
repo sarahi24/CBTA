@@ -774,6 +774,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           is_global: Boolean(this.formData.allStudents)
         };
         
+        console.log('🎯 Construyendo payload. scopeType:', this.formData.scopeType, ', someStudents:', this.formData.selectedSpecificStudents.length);
+        
         // Agregar excepciones si existen (solo en alcance restringido y no estudiantes específicos)
         if (!this.formData.allStudents && this.formData.scopeType !== 'estudiantes' && this.formData.exceptionStudents.length > 0) {
           payload.exceptionStudents = this.formData.exceptionStudents.map(s => String(s.id));
@@ -889,6 +891,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           } else {
             // CREAR nuevo concepto: enviar todo junto en POST
             if (!self.formData.id) {
+              console.log('🎯 Enviando payload:', JSON.stringify(payload, null, 2));
+              
               return fetch(`${self.apiBaseUrl}/v1/concepts`, {
                 method: 'POST',
                 headers: {
@@ -904,6 +908,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.log('📥 Response URL:', res.url);
                 const data = await res.json().catch(() => ({}));
                 console.log('📥 Response data:', data);
+                
+                // Log specific details for students error
+                if (data.error_code === 'STUDENTS_NOT_FOUND') {
+                  console.error('❌ STUDENTS_NOT_FOUND - Detalles:');
+                  console.error('   - IDs enviados:', payload.students);
+                  console.error('   - Tipos:', payload.students.map(id => `${id} (${typeof id})`));
+                  console.error('   - Mensaje completo:', data.message);
+                }
+                
                 if (!res.ok) {
                   let errorMsg = data.message || res.statusText || 'Error desconocido';
                   if (data.errors && typeof data.errors === 'object') {
