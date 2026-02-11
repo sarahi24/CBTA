@@ -81,7 +81,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         })
         .then(res => {
           if (!res.ok) {
-            // Token inválido o expirado - usar fallback silenciosamente
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
@@ -95,7 +94,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           }
         })
         .catch(err => {
-          // Error de API o token - usar fallback con IDs numéricos
+          console.warn('⚠️ Error cargando carreras, usando fallback:', err);
           this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
         });
       },
