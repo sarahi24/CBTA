@@ -131,6 +131,12 @@ const pageTitle = "Dashboard - SIGE";
             pendingDesc.textContent = count === 1 ? '1 Adeudo' : `${count} Adeudos`;
           }
           
+          // Almacenar datos de pagos pendientes para las gráficas
+          localStorage.setItem('dashboardPendingPayments', JSON.stringify({
+            totalAmount: pendingData.totalAmount,
+            totalCount: pendingData.totalCount
+          }));
+          
           console.log('✅ Datos de pagos pendientes cargados:', pendingData);
         }
       } catch (error) {

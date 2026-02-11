@@ -32,23 +32,26 @@ import { Fragment } from 'astro/jsx-runtime';
       try {
         // Intentar obtener datos del Dashboard primero
         let dashboardPayments = null;
+        let dashboardPending = null;
         try {
           dashboardPayments = JSON.parse(localStorage.getItem('dashboardPayments') || 'null');
+          dashboardPending = JSON.parse(localStorage.getItem('dashboardPendingPayments') || 'null');
+          console.log('📊 Donut - dashboardPayments:', dashboardPayments, 'dashboardPending:', dashboardPending);
         } catch (e) {
-          console.warn('No dashboard payments data available');
+          console.warn('No dashboard data available');
         }
 
         let paid, pending, totalMeta;
 
-        if (dashboardPayments && dashboardPayments.totalPayments !== undefined) {
+        if (dashboardPayments && dashboardPayments.totalPayments !== undefined && dashboardPending && dashboardPending.totalAmount !== undefined) {
           // Usar datos del Dashboard
           const totalPayments = parseFloat(dashboardPayments.totalPayments || 0);
-          const totalBalanceAvailable = parseFloat(dashboardPayments.totalBalanceAvailable || 0);
+          const totalPendingAmount = parseFloat(dashboardPending.totalAmount || 0);
           
-          // Total es todos los pagos: recaudado + disponible por cobrar
-          totalMeta = totalPayments + totalBalanceAvailable;
+          // Total es todos los pagos en el sistema: recaudados + pendientes/adeudos
+          totalMeta = totalPayments + totalPendingAmount;
           paid = totalPayments;
-          pending = totalBalanceAvailable;
+          pending = totalPendingAmount;
           
           console.log('📊 Donut usando datos del Dashboard - Total:', totalMeta, 'Pagado:', paid, 'Pendiente:', pending);
         } else {

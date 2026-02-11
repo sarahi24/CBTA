@@ -24,26 +24,28 @@ import { Fragment } from 'astro/jsx-runtime';
       try {
         // Intentar obtener datos del Dashboard primero
         let dashboardPayments = null;
+        let dashboardPending = null;
         try {
           dashboardPayments = JSON.parse(localStorage.getItem('dashboardPayments') || 'null');
-          console.log('📊 ChartLine - dashboardPayments desde localStorage:', dashboardPayments);
+          dashboardPending = JSON.parse(localStorage.getItem('dashboardPendingPayments') || 'null');
+          console.log('📊 ChartLine - dashboardPayments:', dashboardPayments, 'dashboardPending:', dashboardPending);
         } catch (e) {
-          console.warn('No dashboard payments data available:', e);
+          console.warn('No dashboard data available:', e);
         }
 
-        if (dashboardPayments && dashboardPayments.totalPayments !== undefined) {
-          // Usar datos del Dashboard: mostrar totalPayments y totalBalanceAvailable
+        if (dashboardPayments && dashboardPayments.totalPayments !== undefined && dashboardPending && dashboardPending.totalAmount !== undefined) {
+          // Usar datos del Dashboard: mostrar totalPayments (recaudado) y totalAmount de pendientes (adeudos)
           const totalPayments = parseFloat(dashboardPayments.totalPayments || 0);
-          const totalBalanceAvailable = parseFloat(dashboardPayments.totalBalanceAvailable || 0);
+          const totalPendingAmount = parseFloat(dashboardPending.totalAmount || 0);
           
-          console.log('📊 ChartLine usando Dashboard - Pagos:', totalPayments, 'Disponible:', totalBalanceAvailable);
+          console.log('📊 ChartLine usando Dashboard - Recaudado:', totalPayments, 'Pagos Pendientes:', totalPendingAmount);
           
           // Mostrar los valores en febrero (mes actual)
           const currentMonth = new Date().getMonth();
           recaudado[currentMonth] = totalPayments;
-          pendientes[currentMonth] = totalBalanceAvailable;
+          pendientes[currentMonth] = totalPendingAmount;
           
-          console.log('📊 ChartLine arrays - Février [' + currentMonth + '] - Recaudado:', recaudado[currentMonth], 'Pendiente:', pendientes[currentMonth]);
+          console.log('📊 ChartLine arrays - Febrero [' + currentMonth + '] - Recaudado:', recaudado[currentMonth], 'Pendiente:', pendientes[currentMonth]);
         } else {
           // Fallback a chargesList
           console.log('📊 ChartLine usando chargesList como fallback');
