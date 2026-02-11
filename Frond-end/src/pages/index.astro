@@ -598,22 +598,22 @@ const pageTitle = "Acceso al Sistema - SIGE";
 
             <form class="space-y-5" x-show="mode === 'register'" @submit.prevent="handleRegister" x-cloak>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="text" x-model="name" placeholder="Nombre" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="text" x-model="name" placeholder="Nombre" autocomplete="given-name" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="text" x-model="lastName" placeholder="Apellido" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="text" x-model="lastName" placeholder="Apellido" autocomplete="family-name" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="email" x-model="email" placeholder="Correo Electrónico" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="email" x-model="email" placeholder="Correo Electrónico" autocomplete="email" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="tel" x-model="phoneNumber" placeholder="+521234567890" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="tel" x-model="phoneNumber" placeholder="+521234567890" autocomplete="tel" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="date" x-model="birthdate" placeholder="Fecha de Nacimiento" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
+                    <input type="date" x-model="birthdate" placeholder="Fecha de Nacimiento" autocomplete="bday" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="text" x-model="curp" placeholder="CURP (18 caracteres)" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0 uppercase" maxlength="18" required>
+                    <input type="text" x-model="curp" placeholder="CURP (18 caracteres)" autocomplete="username" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0 uppercase" maxlength="18" required>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
                     <select x-model="status" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
@@ -641,7 +641,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
 
             <form class="space-y-6" x-show="mode === 'recover'" @submit.prevent="handleRecovery" x-cloak>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <input type="email" x-model="email" placeholder="Ingresa tu correo" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
+                    <input type="email" x-model="email" placeholder="Ingresa tu correo" autocomplete="email" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0">
                 </div>
                 <button type="submit" :disabled="isLoading" class="w-full py-3 px-4 rounded-full shadow-xl text-base font-bold text-white bg-green-600 uppercase btn-hover-green disabled:opacity-50">
                     <span x-text="isLoading ? 'Enviando...' : 'Enviar Enlace'"></span>
