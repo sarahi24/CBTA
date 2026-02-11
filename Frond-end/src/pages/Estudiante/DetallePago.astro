@@ -14,6 +14,21 @@ const paymentId = Astro.url.searchParams.get('id');
     errorMessage: '',
 
     async init() {
+      console.log('🔍 DetallePago init - paymentId recibido:', this.paymentId);
+      console.log('🔍 URL completa:', window.location.href);
+      console.log('🔍 Search params:', window.location.search);
+      
+      // Verificar si hay ID en la URL aunque Astro no lo haya capturado
+      if (!this.paymentId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const idFromUrl = urlParams.get('id');
+        console.log('🔍 ID desde URLSearchParams:', idFromUrl);
+        if (idFromUrl) {
+          this.paymentId = idFromUrl;
+          console.log('✅ ID rescatado de URL:', this.paymentId);
+        }
+      }
+      
       await this.loadDetail();
     },
 
@@ -21,13 +36,17 @@ const paymentId = Astro.url.searchParams.get('id');
       this.loading = true;
       this.errorMessage = '';
 
+      console.log('🔄 loadDetail iniciado con paymentId:', this.paymentId);
+
       if (!this.paymentId) {
+        console.error('❌ No se proporcionó ID de pago');
         this.errorMessage = 'ID de pago no proporcionado';
         this.loading = false;
         return;
       }
 
       if (!window.StudentAPI) {
+        console.error('❌ StudentAPI no disponible');
         this.errorMessage = 'StudentAPI no esta disponible.';
         this.loading = false;
         return;
@@ -35,14 +54,18 @@ const paymentId = Astro.url.searchParams.get('id');
 
       const token = localStorage.getItem('access_token');
       if (!token) {
+        console.error('❌ No hay token de autenticación');
         this.errorMessage = 'Usuario no autenticado';
         this.loading = false;
         return;
       }
 
       try {
+        console.log('📡 Llamando a API con paymentId:', this.paymentId);
         const response = await window.StudentAPI.getPaymentById(this.paymentId, token, 'student');
+        console.log('✅ Respuesta del API:', response);
         const payment = response?.data?.payment;
+        console.log('💾 Datos del pago:', payment);
         if (!payment) {
           this.errorMessage = response?.message || 'Error al cargar el detalle del pago';
           this.loading = false;
