@@ -286,7 +286,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           if (response.success && response.data?.url_checkout) {
             // Redirigir al checkout de Stripe
             console.log('ðŸ”— Redirigiendo a checkout:', response.data.url_checkout);
-            window.location.href = response.data.url_checkout;
+            window.open(response.data.url_checkout, '_blank');
+            this.loading = false;
           } else {
             throw new Error(response.message || 'No se recibió URL de checkout');
           }
