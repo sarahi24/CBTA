@@ -86,10 +86,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return res.json();
         })
         .then(json => {
+          console.log('📥 Respuesta completa del API de carreras:', json);
           if (json.success && json.data?.careers) {
             this.careers = json.data.careers.map(c => ({ id: c.id, name: c.career_name }));
             console.log('✅ Carreras cargadas desde API:', this.careers.length);
+            console.log('📋 IDs de carreras disponibles:', this.careers.map(c => `${c.id}: ${c.name}`));
           } else {
+            console.warn('⚠️ Respuesta del API no tiene careers, usando fallback');
             this.careers = this.CAREERS.map(c => ({ id: c.id, name: c.name }));
           }
         })
@@ -834,6 +837,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               this.isSaving = false;
               return;
             }
+            
+            // Validar que las carreras seleccionadas existen en la lista cargada del API
+            const availableCareerIds = this.careers.map(c => c.id);
+            const invalidCareerIds = payload.careers.filter(id => !availableCareerIds.includes(id));
+            if (invalidCareerIds.length > 0) {
+              console.error('❌ IDs de carreras no válidos:', invalidCareerIds);
+              console.log('📋 IDs disponibles:', availableCareerIds);
+              this.errorMessage = `❌ Error: Las carreras con ID [${invalidCareerIds.join(', ')}] no existen en la base de datos. IDs válidos: [${availableCareerIds.join(', ')}]. Recarga la página para actualizar la lista.`;
+              this.isSaving = false;
+              return;
+            }
+            
             if (payload.semestres.length === 0) {
               this.errorMessage = '❌ Debes seleccionar al menos un semestre valido.';
               this.isSaving = false;
@@ -861,6 +876,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               this.isSaving = false;
               return;
             }
+            
+            // Validar que las carreras seleccionadas existen en la lista cargada del API
+            const availableCareerIds = this.careers.map(c => c.id);
+            const invalidCareerIds = payload.careers.filter(id => !availableCareerIds.includes(id));
+            if (invalidCareerIds.length > 0) {
+              console.error('❌ IDs de carreras no válidos:', invalidCareerIds);
+              console.log('📋 IDs disponibles:', availableCareerIds);
+              this.errorMessage = `❌ Error: Las carreras con ID [${invalidCareerIds.join(', ')}] no existen en la base de datos. IDs válidos: [${availableCareerIds.join(', ')}]. Recarga la página para actualizar la lista.`;
+              this.isSaving = false;
+              return;
+            }
+            
             console.log('✅ Modo: Carrera | Carreras seleccionadas:', payload.careers);
           } else {
             // Sin filtros seleccionados - aplicar a todos por defecto
