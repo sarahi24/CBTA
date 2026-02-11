@@ -613,11 +613,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     this.isSearching = false;
                     return;
                   }
+                } else if (paymentsRes.status === 403) {
+                  console.warn('⚠️ Error 403 también en /payments/students. Solo está disponible búsqueda en caché local.');
+                  console.warn('💡 TIP: Si no aparecen resultados, verifica que los estudiantes estén cargados en caché (aparece al inicio de la consola)');
                 }
               } catch (fallbackErr) {
                 console.error('❌ Error en fallback:', fallbackErr);
               }
             }
+            // No hay permisos para buscar por API - solo usar caché
+            console.info('ℹ️ Búsqueda por API no disponible. Solo se puede buscar en estudiantes cargados en caché.');
             this.searchResults = [];
             this.isSearching = false;
             return;
@@ -712,24 +717,41 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   
                   // EL ID CORRECTO es student_details.id (NO user_id)
                   studentDetailsId = studentData.id || studentData.student_id;
-                  console.log('✅ student_details.id REAL obtenido:', studentDetailsId);
+                  console.log('✅ student_details.id REAL obtenido desde API:', studentDetailsId);
                 } else if (studentJson.data?.id) {
                   studentDetailsId = studentJson.data.id;
                   console.log('✅ student_details.id obtenido (directo):', studentDetailsId);
                 }
               } else {
-                console.warn('⚠️ /student respondió con:', studentRes.status);
-              }
+                if (studentRes.status === 403) {
+                  console.warn('⚠️ Error 403 en /student: Sin permisos. Intentando obtener desde caché local...');
+                } else {
+                  console.warn('⚠️ /student respondió con:', studentRes.status);
+                }
             } catch (err) {
               console.warn('⚠️ Error buscando en /student:', err);
             }
             
-            // Si no funcionó, intentar con el endpoint de búsqueda original
-            // pero verificar si devuelve el student_details.id correcto
+            // Si no funcionó, buscar en caché local si hay datos completos
+            if (!studentDetailsId && this.allStudents && this.allStudents.length > 0) {
+              console.log('🔍 Buscando student_details.id en caché local...');
+              const cachedStudent = this.allStudents.find(s => 
+                String(s.control) === String(student.control) ||
+                String(s.id) === String(student.id)
+              );
+              
+              if (cachedStudent && cachedStudent.id) {
+                studentDetailsId = cachedStudent.id;
+                console.log('✅ student_details.id obtenido desde caché local:', studentDetailsId);
+              }
+            }
+            
+            // Si no funcionó, intentar con el ID del search como última opción
             if (!studentDetailsId) {
-              console.log('🔍 Fallback: Usando ID del search inicial (puede ser incorrecto)...');
+              console.log('🔍 Última opción: Usando ID del search inicial...');
               studentDetailsId = student.id;
               console.warn('⚠️ ADVERTENCIA: Usando ID del search, puede ser user_id en lugar de student_details.id');
+              console.warn('⚠️ Si el concepto falla al guardarse, es porque el ID es incorrecto');
             }
             
           } catch (err) {
