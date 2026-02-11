@@ -313,7 +313,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       
       <div class="header-content">
         <div class="user-profile">
-          <div class="avatar">PG</div>
+          <div class="avatar" x-text="getInitials()"></div>
           <div class="welcome-text">
             <span class="greeting">Estado de Cuenta</span>
             <h1 x-text="'Hola, ' + alumnoNombre.split(' ')[0]"></h1>
