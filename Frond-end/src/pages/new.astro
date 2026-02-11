@@ -110,14 +110,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 String(item.apellidoM ?? item.apellidoMaterno ?? '').trim()
               ].filter(n => n).join(' ')
             ).trim();
-            const userId = item.id ?? item.userId ?? item.user_id ?? null;
+            const studentDetailsId = item.student_details_id ?? item.studentDetailsId ?? item.student_id ?? null;
+            const userId = item.user_id ?? item.userId ?? item.id ?? null;
             const control = item.n_control ?? item.numControl ?? item.num_control ?? '';
             const careerId = item.career_id ?? item.careerId ?? null;
             const careerName = item.career_name ?? item.carrera ?? item.career ?? '';
             const normalizedCareerId = careerId !== null && careerId !== undefined ? String(careerId) : (careerName ? String(careerName) : '');
             const semester = item.semestre ?? item.semester ?? '';
             return {
-              id: userId ? String(userId) : '',
+              id: studentDetailsId ? String(studentDetailsId) : (userId ? String(userId) : ''),
+              studentDetailsId: studentDetailsId ? String(studentDetailsId) : '',
+              userId: userId ? String(userId) : '',
               control: String(control || ''),
               name: fullName || 'Sin nombre',
               careerId: normalizedCareerId,
@@ -353,9 +356,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('👤 Estudiante encontrado (completo):', student);
             
-            // SIEMPRE buscar el user_id real en /payments/students
-            // porque /concepts/search/controls devuelve student_details.id, no users.id
-            let studentId = null;
+            // Buscar el student_details.id real en /payments/students
+            let studentDetailsId = null;
             
             if (student.n_control) {
               console.log('🔍 Buscando user_id real en /payments/students...');
@@ -383,8 +385,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
                     paymentData = paymentsJson.data.students.items[0];
                     console.log('💾 Campos disponibles:', Object.keys(paymentData));
-                    studentId = paymentData.student_id || paymentData.id || paymentData.user_id || paymentData.userId;
-                    console.log('✅ student_id (user_id real) obtenido:', studentId);
+                    studentDetailsId = paymentData.student_id || paymentData.student_details_id || paymentData.studentDetailsId;
+                    console.log('✅ student_details.id obtenido:', studentDetailsId);
                   }
                 } else {
                   console.error('❌ /payments/students respondió con error:', paymentsRes.status);
@@ -395,15 +397,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             }
             
             console.log('🆔 IDs disponibles:', {
-              'student_details.id': student.id,
-              'user_id (de payments)': studentId,
-              'usar': studentId || 'ERROR - NO HAY USER_ID'
+              'student_details.id (de payments)': studentDetailsId,
+              'user_id (de search)': student.user_id || student.userId || student.id,
+              'usar': studentDetailsId || 'ERROR - NO HAY STUDENT_DETAILS.ID'
             });
             
-            // Validar que obtuvimos el user_id real
-            if (!studentId) {
-              console.error('❌ No se pudo obtener el user_id real del estudiante');
-              this.errorMessage = '⚠️ No se pudo obtener el ID del usuario. El estudiante puede no existir en el sistema.';
+            // Validar que obtuvimos el student_details.id real
+            if (!studentDetailsId) {
+              console.error('❌ No se pudo obtener el student_details.id del estudiante');
+              this.errorMessage = '⚠️ No se pudo obtener el ID del estudiante (student_details). Verifica permisos o intenta otra búsqueda.';
               setTimeout(() => this.errorMessage = '', 3000);
               this.isSearching = false;
               return;
@@ -411,7 +413,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             // Verificar nuevamente con el ID real
             const existsById = this.formData.selectedSpecificStudents.some(s => 
-              String(s.id) === String(studentId)
+              String(s.id) === String(studentDetailsId)
             );
             
             if (existsById) {
@@ -423,7 +425,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             // Agregar con el ID real del usuario
             this.formData.selectedSpecificStudents.push({
-              id: studentId,
+              id: studentDetailsId,
               control: student.n_control || input,
               name: student.name || student.n_control || input,
               email: '',
@@ -432,7 +434,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             });
             
             console.log('✅ Estudiante agregado por Enter:', {
-              user_id: studentId,
+              student_details_id: studentDetailsId,
               name: student.name,
               control: student.n_control
             });
@@ -522,14 +524,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             .slice(0, 15);
           
           if (filtered.length > 0) {
-            this.searchResults = filtered.map(s => ({
-              id: s.id,
-              fullName: s.name,
-              control: s.control,
-              email: s.email || '',
-              career_name: s.careerName || '',
-              semestre: s.semester || ''
-            }));
+            this.searchResults = filtered.map(s => {
+              const studentDetailsId = s.studentDetailsId || '';
+              const userId = s.userId || (studentDetailsId ? '' : s.id);
+              return {
+                id: studentDetailsId || s.id,
+                student_details_id: studentDetailsId,
+                user_id: userId,
+                fullName: s.name,
+                control: s.control,
+                email: s.email || '',
+                career_name: s.careerName || '',
+                semestre: s.semester || ''
+              };
+            });
             this.isSearching = false;
             console.log('✅ Resultados desde cache:', this.searchResults.length);
             return;
@@ -600,15 +608,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   console.log('✅ Usando endpoint alternativo /payments/students');
                   
                   if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
-                    this.searchResults = paymentsJson.data.students.items.map(item => ({
-                      id: item.userId || item.user_id || item.id,
-                      student_id: item.userId || item.user_id || item.id,
-                      fullName: item.fullName || item.name,
-                      control: item.n_control || item.control,
-                      email: '',
-                      career_name: item.career_name || '',
-                      semestre: item.semestre || ''
-                    }));
+                    this.searchResults = paymentsJson.data.students.items.map(item => {
+                      const studentDetailsId = item.student_id || item.student_details_id || item.studentDetailsId || '';
+                      const userId = item.userId || item.user_id || item.id || '';
+                      return {
+                        id: studentDetailsId || userId,
+                        student_details_id: studentDetailsId,
+                        user_id: userId,
+                        fullName: item.fullName || item.name,
+                        control: item.n_control || item.control,
+                        email: '',
+                        career_name: item.career_name || '',
+                        semestre: item.semestre || ''
+                      };
+                    });
                     console.log('✅ Resultados desde /payments/students:', this.searchResults.length);
                     this.isSearching = false;
                     return;
@@ -648,10 +661,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   fullItem: item
                 });
                 
-                // El endpoint /concepts/search/controls devuelve student_details.id en 'id'
+                const studentDetailsId = item.student_details_id || item.student_id || '';
+                const userId = item.user_id || item.userId || (studentDetailsId ? '' : item.id);
                 return {
-                  id: item.id,  // Este es el student_details.id
-                  student_id: item.id,  // Guardar como student_id también
+                  id: studentDetailsId || item.id,
+                  student_details_id: studentDetailsId,
+                  user_id: userId,
                   fullName: item.name,
                   control: item.n_control,
                   email: item.email || '',
@@ -679,58 +694,98 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         console.log('🎯 Estudiante seleccionado del dropdown (completo):', student);
         
         // Buscar el student_details.id real (NO el user_id)
-        let studentDetailsId = null;
+        let studentDetailsId = student.student_details_id || student.student_id || null;
         
-        if (student.control) {
+        if (!studentDetailsId && student.control) {
           try {
             const token = localStorage.getItem('access_token');
             
-            // Buscar el student_details.id usando el endpoint de estudiante individual
-            console.log('🔍 Buscando student_details.id real usando /student...');
+            // Intentar con /payments/students (devuelve student_id)
+            console.log('🔍 Buscando student_details.id real usando /payments/students...');
             try {
-              const studentUrl = new URL(this.apiBaseUrl + '/v1/student');
-              studentUrl.searchParams.set('control', student.control);
+              const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
+              paymentsUrl.searchParams.set('search', student.control);
+              paymentsUrl.searchParams.set('perPage', '5');
               
-              const studentRes = await fetch(studentUrl.toString(), {
+              const paymentsRes = await fetch(paymentsUrl.toString(), {
                 method: 'GET',
                 headers: {
                   'Accept': 'application/json',
                   'Authorization': `Bearer ${token}`,
-                  'X-User-Role': 'financial-staff'
+                  'X-User-Role': 'financial-staff',
+                  'X-User-Permission': 'view.payments.student.summary'
                 }
               });
               
-              if (studentRes.ok) {
-                const studentJson = await studentRes.json();
-                console.log('📊 Respuesta /student completa:', studentJson);
-                
-                // El endpoint debería devolver student_details.id en el campo 'id'
-                if (studentJson.data?.student) {
-                  const studentData = studentJson.data.student;
-                  console.log('💾 Student data extraído:', studentData);
-                  console.log('💾 Campos disponibles:', Object.keys(studentData));
-                  console.log('💾 IDs encontrados:', {
-                    id: studentData.id,
-                    student_id: studentData.student_id,
-                    user_id: studentData.user_id
-                  });
-                  
-                  // EL ID CORRECTO es student_details.id (NO user_id)
-                  studentDetailsId = studentData.id || studentData.student_id;
-                  console.log('✅ student_details.id REAL obtenido desde API:', studentDetailsId);
-                } else if (studentJson.data?.id) {
-                  studentDetailsId = studentJson.data.id;
-                  console.log('✅ student_details.id obtenido (directo):', studentDetailsId);
+              if (paymentsRes.ok) {
+                const paymentsJson = await paymentsRes.json();
+                const items =
+                  paymentsJson.data?.students?.items ||
+                  paymentsJson.data?.items ||
+                  paymentsJson.data?.students ||
+                  paymentsJson.data ||
+                  [];
+                const list = Array.isArray(items) ? items : (items.items || []);
+                const match = list.find(s => String(s.n_control || s.control || s.num_control || '') === String(student.control)) || list[0];
+                if (match) {
+                  studentDetailsId = match.student_id || match.student_details_id || match.studentDetailsId || null;
+                  console.log('✅ student_details.id obtenido desde /payments/students:', studentDetailsId);
                 }
+              } else if (paymentsRes.status === 403) {
+                console.warn('⚠️ Error 403 en /payments/students: Sin permisos. Intentando otras opciones...');
               } else {
-                if (studentRes.status === 403) {
-                  console.warn('⚠️ Error 403 en /student: Sin permisos. Intentando obtener desde caché local...');
-                } else {
-                  console.warn('⚠️ /student respondió con:', studentRes.status);
-                }
+                console.warn('⚠️ /payments/students respondió con:', paymentsRes.status);
               }
             } catch (err) {
-              console.warn('⚠️ Error buscando en /student:', err);
+              console.warn('⚠️ Error buscando en /payments/students:', err);
+            }
+            
+            // Buscar el student_details.id usando el endpoint de estudiante individual
+            if (!studentDetailsId) {
+              console.log('🔍 Buscando student_details.id real usando /student...');
+              try {
+                const studentUrl = new URL(this.apiBaseUrl + '/v1/student');
+                studentUrl.searchParams.set('control', student.control);
+                
+                const studentRes = await fetch(studentUrl.toString(), {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-User-Role': 'financial-staff'
+                  }
+                });
+                
+                if (studentRes.ok) {
+                  const studentJson = await studentRes.json();
+                  console.log('📊 Respuesta /student completa:', studentJson);
+                  
+                  if (studentJson.data?.student) {
+                    const studentData = studentJson.data.student;
+                    console.log('💾 Student data extraído:', studentData);
+                    console.log('💾 Campos disponibles:', Object.keys(studentData));
+                    console.log('💾 IDs encontrados:', {
+                      id: studentData.id,
+                      student_id: studentData.student_id,
+                      user_id: studentData.user_id
+                    });
+                    
+                    studentDetailsId = studentData.id || studentData.student_id;
+                    console.log('✅ student_details.id REAL obtenido desde API:', studentDetailsId);
+                  } else if (studentJson.data?.id) {
+                    studentDetailsId = studentJson.data.id;
+                    console.log('✅ student_details.id obtenido (directo):', studentDetailsId);
+                  }
+                } else {
+                  if (studentRes.status === 403) {
+                    console.warn('⚠️ Error 403 en /student: Sin permisos. Intentando obtener desde caché local...');
+                  } else {
+                    console.warn('⚠️ /student respondió con:', studentRes.status);
+                  }
+                }
+              } catch (err) {
+                console.warn('⚠️ Error buscando en /student:', err);
+              }
             }
             
             // Si no funcionó, buscar en caché local si hay datos completos
@@ -738,23 +793,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               console.log('🔍 Buscando student_details.id en caché local...');
               const cachedStudent = this.allStudents.find(s => 
                 String(s.control) === String(student.control) ||
-                String(s.id) === String(student.id)
+                String(s.userId || s.id) === String(student.user_id || student.id)
               );
               
-              if (cachedStudent && cachedStudent.id) {
-                studentDetailsId = cachedStudent.id;
+              if (cachedStudent && cachedStudent.studentDetailsId) {
+                studentDetailsId = cachedStudent.studentDetailsId;
                 console.log('✅ student_details.id obtenido desde caché local:', studentDetailsId);
               }
             }
-            
-            // Si no funcionó, intentar con el ID del search como última opción
-            if (!studentDetailsId) {
-              console.log('🔍 Última opción: Usando ID del search inicial...');
-              studentDetailsId = student.id;
-              console.warn('⚠️ ADVERTENCIA: Usando ID del search, puede ser user_id en lugar de student_details.id');
-              console.warn('⚠️ Si el concepto falla al guardarse, es porque el ID es incorrecto');
-            }
-            
           } catch (err) {
             console.error('❌ Error buscando student_details.id:', err);
           }
