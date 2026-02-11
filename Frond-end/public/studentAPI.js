@@ -80,7 +80,8 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': role
+          'X-User-Role': role,
+          'X-User-Permission': 'view.own.pending.concepts.summary'
         }
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -101,7 +102,8 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': role
+          'X-User-Role': role,
+          'X-User-Permission': 'view.own.paid.concepts.summary'
         }
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -122,7 +124,8 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': role
+          'X-User-Role': role,
+          'X-User-Permission': 'view.own.overdue.concepts.summary'
         }
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -142,13 +145,40 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': role
+          'X-User-Role': role,
+          'X-User-Permission': 'refresh.all.dashboard'
         }
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
       return await response.json();
     } catch (err) {
       console.error('❌ StudentAPI.refreshDashboardCache:', err);
+      throw err;
+    }
+  },
+
+  async getDashboardHistory(studentId, token, page = 1, perPage = 15, forceRefresh = false, role = 'student') {
+    try {
+      const endpoint = studentId ? `${API_BASE}/dashboard/history/${studentId}` : `${API_BASE}/dashboard/history`;
+      const url = new URL(endpoint);
+      url.searchParams.append('page', String(page));
+      url.searchParams.append('perPage', String(perPage));
+      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+      
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': role,
+          'X-User-Permission': 'view.payments.summary'
+        }
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Error');
+      return await response.json();
+    } catch (err) {
+      console.error('❌ StudentAPI.getDashboardHistory:', err);
       throw err;
     }
   },
