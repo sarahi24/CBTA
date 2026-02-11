@@ -352,11 +352,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('👤 Estudiante encontrado (completo):', student);
             
-            // Si no tiene user_id, buscar en /payments/students
-            let studentId = student.user_id || student.userId;
+            // SIEMPRE buscar el user_id real en /payments/students
+            // porque /concepts/search/controls devuelve student_details.id, no users.id
+            let studentId = null;
             
-            if (!studentId && student.n_control) {
-              console.log('⚠️ No hay user_id, buscando en /payments/students...');
+            if (student.n_control) {
+              console.log('🔍 Buscando user_id real en /payments/students...');
               try {
                 const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
                 paymentsUrl.searchParams.set('search', student.n_control);
@@ -378,8 +379,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   
                   if (paymentsJson.data && paymentsJson.data.length > 0) {
                     studentId = paymentsJson.data[0].student_id || paymentsJson.data[0].id;
-                    console.log('✅ student_id obtenido de /payments/students:', studentId);
+                    console.log('✅ student_id (user_id real) obtenido:', studentId);
                   }
+                } else {
+                  console.error('❌ /payments/students respondió con error:', paymentsRes.status);
                 }
               } catch (err) {
                 console.error('❌ Error buscando en /payments/students:', err);
@@ -387,25 +390,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             }
             
             console.log('🆔 IDs disponibles:', {
-              id: student.id,
-              user_id: student.user_id,
-              studentId: studentId,
-              usando: studentId || student.id
+              'student_details.id': student.id,
+              'user_id (de payments)': studentId,
+              'usar': studentId || 'ERROR - NO HAY USER_ID'
             });
             
-            // Validar que el estudiante tenga un ID válido
-            const finalId = studentId || student.id;
-            if (!finalId) {
-              console.error('❌ El estudiante no tiene ID:', student);
-              this.errorMessage = '⚠️ Error: el estudiante no tiene un ID válido.';
-              setTimeout(() => this.errorMessage = '', 2000);
+            // Validar que obtuvimos el user_id real
+            if (!studentId) {
+              console.error('❌ No se pudo obtener el user_id real del estudiante');
+              this.errorMessage = '⚠️ No se pudo obtener el ID del usuario. El estudiante puede no existir en el sistema.';
+              setTimeout(() => this.errorMessage = '', 3000);
               this.isSearching = false;
               return;
             }
             
             // Verificar nuevamente con el ID real
             const existsById = this.formData.selectedSpecificStudents.some(s => 
-              String(s.id) === String(finalId)
+              String(s.id) === String(studentId)
             );
             
             if (existsById) {
@@ -417,7 +418,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             // Agregar con el ID real del usuario
             this.formData.selectedSpecificStudents.push({
-              id: finalId,
+              id: studentId,
               control: student.n_control || input,
               name: student.name || student.n_control || input,
               email: '',
@@ -426,7 +427,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             });
             
             console.log('✅ Estudiante agregado por Enter:', {
-              id: finalId,
+              user_id: studentId,
               name: student.name,
               control: student.n_control
             });
@@ -620,11 +621,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       async selectStudentFromSearch(student) {
         console.log('🎯 Estudiante seleccionado del dropdown (completo):', student);
         
-        // Si no tiene user_id, buscar en /payments/students
-        let studentId = student.id;
+        // SIEMPRE buscar el user_id real en /payments/students
+        // porque /concepts/search/controls devuelve student_details.id, no users.id
+        let studentId = null;
         
-        if (!studentId && student.control) {
-          console.log('⚠️ No hay ID directo, buscando en /payments/students...');
+        if (student.control) {
+          console.log('🔍 Buscando user_id real en /payments/students...');
           try {
             const token = localStorage.getItem('access_token');
             const userDataRaw = localStorage.getItem('user_data');
@@ -651,23 +653,25 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               
               if (paymentsJson.data && paymentsJson.data.length > 0) {
                 studentId = paymentsJson.data[0].student_id || paymentsJson.data[0].id;
-                console.log('✅ student_id obtenido de /payments/students:', studentId);
+                console.log('✅ student_id (user_id real) obtenido:', studentId);
               }
+            } else {
+              console.error('❌ /payments/students respondió con error:', paymentsRes.status);
             }
           } catch (err) {
             console.error('❌ Error buscando en /payments/students:', err);
           }
         }
         
-        // Validar que el estudiante tenga un ID válido
+        // Validar que obtuvimos el user_id real
         if (!studentId) {
-          console.error('❌ El estudiante no tiene ID:', student);
-          this.errorMessage = '⚠️ Error: el estudiante no tiene un ID válido.';
-          setTimeout(() => this.errorMessage = '', 2000);
+          console.error('❌ No se pudo obtener el user_id real del estudiante');
+          this.errorMessage = '⚠️ No se pudo obtener el ID del usuario. El estudiante puede no existir en el sistema.';
+          setTimeout(() => this.errorMessage = '', 3000);
           return;
         }
         
-        console.log('🆔 ID a usar:', studentId);
+        console.log('🆔 ID a usar (user_id real):', studentId);
         
         const exists = this.formData.selectedSpecificStudents.some(s => 
           String(s.id) === String(studentId)
@@ -694,7 +698,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.searchTerm = '';
         this.searchResults = [];
         console.log('✅ Estudiante seleccionado desde dropdown:', {
-          id: studentId,
+          user_id: studentId,
           name: student.fullName || student.name,
           control: student.control || student.n_control
         });
