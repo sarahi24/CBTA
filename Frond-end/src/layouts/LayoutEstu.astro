@@ -114,6 +114,13 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                         Historial
                     </a>
                 </li>
+                <li>
+                    <a href="/Estudiante/Notificaciones" data-path="/Estudiante/Notificaciones" class="nav-link nav-inactive flex items-center gap-4 py-3 px-4 rounded-lg transition-all relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        Notificaciones
+                        <span id="notif-badge" class="hidden absolute right-4 top-1/2 -translate-y-1/2 bg-[#86efad] text-[#2e594d] text-[10px] font-black px-2 py-0.5 rounded-full">3</span>
+                    </a>
+                </li>
             </ul>
         </div>
 
@@ -210,11 +217,75 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
         window.addEventListener('resize', handleResize);
         window.addEventListener('load', () => { 
             handleResize(); 
-            setActiveLink(); 
+            setActiveLink();
+            updateNotificationBadge();
         });
         
         // Importante para Astro con transiciones de página
-        document.addEventListener("astro:after-swap", setActiveLink);
+        document.addEventListener("astro:after-swap", () => {
+            setActiveLink();
+            updateNotificationBadge();
+        });
+
+        // Actualizar badge de notificaciones
+        async function updateNotificationBadge() {
+            const badge = document.getElementById('notif-badge');
+            if (!badge) return;
+
+            try {
+                // Intentar leer desde localStorage primero
+                const cachedCount = localStorage.getItem('unread_notifications_count');
+                
+                // Obtener token
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    badge.classList.add('hidden');
+                    return;
+                }
+
+                // Si hay cache, mostrarlo inmediatamente
+                if (cachedCount !== null) {
+                    const count = parseInt(cachedCount);
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+
+                // Hacer fetch al API para actualizar
+                const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+                const response = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=1`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error('Error fetching notifications:', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                const unreadCount = data.data?.count || 0;
+
+                // Actualizar UI y cache
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                localStorage.setItem('unread_notifications_count', unreadCount.toString());
+
+            } catch (error) {
+                console.error('Error updating notification badge:', error);
+                // Mantener el cache si hay error
+            }
+        }
     </script>
 </body>
 </html>
