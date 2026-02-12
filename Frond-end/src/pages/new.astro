@@ -293,6 +293,75 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         console.log('✅ Formulario poblado completamente:', this.formData);
       },
 
+      getCareerDisplayName(careerId) {
+        const id = String(careerId || '');
+        const career = (this.careers || []).find(c => String(c.id) === id);
+        return career ? `${career.name} (ID: ${id})` : `ID: ${id}`;
+      },
+
+      getScopeLabel() {
+        if (this.formData.allStudents) return 'Todos los estudiantes';
+
+        const labels = {
+          carrera: 'Por carrera',
+          semestre: 'Por semestre',
+          carrera_semestre: 'Carrera + semestre',
+          estudiantes: 'Estudiantes específicos',
+          tags: 'Tags especiales'
+        };
+
+        return labels[this.formData.scopeType] || 'Sin definir';
+      },
+
+      getScopeSummary() {
+        if (this.formData.allStudents) {
+          return 'Se aplicará a toda la matrícula activa.';
+        }
+
+        if (this.formData.scopeType === 'carrera') {
+          if (!this.formData.selectedCareers.length) return 'Sin carreras seleccionadas.';
+          return this.formData.selectedCareers.map(id => this.getCareerDisplayName(id)).join(' | ');
+        }
+
+        if (this.formData.scopeType === 'semestre') {
+          if (!this.formData.selectedSemesters.length) return 'Sin semestres seleccionados.';
+          return this.formData.selectedSemesters.map(s => `${s}°`).join(', ');
+        }
+
+        if (this.formData.scopeType === 'carrera_semestre') {
+          const careers = this.formData.selectedCareers.length
+            ? this.formData.selectedCareers.map(id => this.getCareerDisplayName(id)).join(', ')
+            : 'Sin carreras';
+          const semesters = this.formData.selectedSemesters.length
+            ? this.formData.selectedSemesters.map(s => `${s}°`).join(', ')
+            : 'Sin semestres';
+          return `Carreras: ${careers} | Semestres: ${semesters}`;
+        }
+
+        if (this.formData.scopeType === 'estudiantes') {
+          const total = this.formData.selectedSpecificStudents.length;
+          if (!total) return 'Sin estudiantes seleccionados.';
+          const preview = this.formData.selectedSpecificStudents
+            .slice(0, 3)
+            .map(s => s.name || s.control || s.id)
+            .join(', ');
+          return total > 3 ? `${preview} y ${total - 3} más` : preview;
+        }
+
+        if (this.formData.scopeType === 'tags') {
+          if (!this.formData.applicantTags.length) return 'Sin tags seleccionados.';
+          return this.formData.applicantTags.join(', ');
+        }
+
+        return 'Sin reglas de alcance configuradas.';
+      },
+
+      getExceptionsSummary() {
+        if (this.formData.scopeType === 'estudiantes') return 'No aplica para estudiantes específicos.';
+        if (!this.formData.exceptionStudents.length) return 'Sin excepciones.';
+        return `${this.formData.exceptionStudents.length} excepción(es) configurada(s).`;
+      },
+
       toggleSpecificStudent(student) {
         const studentControl = student.control || student.n_control;
         const index = this.formData.selectedSpecificStudents.findIndex(s => s.control === studentControl);
@@ -1446,6 +1515,20 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       >
         <i :class="errorMessage.includes('✓') ? 'fas fa-check-circle text-emerald-500' : 'fas fa-exclamation-triangle text-red-500'" class="text-xl mr-3 mt-0.5 flex-shrink-0"></i>
         <span x-text="errorMessage" class="flex-1 whitespace-pre-wrap"></span>
+      </div>
+
+      <div x-cloak x-show="formData.id"
+        class="p-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-900 shadow-md"
+      >
+        <div class="flex items-start gap-3">
+          <i class="fas fa-bullseye text-amber-700 text-xl mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <p class="font-extrabold text-sm mb-1">Este concepto actualmente aplica a:</p>
+            <p class="text-sm font-bold break-words" x-text="getScopeLabel()"></p>
+            <p class="text-xs mt-1 break-words" x-text="getScopeSummary()"></p>
+            <p class="text-xs mt-1 text-amber-800" x-text="getExceptionsSummary()"></p>
+          </div>
+        </div>
       </div>
 
       <!-- Alerta cuando no hay estudiantes cargados -->
