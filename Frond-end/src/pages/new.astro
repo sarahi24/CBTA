@@ -1217,11 +1217,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
         const normalizedDescription = String(this.formData.description || '').trim();
         const safeDescription = normalizedDescription || 'Sin descripción';
+        const isCreateMode = !this.formData.id;
+        const shouldDisableAfterCreate = isCreateMode && this.formData.status === 'inactive';
 
         const payload = {
           concept_name: this.formData.title,
           description: safeDescription,
-          status: this.formData.status,
+          status: isCreateMode ? 'activo' : (this.formData.status === 'active' ? 'activo' : 'inactivo'),
           amount: parseFloat(this.formData.amount),
           start_date: this.formData.startDate,
           end_date: this.formData.endDate,
@@ -1526,6 +1528,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 // ✅ ÉXITO en POST - Ahora guardar relaciones si existen
                 const conceptId = data.data?.concept?.id || data.data?.id;
                 console.log('✅ Concepto creado exitosamente ID:', conceptId);
+
+                const disableConceptIfNeeded = async (resultPayload) => {
+                  if (!shouldDisableAfterCreate || !conceptId) {
+                    return resultPayload;
+                  }
+
+                  try {
+                    const disableRes = await fetch(`${self.apiBaseUrl}/v1/concepts/${conceptId}/disable`, {
+                      method: 'POST',
+                      headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-User-Role': 'financial-staff',
+                        'X-User-Permission': 'update.concepts'
+                      }
+                    });
+
+                    const disableData = await disableRes.json().catch(() => ({}));
+                    if (!disableRes.ok) {
+                      console.warn('⚠️ Concepto creado, pero no se pudo desactivar automáticamente:', disableData?.message || disableRes.statusText);
+                      return {
+                        ...resultPayload,
+                        statusUpdateWarning: disableData?.message || 'No se pudo cambiar a inactivo automáticamente.'
+                      };
+                    }
+
+                    console.log('✅ Concepto desactivado automáticamente tras creación');
+                    return resultPayload;
+                  } catch (disableErr) {
+                    console.warn('⚠️ Concepto creado, pero falló la desactivación automática:', disableErr);
+                    return {
+                      ...resultPayload,
+                      statusUpdateWarning: 'No se pudo cambiar a inactivo automáticamente.'
+                    };
+                  }
+                };
                 
                 // Verificar si hay relaciones que guardar (PATCH update-relations)
                 const needsRelationsUpdate = 
@@ -1590,14 +1629,14 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                       }
                       console.error('⚠️ Error en PATCH, pero concepto ya fue creado:', patchError);
                       // No rechazar porque el concepto ya existe, solo avisar
-                      return { ...data, relationsUpdate: { error: patchError } };
+                      return disableConceptIfNeeded({ ...data, relationsUpdate: { error: patchError } });
                     }
                     console.log('✅ Relaciones guardadas correctamente');
-                    return patchData;
+                    return disableConceptIfNeeded(patchData);
                   });
                 }
                 
-                return data;
+                return disableConceptIfNeeded(data);
               });
             }
             
@@ -1881,13 +1920,26 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           const urlParams = new URLSearchParams(window.location.search);
           const editId = urlParams.get('edit');
           const rawConcept = localStorage.getItem('editingConcept');
+          let conceptFromStorage = null;
+
+          if (rawConcept) {
+            try {
+              conceptFromStorage = JSON.parse(rawConcept);
+            } catch {
+              conceptFromStorage = null;
+            }
+          }
+
+          const fallbackEditId = conceptFromStorage?.id ? String(conceptFromStorage.id) : null;
+          const effectiveEditId = editId || fallbackEditId;
           
-          console.log('🔍 Modo:', editId ? `Edición (ID: ${editId})` : 'Creación');
+          console.log('🔍 Modo:', effectiveEditId ? `Edición (ID: ${effectiveEditId})` : 'Creación');
           console.log('📦 localStorage editingConcept:', rawConcept ? 'Existe' : 'No existe');
           
-          if (editId && rawConcept) {
+          if (rawConcept && effectiveEditId) {
             try {
-              const concept = JSON.parse(rawConcept);
+              const concept = conceptFromStorage || JSON.parse(rawConcept);
+              concept.id = concept.id || effectiveEditId;
               console.log('📋 Concepto parseado:', concept);
               console.log('🎯 formData antes:', JSON.parse(JSON.stringify(self.formData)));
               
