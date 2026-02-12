@@ -213,7 +213,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
         const careersRaw = readFirst(['careers', 'carreras', 'careerIds', 'career_ids', 'career']);
         const semestersRaw = readFirst(['semestres', 'semesters', 'semesterIds', 'semester_ids', 'target_semester', 'semester', 'semestre']);
-        const studentsRaw = readFirst(['students', 'specificStudents', 'userIds', 'user_ids']);
+        const studentsRaw = readFirst([
+          'students',
+          'specificStudents',
+          'specific_students',
+          'users',
+          'studentUsers',
+          'student_users',
+          'userIds',
+          'user_ids',
+          'studentIds',
+          'student_ids',
+          'controls',
+          'student_controls',
+          'user_controls',
+          'n_controls'
+        ]);
         const exceptionsRaw = readFirst(['exceptionStudents', 'exception_students']);
         const tagsRaw = readFirst(['applicantTags', 'applicant_tags']);
         const appliesToRaw = readFirst(['applies_to', 'appliesTo', 'scopeType', 'scope_type']);
@@ -408,10 +423,42 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         // Estudiantes específicos
         const specificStudentsRaw =
           scopeRules.specificStudents ??
+          scopeRules.specific_students ??
           scopeRules.students ??
+          scopeRules.users ??
+          scopeRules.studentUsers ??
+          scopeRules.student_users ??
+          scopeRules.controls ??
+          scopeRules.student_controls ??
+          scopeRules.user_controls ??
           concept.students ??
+          concept.users ??
+          concept.studentUsers ??
+          concept.student_users ??
+          concept.specific_students ??
+          concept.controls ??
+          concept.student_controls ??
+          concept.user_controls ??
           concept.userIds ??
-          concept.user_ids;
+          concept.user_ids ??
+          concept.studentIds ??
+          concept.student_ids;
+
+        const resolveStudentCollection = (value) => {
+          if (value === null || value === undefined || value === '') return [];
+          if (Array.isArray(value)) return value;
+          if (typeof value === 'object') {
+            if (Array.isArray(value.items)) return value.items;
+            if (Array.isArray(value.data)) return value.data;
+            if (Array.isArray(value.students)) return value.students;
+            if (Array.isArray(value.users)) return value.users;
+            if (Array.isArray(value.controls)) return value.controls;
+            if (Array.isArray(value.user_ids)) return value.user_ids;
+            if (Array.isArray(value.student_ids)) return value.student_ids;
+            if (Array.isArray(value.ids)) return value.ids;
+          }
+          return [value];
+        };
 
         const normalizeStudentForSelection = (value) => {
           if (value === null || value === undefined) return null;
@@ -447,11 +494,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           };
         };
 
-        if (toArray(specificStudentsRaw).length > 0) {
-          this.formData.selectedSpecificStudents = toArray(specificStudentsRaw)
+        const normalizedSpecificStudentsRaw = resolveStudentCollection(specificStudentsRaw);
+
+        if (normalizedSpecificStudentsRaw.length > 0) {
+          this.formData.selectedSpecificStudents = normalizedSpecificStudentsRaw
             .map(item => normalizeStudentForSelection(item))
             .filter(item => item && (item.id || item.control));
           console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
+        }
+
+        if (this.formData.scopeType === 'estudiantes' && this.formData.selectedSpecificStudents.length === 0) {
+          console.warn('⚠️ Scope estudiantes sin estudiantes precargados. specificStudentsRaw:', specificStudentsRaw);
         }
 
         // Excepciones
