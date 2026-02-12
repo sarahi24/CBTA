@@ -190,6 +190,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <option value="activo">Activo</option>
                         <option value="baja-temporal">Baja Temporal</option>
                         <option value="baja">Baja</option>
+                        <option value="eliminado">Eliminado</option>
                     </select>
                 </div>
             </div>
@@ -331,7 +332,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-2 rounded-full text-xs font-bold border shadow-sm"
-                                          x-bind:class="user.status === 'activo' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : user.status === 'baja-temporal' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-red-100 text-red-800 border-red-300'"
+                                          x-bind:class="user.status === 'activo' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : user.status === 'baja-temporal' ? 'bg-amber-100 text-amber-800 border-amber-300' : user.status === 'baja' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-slate-100 text-slate-700 border-slate-300'"
                                           x-text="statusLabel(user.status)"></span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
@@ -1462,6 +1463,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (key === 'activo' || key === 'active') return 'Activo';
                 if (key === 'baja-temporal') return 'Baja temporal';
                 if (key === 'baja' || key === 'inactive' || key === 'inactivo' || key === 'disabled') return 'Baja';
+                if (key === 'eliminado' || key === 'deleted') return 'Eliminado';
                 return 'Inactivo';
             },
 
@@ -1594,6 +1596,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (statusKey === 'active' || statusKey === 'activo') status = 'activo';
                 else if (statusKey === 'baja-temporal' || statusKey === 'baja temporal' || statusKey === 'temporary-disable') status = 'baja-temporal';
                 else if (statusKey === 'baja' || statusKey === 'inactive' || statusKey === 'inactivo' || statusKey === 'disabled') status = 'baja';
+                else if (statusKey === 'eliminado' || statusKey === 'deleted') status = 'eliminado';
 
                 // Address puede ser string o array, asegurar que siempre sea array
                 let address = ['', '', ''];
