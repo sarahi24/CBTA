@@ -1221,7 +1221,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         const payload = {
           concept_name: this.formData.title,
           description: safeDescription,
-          status: this.formData.status === 'active' ? 'activo' : 'inactivo',
+          status: this.formData.status,
           amount: parseFloat(this.formData.amount),
           start_date: this.formData.startDate,
           end_date: this.formData.endDate,
