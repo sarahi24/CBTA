@@ -1102,6 +1102,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           this.errorMessage = '⚠️ Las fechas de inicio y fin son obligatorias.';
           return;
         }
+
+        const now = new Date();
+        const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        if (this.formData.endDate < this.formData.startDate) {
+          this.errorMessage = '⚠️ La fecha de fin no puede ser anterior a la fecha de inicio.';
+          return;
+        }
+
+        if (!this.formData.id && this.formData.endDate < todayISO) {
+          this.errorMessage = `⚠️ La fecha de fin no puede ser anterior a hoy (${todayISO}). Actualiza la fecha para continuar.`;
+          return;
+        }
         
         // Validación específica según el ámbito seleccionado
         if (!this.formData.allStudents) {
@@ -1518,77 +1531,36 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               });
             }
             
-            // ACTUALIZAR concepto existente: separar en dos peticiones
-            // 1. Actualizar datos básicos con PUT
-            const basicData = {
-              concept_name: payload.concept_name,
-              description: payload.description,
-              status: payload.status,
-              amount: payload.amount,
-              start_date: payload.start_date,
-              end_date: payload.end_date
-            };
-            
-            console.log('📤 Actualizando datos básicos:', basicData);
-            
-            return fetch(`${self.apiBaseUrl}/v1/concepts/${self.formData.id}`, {
-              method: 'PUT',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-User-Role': 'financial-staff',
-                'X-User-Permission': 'update.concepts'
-              },
-              body: JSON.stringify(basicData)
-            })
-            .then(async res => {
-              const data = await res.json().catch(() => ({}));
-              if (!res.ok) {
-                let errorMsg = data.message || res.statusText || 'Error al actualizar datos básicos';
-                if (data.errors && typeof data.errors === 'object') {
-                  const errorList = Object.entries(data.errors)
-                    .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-                    .join(' | ');
-                  errorMsg = `${errorMsg} - ${errorList}`;
-                }
-                console.error('Backend validation errors:', data.errors);
-                return Promise.reject(new Error(errorMsg));
-              }
-              console.log('✅ Datos básicos actualizados');
-              return data;
-            })
-            .then(basicResult => {
-              // 2. Actualizar relaciones con PATCH
-              // Siempre intentar actualizar relaciones ya que ahora las cargamos del API
+            // ACTUALIZAR concepto existente: si está vencido, actualizar relaciones directamente
+            const buildRelationsData = () => {
               const relationsData = {
                 applies_to: payload.applies_to
               };
-              
-              // Agregar campos de relaciones solo si existen
+
               if (payload.students) relationsData.students = payload.students;
               if (payload.careers) relationsData.careers = payload.careers;
               if (payload.semestres) relationsData.semestres = payload.semestres;
-              
-              // Agregar excepciones si existen
+
               if (payload.exceptionStudents && payload.exceptionStudents.length > 0) {
                 relationsData.exceptionStudents = payload.exceptionStudents;
               }
-              
-              // Agregar tags si existen
+
               if (payload.applicantTags && payload.applicantTags.length > 0) {
                 relationsData.applicantTags = payload.applicantTags;
-                // TAMBIÉN enviar en snake_case por si el backend espera ese formato
                 relationsData.applicant_tags = payload.applicantTags;
               }
-              
-              // Agregar booleanos de control si existen
+
               if (payload.replaceRelations !== undefined) relationsData.replaceRelations = payload.replaceRelations;
               if (payload.removeAllExceptions !== undefined) relationsData.removeAllExceptions = payload.removeAllExceptions;
               if (payload.replaceExceptions !== undefined) relationsData.replaceExceptions = payload.replaceExceptions;
-              
+
+              return relationsData;
+            };
+
+            const updateRelations = () => {
+              const relationsData = buildRelationsData();
               console.log('📤 Actualizando relaciones:', relationsData);
-              
+
               return fetch(`${self.apiBaseUrl}/v1/concepts/update-relations/${self.formData.id}`, {
                 method: 'PATCH',
                 headers: {
@@ -1616,7 +1588,54 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 console.log('✅ Relaciones actualizadas');
                 return data;
               });
-            });
+            };
+
+            const conceptIsExpired = payload.end_date < todayISO;
+            if (conceptIsExpired) {
+              console.warn('⚠️ Concepto vencido: se omite PUT de datos básicos y se actualizan solo relaciones.');
+              return updateRelations();
+            }
+
+            // Si no está vencido, mantener flujo completo: PUT (básicos) + PATCH (relaciones)
+            const basicData = {
+              concept_name: payload.concept_name,
+              description: payload.description,
+              status: payload.status,
+              amount: payload.amount,
+              start_date: payload.start_date,
+              end_date: payload.end_date
+            };
+
+            console.log('📤 Actualizando datos básicos:', basicData);
+
+            return fetch(`${self.apiBaseUrl}/v1/concepts/${self.formData.id}`, {
+              method: 'PUT',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-User-Role': 'financial-staff',
+                'X-User-Permission': 'update.concepts'
+              },
+              body: JSON.stringify(basicData)
+            })
+            .then(async res => {
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                let errorMsg = data.message || res.statusText || 'Error al actualizar datos básicos';
+                if (data.errors && typeof data.errors === 'object') {
+                  const errorList = Object.entries(data.errors)
+                    .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                    .join(' | ');
+                  errorMsg = `${errorMsg} - ${errorList}`;
+                }
+                console.error('Backend validation errors:', data.errors);
+                return Promise.reject(new Error(errorMsg));
+              }
+              console.log('✅ Datos básicos actualizados');
+              return data;
+            })
+            .then(() => updateRelations());
           }
         };
         executeSubmit()
@@ -1941,6 +1960,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   Fecha de Fin <span class="text-red-600">*</span>
                 </label>
                 <input type="date" id="endDate" x-model="formData.endDate"
+                  :min="(() => { const n = new Date(); const today = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'); return (formData.startDate && formData.startDate > today) ? formData.startDate : today; })()"
                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl input-focus-style transition duration-200 text-sm font-medium shadow-sm hover:border-red-400" required>
               </div>
             </div>
