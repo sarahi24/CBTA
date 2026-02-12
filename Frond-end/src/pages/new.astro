@@ -823,9 +823,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             }
           }
         }
+        const normalizedDescription = String(this.formData.description || '').trim();
+        const safeDescription = normalizedDescription || 'Sin descripción';
+
         const payload = {
           concept_name: this.formData.title,
-          description: this.formData.description || '',
+          description: safeDescription,
           status: this.formData.status === 'active' ? 'activo' : 'inactivo',
           amount: parseFloat(this.formData.amount),
           start_date: this.formData.startDate,
@@ -1017,8 +1020,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }
         console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
         console.log('📋 Payload object:', payload);
-        console.log('🏷️  applicantTags específicamente:', payload.applicantTags);
-        console.log('🏷️  Tipo de applicantTags:', typeof payload.applicantTags, Array.isArray(payload.applicantTags) ? 'ARRAY' : 'NO ARRAY');
+        if (payload.applies_to === 'tag') {
+          console.log('🏷️  applicantTags específicamente:', payload.applicantTags);
+          console.log('🏷️  Tipo de applicantTags:', typeof payload.applicantTags, Array.isArray(payload.applicantTags) ? 'ARRAY' : 'NO ARRAY');
+        }
         const token = localStorage.getItem('access_token');
         console.log('🎯 URL del API:', this.apiBaseUrl + '/v1/concepts');
         console.log('🔑 Token presente:', !!token);
