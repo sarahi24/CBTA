@@ -180,6 +180,78 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         return Promise.resolve();
       },
 
+      mergeRelationsIntoConcept(concept, relationsResponse) {
+        const sources = [
+          relationsResponse?.data?.relations,
+          relationsResponse?.data?.scopeRules,
+          relationsResponse?.data?.concept_relations,
+          relationsResponse?.data,
+          relationsResponse?.relations,
+          relationsResponse?.scopeRules,
+          relationsResponse
+        ].filter(Boolean);
+
+        const readFirst = (keys) => {
+          for (const source of sources) {
+            if (!source || typeof source !== 'object') continue;
+            for (const key of keys) {
+              if (source[key] === undefined || source[key] === null) continue;
+              if (Array.isArray(source[key]) && source[key].length === 0) continue;
+              return source[key];
+            }
+          }
+          for (const source of sources) {
+            if (!source || typeof source !== 'object') continue;
+            for (const key of keys) {
+              if (source[key] !== undefined && source[key] !== null) {
+                return source[key];
+              }
+            }
+          }
+          return undefined;
+        };
+
+        const careersRaw = readFirst(['careers', 'carreras', 'careerIds', 'career_ids', 'career']);
+        const semestersRaw = readFirst(['semestres', 'semesters', 'semesterIds', 'semester_ids', 'target_semester', 'semester', 'semestre']);
+        const studentsRaw = readFirst(['students', 'specificStudents', 'userIds', 'user_ids']);
+        const exceptionsRaw = readFirst(['exceptionStudents', 'exception_students']);
+        const tagsRaw = readFirst(['applicantTags', 'applicant_tags']);
+        const appliesToRaw = readFirst(['applies_to', 'appliesTo', 'scopeType', 'scope_type']);
+        const allStudentsRaw = readFirst(['allStudents', 'is_global', 'isGlobal']);
+
+        concept.scopeRules = concept.scopeRules || {};
+
+        if (careersRaw !== undefined) {
+          concept.careers = careersRaw;
+          concept.scopeRules.careers = careersRaw;
+        }
+        if (semestersRaw !== undefined) {
+          concept.semestres = semestersRaw;
+          concept.semesters = semestersRaw;
+          concept.scopeRules.semestres = semestersRaw;
+          concept.scopeRules.semesters = semestersRaw;
+        }
+        if (studentsRaw !== undefined) {
+          concept.students = studentsRaw;
+          concept.scopeRules.specificStudents = studentsRaw;
+        }
+        if (exceptionsRaw !== undefined) {
+          concept.exceptionStudents = exceptionsRaw;
+          concept.scopeRules.exceptionStudents = exceptionsRaw;
+        }
+        if (tagsRaw !== undefined) {
+          concept.applicantTags = tagsRaw;
+          concept.scopeRules.applicantTags = tagsRaw;
+        }
+        if (appliesToRaw !== undefined && appliesToRaw !== '') {
+          concept.applies_to = appliesToRaw;
+        }
+        if (allStudentsRaw !== undefined && allStudentsRaw !== null) {
+          concept.scopeRules.allStudents = Boolean(allStudentsRaw);
+          concept.is_global = Boolean(allStudentsRaw);
+        }
+      },
+
       populateForm(concept) {
         console.log('📋 Poblando formulario con concepto:', concept);
         const toArray = (value) => {
@@ -286,9 +358,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           concept.target_semester ??
           concept.semester ??
           concept.semestre;
+        const normalizeSemesterId = (value) => {
+          if (value === null || value === undefined) return null;
+          if (typeof value === 'number' || typeof value === 'string') return String(value);
+          if (typeof value === 'object') {
+            const candidate =
+              value.id ??
+              value.semester_id ??
+              value.semesterId ??
+              value.semestre_id ??
+              value.semestreId ??
+              value.semester ??
+              value.semestre ??
+              value.value;
+            if (candidate !== undefined && candidate !== null) return String(candidate);
+          }
+          return null;
+        };
+
         this.formData.selectedSemesters = toArray(semestersRaw)
-          .map(s => String(s))
-          .filter(s => s !== '' && !Number.isNaN(Number(s)));
+          .map(normalizeSemesterId)
+          .filter(s => s !== null && s !== '' && !Number.isNaN(Number(s)));
 
         console.log('✅ Carreras seleccionadas:', this.formData.selectedCareers);
         console.log('✅ Semestres seleccionados:', this.formData.selectedSemesters);
@@ -1539,6 +1629,30 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         if (key === 'updated_at') concept.updatedAt = fullConcept[key];
                         concept[key] = fullConcept[key];
                       });
+                    }
+
+                    // Cargar relaciones (carreras/semestres/estudiantes/tags) desde endpoint dedicado
+                    try {
+                      const relationsResponse = await fetch(`https://nginx-production-728f.up.railway.app/api/v1/concepts/relations/${concept.id}`, {
+                        method: 'GET',
+                        headers: {
+                          'Authorization': `Bearer ${token}`,
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json',
+                          'X-User-Role': 'financial-staff',
+                          'X-User-Permission': 'view.concepts'
+                        }
+                      });
+
+                      if (relationsResponse.ok) {
+                        const relationsData = await relationsResponse.json();
+                        console.log('✅ Relaciones obtenidas desde GET /concepts/relations/{id}:', relationsData);
+                        self.mergeRelationsIntoConcept(concept, relationsData);
+                      } else {
+                        console.warn('⚠️ GET /concepts/relations/{id} retornó estado:', relationsResponse.status);
+                      }
+                    } catch (relationErr) {
+                      console.warn('⚠️ Error al cargar relaciones del concepto:', relationErr);
                     }
                     
                     console.log('✅ Concepto actualizado con datos de la API:', concept);
