@@ -1720,18 +1720,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('📋 Respuesta completa del refresh:', data);
+                        
                         const newAccessToken = data.data?.user_tokens?.access_token || data.data?.access_token || data.access_token;
                         const newRefreshToken = data.data?.user_tokens?.refresh_token || data.data?.refresh_token || data.refresh_token;
 
+                        console.log('🔑 Access Token extraído:', newAccessToken ? '✅ Sí' : '❌ No');
+                        console.log('🔄 Refresh Token extraído:', newRefreshToken ? '✅ Sí' : '❌ No');
+
                         if (newAccessToken) {
                             localStorage.setItem('access_token', newAccessToken);
-                            console.log('✅ Token refrescado exitosamente');
+                            console.log('✅ Token refrescado exitosamente y guardado en localStorage');
                             
                             if (newRefreshToken) {
                                 localStorage.setItem('refresh_token', newRefreshToken);
+                                console.log('✅ Refresh token rotado y guardado');
                             }
                             
                             return newAccessToken;
+                        } else {
+                            console.error('❌ No se encontró access_token en la respuesta');
+                            return null;
                         }
                     }
 
