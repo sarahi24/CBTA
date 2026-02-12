@@ -666,7 +666,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       },
 
       getExceptionsSummary() {
-        if (this.formData.scopeType === 'estudiantes') return 'No aplica para estudiantes específicos.';
+        if (this.formData.scopeType === 'estudiantes') return '';
         if (!this.formData.exceptionStudents.length) return 'Sin excepciones.';
         return `${this.formData.exceptionStudents.length} excepción(es) configurada(s).`;
       },
