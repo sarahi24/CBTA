@@ -310,12 +310,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
     <header class="main-header">
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
         <div class="overdue-alert-banner">
-          <div class="alert-icon">š ï¸</div>
+          <div class="alert-icon" aria-hidden="true">&#9888;</div>
           <div class="alert-content">
             <h3>¡Tienes pagos vencidos!</h3>
             <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s) que requieren atención inmediata.'"></p>
           </div>
-          <button @click="showOverdueAlert = false" class="alert-close">•</button>
+          <button @click="showOverdueAlert = false" class="alert-close" aria-label="Cerrar alerta">&times;</button>
         </div>
       </template>
       
@@ -351,12 +351,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       <!-- Alerta de pagos vencidos -->
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
         <div class="overdue-alert-banner" x-transition>
-          <div class="alert-icon">š ï¸</div>
+          <div class="alert-icon" aria-hidden="true">&#9888;</div>
           <div class="alert-content">
             <h3>Pagos vencidos</h3>
             <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Por favor realiza el pago cuanto antes.'"></p>
           </div>
-          <button class="alert-close" @click="showOverdueAlert = false">—</button>
+          <button class="alert-close" @click="showOverdueAlert = false" aria-label="Cerrar alerta">&times;</button>
         </div>
       </template>
 
