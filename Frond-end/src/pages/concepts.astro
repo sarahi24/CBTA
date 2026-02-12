@@ -143,6 +143,41 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       </a>
     </header>
 
+    <section class="mb-4 sm:mb-6 lg:mb-8 bg-white/90 border border-gray-200 rounded-2xl shadow-sm p-3 sm:p-4">
+      <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end">
+        <div class="flex-1 min-w-0">
+          <label for="filter-status" class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-1">Estatus</label>
+          <select id="filter-status" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+            <option value="">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+            <option value="finalizado">Finalizado</option>
+            <option value="expirado">Expirado</option>
+            <option value="eliminado">Eliminado</option>
+          </select>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <label for="filter-scope" class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-1">Relación (Aplica A)</label>
+          <select id="filter-scope" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+            <option value="">Todas</option>
+            <option value="todos">Todos</option>
+            <option value="carrera">Por carrera</option>
+            <option value="semestre">Por semestre</option>
+            <option value="carrera_semestre">Carrera + semestre</option>
+            <option value="estudiantes">Estudiantes específicos</option>
+            <option value="tag">Tags especiales</option>
+          </select>
+        </div>
+
+        <div class="sm:w-auto">
+          <button id="clear-concept-filters" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-50 text-gray-700 text-sm font-bold hover:bg-gray-100 transition-colors">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+    </section>
+
     <div id="concepts-grid"
          class="grid gap-4 sm:gap-6 lg:gap-8"
          style="grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));">
@@ -210,6 +245,66 @@ function getStatusBadge(status){
   if (s === 'finalizado' || s === 'finalized') return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-amber-300 hover:scale-105 transition-transform"><i class="fas fa-flag-checkered"></i> Finalizado</span>';
   if (s === 'inactivo' || s === 'inactive') return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-gray-300 hover:scale-105 transition-transform"><i class="fas fa-pause-circle"></i> Inactivo</span>';
   return '<span class="inline-flex items-center gap-1.5 mt-1 text-[10px] bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 px-3 py-1.5 rounded-full font-black uppercase shadow-md border border-emerald-300 animate-pulse hover:scale-105 hover:shadow-lg transition-all relative overflow-hidden group"><div class="absolute inset-0 shimmer opacity-0 group-hover:opacity-50"></div><i class="fas fa-check-circle relative z-10"></i> <span class="relative z-10">Vigente</span></span>';
+}
+
+function normalizeStatus(status) {
+  const raw = String(status || '').toLowerCase().trim();
+  if (!raw) return 'activo';
+  if (raw === 'active') return 'activo';
+  if (raw === 'inactive') return 'inactivo';
+  if (raw === 'finalized') return 'finalizado';
+  if (raw === 'expired') return 'expirado';
+  if (raw === 'deleted') return 'eliminado';
+  return raw;
+}
+
+function normalizeAppliesTo(value) {
+  const raw = String(value || '').toLowerCase().trim();
+  const map = {
+    'todos': 'todos',
+    'all': 'todos',
+    'carrera': 'carrera',
+    'career': 'carrera',
+    'semestre': 'semestre',
+    'semester': 'semestre',
+    'carrera_semestre': 'carrera_semestre',
+    'career_semester': 'carrera_semestre',
+    'estudiantes': 'estudiantes',
+    'students': 'estudiantes',
+    'tag': 'tag',
+    'tags': 'tag'
+  };
+  return map[raw] || raw;
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (value == null || value === '') return [];
+  if (typeof value === 'string') {
+    return value.split(',').map(v => v.trim()).filter(Boolean);
+  }
+  return [value];
+}
+
+function relationSummary(concept, appliesTo) {
+  const careers = toArray(concept.careerIds || concept.career_ids || concept.careers || concept.target_career_id)
+    .map(item => (typeof item === 'object' ? (item.career_name || item.name || item.id) : item));
+  const semesters = toArray(concept.semesters || concept.target_semester || concept.semester)
+    .map(item => (typeof item === 'object' ? (item.semestre || item.name || item.id) : item));
+  const students = toArray(concept.userIds || concept.user_ids || concept.specific_students);
+  const tags = toArray(concept.applicantTags || concept.applicant_tags);
+
+  if (appliesTo === 'todos') return 'Todos los estudiantes';
+  if (appliesTo === 'carrera') return careers.length ? `Carreras: ${careers.join(', ')}` : 'Carreras: Sin especificar';
+  if (appliesTo === 'semestre') return semesters.length ? `Semestres: ${semesters.join(', ')}` : 'Semestres: Sin especificar';
+  if (appliesTo === 'carrera_semestre') {
+    const carreraTxt = careers.length ? careers.join(', ') : 'Sin carrera';
+    const semestreTxt = semesters.length ? semesters.join(', ') : 'Sin semestre';
+    return `Carreras: ${carreraTxt} | Semestres: ${semestreTxt}`;
+  }
+  if (appliesTo === 'estudiantes') return `Estudiantes específicos: ${students.length || 0}`;
+  if (appliesTo === 'tag') return tags.length ? `Tags: ${tags.join(', ')}` : 'Tags: Sin especificar';
+  return 'Relación no definida';
 }
 
 async function apiFetch(url, options = {}) {
@@ -288,7 +383,17 @@ async function loadConcepts(){
 function renderConcepts(){
   const grid = document.getElementById('concepts-grid');
   if(!grid) return;
-  const list = [...conceptsCache];
+  const statusFilter = normalizeStatus(document.getElementById('filter-status')?.value || '');
+  const scopeFilter = normalizeAppliesTo(document.getElementById('filter-scope')?.value || '');
+
+  const list = [...conceptsCache].filter(c => {
+    const conceptStatus = normalizeStatus(c.status);
+    const conceptScope = normalizeAppliesTo(c.applies_to || c.appliesTo);
+    const matchesStatus = !statusFilter || conceptStatus === statusFilter;
+    const matchesScope = !scopeFilter || conceptScope === scopeFilter;
+    return matchesStatus && matchesScope;
+  });
+
   if(!list.length){
     grid.innerHTML = `
       <div class="col-span-full text-center py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border-2 border-emerald-200/50">
@@ -314,10 +419,11 @@ function renderConcepts(){
 
   grid.innerHTML = list.map(c=>{
     const amount = Number(c.amount)||0;
-    const isInactive = (c.status || '').toLowerCase() !== 'activo' && (c.status || '').toLowerCase() !== 'active';
+    const normalizedStatus = normalizeStatus(c.status);
+    const isInactive = normalizedStatus !== 'activo';
     
     // Determinar y mostrar el tipo de alcance
-    const appliesTo = (c.applies_to || c.appliesTo || '').toLowerCase();
+    const appliesTo = normalizeAppliesTo(c.applies_to || c.appliesTo);
     let scopeTypeLabel = '';
     let scopeTypeColor = '';
     let showScopeType = true;
@@ -337,9 +443,14 @@ function renderConcepts(){
     } else if (appliesTo === 'tag') {
       scopeTypeLabel = 'Por tags especiales';
       scopeTypeColor = 'bg-pink-100 text-pink-800 border-pink-300';
+    } else if (appliesTo === 'todos') {
+      scopeTypeLabel = 'Todos';
+      scopeTypeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
     } else {
       showScopeType = false;
     }
+
+    const appliesSummary = relationSummary(c, appliesTo);
     
     // Usar expiration_human del API si está disponible, o construir desde fechas
     const vigenciaRaw = c.expiration_human || c.expirationHuman || (() => {
@@ -392,6 +503,11 @@ function renderConcepts(){
           </div>
         </div>
 
+        <div class="text-[11px] py-2 rounded px-2.5 mb-2.5 border border-emerald-200 bg-emerald-50/70 text-emerald-900 font-semibold relative z-10">
+          <span class="uppercase text-[9px] font-black tracking-wide text-emerald-700">Aplica a:</span>
+          <div class="mt-1 leading-snug break-words">${escapeHtml(appliesSummary)}</div>
+        </div>
+
         <!-- Descripción y Acciones -->
         <div class="space-y-2 relative z-10">
           <!-- Descripción expandible -->
@@ -438,6 +554,31 @@ function renderConcepts(){
       </div>
     `;
   }).join('');
+}
+
+function initConceptFilters() {
+  const statusSelect = document.getElementById('filter-status');
+  const scopeSelect = document.getElementById('filter-scope');
+  const clearButton = document.getElementById('clear-concept-filters');
+
+  if (statusSelect && !statusSelect.dataset.bound) {
+    statusSelect.addEventListener('change', renderConcepts);
+    statusSelect.dataset.bound = 'true';
+  }
+
+  if (scopeSelect && !scopeSelect.dataset.bound) {
+    scopeSelect.addEventListener('change', renderConcepts);
+    scopeSelect.dataset.bound = 'true';
+  }
+
+  if (clearButton && !clearButton.dataset.bound) {
+    clearButton.addEventListener('click', () => {
+      if (statusSelect) statusSelect.value = '';
+      if (scopeSelect) scopeSelect.value = '';
+      renderConcepts();
+    });
+    clearButton.dataset.bound = 'true';
+  }
 }
 
 async function mutateConcept(id, action){
@@ -570,6 +711,7 @@ window.deleteConcept = (id) => {
   mutateConcept(id, 'delete');
 };
 
+initConceptFilters();
 loadConcepts();
 </script>
 
