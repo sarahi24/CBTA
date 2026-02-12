@@ -101,8 +101,10 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         console.log('ðŸ” [Adeudos] StudentAPI disponible:', apiReady);
         
         if (token && apiReady) {
-          await this.loadPendingPayments();
-          await this.loadOverduePayments();
+          await Promise.all([
+            this.loadPendingPayments(),
+            this.loadOverduePayments()
+          ]);
         }
 
         if (token && apiReady) {
