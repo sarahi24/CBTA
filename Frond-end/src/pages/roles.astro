@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import rolesBootstrapUrl from '../scripts/roles-bootstrap.js?url';
 
 // No cargar usuarios en SSR - se cargarán del lado del cliente con autenticación
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
@@ -1288,14 +1289,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <!-- Cargar AdminAPI y AuthService como módulos -->
-<script type="module">
-    import { AdminAPI } from '/src/utils/adminAPI.js';
-    import AuthService from '/src/utils/authService.js';
-    window.AdminAPI = AdminAPI;
-    window.AuthService = AuthService;
-    window.__adminAPILoaded = true;
-    console.log('✅ AdminAPI cargada:', window.AdminAPI);
-</script>
+<script type="module" src={rolesBootstrapUrl}></script>
 
 <script type="module">
     
@@ -4550,11 +4544,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }));
         }
         
+        function waitForAuthService() {
+            if (window.__adminAPILoaded && window.AuthService) {
+                registerComponent();
+                return;
+            }
+            setTimeout(waitForAuthService, 50);
+        }
+
         // Registrar cuando Alpine esté disponible
         if (typeof Alpine !== 'undefined') {
-            registerComponent();
+            waitForAuthService();
         } else {
-            document.addEventListener('alpine:init', registerComponent);
+            document.addEventListener('alpine:init', waitForAuthService);
         }
     })();
 </script>
