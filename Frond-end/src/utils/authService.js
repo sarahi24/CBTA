@@ -233,23 +233,33 @@ export const AuthService = {
         headers,
       });
 
-      // Si el token expiró (401), intentar refresh
-      if (response.status === 401) {
+      const isAuthError = response.status === 401 || response.status === 403;
+      if (isAuthError) {
+        let errorCode = null;
         try {
-          await this.refreshToken();
-          // Reintentar con el nuevo token
-          const newToken = this.getToken();
-          const retryHeaders = {
-            ...headers,
-            Authorization: `Bearer ${newToken}`,
-          };
-          return await fetch(url, { ...options, headers: retryHeaders });
-        } catch (refreshError) {
-          // Si el refresh falla, limpiar y redirigir al login
-          this.clearAuth();
-          window.location.href = '/';
-          throw refreshError;
+          const errorData = await response.clone().json();
+          errorCode = errorData?.error_code || errorData?.errorCode;
+        } catch (error) {
+          errorCode = null;
         }
+
+        if (errorCode === 'ACCESS_TOKEN_EXPIRED') {
+          try {
+            await this.refreshToken();
+            const newToken = this.getToken();
+            const retryHeaders = {
+              ...headers,
+              Authorization: `Bearer ${newToken}`,
+            };
+            return await fetch(url, { ...options, headers: retryHeaders });
+          } catch (refreshError) {
+            this.clearAuth();
+            window.location.href = '/';
+            throw refreshError;
+          }
+        }
+
+        return response;
       }
 
       return response;

@@ -1287,10 +1287,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
-<script>
+<!-- Cargar AdminAPI y AuthService como módulos -->
+<script type="module">
     import { AdminAPI } from '../utils/adminAPI.js';
+    import AuthService from '../utils/authService.js';
     window.AdminAPI = AdminAPI;
+    window.AuthService = AuthService;
     window.__adminAPILoaded = true;
     console.log('✅ AdminAPI cargada:', window.AdminAPI);
 </script>
@@ -1391,58 +1393,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 importResult: null,
                 importError: null,
 
-            // Función helper para hacer fetch con auto-refresh
-            async authenticatedFetch(url, options = {}, isRetry = false) {
-                const token = localStorage.getItem('access_token');
-                
-                if (!token) {
-                    throw new Error('No hay token de autenticación');
+            // Función helper: delega en AuthService global
+            async authenticatedFetch(url, options = {}) {
+                if (!window.AuthService) {
+                    throw new Error('AuthService no disponible');
                 }
 
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                        ...options.headers
-                    }
-                });
-
-                const isAuthError = response.status === 401 || response.status === 403;
-                if (isAuthError) {
-                    let errorCode = null;
-                    try {
-                        const errorData = await response.clone().json();
-                        errorCode = errorData?.error_code || errorData?.errorCode;
-                    } catch (error) {
-                        errorCode = null;
-                    }
-
-                    if (errorCode === 'ACCESS_TOKEN_EXPIRED') {
-                        if (!isRetry) {
-                            console.log('🔄 Token expirado (ACCESS_TOKEN_EXPIRED). Intentando refresh...');
-                            const newToken = await this.refreshAuthToken();
-
-                            if (newToken) {
-                                console.log('✅ Token refrescado. Reintentando petición...');
-                                return await this.authenticatedFetch(url, options, true);
-                            }
-                        }
-
-                        console.error('❌ No se pudo refrescar el token. Cerrando sesión...');
-                        this.showNotify('Tu sesión ha expirado', 'error');
-                        setTimeout(() => {
-                            localStorage.clear();
-                            window.location.href = '/';
-                        }, 2000);
-                        throw new Error('Sesión expirada');
-                    }
-
-                    return response;
-                }
-
-                return response;
+                return await window.AuthService.authenticatedFetch(url, options);
             },
 
             normalizeDate(value) {
@@ -1704,57 +1661,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 await this.loadUsers(token);
             },
 
-            async refreshAuthToken() {
-                const refreshToken = localStorage.getItem('refresh_token');
-                if (!refreshToken) {
-                    console.error('❌ No hay refresh token disponible');
-                    return null;
-                }
-
-                console.log('🔄 Intentando refrescar token...');
-                try {
-                    const response = await fetch(`${this.apiBaseUrl}/v1/refresh-token`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ refresh_token: refreshToken })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log('📋 Respuesta completa del refresh:', data);
-                        
-                        const newAccessToken = data.data?.user_tokens?.access_token || data.data?.access_token || data.access_token;
-                        const newRefreshToken = data.data?.user_tokens?.refresh_token || data.data?.refresh_token || data.refresh_token;
-
-                        console.log('🔑 Access Token extraído:', newAccessToken ? '✅ Sí' : '❌ No');
-                        console.log('🔄 Refresh Token extraído:', newRefreshToken ? '✅ Sí' : '❌ No');
-
-                        if (newAccessToken) {
-                            localStorage.setItem('access_token', newAccessToken);
-                            console.log('✅ Token refrescado exitosamente y guardado en localStorage');
-                            
-                            if (newRefreshToken) {
-                                localStorage.setItem('refresh_token', newRefreshToken);
-                                console.log('✅ Refresh token rotado y guardado');
-                            }
-                            
-                            return newAccessToken;
-                        } else {
-                            console.error('❌ No se encontró access_token en la respuesta');
-                            return null;
-                        }
-                    }
-
-                    console.error('❌ No se pudo refrescar el token');
-                    return null;
-                } catch (error) {
-                    console.error('❌ Error al refrescar token:', error);
-                    return null;
-                }
-            },
 
             async loadUsers(token, isRetry = false) {
                 try {
