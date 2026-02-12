@@ -1461,6 +1461,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 const key = (status || '').toLowerCase();
                 if (key === 'activo' || key === 'active') return 'Activo';
                 if (key === 'baja-temporal') return 'Baja temporal';
+                if (key === 'baja' || key === 'inactive' || key === 'inactivo' || key === 'disabled') return 'Baja';
                 return 'Inactivo';
             },
 
@@ -1589,10 +1590,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 const statusKey = (raw.status || '').toString().toLowerCase();
-                let status = 'inactivo';
+                let status = 'baja';
                 if (statusKey === 'active' || statusKey === 'activo') status = 'activo';
                 else if (statusKey === 'baja-temporal' || statusKey === 'baja temporal' || statusKey === 'temporary-disable') status = 'baja-temporal';
-                else if (statusKey) status = statusKey;
+                else if (statusKey === 'baja' || statusKey === 'inactive' || statusKey === 'inactivo' || statusKey === 'disabled') status = 'baja';
 
                 // Address puede ser string o array, asegurar que siempre sea array
                 let address = ['', '', ''];
