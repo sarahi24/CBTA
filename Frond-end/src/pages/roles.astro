@@ -1289,8 +1289,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
 <!-- Cargar AdminAPI y AuthService como módulos -->
 <script type="module">
-    import { AdminAPI } from '/src/utils/adminAPI.js';
-    import AuthService from '/src/utils/authService.js';
+    import { AdminAPI } from '../utils/adminAPI.js';
+    import AuthService from '../utils/authService.js';
     window.AdminAPI = AdminAPI;
     window.AuthService = AuthService;
     window.__adminAPILoaded = true;
