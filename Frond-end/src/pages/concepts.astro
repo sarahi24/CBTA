@@ -697,9 +697,9 @@ window.editConcept = (id) => {
     scopeType: scopeType,   // tipo de ámbito normalizado
     scopeRules: {
       allStudents: appliesTo === 'todos',
-      careers: c.careerIds || c.careers || [],
-      semesters: c.semesters || [],
-      specificStudents: c.userIds || c.user_ids || [],
+      careers: c.careerIds || c.careers || c.carreras || c.career_ids || [],
+      semesters: c.semesters || c.semestres || c.target_semester || c.semester || c.semestre || [],
+      specificStudents: c.userIds || c.user_ids || c.students || [],
       exceptionStudents: c.exceptionStudents || c.exception_students || [],
       applicantTags: (() => {
         const tags = c.applicantTags || c.applicant_tags;

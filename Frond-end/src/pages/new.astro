@@ -182,6 +182,31 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
       populateForm(concept) {
         console.log('📋 Poblando formulario con concepto:', concept);
+        const toArray = (value) => {
+          if (Array.isArray(value)) return value;
+          if (value === null || value === undefined || value === '') return [];
+          return [value];
+        };
+
+        const normalizeAppliesTo = (value) => {
+          const raw = String(value || '').trim().toLowerCase();
+          const map = {
+            all: 'todos',
+            todos: 'todos',
+            carrera: 'carrera',
+            career: 'carrera',
+            semestre: 'semestre',
+            semester: 'semestre',
+            carrera_semestre: 'carrera_semestre',
+            career_semester: 'carrera_semestre',
+            'career-semester': 'carrera_semestre',
+            estudiantes: 'estudiantes',
+            students: 'estudiantes',
+            tag: 'tags',
+            tags: 'tags'
+          };
+          return map[raw] || raw;
+        };
         
         // Asignar campos básicos
         this.formData.id = concept.id;
@@ -220,74 +245,130 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         this.formData.endDate = formatDate(concept.end_date || concept.endDate);
         console.log('✅ Fechas formateadas:', this.formData.startDate, '→', this.formData.endDate);
         
-        // 🔑 IMPORTANTE: Si viene scopeType en el concepto (desde editingConcept), usarlo
-        if (concept.scopeType) {
-          this.formData.scopeType = concept.scopeType;
-          console.log('🎯 scopeType cargado desde editingConcept:', this.formData.scopeType);
-        }
-        
-        // Procesar scopeRules
-        if (concept.scopeRules) {
-          this.formData.allStudents = concept.scopeRules.allStudents || false;
-          
-          // Asegurar que careers sean strings
-          this.formData.selectedCareers = (concept.scopeRules.careers || []).map(c => String(c));
-          
-          // Asegurar que semesters sean números
-          this.formData.selectedSemesters = (concept.scopeRules.semesters || []).map(s => parseInt(s));
-          
-          console.log('✅ Carreras seleccionadas:', this.formData.selectedCareers);
-          console.log('✅ Semestres seleccionados:', this.formData.selectedSemesters);
-          
-          if (Array.isArray(concept.scopeRules.specificStudents)) {
-            this.formData.selectedSpecificStudents = concept.scopeRules.specificStudents.map(id => ({
-              id: String(id),
-              control: String(id),
-              name: String(id)
-            }));
-            console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
-          }
-          
-          // Cargar excepciones si existen
-          if (Array.isArray(concept.scopeRules.exceptionStudents)) {
-            this.formData.exceptionStudents = concept.scopeRules.exceptionStudents.map(id => {
-              const student = this.allStudents.find(s => String(s.id) === String(id));
-              return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
-            });
-            console.log('✅ Excepciones:', this.formData.exceptionStudents.length);
-          }
-          
-          // Cargar tags de aplicantes si existen
-          if (concept.scopeRules.applicantTags) {
-            this.formData.applicantTags = Array.isArray(concept.scopeRules.applicantTags) 
-              ? concept.scopeRules.applicantTags 
-              : [concept.scopeRules.applicantTags];
-            console.log('✅ Applicant Tags:', this.formData.applicantTags);
-          }
-          
-          // Determinar el tipo de ámbito basado en los filtros cargados
-          // PERO: Si ya viene scopeType, NO sobreescribir
-          if (!concept.scopeType) {
-            if (this.formData.selectedSpecificStudents.length > 0) {
-              this.formData.scopeType = 'estudiantes';
-            } else if (this.formData.selectedCareers.length > 0 && this.formData.selectedSemesters.length > 0) {
-              this.formData.scopeType = 'carrera_semestre';
-            } else if (this.formData.selectedSemesters.length > 0) {
-              this.formData.scopeType = 'semestre';
-            } else if (this.formData.selectedCareers.length > 0) {
-              this.formData.scopeType = 'carrera';
-            } else if (this.formData.applicantTags.length > 0) {
-              // Si solo tiene tags sin otros filtros, es un concepto de tags
-              this.formData.scopeType = 'tags';
-            }
-          }
-          console.log('✅ Tipo de ámbito final:', this.formData.scopeType);
+        // Reiniciar selección de alcance para no arrastrar estado previo
+        this.formData.selectedCareers = [];
+        this.formData.selectedSemesters = [];
+        this.formData.selectedSpecificStudents = [];
+        this.formData.exceptionStudents = [];
+        this.formData.applicantTags = [];
 
-          if (this.formData.scopeType === 'estudiantes') {
-            this.formData.exceptionStudents = [];
-            this.formData.removeAllExceptions = false;
-            this.formData.replaceExceptions = false;
-          }
+        const scopeRules = concept.scopeRules || {};
+        const normalizedAppliesTo = normalizeAppliesTo(concept.applies_to || concept.appliesTo);
+
+        // allStudents puede venir por scopeRules, is_global o applies_to
+        this.formData.allStudents = Boolean(
+          scopeRules.allStudents === true ||
+          concept.is_global === true ||
+          normalizedAppliesTo === 'todos'
+        );
+
+        // Carreras: soportar variants del endpoint/localStorage
+        const careersRaw =
+          scopeRules.careers ??
+          scopeRules.carreras ??
+          concept.careers ??
+          concept.carreras ??
+          concept.careerIds ??
+          concept.career_ids ??
+          concept.career;
+        this.formData.selectedCareers = toArray(careersRaw)
+          .map(c => String(c))
+          .filter(c => c !== '');
+
+        // Semestres: soportar variants y mantener strings (x-model usa string)
+        const semestersRaw =
+          scopeRules.semesters ??
+          scopeRules.semestres ??
+          concept.semesters ??
+          concept.semestres ??
+          concept.semesterIds ??
+          concept.semester_ids ??
+          concept.target_semester ??
+          concept.semester ??
+          concept.semestre;
+        this.formData.selectedSemesters = toArray(semestersRaw)
+          .map(s => String(s))
+          .filter(s => s !== '' && !Number.isNaN(Number(s)));
+
+        console.log('✅ Carreras seleccionadas:', this.formData.selectedCareers);
+        console.log('✅ Semestres seleccionados:', this.formData.selectedSemesters);
+
+        // Estudiantes específicos
+        const specificStudentsRaw =
+          scopeRules.specificStudents ??
+          scopeRules.students ??
+          concept.students ??
+          concept.userIds ??
+          concept.user_ids;
+        if (toArray(specificStudentsRaw).length > 0) {
+          this.formData.selectedSpecificStudents = toArray(specificStudentsRaw).map(id => ({
+            id: String(id),
+            control: String(id),
+            name: String(id)
+          }));
+          console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
+        }
+
+        // Excepciones
+        const exceptionRaw =
+          scopeRules.exceptionStudents ??
+          scopeRules.exception_students ??
+          concept.exceptionStudents ??
+          concept.exception_students;
+        if (toArray(exceptionRaw).length > 0) {
+          this.formData.exceptionStudents = toArray(exceptionRaw).map(id => {
+            const student = this.allStudents.find(s => String(s.id) === String(id));
+            return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
+          });
+          console.log('✅ Excepciones:', this.formData.exceptionStudents.length);
+        }
+
+        // Tags especiales
+        const tagsRaw =
+          scopeRules.applicantTags ??
+          scopeRules.applicant_tags ??
+          concept.applicantTags ??
+          concept.applicant_tags;
+        this.formData.applicantTags = toArray(tagsRaw)
+          .map(tag => String(tag))
+          .filter(tag => tag);
+        if (this.formData.applicantTags.length > 0) {
+          console.log('✅ Applicant Tags:', this.formData.applicantTags);
+        }
+
+        // Tipo de ámbito final: prioridad scopeType -> applies_to normalizado -> inferencia
+        const explicitScopeType = String(concept.scopeType || '').trim();
+        if (explicitScopeType) {
+          this.formData.scopeType = explicitScopeType;
+          console.log('🎯 scopeType cargado desde editingConcept:', this.formData.scopeType);
+        } else if (normalizedAppliesTo === 'tags') {
+          this.formData.scopeType = 'tags';
+        } else if (normalizedAppliesTo === 'estudiantes') {
+          this.formData.scopeType = 'estudiantes';
+        } else if (normalizedAppliesTo === 'carrera_semestre') {
+          this.formData.scopeType = 'carrera_semestre';
+        } else if (normalizedAppliesTo === 'semestre') {
+          this.formData.scopeType = 'semestre';
+        } else if (normalizedAppliesTo === 'carrera') {
+          this.formData.scopeType = 'carrera';
+        } else if (this.formData.selectedSpecificStudents.length > 0) {
+          this.formData.scopeType = 'estudiantes';
+        } else if (this.formData.selectedCareers.length > 0 && this.formData.selectedSemesters.length > 0) {
+          this.formData.scopeType = 'carrera_semestre';
+        } else if (this.formData.selectedSemesters.length > 0) {
+          this.formData.scopeType = 'semestre';
+        } else if (this.formData.selectedCareers.length > 0) {
+          this.formData.scopeType = 'carrera';
+        } else if (this.formData.applicantTags.length > 0) {
+          this.formData.scopeType = 'tags';
+        }
+
+        console.log('✅ Tipo de ámbito final:', this.formData.scopeType);
+
+        if (this.formData.scopeType === 'estudiantes') {
+          this.formData.exceptionStudents = [];
+          this.formData.removeAllExceptions = false;
+          this.formData.replaceExceptions = false;
         }
         
         console.log('✅ Formulario poblado completamente:', this.formData);
