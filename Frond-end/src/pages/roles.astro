@@ -1409,17 +1409,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     }
                 });
 
-                // Si el token expiró (401 o 403) y no hemos reintentado
-                if ((response.status === 401 || response.status === 403) && !isRetry) {
-                    console.log('🔄 Token expirado. Intentando refresh...');
-                    
-                    const newToken = await this.refreshAuthToken();
-                    
-                    if (newToken) {
-                        console.log('✅ Token refrescado. Reintentando petición...');
-                        // Reintentar con el nuevo token
-                        return await this.authenticatedFetch(url, options, true);
-                    } else {
+                const isAuthError = response.status === 401 || response.status === 403;
+                if (isAuthError) {
+                    let errorCode = null;
+                    try {
+                        const errorData = await response.clone().json();
+                        errorCode = errorData?.error_code || errorData?.errorCode;
+                    } catch (error) {
+                        errorCode = null;
+                    }
+
+                    if (errorCode === 'ACCESS_TOKEN_EXPIRED') {
+                        if (!isRetry) {
+                            console.log('🔄 Token expirado (ACCESS_TOKEN_EXPIRED). Intentando refresh...');
+                            const newToken = await this.refreshAuthToken();
+
+                            if (newToken) {
+                                console.log('✅ Token refrescado. Reintentando petición...');
+                                return await this.authenticatedFetch(url, options, true);
+                            }
+                        }
+
                         console.error('❌ No se pudo refrescar el token. Cerrando sesión...');
                         this.showNotify('Tu sesión ha expirado', 'error');
                         setTimeout(() => {
@@ -1428,14 +1438,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }, 2000);
                         throw new Error('Sesión expirada');
                     }
-                } else if ((response.status === 401 || response.status === 403) && isRetry) {
-                    // Ya reintentamos y falló
-                    this.showNotify('Tu sesión ha expirado', 'error');
-                    setTimeout(() => {
-                        localStorage.clear();
-                        window.location.href = '/';
-                    }, 2000);
-                    throw new Error('Sesión expirada');
+
+                    return response;
                 }
 
                 return response;
