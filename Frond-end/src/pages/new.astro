@@ -343,9 +343,29 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           concept.careerIds ??
           concept.career_ids ??
           concept.career;
-        this.formData.selectedCareers = toArray(careersRaw)
-          .map(c => String(c))
-          .filter(c => c !== '');
+        const normalizeCareerId = (value) => {
+          if (value === null || value === undefined) return null;
+          if (typeof value === 'number' || typeof value === 'string') return String(value);
+          if (typeof value === 'object') {
+            const candidate =
+              value.id ??
+              value.career_id ??
+              value.careerId ??
+              value.carrera_id ??
+              value.carreraId ??
+              value.career ??
+              value.carrera ??
+              value.value;
+            if (candidate !== undefined && candidate !== null) return String(candidate);
+          }
+          return null;
+        };
+
+        this.formData.selectedCareers = [...new Set(
+          toArray(careersRaw)
+            .map(normalizeCareerId)
+            .filter(c => c !== null && c !== '')
+        )];
 
         // Semestres: soportar variants y mantener strings (x-model usa string)
         const semestersRaw =
@@ -376,9 +396,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           return null;
         };
 
-        this.formData.selectedSemesters = toArray(semestersRaw)
-          .map(normalizeSemesterId)
-          .filter(s => s !== null && s !== '' && !Number.isNaN(Number(s)));
+        this.formData.selectedSemesters = [...new Set(
+          toArray(semestersRaw)
+            .map(normalizeSemesterId)
+            .filter(s => s !== null && s !== '' && !Number.isNaN(Number(s)))
+        )];
 
         console.log('✅ Carreras seleccionadas:', this.formData.selectedCareers);
         console.log('✅ Semestres seleccionados:', this.formData.selectedSemesters);
@@ -390,12 +412,45 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           concept.students ??
           concept.userIds ??
           concept.user_ids;
+
+        const normalizeStudentForSelection = (value) => {
+          if (value === null || value === undefined) return null;
+
+          let rawId = value;
+          let rawControl = value;
+          let rawName = value;
+          let rawEmail = '';
+          let rawCareer = '';
+          let rawSemester = '';
+
+          if (typeof value === 'object') {
+            rawId = value.id ?? value.user_id ?? value.userId ?? value.student_id ?? value.studentId ?? value.n_control ?? value.control ?? '';
+            rawControl = value.n_control ?? value.control ?? value.numControl ?? value.num_control ?? rawId;
+            rawName = value.name ?? value.fullName ?? value.nombre ?? rawControl ?? rawId;
+            rawEmail = value.email ?? '';
+            rawCareer = value.career_name ?? value.career ?? value.carrera ?? '';
+            rawSemester = value.semestre ?? value.semester ?? '';
+          }
+
+          const lookup = this.allStudents.find(s =>
+            String(s.id) === String(rawId) ||
+            String(s.control || '') === String(rawControl)
+          );
+
+          return {
+            id: String(lookup?.id || rawId || rawControl || ''),
+            control: String(lookup?.control || rawControl || rawId || ''),
+            name: String(lookup?.name || rawName || rawControl || rawId || 'Sin nombre'),
+            email: String(lookup?.email || rawEmail || ''),
+            career: String(lookup?.careerName || rawCareer || ''),
+            semestre: String(lookup?.semester || rawSemester || '')
+          };
+        };
+
         if (toArray(specificStudentsRaw).length > 0) {
-          this.formData.selectedSpecificStudents = toArray(specificStudentsRaw).map(id => ({
-            id: String(id),
-            control: String(id),
-            name: String(id)
-          }));
+          this.formData.selectedSpecificStudents = toArray(specificStudentsRaw)
+            .map(item => normalizeStudentForSelection(item))
+            .filter(item => item && (item.id || item.control));
           console.log('✅ Estudiantes específicos:', this.formData.selectedSpecificStudents.length);
         }
 
@@ -405,11 +460,29 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           scopeRules.exception_students ??
           concept.exceptionStudents ??
           concept.exception_students;
+        const normalizeExceptionStudent = (value) => {
+          if (value === null || value === undefined) return null;
+          const exceptionId = typeof value === 'object'
+            ? (value.id ?? value.user_id ?? value.userId ?? value.student_id ?? value.studentId ?? value.n_control ?? value.control)
+            : value;
+          if (exceptionId === null || exceptionId === undefined || exceptionId === '') return null;
+
+          const student = this.allStudents.find(s =>
+            String(s.id) === String(exceptionId) ||
+            String(s.control || '') === String(exceptionId)
+          );
+
+          if (student) {
+            return { id: student.id, name: student.name, control: student.control };
+          }
+
+          return { id: String(exceptionId), name: 'ID: ' + exceptionId, control: '' };
+        };
+
         if (toArray(exceptionRaw).length > 0) {
-          this.formData.exceptionStudents = toArray(exceptionRaw).map(id => {
-            const student = this.allStudents.find(s => String(s.id) === String(id));
-            return student ? {id: student.id, name: student.name, control: student.control} : {id: String(id), name: 'ID: ' + id, control: ''};
-          });
+          this.formData.exceptionStudents = toArray(exceptionRaw)
+            .map(item => normalizeExceptionStudent(item))
+            .filter(Boolean);
           console.log('✅ Excepciones:', this.formData.exceptionStudents.length);
         }
 
@@ -419,9 +492,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           scopeRules.applicant_tags ??
           concept.applicantTags ??
           concept.applicant_tags;
-        this.formData.applicantTags = toArray(tagsRaw)
-          .map(tag => String(tag))
-          .filter(tag => tag);
+        const normalizeTagValue = (value) => {
+          if (value === null || value === undefined || value === '') return null;
+          if (typeof value === 'string' || typeof value === 'number') return String(value);
+          if (typeof value === 'object') {
+            const candidate = value.tag ?? value.value ?? value.name ?? value.code ?? value.type;
+            return candidate !== undefined && candidate !== null ? String(candidate) : null;
+          }
+          return null;
+        };
+
+        this.formData.applicantTags = [...new Set(
+          toArray(tagsRaw)
+            .map(tag => normalizeTagValue(tag))
+            .filter(tag => tag)
+        )];
         if (this.formData.applicantTags.length > 0) {
           console.log('✅ Applicant Tags:', this.formData.applicantTags);
         }
