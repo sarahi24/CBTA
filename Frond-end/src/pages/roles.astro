@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 
 // No cargar usuarios en SSR - se cargarán del lado del cliente con autenticación
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
+const authServiceUrl = Astro.resolve('../utils/authService.js');
+const adminApiUrl = Astro.resolve('../utils/adminAPI.js');
 ---
 
 <Layout title="Gestión de Personal | CBTA 71">
@@ -1288,16 +1290,18 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 </Layout>
 
 <!-- Cargar AdminAPI y AuthService como módulos -->
-<script type="module">
-    import { AdminAPI } from '/src/utils/adminAPI.js';
-    import AuthService from '/src/utils/authService.js';
-    window.AdminAPI = AdminAPI;
-    window.AuthService = AuthService;
+<script type="module" define:vars={{ authServiceUrl, adminApiUrl }}>
+    const [adminApiModule, authModule] = await Promise.all([
+        import(adminApiUrl),
+        import(authServiceUrl),
+    ]);
+    window.AdminAPI = adminApiModule.AdminAPI;
+    window.AuthService = authModule.default;
     window.__adminAPILoaded = true;
     console.log('✅ AdminAPI cargada:', window.AdminAPI);
 </script>
 
-<script is:inline>
+<script type="module" is:inline>
     
     // Prevenir múltiples inicializaciones de Alpine
     (function() {
