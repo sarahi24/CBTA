@@ -230,7 +230,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           'n_controls'
         ]);
         const exceptionsRaw = readFirst(['exceptionStudents', 'exception_students']);
-        const tagsRaw = readFirst(['applicantTags', 'applicant_tags']);
+        const tagsRaw = readFirst(['applicantTags', 'applicant_tags', 'tags', 'tag', 'special_tags', 'scope_tags']);
         const appliesToRaw = readFirst(['applies_to', 'appliesTo', 'scopeType', 'scope_type']);
         const allStudentsRaw = readFirst(['allStudents', 'is_global', 'isGlobal']);
 
@@ -543,14 +543,39 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         const tagsRaw =
           scopeRules.applicantTags ??
           scopeRules.applicant_tags ??
+          scopeRules.tags ??
+          scopeRules.tag ??
           concept.applicantTags ??
-          concept.applicant_tags;
+          concept.applicant_tags ??
+          concept.tags ??
+          concept.tag;
         const normalizeTagValue = (value) => {
           if (value === null || value === undefined || value === '') return null;
-          if (typeof value === 'string' || typeof value === 'number') return String(value);
+          const normalizeRawTag = (raw) => {
+            const tag = String(raw || '').trim().toLowerCase();
+            const map = {
+              applicant: 'applicant',
+              applicants: 'applicant',
+              aspirante: 'applicant',
+              aspirantes: 'applicant',
+              no_student_details: 'no_student_details',
+              no-student-details: 'no_student_details',
+              no_student_detail: 'no_student_details',
+              without_student_details: 'no_student_details',
+              sin_detalles: 'no_student_details',
+              sin_detalle: 'no_student_details',
+              sin_datos: 'no_student_details',
+              sin_datos_estudiante: 'no_student_details'
+            };
+            return map[tag] || (tag || null);
+          };
+
+          if (typeof value === 'string' || typeof value === 'number') {
+            return normalizeRawTag(value);
+          }
           if (typeof value === 'object') {
-            const candidate = value.tag ?? value.value ?? value.name ?? value.code ?? value.type;
-            return candidate !== undefined && candidate !== null ? String(candidate) : null;
+            const candidate = value.tag ?? value.value ?? value.name ?? value.code ?? value.type ?? value.slug;
+            return candidate !== undefined && candidate !== null ? normalizeRawTag(candidate) : null;
           }
           return null;
         };
@@ -562,6 +587,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         )];
         if (this.formData.applicantTags.length > 0) {
           console.log('✅ Applicant Tags:', this.formData.applicantTags);
+        } else if (this.formData.scopeType === 'tags' || normalizedAppliesTo === 'tags') {
+          console.warn('⚠️ Scope tags sin tags precargados. tagsRaw:', tagsRaw);
         }
 
         // Tipo de ámbito final: prioridad scopeType -> applies_to normalizado -> inferencia
