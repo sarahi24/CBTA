@@ -157,27 +157,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, false, 'student');
           
           console.log('ðŸ“Š [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
-          
-          // El backend retorna: { success: true, data: [...] } donde data es un array
-          let paymentsArray = [];
-          if (paymentsData?.data) {
-            if (Array.isArray(paymentsData.data)) {
-              paymentsArray = paymentsData.data;
-            } else if (paymentsData.data?.pending_payments && Array.isArray(paymentsData.data.pending_payments)) {
-              paymentsArray = paymentsData.data.pending_payments;
-            }
-          }
+
+          const paymentsArray = this.extractPaymentsArray(paymentsData);
           
           console.log('ðŸ“Š [Adeudos] Payments array length:', paymentsArray.length, 'Sample:', paymentsArray[0]);
-          
-          this.adeudos = paymentsArray.map(payment => ({
-            id: payment.id,
-            concepto: payment.concept_name || payment.concepto || 'Pago',
-            monto: payment.amount?.toString() || payment.monto || '0.00',
-            fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-            status: payment.status || 'Pendiente',
-            description: payment.description || payment.descripcion || ''
-          }));
+
+          this.adeudos = paymentsArray.map((payment, index) => this.mapPaymentItem(payment, index));
           console.log('… Adeudos cargados:', this.adeudos.length);
         } catch (err) {
           console.error(' Error al cargar adeudos:', err);
@@ -212,36 +197,20 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           
           console.log('ðŸ“Š [Adeudos] Respuesta completa del servidor:', overdueData);
           console.log('ðŸ“Š [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });
-          
-          // El backend retorna: { success: true, data: [...] } donde data es un array
-          let overdueArray = [];
-          if (overdueData?.data) {
-            if (Array.isArray(overdueData.data)) {
-              console.log('… Respuesta es un array directo');
-              overdueArray = overdueData.data;
-            } else if (overdueData.data?.pending_payments && Array.isArray(overdueData.data.pending_payments)) {
-              console.log('… Respuesta tiene estructura pending_payments');
-              overdueArray = overdueData.data.pending_payments;
-            } else {
-              console.log('š ï¸ Estructura de respuesta inesperada:', {
-                tieneData: !!overdueData.data,
-                tienePendingPayments: !!overdueData.data?.pending_payments,
-                estructuraDatos: Object.keys(overdueData.data || {})
-              });
-            }
-          } else {
-            console.log('ðŸ“­ No data received from API');
+
+          const overdueArray = this.extractPaymentsArray(overdueData);
+
+          if (!overdueArray.length) {
+            console.log('š ï¸ Estructura de respuesta sin lista mapeable:', {
+              tieneData: !!overdueData?.data,
+              clavesData: Object.keys(overdueData?.data || {}),
+              clavesRaiz: Object.keys(overdueData || {})
+            });
           }
           
           console.log('ðŸ“Š [Adeudos] Overdue array length:', overdueArray.length, 'Sample:', overdueArray[0]);
-          
-          this.overdueAdeudos = overdueArray.map(payment => ({
-            id: payment.id,
-            concepto: payment.concept_name || payment.concepto || 'Pago',
-            monto: payment.amount?.toString() || payment.monto || '0.00',
-            fecha: payment.end_date || payment.due_date || payment.fecha_fin || payment.fecha || new Date().toLocaleDateString('es-MX'),
-            description: payment.description || payment.descripcion || ''
-          }));
+
+          this.overdueAdeudos = overdueArray.map((payment, index) => this.mapPaymentItem(payment, index));
           
           this.showOverdueAlert = this.overdueAdeudos.length > 0;
           console.log('… Pagos vencidos cargados:', this.overdueAdeudos.length);
@@ -296,6 +265,38 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           alert('Error al procesar el pago: ' + (err.message || 'Error desconocido'));
           this.loading = false;
         }
+      },
+
+      extractPaymentsArray(apiResponse) {
+        const data = apiResponse?.data ?? apiResponse ?? {};
+        const candidates = [
+          data,
+          data?.pending_payments,
+          data?.pending_payments?.items,
+          data?.overdue_payments,
+          data?.overdue_payments?.items,
+          data?.payments,
+          data?.payments?.items,
+          apiResponse?.pending_payments,
+          apiResponse?.pending_payments?.items,
+          apiResponse?.overdue_payments,
+          apiResponse?.overdue_payments?.items,
+          apiResponse?.items
+        ];
+
+        const firstArray = candidates.find(item => Array.isArray(item));
+        return firstArray || [];
+      },
+
+      mapPaymentItem(payment, index = 0) {
+        return {
+          id: payment?.id || payment?.concept_id || payment?.payment_id || ('payment-' + String(index)),
+          concepto: payment?.concept_name || payment?.concepto || payment?.concept || payment?.name || 'Pago',
+          monto: payment?.amount?.toString() || payment?.monto || payment?.total_amount?.toString() || '0.00',
+          fecha: payment?.end_date || payment?.due_date || payment?.fecha_fin || payment?.fecha || payment?.date || new Date().toLocaleDateString('es-MX'),
+          status: payment?.status || 'Pendiente',
+          description: payment?.description || payment?.descripcion || ''
+        };
       },
 
       getInitials() {
