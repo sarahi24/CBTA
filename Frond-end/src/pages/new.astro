@@ -191,6 +191,29 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           relationsResponse
         ].filter(Boolean);
 
+        const collectDeepByKeys = (node, keys, bucket = []) => {
+          if (node === null || node === undefined) return bucket;
+
+          if (Array.isArray(node)) {
+            for (const item of node) collectDeepByKeys(item, keys, bucket);
+            return bucket;
+          }
+
+          if (typeof node !== 'object') return bucket;
+
+          for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(node, key)) {
+              bucket.push(node[key]);
+            }
+          }
+
+          for (const value of Object.values(node)) {
+            collectDeepByKeys(value, keys, bucket);
+          }
+
+          return bucket;
+        };
+
         const readFirst = (keys) => {
           for (const source of sources) {
             if (!source || typeof source !== 'object') continue;
@@ -208,6 +231,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               }
             }
           }
+
+          const deepMatches = sources.flatMap(source => collectDeepByKeys(source, keys, []));
+          for (const value of deepMatches) {
+            if (value === undefined || value === null) continue;
+            if (Array.isArray(value) && value.length === 0) continue;
+            return value;
+          }
+          for (const value of deepMatches) {
+            if (value !== undefined && value !== null) return value;
+          }
+
           return undefined;
         };
 
@@ -230,7 +264,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           'n_controls'
         ]);
         const exceptionsRaw = readFirst(['exceptionStudents', 'exception_students']);
-        const tagsRaw = readFirst(['applicantTags', 'applicant_tags', 'tags', 'tag', 'special_tags', 'scope_tags']);
+        const tagsRaw = readFirst([
+          'applicantTags',
+          'applicant_tags',
+          'applicantTag',
+          'applicant_tag',
+          'tags',
+          'tag',
+          'special_tags',
+          'scope_tags'
+        ]);
         const appliesToRaw = readFirst(['applies_to', 'appliesTo', 'scopeType', 'scope_type']);
         const allStudentsRaw = readFirst(['allStudents', 'is_global', 'isGlobal']);
 
