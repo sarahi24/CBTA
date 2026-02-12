@@ -107,12 +107,16 @@ export const AuthService = {
       const tokenBundle = data?.data?.user_tokens || data?.data || {};
       const accessToken = tokenBundle.access_token || data?.access_token;
       const newRefreshToken = tokenBundle.refresh_token || data?.refresh_token;
+      const userData = tokenBundle.user_data || data?.user_data;
 
       if (accessToken) {
         this.setToken(accessToken);
       }
       if (newRefreshToken) {
         this.setRefreshToken(newRefreshToken);
+      }
+      if (userData) {
+        this.setUserData(userData);
       }
 
       return data;

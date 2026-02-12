@@ -1716,8 +1716,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                     if (response.ok) {
                         const data = await response.json();
-                        const newAccessToken = data.data?.access_token || data.access_token;
-                        const newRefreshToken = data.data?.refresh_token || data.refresh_token;
+                        const tokenBundle = data?.data?.user_tokens || data?.data || {};
+                        const newAccessToken = tokenBundle.access_token || data?.access_token;
+                        const newRefreshToken = tokenBundle.refresh_token || data?.refresh_token;
 
                         if (newAccessToken) {
                             localStorage.setItem('access_token', newAccessToken);

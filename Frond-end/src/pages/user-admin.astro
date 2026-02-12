@@ -542,8 +542,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                         if (refreshResponse.ok) {
                             const data = await refreshResponse.json().catch(() => ({}));
-                            const newAccess = data.data?.access_token;
-                            const newRefresh = data.data?.refresh_token;
+                            const tokenBundle = data?.data?.user_tokens || data?.data || {};
+                            const newAccess = tokenBundle.access_token || data?.access_token;
+                            const newRefresh = tokenBundle.refresh_token || data?.refresh_token;
                             if (newAccess) {
                                 localStorage.setItem('access_token', newAccess);
                                 headers['Authorization'] = `Bearer ${newAccess}`;
