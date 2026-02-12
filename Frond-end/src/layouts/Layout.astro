@@ -222,6 +222,10 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		const openButton = document.getElementById('open-sidebar-button');
 		const closeButton = document.getElementById('close-sidebar-button');
 		const navLinks = document.querySelectorAll('.nav-link');
+		const NAV_ROLE_DEBUG = false;
+		const roleDebugLog = (...args) => {
+			if (NAV_ROLE_DEBUG) console.log(...args);
+		};
 		const activeClass = 'nav-active';
 		const inactiveClass = 'nav-inactive';
 
@@ -286,40 +290,39 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		function filterNavigationByRole() {
 			const userRole = getUserRole();
 			const normalizedRole = normalizeRole(userRole);
-			
-			console.log('🔐 Rol del usuario:', userRole);
-			console.log('🔄 Rol normalizado:', normalizedRole);
-			console.log('📦 localStorage user_data:', localStorage.getItem('user_data'));
-			
-			const navigationItems = document.querySelectorAll('#main-navigation li[data-role]');
-			console.log('📋 Items de navegación encontrados:', navigationItems.length);
-			
-			let itemsShown = 0;
-			navigationItems.forEach((item, index) => {
-				const allowedRoles = item.getAttribute('data-role').split(',').map(r => r.trim());
+
+			roleDebugLog('🔐 Rol del usuario:', userRole);
+			roleDebugLog('🔄 Rol normalizado:', normalizedRole);
+			roleDebugLog('📦 localStorage user_data:', localStorage.getItem('user_data'));
+
+			const navigationItems = Array.from(document.querySelectorAll('#main-navigation li[data-role]'));
+			roleDebugLog('📋 Items de navegación encontrados:', navigationItems.length);
+
+			const visibilityPlan = navigationItems.map((item, index) => {
+				const allowedRoles = (item.getAttribute('data-role') || '')
+					.split(',')
+					.map(r => r.trim())
+					.filter(Boolean);
 				const linkText = item.querySelector('a')?.textContent?.trim() || 'Unknown';
-				
-				console.log(`Item ${index}: "${linkText}" - Roles permitidos:`, allowedRoles);
-				
-				// Si el usuario no tiene rol, ocultar todo
-				if (!normalizedRole) {
-					item.style.display = 'none';
-					console.log(`  ❌ Oculto (sin rol)`);
-					return;
-				}
-				
-				// Mostrar u ocultar basado en el rol permitido
-				if (allowedRoles.includes(normalizedRole)) {
-					item.style.display = 'block';
-					itemsShown++;
-					console.log(`  ✅ Mostrado (rol coincide: ${normalizedRole})`);
-				} else {
-					item.style.display = 'none';
-					console.log(`  ❌ Oculto (rol no coincide)`);
-				}
+				const shouldShow = Boolean(normalizedRole && allowedRoles.includes(normalizedRole));
+
+				roleDebugLog(`Item ${index}: "${linkText}" - Roles permitidos:`, allowedRoles);
+				roleDebugLog(shouldShow
+					? `  ✅ Mostrado (rol coincide: ${normalizedRole})`
+					: (normalizedRole ? `  ❌ Oculto (rol no coincide)` : `  ❌ Oculto (sin rol)`)
+				);
+
+				return { item, shouldShow };
 			});
-			
-			console.log(`✨ Total de items mostrados: ${itemsShown}`);
+
+			requestAnimationFrame(() => {
+				let itemsShown = 0;
+				for (const { item, shouldShow } of visibilityPlan) {
+					item.hidden = !shouldShow;
+					if (shouldShow) itemsShown++;
+				}
+				roleDebugLog(`✨ Total de items mostrados: ${itemsShown}`);
+			});
 		}
 
 		function setActiveLink() {
@@ -398,7 +401,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		window.addEventListener('load', () => { 
 			handleResize(); 
 			setActiveLink(); 
-			console.log('🚀 Ejecutando filterNavigationByRole en load...');
+			roleDebugLog('🚀 Ejecutando filterNavigationByRole en load...');
 			filterNavigationByRole(); // Filtrar navegación por rol al cargar
 			
 			// Redireccionar automáticamente a /roles si el usuario es admin y está en Dashboard
@@ -413,7 +416,7 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		});
 		document.addEventListener("astro:after-swap", () => {
 			setActiveLink();
-			console.log('🔄 Ejecutando filterNavigationByRole en astro:after-swap...');
+			roleDebugLog('🔄 Ejecutando filterNavigationByRole en astro:after-swap...');
 			filterNavigationByRole(); // Filtrar navegación por rol en cambio de página
 		});
 		
