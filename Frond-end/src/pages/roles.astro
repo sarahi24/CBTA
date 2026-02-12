@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import rolesAdminLoaderUrl from '../scripts/roles-admin-loader.js?url';
 
 // No cargar usuarios en SSR - se cargarán del lado del cliente con autenticación
 const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
@@ -191,7 +190,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <option value="activo">Activo</option>
                         <option value="baja-temporal">Baja Temporal</option>
                         <option value="baja">Baja</option>
-                        <option value="eliminado">Eliminado</option>
                     </select>
                 </div>
             </div>
@@ -333,7 +331,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-3 py-2 rounded-full text-xs font-bold border shadow-sm"
-                                          x-bind:class="user.status === 'activo' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : user.status === 'baja-temporal' ? 'bg-amber-100 text-amber-800 border-amber-300' : user.status === 'baja' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-slate-100 text-slate-700 border-slate-300'"
+                                          x-bind:class="user.status === 'activo' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : user.status === 'baja-temporal' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-red-100 text-red-800 border-red-300'"
                                           x-text="statusLabel(user.status)"></span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
@@ -1288,10 +1286,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
     </div>
 </Layout>
 
-<!-- Cargar AdminAPI y AuthService como módulo empaquetado -->
-<script type="module" src={rolesAdminLoaderUrl}></script>
+<!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
+<script>
+    import { AdminAPI } from '../utils/adminAPI.js';
+    window.AdminAPI = AdminAPI;
+    window.__adminAPILoaded = true;
+    console.log('✅ AdminAPI cargada:', window.AdminAPI);
+</script>
 
-<script type="module">
+<script is:inline>
     
     // Prevenir múltiples inicializaciones de Alpine
     (function() {
@@ -1387,13 +1390,54 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 importResult: null,
                 importError: null,
 
-            // Función helper: delega en AuthService global
-            async authenticatedFetch(url, options = {}) {
-                if (!window.AuthService) {
-                    throw new Error('AuthService no disponible');
+            // Función helper para hacer fetch con auto-refresh
+            async authenticatedFetch(url, options = {}, isRetry = false) {
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    throw new Error('No hay token de autenticación');
                 }
 
-                return await window.AuthService.authenticatedFetch(url, options);
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        ...options.headers
+                    }
+                });
+
+                // Si el token expiró (401 o 403) y no hemos reintentado
+                if ((response.status === 401 || response.status === 403) && !isRetry) {
+                    console.log('🔄 Token expirado. Intentando refresh...');
+                    
+                    const newToken = await this.refreshAuthToken();
+                    
+                    if (newToken) {
+                        console.log('✅ Token refrescado. Reintentando petición...');
+                        // Reintentar con el nuevo token
+                        return await this.authenticatedFetch(url, options, true);
+                    } else {
+                        console.error('❌ No se pudo refrescar el token. Cerrando sesión...');
+                        this.showNotify('Tu sesión ha expirado', 'error');
+                        setTimeout(() => {
+                            localStorage.clear();
+                            window.location.href = '/';
+                        }, 2000);
+                        throw new Error('Sesión expirada');
+                    }
+                } else if ((response.status === 401 || response.status === 403) && isRetry) {
+                    // Ya reintentamos y falló
+                    this.showNotify('Tu sesión ha expirado', 'error');
+                    setTimeout(() => {
+                        localStorage.clear();
+                        window.location.href = '/';
+                    }, 2000);
+                    throw new Error('Sesión expirada');
+                }
+
+                return response;
             },
 
             normalizeDate(value) {
@@ -1417,8 +1461,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 const key = (status || '').toLowerCase();
                 if (key === 'activo' || key === 'active') return 'Activo';
                 if (key === 'baja-temporal') return 'Baja temporal';
-                if (key === 'baja' || key === 'inactive' || key === 'inactivo' || key === 'disabled') return 'Baja';
-                if (key === 'eliminado' || key === 'deleted') return 'Eliminado';
                 return 'Inactivo';
             },
 
@@ -1547,11 +1589,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 const statusKey = (raw.status || '').toString().toLowerCase();
-                let status = 'baja';
+                let status = 'inactivo';
                 if (statusKey === 'active' || statusKey === 'activo') status = 'activo';
                 else if (statusKey === 'baja-temporal' || statusKey === 'baja temporal' || statusKey === 'temporary-disable') status = 'baja-temporal';
-                else if (statusKey === 'baja' || statusKey === 'inactive' || statusKey === 'inactivo' || statusKey === 'disabled') status = 'baja';
-                else if (statusKey === 'eliminado' || statusKey === 'deleted') status = 'eliminado';
+                else if (statusKey) status = statusKey;
 
                 // Address puede ser string o array, asegurar que siempre sea array
                 let address = ['', '', ''];
@@ -1655,6 +1696,48 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 await this.loadUsers(token);
             },
 
+            async refreshAuthToken() {
+                const refreshToken = localStorage.getItem('refresh_token');
+                if (!refreshToken) {
+                    console.error('❌ No hay refresh token disponible');
+                    return null;
+                }
+
+                console.log('🔄 Intentando refrescar token...');
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/v1/refresh-token`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ refresh_token: refreshToken })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const newAccessToken = data.data?.access_token || data.access_token;
+                        const newRefreshToken = data.data?.refresh_token || data.refresh_token;
+
+                        if (newAccessToken) {
+                            localStorage.setItem('access_token', newAccessToken);
+                            console.log('✅ Token refrescado exitosamente');
+                            
+                            if (newRefreshToken) {
+                                localStorage.setItem('refresh_token', newRefreshToken);
+                            }
+                            
+                            return newAccessToken;
+                        }
+                    }
+
+                    console.error('❌ No se pudo refrescar el token');
+                    return null;
+                } catch (error) {
+                    console.error('❌ Error al refrescar token:', error);
+                    return null;
+                }
+            },
 
             async loadUsers(token, isRetry = false) {
                 try {
@@ -4544,19 +4627,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         }));
         }
         
-        function waitForAuthService() {
-            if (window.__adminAPILoaded && window.AuthService) {
-                registerComponent();
-                return;
-            }
-            setTimeout(waitForAuthService, 50);
-        }
-
         // Registrar cuando Alpine esté disponible
         if (typeof Alpine !== 'undefined') {
-            waitForAuthService();
+            registerComponent();
         } else {
-            document.addEventListener('alpine:init', waitForAuthService);
+            document.addEventListener('alpine:init', registerComponent);
         }
     })();
 </script>
