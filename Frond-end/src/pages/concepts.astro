@@ -147,31 +147,33 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end">
         <div class="flex-1 min-w-0">
           <label for="filter-status" class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-1">Estatus</label>
-          <select id="filter-status" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+          <select id="filter-status" class="w-full px-2.5 py-2 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
             <option value="">Todos</option>
-            <option value="activo">Activo</option>
-            <option value="inactivo">Inactivo</option>
-            <option value="finalizado">Finalizado</option>
-            <option value="expirado">Expirado</option>
-            <option value="eliminado">Eliminado</option>
+            <option value="activo">Activo (status: activo/active)</option>
+            <option value="inactivo">Inactivo (status: inactivo/inactive)</option>
+            <option value="finalizado">Finalizado (status: finalizado/finalized)</option>
+            <option value="expirado">Expirado (status: expirado/expired)</option>
+            <option value="eliminado">Eliminado (status: eliminado/deleted)</option>
           </select>
+          <p class="mt-1 text-[10px] text-gray-500">Campo del endpoint: <strong>status</strong></p>
         </div>
 
         <div class="flex-1 min-w-0">
           <label for="filter-scope" class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-1">Relación (Aplica A)</label>
-          <select id="filter-scope" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+          <select id="filter-scope" class="w-full px-2.5 py-2 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
             <option value="">Todas</option>
-            <option value="todos">Todos</option>
-            <option value="carrera">Por carrera</option>
-            <option value="semestre">Por semestre</option>
-            <option value="carrera_semestre">Carrera + semestre</option>
-            <option value="estudiantes">Estudiantes específicos</option>
-            <option value="tag">Tags especiales</option>
+            <option value="todos">Todos (applies_to: todos/all)</option>
+            <option value="carrera">Por carrera (applies_to: carrera/career)</option>
+            <option value="semestre">Por semestre (applies_to: semestre/semester)</option>
+            <option value="carrera_semestre">Carrera + semestre (applies_to: carrera_semestre/career_semester)</option>
+            <option value="estudiantes">Estudiantes específicos (applies_to: estudiantes/students)</option>
+            <option value="tag">Tags especiales (applies_to: tag/tags)</option>
           </select>
+          <p class="mt-1 text-[10px] text-gray-500">Campo del endpoint: <strong>applies_to</strong></p>
         </div>
 
         <div class="sm:w-auto">
-          <button id="clear-concept-filters" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-50 text-gray-700 text-sm font-bold hover:bg-gray-100 transition-colors">
+          <button id="clear-concept-filters" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 text-xs font-bold hover:bg-gray-100 transition-colors">
             Limpiar filtros
           </button>
         </div>
@@ -249,12 +251,13 @@ function getStatusBadge(status){
 
 function normalizeStatus(status) {
   const raw = String(status || '').toLowerCase().trim();
-  if (!raw) return 'activo';
+  if (!raw) return '';
   if (raw === 'active') return 'activo';
   if (raw === 'inactive') return 'inactivo';
   if (raw === 'finalized') return 'finalizado';
   if (raw === 'expired') return 'expirado';
   if (raw === 'deleted') return 'eliminado';
+  if (raw === 'vigente') return 'activo';
   return raw;
 }
 
@@ -268,7 +271,9 @@ function normalizeAppliesTo(value) {
     'semestre': 'semestre',
     'semester': 'semestre',
     'carrera_semestre': 'carrera_semestre',
+    'carrera-semestre': 'carrera_semestre',
     'career_semester': 'carrera_semestre',
+    'career-semester': 'carrera_semestre',
     'estudiantes': 'estudiantes',
     'students': 'estudiantes',
     'tag': 'tag',
@@ -387,7 +392,7 @@ function renderConcepts(){
   const scopeFilter = normalizeAppliesTo(document.getElementById('filter-scope')?.value || '');
 
   const list = [...conceptsCache].filter(c => {
-    const conceptStatus = normalizeStatus(c.status);
+    const conceptStatus = normalizeStatus(c.status) || 'activo';
     const conceptScope = normalizeAppliesTo(c.applies_to || c.appliesTo);
     const matchesStatus = !statusFilter || conceptStatus === statusFilter;
     const matchesScope = !scopeFilter || conceptScope === scopeFilter;
@@ -419,7 +424,7 @@ function renderConcepts(){
 
   grid.innerHTML = list.map(c=>{
     const amount = Number(c.amount)||0;
-    const normalizedStatus = normalizeStatus(c.status);
+    const normalizedStatus = normalizeStatus(c.status) || 'activo';
     const isInactive = normalizedStatus !== 'activo';
     
     // Determinar y mostrar el tipo de alcance
