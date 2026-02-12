@@ -102,6 +102,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         
         if (token && apiReady) {
           await this.loadPendingPayments();
+          await this.loadOverduePayments();
         }
 
         if (token && apiReady) {
