@@ -49,12 +49,9 @@ async function _fetchWithTokenRefresh(url, options = {}) {
       }
 
       const refreshData = await refreshResponse.json();
-      const newAccessToken = refreshData?.data?.access_token || 
-                           refreshData?.data?.user_tokens?.access_token ||
-                           refreshData?.access_token;
-      const newRefreshToken = refreshData?.data?.refresh_token || 
-                            refreshData?.data?.user_tokens?.refresh_token ||
-                            refreshData?.refresh_token;
+      const tokenBundle = refreshData?.data?.user_tokens || refreshData?.data || {};
+      const newAccessToken = tokenBundle.access_token || refreshData?.access_token;
+      const newRefreshToken = tokenBundle.refresh_token || refreshData?.refresh_token;
 
       if (newAccessToken) {
         localStorage.setItem('access_token', newAccessToken);
