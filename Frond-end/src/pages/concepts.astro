@@ -141,7 +141,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             <span>Filtro</span>
           </summary>
 
-          <div id="concept-filters-panel" class="absolute right-0 top-full mt-2 w-[280px] bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2 z-[9999]">
+          <div id="concept-filters-panel" class="fixed w-[280px] max-w-[calc(100vw-16px)] bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2 z-[9999] max-h-[calc(100vh-16px)] overflow-y-auto">
             <div class="pb-1 border-b border-gray-200">
               <p class="text-xs font-bold text-gray-800">Filtros</p>
               <p class="text-[11px] text-gray-500">Estatus = estado del concepto. Relación = a quién aplica.</p>
@@ -643,31 +643,38 @@ function initConceptFilters() {
   const filtersDetails = document.getElementById('concept-filters-details');
   const filtersPanel = document.getElementById('concept-filters-panel');
   const toggleButton = document.getElementById('filter-toggle-btn');
-  const conceptsGrid = document.getElementById('concepts-grid');
   const statusSelect = document.getElementById('filter-status');
   const scopeSelect = document.getElementById('filter-scope');
   const clearButton = document.getElementById('clear-concept-filters');
 
   const placePanel = () => {
-    if (!filtersDetails || !filtersPanel || !toggleButton || !conceptsGrid) return;
+    if (!filtersDetails || !filtersPanel || !toggleButton) return;
 
-    filtersPanel.classList.remove('bottom-full', 'mb-2');
-    filtersPanel.classList.add('top-full', 'mt-2');
+    const margin = 8;
+    filtersPanel.style.maxHeight = `${window.innerHeight - margin * 2}px`;
 
+    const buttonRect = toggleButton.getBoundingClientRect();
     const panelRect = filtersPanel.getBoundingClientRect();
-    const gridRect = conceptsGrid.getBoundingClientRect();
-    const wouldOverlapGrid = panelRect.bottom > gridRect.top;
 
-    if (wouldOverlapGrid) {
-      filtersPanel.classList.remove('top-full', 'mt-2');
-      filtersPanel.classList.add('bottom-full', 'mb-2');
+    let left = buttonRect.right - panelRect.width;
+    left = Math.max(margin, Math.min(left, window.innerWidth - panelRect.width - margin));
+
+    const belowTop = buttonRect.bottom + margin;
+    const aboveTop = buttonRect.top - panelRect.height - margin;
+
+    let top = belowTop;
+    if (belowTop + panelRect.height > window.innerHeight - margin) {
+      top = aboveTop >= margin ? aboveTop : margin;
     }
+
+    filtersPanel.style.left = `${left}px`;
+    filtersPanel.style.top = `${top}px`;
   };
 
   if (filtersDetails && !filtersDetails.dataset.bound) {
     filtersDetails.addEventListener('toggle', () => {
       if (filtersDetails.open) {
-        placePanel();
+        requestAnimationFrame(placePanel);
       }
     });
 
@@ -676,6 +683,12 @@ function initConceptFilters() {
         placePanel();
       }
     });
+
+    window.addEventListener('scroll', () => {
+      if (filtersDetails.open) {
+        placePanel();
+      }
+    }, true);
 
     filtersDetails.dataset.bound = 'true';
   }
