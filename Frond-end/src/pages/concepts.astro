@@ -175,6 +175,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
          style="grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));">
     </div>
 
+        <div id="concepts-pagination" class="mt-6 flex items-center justify-center gap-2"></div>
+
   </div>
 
 <script type="module">
@@ -428,10 +430,51 @@ async function apiFetch(url, options = {}) {
 }
 
 let conceptsCache = [];
+const conceptsPagination = {
+  page: 1,
+  perPage: 15,
+  lastPage: 1,
+  total: 0,
+  hasNext: false
+};
 
-async function loadConcepts(){
+function renderPagination() {
+  const container = document.getElementById('concepts-pagination');
+  if (!container) return;
+
+  const canPrev = conceptsPagination.page > 1;
+  const canNext = conceptsPagination.hasNext || conceptsPagination.page < conceptsPagination.lastPage;
+  const totalText = Number.isFinite(conceptsPagination.total) && conceptsPagination.total > 0
+    ? ` · Total: ${conceptsPagination.total}`
+    : '';
+
+  container.innerHTML = `
+    <button
+      type="button"
+      onclick="window.changeConceptsPage(${conceptsPagination.page - 1})"
+      ${canPrev ? '' : 'disabled'}
+      class="h-9 px-3 rounded-lg border ${canPrev ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'} text-xs font-bold transition-colors"
+    >Anterior</button>
+
+    <div class="h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold flex items-center">
+      Página ${conceptsPagination.page}${Number.isFinite(conceptsPagination.lastPage) && conceptsPagination.lastPage > 0 ? ` de ${conceptsPagination.lastPage}` : ''}${totalText}
+    </div>
+
+    <button
+      type="button"
+      onclick="window.changeConceptsPage(${conceptsPagination.page + 1})"
+      ${canNext ? '' : 'disabled'}
+      class="h-9 px-3 rounded-lg border ${canNext ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'} text-xs font-bold transition-colors"
+    >Siguiente</button>
+  `;
+}
+
+async function loadConcepts(page = 1){
   const grid = document.getElementById('concepts-grid');
+  const paginationContainer = document.getElementById('concepts-pagination');
   if(!grid) return;
+  const targetPage = Math.max(1, Number(page) || 1);
+
   grid.innerHTML = `
     <div class="col-span-full text-center py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/10 rounded-2xl sm:rounded-3xl border-2 border-emerald-200/50 shadow-xl sm:shadow-2xl">
       <div class="flex flex-col items-center gap-3 sm:gap-4 lg:gap-5">
@@ -446,15 +489,51 @@ async function loadConcepts(){
       </div>
     </div>
   `;
+  if (paginationContainer) paginationContainer.innerHTML = '';
+
   try {
-    const data = await apiFetch(`${API_BASE}/v1/concepts?perPage=50`, {
+    const statusFilter = normalizeStatus(document.getElementById('filter-status')?.value || '');
+    const params = new URLSearchParams({
+      perPage: String(conceptsPagination.perPage),
+      page: String(targetPage)
+    });
+    if (statusFilter) {
+      params.set('status', statusFilter);
+    }
+
+    const data = await apiFetch(`${API_BASE}/v1/concepts?${params.toString()}`, {
       headers: {
         'X-User-Role': 'financial-staff',
         'X-User-Permission': 'view.concepts'
       }
     });
-    conceptsCache = data?.data?.concepts?.items || [];
+
+    const conceptsNode = data?.data?.concepts || {};
+    conceptsCache = conceptsNode?.items || conceptsNode?.data || [];
+
+    const meta = conceptsNode?.meta || conceptsNode?.pagination || data?.data?.meta || {};
+    const currentPage = Number(meta?.current_page ?? meta?.currentPage ?? conceptsNode?.current_page ?? conceptsNode?.page ?? targetPage) || targetPage;
+    const perPage = Number(meta?.per_page ?? meta?.perPage ?? conceptsNode?.per_page ?? conceptsNode?.perPage ?? conceptsPagination.perPage) || conceptsPagination.perPage;
+    const total = Number(meta?.total ?? conceptsNode?.total ?? 0) || 0;
+    const explicitLastPage = Number(meta?.last_page ?? meta?.lastPage ?? conceptsNode?.last_page ?? conceptsNode?.lastPage ?? 0) || 0;
+    const calculatedLastPage = total > 0 ? Math.ceil(total / perPage) : 0;
+    const lastPage = explicitLastPage || calculatedLastPage || currentPage;
+    const hasNextByLink = Boolean(meta?.next_page_url ?? meta?.nextPageUrl ?? conceptsNode?.next_page_url ?? conceptsNode?.nextPageUrl);
+    const hasNext = hasNextByLink || currentPage < lastPage || conceptsCache.length >= perPage;
+
+    conceptsPagination.page = currentPage;
+    conceptsPagination.perPage = perPage;
+    conceptsPagination.total = total;
+    conceptsPagination.lastPage = Math.max(1, lastPage);
+    conceptsPagination.hasNext = hasNext;
+
+    if (conceptsCache.length === 0 && targetPage > 1) {
+      await loadConcepts(targetPage - 1);
+      return;
+    }
+
     renderConcepts();
+    renderPagination();
   } catch(err){
     console.error(err);
     grid.innerHTML = `
@@ -467,12 +546,13 @@ async function loadConcepts(){
             <p class="text-red-800 font-black text-base sm:text-lg lg:text-xl">Error al cargar conceptos</p>
             <p class="text-red-600 text-xs sm:text-sm font-medium max-w-md break-words">${escapeHtml(err.message || 'Error desconocido')}</p>
           </div>
-          <button onclick="loadConcepts()" class="mt-2 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs sm:text-sm">
+          <button onclick="loadConcepts(${targetPage})" class="mt-2 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs sm:text-sm">
             <i class="fas fa-redo mr-2"></i> Reintentar
           </button>
         </div>
       </div>
     `;
+    if (paginationContainer) paginationContainer.innerHTML = '';
   }
 }
 
@@ -658,7 +738,7 @@ function initConceptFilters() {
   const clearButton = document.getElementById('clear-concept-filters');
 
   if (statusSelect && !statusSelect.dataset.bound) {
-    statusSelect.addEventListener('change', renderConcepts);
+    statusSelect.addEventListener('change', () => loadConcepts(1));
     statusSelect.dataset.bound = 'true';
   }
 
@@ -805,6 +885,12 @@ window.activateConcept = (id) => mutateConcept(id, 'activate');
 window.deleteConcept = (id) => {
   if(!confirm('⚠️ ¿Marcar concepto como eliminado (borrado lógico)?')) return;
   mutateConcept(id, 'delete');
+};
+window.changeConceptsPage = (page) => {
+  const target = Number(page) || 1;
+  if (target < 1) return;
+  if (target === conceptsPagination.page) return;
+  loadConcepts(target);
 };
 
 initConceptFilters();
