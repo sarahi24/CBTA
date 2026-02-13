@@ -98,6 +98,13 @@ const pageTitle = "Dashboard - SIGE";
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
     const payoutBtn = document.getElementById('createPayoutBtn') as HTMLButtonElement | null;
+
+    const parseAmount = (value: unknown): number => {
+      if (value == null) return 0;
+      const clean = String(value).replace(/,/g, '').trim();
+      const parsed = parseFloat(clean);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
     
     // Variable para almacenar el balance disponible
     let availableBalance = 0;
@@ -136,6 +143,7 @@ const pageTitle = "Dashboard - SIGE";
             totalAmount: pendingData.totalAmount,
             totalCount: pendingData.totalCount
           }));
+          window.dispatchEvent(new Event('dashboardCardsUpdated'));
           
           console.log('✅ Datos de pagos pendientes cargados:', pendingData);
         }
@@ -162,19 +170,20 @@ const pageTitle = "Dashboard - SIGE";
         if (data.success && data.data?.payments_data) {
           const paymentsData = data.data.payments_data;
           const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
-          const percentage = paymentsData.pendingPercentage || 0;
+          const percentage = parseAmount(paymentsData.pendingPercentage || 0);
           
           const balanceEl = document.getElementById('count-balance');
           const balanceDesc = document.getElementById('desc-balance');
           
           if (balanceEl) {
-            balanceEl.textContent = formatMX(paymentsData.totalBalancePending || 0);
+            balanceEl.textContent = formatMX(parseAmount(paymentsData.totalBalancePending || 0));
           }
           if (balanceDesc) {
             balanceDesc.textContent = `${percentage}% del total`;
           }
           
           console.log('✅ Datos de balance pendiente cargados - Pendiente:', paymentsData.totalBalancePending, 'Porcentaje:', percentage);
+          window.dispatchEvent(new Event('dashboardCardsUpdated'));
         }
       } catch (error) {
         console.error('❌ Error cargando datos de balance pendiente:', error);
@@ -214,6 +223,13 @@ const pageTitle = "Dashboard - SIGE";
           if (estudiantesDesc) {
             estudiantesDesc.textContent = description;
           }
+
+          localStorage.setItem('dashboardStudents', JSON.stringify({
+            totalStudents,
+            studentCount,
+            applicantCount
+          }));
+          window.dispatchEvent(new Event('dashboardCardsUpdated'));
           
           console.log('✅ Datos de estudiantes cargados - Total:', totalStudents, '(', studentCount, 'estudiantes +', applicantCount, 'aspirantes)');
         }
@@ -248,13 +264,13 @@ const pageTitle = "Dashboard - SIGE";
           const recaudadoDesc = document.getElementById('desc-recaudado');
           
           if (recaudadoEl) {
-            recaudadoEl.textContent = formatMX(paymentsData.totalPayments || 0);
+            recaudadoEl.textContent = formatMX(parseAmount(paymentsData.totalPayments || 0));
           }
           if (recaudadoDesc) {
-            recaudadoDesc.textContent = `Balance disponible: ${formatMX(paymentsData.totalBalanceAvailable || 0)}`;
+            recaudadoDesc.textContent = `Balance disponible: ${formatMX(parseAmount(paymentsData.totalBalanceAvailable || 0))}`;
           }
           
-          availableBalance = parseFloat(paymentsData.totalBalanceAvailable || 0);
+          availableBalance = parseAmount(paymentsData.totalBalanceAvailable || 0);
           
           // Almacenar datos de pagos para los gráficos
           localStorage.setItem('dashboardPayments', JSON.stringify({
@@ -265,6 +281,7 @@ const pageTitle = "Dashboard - SIGE";
             pendingPercentage: paymentsData.pendingPercentage || 0,
             availablePercentage: paymentsData.availablePercentage || 0
           }));
+          window.dispatchEvent(new Event('dashboardCardsUpdated'));
           
           // Disparar eventos para actualizar gráficos
           const updateEvent = new Event('paymentsDataLoaded');

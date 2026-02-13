@@ -75,6 +75,15 @@ const getIconSvg = (iconName, sizeClass) => {
         if (!elVal) return;
 
         const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
+        const parseAmount = (value) => {
+            if (value == null) return 0;
+            const parsed = parseFloat(String(value).replace(/,/g, '').trim());
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+
+        const dashboardPayments = JSON.parse(localStorage.getItem('dashboardPayments') || 'null');
+        const dashboardPending = JSON.parse(localStorage.getItem('dashboardPendingPayments') || 'null');
+        const dashboardStudents = JSON.parse(localStorage.getItem('dashboardStudents') || 'null');
 
         if (icon === 'concepts') {
             const list = JSON.parse(localStorage.getItem('conceptsList') || '[]');
@@ -83,6 +92,22 @@ const getIconSvg = (iconName, sizeClass) => {
         }
 
         if (icon === 'pending' || icon === 'recaudado') {
+            if (icon === 'pending' && dashboardPending && dashboardPending.totalAmount != null) {
+                const totalAmount = parseAmount(dashboardPending.totalAmount);
+                const totalCount = Number(dashboardPending.totalCount || 0);
+                elVal.textContent = formatMX(totalAmount);
+                if (elDesc) elDesc.textContent = totalCount === 1 ? '1 Adeudo' : `${totalCount} Adeudos`;
+                return;
+            }
+
+            if (icon === 'recaudado' && dashboardPayments && dashboardPayments.totalPayments != null) {
+                const totalPayments = parseAmount(dashboardPayments.totalPayments);
+                const totalAvailable = parseAmount(dashboardPayments.totalBalanceAvailable || 0);
+                elVal.textContent = formatMX(totalPayments);
+                if (elDesc) elDesc.textContent = `Balance disponible: ${formatMX(totalAvailable)}`;
+                return;
+            }
+
             const charges = JSON.parse(localStorage.getItem('chargesList') || '[]');
             if (icon === 'recaudado') {
                 const paid = charges.filter(c => ['paid', 'pagado'].includes(String(c.status).toLowerCase()));
@@ -95,7 +120,29 @@ const getIconSvg = (iconName, sizeClass) => {
             }
         }
 
+        if (icon === 'balance') {
+            if (dashboardPayments && dashboardPayments.totalBalancePending != null) {
+                const balancePending = parseAmount(dashboardPayments.totalBalancePending);
+                const percentage = parseAmount(dashboardPayments.pendingPercentage || 0);
+                elVal.textContent = formatMX(balancePending);
+                if (elDesc) elDesc.textContent = `${percentage}% del total`;
+                return;
+            }
+        }
+
         if (icon === 'students') {
+            if (dashboardStudents && dashboardStudents.totalStudents != null) {
+                const totalStudents = Number(dashboardStudents.totalStudents || 0);
+                const studentCount = Number(dashboardStudents.studentCount || 0);
+                const applicantCount = Number(dashboardStudents.applicantCount || 0);
+                const description = applicantCount > 0
+                    ? `${studentCount} Estudiantes, ${applicantCount} Aspirantes`
+                    : `Actualizado: ${new Date().toLocaleDateString('es-MX')}`;
+                elVal.textContent = String(totalStudents);
+                if (elDesc) elDesc.textContent = description;
+                return;
+            }
+
             // Intentar obtener estudiantes de localStorage
             let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
             let studentCount = 0;
@@ -137,4 +184,5 @@ const getIconSvg = (iconName, sizeClass) => {
     window.addEventListener('conceptsUpdated', updateCard);
     window.addEventListener('chargesUpdated', updateCard);
     window.addEventListener('studentsUpdated', updateCard);
+    window.addEventListener('dashboardCardsUpdated', updateCard);
 </script>
