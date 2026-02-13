@@ -396,6 +396,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 <input type="password" x-model="passwordData.currentPassword" 
                                        class="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all"
                                        placeholder="Ingresa tu contraseña actual"
+                                        autocomplete="current-password"
                                        required>
                                 <p x-show="passwordErrors.currentPassword" x-text="passwordErrors.currentPassword && passwordErrors.currentPassword[0]" class="mt-1 text-sm text-red-600"></p>
                             </div>
@@ -406,6 +407,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 <input type="password" x-model="passwordData.newPassword" 
                                        class="w-full px-4 py-3 border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
                                        placeholder="Mínimo 8 caracteres"
+                                        autocomplete="new-password"
                                        minlength="8"
                                        required>
                                 <p x-show="passwordErrors.newPassword" x-text="passwordErrors.newPassword && passwordErrors.newPassword[0]" class="mt-1 text-sm text-red-600"></p>
@@ -418,6 +420,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 <input type="password" x-model="passwordData.confirmPassword" 
                                        class="w-full px-4 py-3 border-2 border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white transition-all"
                                        placeholder="Repite la nueva contraseña"
+                                        autocomplete="new-password"
                                        minlength="8"
                                        required>
                                 <p x-show="passwordErrors.confirmPassword" x-text="passwordErrors.confirmPassword && passwordErrors.confirmPassword[0]" class="mt-1 text-sm text-red-600"></p>
@@ -461,6 +464,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 group: '',
                 workshop: '',
                 careerName: '',
+                rol: '',
                 showEditModal: false,
                 showPasswordModal: false,
                 isUpdating: false,
@@ -510,28 +514,46 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         const userData = localStorage.getItem('user_data');
                         if (userData) {
                             const user = JSON.parse(userData);
-                            // Verificar si el usuario tiene roles que no son de estudiante
+
+                            const roles = [];
+
                             if (user.roles) {
-                                const roles = Array.isArray(user.roles) ? user.roles : [user.roles];
-                                const roleNames = roles.map(r => {
-                                    if (typeof r === 'string') return r.toLowerCase();
-                                    if (r.name) return r.name.toLowerCase();
-                                    return '';
+                                const rawRoles = Array.isArray(user.roles) ? user.roles : [user.roles];
+                                rawRoles.forEach(r => {
+                                    if (typeof r === 'string') {
+                                        roles.push(r);
+                                    } else if (r?.name) {
+                                        roles.push(r.name);
+                                    }
                                 });
-                                
-                                // Si tiene roles de admin o financiero, no es estudiante
-                                const hasAdminRole = roleNames.some(role => 
-                                    role.includes('admin') || 
-                                    role.includes('administrador') ||
-                                    role.includes('financiero') ||
-                                    role.includes('financial-staff')
-                                );
-                                
-                                this.isStudent = !hasAdminRole;
                             }
+
+                            if (user.role) {
+                                roles.push(String(user.role));
+                            }
+
+                            if (user.role_name) {
+                                roles.push(String(user.role_name));
+                            }
+
+                            const roleNames = roles
+                                .map(role => role.toLowerCase().trim())
+                                .filter(Boolean);
+
+                            this.rol = roleNames[0] || '';
+
+                            const hasAdminRole = roleNames.some(role =>
+                                role.includes('admin') ||
+                                role.includes('administrador') ||
+                                role.includes('financiero') ||
+                                role.includes('financial-staff')
+                            );
+
+                            this.isStudent = !hasAdminRole;
                         }
                     } catch (e) {
                         console.error('Error detecting role:', e);
+                        this.rol = '';
                         this.isStudent = true;
                     }
                 },
