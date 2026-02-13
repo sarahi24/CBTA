@@ -55,6 +55,9 @@ const pageTitle = "Notificaciones";
       <!-- Las notificaciones se cargarán dinámicamente aquí -->
     </div>
 
+    <!-- Paginación -->
+    <div id="notifications-pagination" class="mt-6 flex items-center justify-center gap-2"></div>
+
     <!-- Mensaje cuando no hay notificaciones -->
     <div id="no-notifications" class="hidden text-center py-20">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,11 +69,18 @@ const pageTitle = "Notificaciones";
   </div>
 
   <script>
+    // @ts-nocheck
     const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
     let allNotifications = [];
     let currentFilter = 'all';
     let currentPage = 1;
     const perPage = 20;
+    const paginationState = {
+      currentPage: 1,
+      lastPage: 1,
+      total: 0,
+      hasNext: false
+    };
 
     // Obtener token
     function getToken() {
@@ -87,7 +97,7 @@ const pageTitle = "Notificaciones";
       }
 
       try {
-        // Obtener notificaciones leídas
+        // Obtener notificaciones paginadas
         const readResponse = await fetch(`${API_BASE}/notifications?page=${currentPage}&per_page=${perPage}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -95,8 +105,8 @@ const pageTitle = "Notificaciones";
           }
         });
 
-        // Obtener notificaciones no leídas
-        const unreadResponse = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=50`, {
+        // Obtener solo conteo de no leídas (sin cargar lista completa)
+        const unreadResponse = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=1`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -110,19 +120,36 @@ const pageTitle = "Notificaciones";
           console.log('✅ Notificaciones leídas:', readData);
           console.log('✅ Notificaciones no leídas:', unreadData);
 
-          // Combinar notificaciones
-          const readNotifications = readData.data?.notifications?.data || [];
-          const unreadNotifications = unreadData.data?.notifications || [];
+          const notificationsNode = readData.data?.notifications || {};
+          const notificationsList = notificationsNode?.data || notificationsNode?.items || [];
+          const unreadCount = unreadData.data?.count ?? unreadData.data?.unread_count ?? 0;
 
-          allNotifications = [
-            ...unreadNotifications.map(n => normalizeNotification(n, false)),
-            ...readNotifications.map(n => normalizeNotification(n, true))
-          ];
+          const meta = notificationsNode?.meta || notificationsNode?.pagination || {};
+          const apiCurrentPage = Number(meta.current_page ?? meta.currentPage ?? notificationsNode.current_page ?? currentPage) || currentPage;
+          const apiLastPage = Number(meta.last_page ?? meta.lastPage ?? notificationsNode.last_page ?? 1) || 1;
+          const apiTotal = Number(meta.total ?? notificationsNode.total ?? notificationsList.length ?? 0) || 0;
+
+          paginationState.currentPage = apiCurrentPage;
+          paginationState.lastPage = Math.max(1, apiLastPage);
+          paginationState.total = apiTotal;
+          paginationState.hasNext = apiCurrentPage < paginationState.lastPage;
+          currentPage = paginationState.currentPage;
+
+          allNotifications = notificationsList.map(n => {
+            const inferredRead = Boolean(
+              n?.read ||
+              n?.is_read ||
+              n?.read_at ||
+              n?.readAt
+            );
+            return normalizeNotification(n, inferredRead);
+          });
 
           // Actualizar conteo en badge
-          updateBadgeCount(unreadData.data?.count || unreadNotifications.length);
+          updateBadgeCount(unreadCount);
 
           renderNotifications(currentFilter);
+          renderPagination();
         } else {
           console.error('❌ Error al obtener notificaciones');
           showNoNotifications();
@@ -131,6 +158,48 @@ const pageTitle = "Notificaciones";
         console.error('❌ Error:', error);
         showNoNotifications();
       }
+    }
+
+    function renderPagination() {
+      const container = document.getElementById('notifications-pagination');
+      if (!container) return;
+
+      if (!allNotifications.length && paginationState.currentPage <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const canPrev = paginationState.currentPage > 1;
+      const canNext = paginationState.hasNext;
+      const totalText = paginationState.total > 0 ? ` · Total: ${paginationState.total}` : '';
+
+      container.innerHTML = `
+        <button
+          type="button"
+          onclick="changeNotificationsPage(${paginationState.currentPage - 1})"
+          ${canPrev ? '' : 'disabled'}
+          class="h-9 px-3 rounded-lg border ${canPrev ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'} text-xs font-bold transition-colors"
+        >Anterior</button>
+
+        <div class="h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold flex items-center">
+          Página ${paginationState.currentPage} de ${paginationState.lastPage}${totalText}
+        </div>
+
+        <button
+          type="button"
+          onclick="changeNotificationsPage(${paginationState.currentPage + 1})"
+          ${canNext ? '' : 'disabled'}
+          class="h-9 px-3 rounded-lg border ${canNext ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'} text-xs font-bold transition-colors"
+        >Siguiente</button>
+      `;
+    }
+
+    window.changeNotificationsPage = async function(page) {
+      const targetPage = Number(page) || 1;
+      if (targetPage < 1) return;
+      if (targetPage === currentPage) return;
+      currentPage = targetPage;
+      await fetchNotifications();
     }
 
     // Normalizar formato de notificación
@@ -199,6 +268,9 @@ const pageTitle = "Notificaciones";
             // Re-renderizar
             renderNotifications(currentFilter);
           }
+
+          // Refrescar página para mantener consistencia con paginación
+          await fetchNotifications();
         } else if (response.status === 404) {
           console.error('❌ Notificación no encontrada');
         } else {
@@ -235,6 +307,9 @@ const pageTitle = "Notificaciones";
           
           // Re-renderizar
           renderNotifications(currentFilter);
+
+          // Refrescar página para mantener consistencia con paginación
+          await fetchNotifications();
         } else {
           console.error('❌ Error al marcar todas como leídas');
         }
@@ -416,8 +491,10 @@ const pageTitle = "Notificaciones";
     function showNoNotifications() {
       const container = document.getElementById('notifications-container');
       const noNotifications = document.getElementById('no-notifications');
+      const pagination = document.getElementById('notifications-pagination');
       container.innerHTML = '';
       noNotifications.classList.remove('hidden');
+      if (pagination) pagination.innerHTML = '';
     }
 
     // Filtros
