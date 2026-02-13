@@ -344,6 +344,13 @@ import Layout from '../layouts/Layout.astro';
                         </div>
 
                         <form @submit.prevent="submitChangePassword" class="space-y-5">
+                            <input type="text"
+                                   name="username"
+                                   autocomplete="username"
+                                   :value="userEmail || formData.email || ''"
+                                   class="hidden"
+                                   tabindex="-1"
+                                   aria-hidden="true">
                             <!-- Contraseña Actual -->
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Contraseña Actual</label>
