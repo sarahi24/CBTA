@@ -432,19 +432,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <option value="mujer">Mujer</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Tipo de Sangre</label>
-                            <select x-model="newUser.blood_type" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional">
-                                <option value="O+">O+</option>
-                                <option value="O-">O-</option>
-                                <option value="A+">A+</option>
-                                <option value="A-">A-</option>
-                                <option value="B+">B+</option>
-                                <option value="B-">B-</option>
-                                <option value="AB+">AB+</option>
-                                <option value="AB-">AB-</option>
-                            </select>
-                        </div>
+                        <div></div>
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-2">CURP</label>
@@ -482,9 +470,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Asignar Rol</label>
                         <select x-model="newUser.role" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional font-semibold">
                             <option value="">🚫 Sin rol</option>
-                            <option value="Administrador">Administrador</option>
-                            <option value="Caja">Personal de Caja</option>
-                            <option value="Maestro">Maestro</option>
+                            <option value="admin">Administrador</option>
+                            <option value="financial-staff">Personal de Caja</option>
                         </select>
                     </div>
 
@@ -1328,7 +1315,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
-                    status: 'activo', role: 'Administrador',
+                    status: 'activo', role: 'admin',
                     studentDetail: {
                         user_id: null,
                         career_id: '',
@@ -1447,6 +1434,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     return value.split('T')[0];
                 }
                 return value;
+            },
+
+            normalizeRoleForApi(roleValue) {
+                const key = String(roleValue || '').toLowerCase().trim();
+                if (!key) return '';
+
+                if (key === 'admin' || key === 'administrador') return 'admin';
+                if (key === 'caja' || key === 'financial-staff' || key === 'financial staff') return 'financial-staff';
+                if (key === 'student' || key === 'estudiante') return 'student';
+                if (key === 'parent' || key === 'padre') return 'parent';
+                return key;
             },
 
             generatePassword() {
@@ -2364,7 +2362,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
                     blood_type: 'O+', registration_date: new Date().toISOString().split('T')[0],
-                    status: 'activo', role: 'Administrador',
+                    status: 'activo', role: 'admin',
                     studentDetail: {
                         user_id: null,
                         career_id: '',
@@ -2419,7 +2417,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     address: addressArray,
                     registration_date: mapped.registration_date || user?.registration_date || new Date().toISOString().split('T')[0],
                     status: mapped.status || user?.status || 'activo',
-                    role: mapped.role || mapped.roleLabel || user?.role || '',
+                    role: this.normalizeRoleForApi(mapped.roleKey || mapped.role || mapped.roleLabel || user?.role || user?.role_name || user?.roles?.[0] || ''),
                     studentDetail: {
                         user_id: mapped.id || user?.id,
                         career_id: '',
@@ -2615,7 +2613,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         birthdate: this.normalizeDate(this.newUser.birthdate) || undefined,
                         gender: this.newUser.gender || undefined,
                         curp: this.newUser.curp || undefined,
-                        address: this.newUser.address || undefined
+                        address: this.newUser.address || undefined,
+                        role: this.normalizeRoleForApi(this.newUser.role) || undefined
                     };
                     
                     // En creación, agregar blood_type

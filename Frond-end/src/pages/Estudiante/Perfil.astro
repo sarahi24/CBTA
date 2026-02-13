@@ -536,6 +536,39 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     }
                 },
 
+                getFirstValue(source, keys, fallback = '') {
+                    if (!source || typeof source !== 'object') return fallback;
+                    for (const key of keys) {
+                        const value = source[key];
+                        if (value !== undefined && value !== null && value !== '') {
+                            return value;
+                        }
+                    }
+                    return fallback;
+                },
+
+                normalizeAddress(addressValue) {
+                    if (Array.isArray(addressValue)) {
+                        return addressValue.filter(Boolean).join(', ');
+                    }
+                    if (typeof addressValue === 'string') {
+                        return addressValue;
+                    }
+                    if (addressValue && typeof addressValue === 'object') {
+                        const parts = [
+                            addressValue.street,
+                            addressValue.number,
+                            addressValue.neighborhood,
+                            addressValue.colony,
+                            addressValue.city,
+                            addressValue.state,
+                            addressValue.zip_code
+                        ].filter(Boolean);
+                        return parts.join(', ');
+                    }
+                    return '';
+                },
+
                 async loadStudentData() {
                     const token = localStorage.getItem('access_token');
                     
@@ -556,9 +589,9 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         if (response.ok) {
                             const data = await response.json();
                             console.log('Respuesta completa de /v1/users/user:', data);
-                            
-                            if (data.success && data.data?.user) {
-                                const student = data.data.user;
+
+                            const student = data?.data?.user || data?.user || data?.data;
+                            if ((data.success || student) && student) {
                                 console.log('Objeto user recibido:', student);
                                 
                                 localStorage.setItem('user_data', JSON.stringify(student));
@@ -618,9 +651,9 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                         if (response.ok) {
                             const data = await response.json();
                             console.log('Respuesta de /v1/users/student-details:', data);
-                            
-                            if (data.success && data.data?.student_details) {
-                                const details = data.data.student_details;
+
+                            const details = data?.data?.student_details || data?.student_details || data?.data;
+                            if ((data.success || details) && details) {
                                 console.log('student_details recibido:', details);
                                 
                                 localStorage.setItem('student_details', JSON.stringify(details));
@@ -658,12 +691,18 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     console.log('=== populateStudentDetails ejecutándose ===');
                     console.log('Detalles recibidos:', details);
                     
-                    // Mapeo según la documentación de la API: nControl, semestre, group, workshop, careerName
-                    this.nControl = details.nControl || 'No disponible';
-                    this.semestre = details.semestre ? 'Semestre ' + details.semestre : 'No disponible';
-                    this.group = details.group || 'No disponible';
-                    this.workshop = details.workshop || 'No disponible';
-                    this.careerName = details.careerName || 'No disponible';
+                    const nControlValue = this.getFirstValue(details, ['nControl', 'n_control', 'control', 'student_control', 'num_control']);
+                    const semestreValue = this.getFirstValue(details, ['semestre', 'semester', 'semester_number']);
+                    const groupValue = this.getFirstValue(details, ['group', 'grupo']);
+                    const workshopValue = this.getFirstValue(details, ['workshop', 'taller']);
+                    const careerNameValue = this.getFirstValue(details, ['careerName', 'career_name', 'career']);
+                    const careerObjectName = details?.career?.name || details?.career?.career_name;
+
+                    this.nControl = nControlValue || this.nControl || 'No disponible';
+                    this.semestre = semestreValue ? 'Semestre ' + semestreValue : (this.semestre || 'No disponible');
+                    this.group = groupValue || this.group || 'No disponible';
+                    this.workshop = workshopValue || this.workshop || 'No disponible';
+                    this.careerName = careerNameValue || careerObjectName || this.careerName || 'No disponible';
                     
                     console.log('Valores asignados:');
                     console.log('  nControl:', this.nControl);
@@ -676,10 +715,36 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 populateStudentData(student) {
                     console.log('=== populateStudentData ejecutándose ===');
                     console.log('Objeto student completo:', student);
-                    
-                    this.studentName = student.name || student.username || 'Sin nombre';
-                    this.studentEmail = student.email || 'No disponible';
-                    this.studentId = student.id || 'No disponible';
+
+                    const firstName = this.getFirstValue(student, ['name', 'first_name', 'firstName']);
+                    const lastName = this.getFirstValue(student, ['last_name', 'lastName']);
+                    const fullName = this.getFirstValue(student, ['fullName', 'full_name']);
+                    const composedName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+                    this.studentName = fullName || composedName || this.getFirstValue(student, ['username', 'user_name'], 'Sin nombre');
+                    this.studentEmail = this.getFirstValue(student, ['email', 'mail'], 'No disponible');
+                    this.studentId = this.getFirstValue(student, ['n_control', 'nControl', 'control', 'id'], 'No disponible');
+
+                    const detailsControl = this.getFirstValue(student, ['n_control', 'nControl', 'control']);
+                    if (detailsControl) {
+                        this.nControl = detailsControl;
+                    }
+                    const detailsSemester = this.getFirstValue(student, ['semestre', 'semester']);
+                    if (detailsSemester) {
+                        this.semestre = 'Semestre ' + detailsSemester;
+                    }
+                    const detailsGroup = this.getFirstValue(student, ['group', 'grupo']);
+                    if (detailsGroup) {
+                        this.group = detailsGroup;
+                    }
+                    const detailsWorkshop = this.getFirstValue(student, ['workshop', 'taller']);
+                    if (detailsWorkshop) {
+                        this.workshop = detailsWorkshop;
+                    }
+                    const detailsCareer = this.getFirstValue(student, ['careerName', 'career_name']) || student?.career?.name;
+                    if (detailsCareer) {
+                        this.careerName = detailsCareer;
+                    }
                     
                     this.lastLogin = new Date().toLocaleDateString('es-ES', {
                         year: 'numeric',
@@ -690,22 +755,15 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     });
 
                     // Populate form data
-                    this.formData.name = student.name || '';
-                    this.formData.last_name = student.last_name || '';
-                    this.formData.email = student.email || '';
-                    this.formData.phone_number = student.phone_number || '';
-                    this.formData.birthdate = student.birthdate || '';
-                    this.formData.gender = student.gender || '';
-                    this.formData.blood_type = student.blood_type || '';
+                    this.formData.name = firstName || '';
+                    this.formData.last_name = lastName || '';
+                    this.formData.email = this.getFirstValue(student, ['email', 'mail'], '');
+                    this.formData.phone_number = this.getFirstValue(student, ['phone_number', 'phone', 'phoneNumber', 'cellphone'], '');
+                    this.formData.birthdate = this.getFirstValue(student, ['birthdate', 'birth_date', 'date_of_birth'], '');
+                    this.formData.gender = this.getFirstValue(student, ['gender', 'sex'], '');
+                    this.formData.blood_type = this.getFirstValue(student, ['blood_type', 'bloodType'], '');
                     
-                    // Manejar dirección - puede ser array o string
-                    if (Array.isArray(student.address)) {
-                        this.formData.address = student.address.join(', ') || '';
-                    } else if (typeof student.address === 'string') {
-                        this.formData.address = student.address;
-                    } else {
-                        this.formData.address = '';
-                    }
+                    this.formData.address = this.normalizeAddress(this.getFirstValue(student, ['address', 'direccion'], ''));
 
                     this.originalFormData = { ...this.formData };
                 },
