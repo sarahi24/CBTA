@@ -495,7 +495,8 @@ async function loadConcepts(page = 1){
     const statusFilter = normalizeStatus(document.getElementById('filter-status')?.value || '');
     const params = new URLSearchParams({
       perPage: String(conceptsPagination.perPage),
-      page: String(targetPage)
+      page: String(targetPage),
+      forceRefresh: 'false'
     });
     if (statusFilter) {
       params.set('status', statusFilter);
