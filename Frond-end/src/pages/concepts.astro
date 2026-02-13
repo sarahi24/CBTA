@@ -141,7 +141,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             <span>Filtro</span>
           </summary>
 
-          <div id="concept-filters-panel" class="absolute right-0 mt-2 w-[280px] bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2 z-[9999]">
+          <div id="concept-filters-panel" class="absolute right-0 top-full mt-2 w-[280px] bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2 z-[9999]">
             <div class="pb-1 border-b border-gray-200">
               <p class="text-xs font-bold text-gray-800">Filtros</p>
               <p class="text-[11px] text-gray-500">Estatus = estado del concepto. Relación = a quién aplica.</p>
@@ -641,9 +641,44 @@ function renderConcepts(){
 
 function initConceptFilters() {
   const filtersDetails = document.getElementById('concept-filters-details');
+  const filtersPanel = document.getElementById('concept-filters-panel');
+  const toggleButton = document.getElementById('filter-toggle-btn');
+  const conceptsGrid = document.getElementById('concepts-grid');
   const statusSelect = document.getElementById('filter-status');
   const scopeSelect = document.getElementById('filter-scope');
   const clearButton = document.getElementById('clear-concept-filters');
+
+  const placePanel = () => {
+    if (!filtersDetails || !filtersPanel || !toggleButton || !conceptsGrid) return;
+
+    filtersPanel.classList.remove('bottom-full', 'mb-2');
+    filtersPanel.classList.add('top-full', 'mt-2');
+
+    const panelRect = filtersPanel.getBoundingClientRect();
+    const gridRect = conceptsGrid.getBoundingClientRect();
+    const wouldOverlapGrid = panelRect.bottom > gridRect.top;
+
+    if (wouldOverlapGrid) {
+      filtersPanel.classList.remove('top-full', 'mt-2');
+      filtersPanel.classList.add('bottom-full', 'mb-2');
+    }
+  };
+
+  if (filtersDetails && !filtersDetails.dataset.bound) {
+    filtersDetails.addEventListener('toggle', () => {
+      if (filtersDetails.open) {
+        placePanel();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (filtersDetails.open) {
+        placePanel();
+      }
+    });
+
+    filtersDetails.dataset.bound = 'true';
+  }
 
   if (statusSelect && !statusSelect.dataset.bound) {
     statusSelect.addEventListener('change', renderConcepts);
