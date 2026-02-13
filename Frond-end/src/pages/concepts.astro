@@ -643,6 +643,7 @@ function initConceptFilters() {
   const filtersDetails = document.getElementById('concept-filters-details');
   const filtersPanel = document.getElementById('concept-filters-panel');
   const toggleButton = document.getElementById('filter-toggle-btn');
+  const conceptsGrid = document.getElementById('concepts-grid');
   const statusSelect = document.getElementById('filter-status');
   const scopeSelect = document.getElementById('filter-scope');
   const clearButton = document.getElementById('clear-concept-filters');
@@ -662,9 +663,18 @@ function initConceptFilters() {
     const belowTop = buttonRect.bottom + margin;
     const aboveTop = buttonRect.top - panelRect.height - margin;
 
+    const gridTop = conceptsGrid ? conceptsGrid.getBoundingClientRect().top : Number.POSITIVE_INFINITY;
+    const overlapsGridIfBelow = (belowTop + panelRect.height) > (gridTop - margin);
+    const fitsBelowViewport = (belowTop + panelRect.height) <= (window.innerHeight - margin);
+
     let top = belowTop;
-    if (belowTop + panelRect.height > window.innerHeight - margin) {
-      top = aboveTop >= margin ? aboveTop : margin;
+
+    if (overlapsGridIfBelow || !fitsBelowViewport) {
+      if (aboveTop >= margin) {
+        top = aboveTop;
+      } else {
+        top = margin;
+      }
     }
 
     filtersPanel.style.left = `${left}px`;
