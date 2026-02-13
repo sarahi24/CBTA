@@ -367,6 +367,86 @@ function relationSummary(concept, appliesTo) {
   return 'Relación no definida';
 }
 
+function deepFindValue(source, keys = []) {
+  if (!source || typeof source !== 'object') return undefined;
+  const targetKeys = new Set(keys.map(k => String(k).toLowerCase()));
+  const queue = [source];
+  const visited = new Set();
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object' || visited.has(current)) continue;
+    visited.add(current);
+
+    if (Array.isArray(current)) {
+      for (const item of current) {
+        if (item && typeof item === 'object') queue.push(item);
+      }
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(current)) {
+      if (targetKeys.has(String(key).toLowerCase()) && value != null && value !== '') {
+        return value;
+      }
+      if (value && typeof value === 'object') {
+        queue.push(value);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeRelationItems(value) {
+  return toArray(value)
+    .map(item => {
+      if (item && typeof item === 'object') {
+        return item.id ?? item.value ?? item.name ?? item.semestre ?? item.career_name;
+      }
+      return item;
+    })
+    .filter(item => item != null && item !== '');
+}
+
+function mergeConceptRelations(concept, relationsPayload) {
+  const source = relationsPayload?.data?.relations || relationsPayload?.data || relationsPayload || {};
+
+  const explicitScope = normalizeAppliesTo(
+    deepFindValue(source, ['applies_to', 'appliesTo', 'scope_type', 'scopeType', 'relation_type', 'relationType', 'target_type', 'targetType'])
+  );
+
+  const careers = normalizeRelationItems(
+    deepFindValue(source, ['careers', 'career_ids', 'careerIds', 'target_career_id', 'carreras'])
+  );
+  const semesters = normalizeRelationItems(
+    deepFindValue(source, ['semesters', 'semester', 'semestre', 'target_semester', 'semestres'])
+  );
+  const students = normalizeRelationItems(
+    deepFindValue(source, ['students', 'student_ids', 'user_ids', 'userIds', 'specific_students', 'controls'])
+  );
+  const tags = normalizeRelationItems(
+    deepFindValue(source, ['applicant_tags', 'applicantTags', 'tags', 'special_tags'])
+  );
+
+  if (explicitScope) {
+    concept.applies_to = explicitScope;
+  }
+  if (careers.length) {
+    concept.careers = careers;
+    concept.career_ids = careers;
+  }
+  if (semesters.length) {
+    concept.semesters = semesters;
+  }
+  if (students.length) {
+    concept.user_ids = students;
+  }
+  if (tags.length) {
+    concept.applicant_tags = tags;
+  }
+}
+
 async function apiFetch(url, options = {}) {
   const parseJsonSafe = (text) => {
     if (!text) return {};
@@ -460,6 +540,33 @@ async function apiFetch(url, options = {}) {
 }
 
 let conceptsCache = [];
+let relationEnrichmentPromise = null;
+
+async function enrichConceptsWithRelations() {
+  if (!Array.isArray(conceptsCache) || conceptsCache.length === 0) return;
+
+  const pending = conceptsCache.filter(concept => {
+    const scope = getConceptScope(concept);
+    const summary = relationSummary(concept, scope);
+    return summary === 'Relación no definida' && concept?.id;
+  });
+
+  if (!pending.length) return;
+
+  await Promise.allSettled(
+    pending.map(async (concept) => {
+      const relations = await apiFetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
+        headers: {
+          'X-User-Role': 'financial-staff',
+          'X-User-Permission': 'view.concepts'
+        }
+      });
+      mergeConceptRelations(concept, relations);
+    })
+  );
+
+  renderConcepts();
+}
 
 async function loadConcepts(){
   const grid = document.getElementById('concepts-grid');
@@ -487,6 +594,9 @@ async function loadConcepts(){
     });
     conceptsCache = data?.data?.concepts?.items || [];
     renderConcepts();
+    relationEnrichmentPromise = enrichConceptsWithRelations().catch((error) => {
+      console.error('Error enriqueciendo relaciones de conceptos:', error);
+    });
   } catch(err){
     console.error(err);
     grid.innerHTML = `
