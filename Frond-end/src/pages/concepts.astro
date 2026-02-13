@@ -533,7 +533,10 @@ async function apiFetch(url, options = {}) {
   }
 
   if (!result.ok) {
-    throw new Error(result.data?.message || 'Error de API');
+    const apiError = new Error(result.data?.message || 'Error de API');
+    apiError.status = result.status;
+    apiError.payload = result.data;
+    throw apiError;
   }
 
   return result.data;
@@ -541,31 +544,68 @@ async function apiFetch(url, options = {}) {
 
 let conceptsCache = [];
 let relationEnrichmentPromise = null;
+let relationEnrichmentInProgress = false;
 
-async function enrichConceptsWithRelations() {
-  if (!Array.isArray(conceptsCache) || conceptsCache.length === 0) return;
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  const pending = conceptsCache.filter(concept => {
-    const scope = getConceptScope(concept);
-    const summary = relationSummary(concept, scope);
-    return summary === 'Relación no definida' && concept?.id;
-  });
+async function fetchConceptRelationsWithRetry(conceptId, maxRetries = 3) {
+  let attempt = 0;
 
-  if (!pending.length) return;
-
-  await Promise.allSettled(
-    pending.map(async (concept) => {
-      const relations = await apiFetch(`${API_BASE}/v1/concepts/relations/${concept.id}`, {
+  while (attempt <= maxRetries) {
+    try {
+      return await apiFetch(`${API_BASE}/v1/concepts/relations/${conceptId}`, {
         headers: {
           'X-User-Role': 'financial-staff',
           'X-User-Permission': 'view.concepts'
         }
       });
-      mergeConceptRelations(concept, relations);
-    })
-  );
+    } catch (error) {
+      const isRateLimited = error?.status === 429;
+      if (!isRateLimited || attempt === maxRetries) {
+        if (isRateLimited) {
+          console.warn(`Rate limit persistente para concepto ${conceptId}`);
+        }
+        return null;
+      }
 
-  renderConcepts();
+      const backoffMs = 500 * (2 ** attempt);
+      await sleep(backoffMs);
+      attempt += 1;
+    }
+  }
+
+  return null;
+}
+
+async function enrichConceptsWithRelations() {
+  if (relationEnrichmentInProgress) return;
+  relationEnrichmentInProgress = true;
+
+  try {
+    if (!Array.isArray(conceptsCache) || conceptsCache.length === 0) return;
+
+    const pending = conceptsCache.filter(concept => {
+      const scope = getConceptScope(concept);
+      const summary = relationSummary(concept, scope);
+      return summary === 'Relación no definida' && concept?.id;
+    });
+
+    if (!pending.length) return;
+
+    for (const concept of pending) {
+      const relations = await fetchConceptRelationsWithRetry(concept.id);
+      if (relations) {
+        mergeConceptRelations(concept, relations);
+      }
+      await sleep(140);
+    }
+
+    renderConcepts();
+  } finally {
+    relationEnrichmentInProgress = false;
+  }
 }
 
 async function loadConcepts(){
