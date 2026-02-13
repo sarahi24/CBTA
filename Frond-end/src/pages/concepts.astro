@@ -135,13 +135,13 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
       </div>
 
       <div class="mt-4 sm:mt-0 w-full sm:w-auto flex items-start justify-end gap-2 sm:gap-2.5 relative z-20">
-        <div class="flex flex-col items-end">
-          <button id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="concept-filters-panel" class="h-8 px-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 shadow-sm text-xs font-semibold" title="Filtro">
+        <details id="concept-filters-details" class="relative">
+          <summary id="filter-toggle-btn" class="list-none h-8 px-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 shadow-sm text-xs font-semibold cursor-pointer select-none" title="Filtro">
             <i class="fas fa-filter text-xs"></i>
             <span>Filtro</span>
-          </button>
+          </summary>
 
-          <div id="concept-filters-panel" class="hidden fixed w-[280px] bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2 z-[9999]">
+          <div id="concept-filters-panel" class="absolute right-0 mt-2 w-[280px] bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2 z-[9999]">
             <div class="pb-1 border-b border-gray-200">
               <p class="text-xs font-bold text-gray-800">Filtros</p>
               <p class="text-[11px] text-gray-500">Estatus = estado del concepto. Relación = a quién aplica.</p>
@@ -178,7 +178,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               </button>
             </div>
           </div>
-        </div>
+        </details>
 
         <a href="/new"
            class="h-9 px-4 sm:px-5 bg-gradient-to-r from-[#2E594D] via-emerald-700 to-teal-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 text-xs sm:text-sm flex items-center justify-center gap-2 relative group overflow-hidden whitespace-nowrap">
@@ -640,83 +640,10 @@ function renderConcepts(){
 }
 
 function initConceptFilters() {
-  const toggleButton = document.getElementById('filter-toggle-btn');
-  const filtersPanel = document.getElementById('concept-filters-panel');
+  const filtersDetails = document.getElementById('concept-filters-details');
   const statusSelect = document.getElementById('filter-status');
   const scopeSelect = document.getElementById('filter-scope');
   const clearButton = document.getElementById('clear-concept-filters');
-
-  const positionPanel = () => {
-    if (!filtersPanel || !toggleButton) return;
-
-    const buttonRect = toggleButton.getBoundingClientRect();
-    const panelWidth = filtersPanel.offsetWidth || 260;
-    const panelHeight = filtersPanel.offsetHeight || 190;
-    const margin = 8;
-
-    let left = buttonRect.right - panelWidth;
-    left = Math.max(margin, Math.min(left, window.innerWidth - panelWidth - margin));
-
-    let top = buttonRect.bottom + margin;
-    if (top + panelHeight > window.innerHeight - margin) {
-      top = Math.max(margin, buttonRect.top - panelHeight - margin);
-    }
-
-    filtersPanel.style.left = `${left}px`;
-    filtersPanel.style.top = `${top}px`;
-  };
-
-  const openPanel = () => {
-    if (!filtersPanel || !toggleButton) return;
-    filtersPanel.classList.remove('hidden');
-    positionPanel();
-    toggleButton.setAttribute('aria-expanded', 'true');
-  };
-
-  const closePanel = () => {
-    if (!filtersPanel || !toggleButton) return;
-    filtersPanel.classList.add('hidden');
-    toggleButton.setAttribute('aria-expanded', 'false');
-  };
-
-  if (toggleButton && filtersPanel && !toggleButton.dataset.bound) {
-    toggleButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const isHidden = filtersPanel.classList.contains('hidden');
-      if (isHidden) {
-        openPanel();
-      } else {
-        closePanel();
-      }
-    });
-
-    document.addEventListener('click', (event) => {
-      const target = event.target;
-      if (!filtersPanel.contains(target) && !toggleButton.contains(target)) {
-        closePanel();
-      }
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        closePanel();
-      }
-    });
-
-    window.addEventListener('resize', () => {
-      if (!filtersPanel.classList.contains('hidden')) {
-        positionPanel();
-      }
-    });
-
-    window.addEventListener('scroll', () => {
-      if (!filtersPanel.classList.contains('hidden')) {
-        positionPanel();
-      }
-    }, true);
-
-    toggleButton.dataset.bound = 'true';
-  }
 
   if (statusSelect && !statusSelect.dataset.bound) {
     statusSelect.addEventListener('change', renderConcepts);
@@ -733,7 +660,7 @@ function initConceptFilters() {
       if (statusSelect) statusSelect.value = '';
       if (scopeSelect) scopeSelect.value = '';
       renderConcepts();
-      closePanel();
+      if (filtersDetails) filtersDetails.removeAttribute('open');
     });
     clearButton.dataset.bound = 'true';
   }
@@ -875,6 +802,8 @@ loadConcepts();
 
 <style>
 .hidden { display:none; }
+summary::-webkit-details-marker { display: none; }
+summary::marker { content: ''; }
 .line-clamp-1 { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1; }
 .line-clamp-2 { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .col-span-full { grid-column: 1 / -1; }
