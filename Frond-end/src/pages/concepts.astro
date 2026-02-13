@@ -293,7 +293,7 @@ function getConceptStatus(concept) {
 }
 
 function getConceptScope(concept) {
-  return normalizeAppliesTo(
+  const explicitScope = normalizeAppliesTo(
     concept?.applies_to ||
     concept?.appliesTo ||
     concept?.scope_type ||
@@ -303,6 +303,21 @@ function getConceptScope(concept) {
     concept?.target_type ||
     concept?.targetType
   );
+
+  if (explicitScope) return explicitScope;
+
+  const careers = toArray(concept?.careerIds || concept?.career_ids || concept?.careers || concept?.target_career_id);
+  const semesters = toArray(concept?.semesters || concept?.target_semester || concept?.semester || concept?.semestre);
+  const students = toArray(concept?.userIds || concept?.user_ids || concept?.students || concept?.specific_students);
+  const tags = toArray(concept?.applicantTags || concept?.applicant_tags || concept?.tags);
+
+  if (careers.length && semesters.length) return 'carrera_semestre';
+  if (careers.length) return 'carrera';
+  if (semesters.length) return 'semestre';
+  if (students.length) return 'estudiantes';
+  if (tags.length) return 'tag';
+
+  return '';
 }
 
 function toArray(value) {
@@ -332,6 +347,23 @@ function relationSummary(concept, appliesTo) {
   }
   if (appliesTo === 'estudiantes') return `Estudiantes específicos: ${students.length || 0}`;
   if (appliesTo === 'tag') return tags.length ? `Tags: ${tags.join(', ')}` : 'Tags: Sin especificar';
+
+  if (careers.length && semesters.length) {
+    return `Carreras: ${careers.join(', ')} | Semestres: ${semesters.join(', ')}`;
+  }
+  if (careers.length) {
+    return `Carreras: ${careers.join(', ')}`;
+  }
+  if (semesters.length) {
+    return `Semestres: ${semesters.join(', ')}`;
+  }
+  if (students.length) {
+    return `Estudiantes específicos: ${students.length}`;
+  }
+  if (tags.length) {
+    return `Tags: ${tags.join(', ')}`;
+  }
+
   return 'Relación no definida';
 }
 
