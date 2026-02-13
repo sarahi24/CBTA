@@ -242,11 +242,11 @@ function getStatusBadge(status){
 function normalizeStatus(status) {
   const raw = String(status || '').toLowerCase().trim();
   if (!raw) return '';
-  if (raw === 'active') return 'activo';
-  if (raw === 'inactive') return 'inactivo';
-  if (raw === 'finalized') return 'finalizado';
-  if (raw === 'expired') return 'expirado';
-  if (raw === 'deleted') return 'eliminado';
+  if (['active', 'enabled', 'vigente', 'activo'].includes(raw)) return 'activo';
+  if (['inactive', 'disabled', 'paused', 'inactivo'].includes(raw)) return 'inactivo';
+  if (['finalized', 'finished', 'finalizado'].includes(raw)) return 'finalizado';
+  if (['expired', 'expirado', 'vencido'].includes(raw)) return 'expirado';
+  if (['deleted', 'removed', 'eliminado'].includes(raw)) return 'eliminado';
   if (raw === 'vigente') return 'activo';
   return raw;
 }
@@ -256,20 +256,53 @@ function normalizeAppliesTo(value) {
   const map = {
     'todos': 'todos',
     'all': 'todos',
+    'all_students': 'todos',
+    'all-students': 'todos',
     'carrera': 'carrera',
     'career': 'carrera',
+    'careers': 'carrera',
     'semestre': 'semestre',
     'semester': 'semestre',
+    'semesters': 'semestre',
     'carrera_semestre': 'carrera_semestre',
     'carrera-semestre': 'carrera_semestre',
     'career_semester': 'carrera_semestre',
     'career-semester': 'carrera_semestre',
+    'career_and_semester': 'carrera_semestre',
+    'career-semester-scope': 'carrera_semestre',
     'estudiantes': 'estudiantes',
     'students': 'estudiantes',
+    'specific_students': 'estudiantes',
+    'specific-students': 'estudiantes',
     'tag': 'tag',
-    'tags': 'tag'
+    'tags': 'tag',
+    'special_tags': 'tag',
+    'special-tags': 'tag'
   };
   return map[raw] || raw;
+}
+
+function getConceptStatus(concept) {
+  return normalizeStatus(
+    concept?.status ||
+    concept?.state ||
+    concept?.concept_status ||
+    concept?.conceptStatus ||
+    concept?.current_status
+  ) || 'activo';
+}
+
+function getConceptScope(concept) {
+  return normalizeAppliesTo(
+    concept?.applies_to ||
+    concept?.appliesTo ||
+    concept?.scope_type ||
+    concept?.scopeType ||
+    concept?.relation_type ||
+    concept?.relationType ||
+    concept?.target_type ||
+    concept?.targetType
+  );
 }
 
 function toArray(value) {
@@ -450,8 +483,8 @@ function renderConcepts(){
   const scopeFilter = normalizeAppliesTo(document.getElementById('filter-scope')?.value || '');
 
   const list = [...conceptsCache].filter(c => {
-    const conceptStatus = normalizeStatus(c.status) || 'activo';
-    const conceptScope = normalizeAppliesTo(c.applies_to || c.appliesTo);
+    const conceptStatus = getConceptStatus(c);
+    const conceptScope = getConceptScope(c);
     const matchesStatus = !statusFilter || conceptStatus === statusFilter;
     const matchesScope = !scopeFilter || conceptScope === scopeFilter;
     return matchesStatus && matchesScope;
@@ -482,11 +515,11 @@ function renderConcepts(){
 
   grid.innerHTML = list.map(c=>{
     const amount = Number(c.amount)||0;
-    const normalizedStatus = normalizeStatus(c.status) || 'activo';
+    const normalizedStatus = getConceptStatus(c);
     const isInactive = normalizedStatus !== 'activo';
     
     // Determinar y mostrar el tipo de alcance
-    const appliesTo = normalizeAppliesTo(c.applies_to || c.appliesTo);
+    const appliesTo = getConceptScope(c);
     let scopeTypeLabel = '';
     let scopeTypeColor = '';
     let showScopeType = true;
