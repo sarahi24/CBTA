@@ -288,6 +288,21 @@ const pageTitle = "Acceso al Sistema - SIGE";
             background-color: #f4f7fa;
             box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1), inset -2px -2px 5px rgba(255, 255, 255, 0.7);
         }
+        .input-inset-shadow input,
+        .input-inset-shadow select {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent;
+        }
+        .input-inset-shadow input:focus,
+        .input-inset-shadow select:focus,
+        .input-inset-shadow input:focus-visible,
+        .input-inset-shadow select:focus-visible {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
         .btn-hover-green:hover {
             background-color: #43A047;
             transform: scale(1.01);
