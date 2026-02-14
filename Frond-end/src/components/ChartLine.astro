@@ -4,7 +4,7 @@ import { Fragment } from 'astro/jsx-runtime';
 ---
 
 <Fragment>
-  <div class="relative h-96 w-full">
+  <div class="relative h-64 sm:h-80 md:h-96 w-full">
     <canvas id="chartLine"></canvas>
   </div>
 
@@ -73,6 +73,8 @@ import { Fragment } from 'astro/jsx-runtime';
 
         if (window.myLineChart) window.myLineChart.destroy();
 
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
+
         window.myLineChart = new Chart(ctx, {
           type: 'line',
           data: {
@@ -107,17 +109,37 @@ import { Fragment } from 'astro/jsx-runtime';
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { left: 8, right: 12, top: 8, bottom: 4 } },
+            layout: { padding: isMobile ? { left: 2, right: 6, top: 6, bottom: 2 } : { left: 8, right: 12, top: 8, bottom: 4 } },
             scales: {
               y: {
                 beginAtZero: true,
                 grid: { color: 'rgba(0,0,0,0.06)' },
-                ticks: { callback: v => '$' + v.toLocaleString() }
+                ticks: {
+                  maxTicksLimit: isMobile ? 4 : 6,
+                  font: { size: isMobile ? 10 : 12 },
+                  callback: v => '$' + Number(v).toLocaleString('es-MX')
+                }
               },
-              x: { grid: { display: false } }
+              x: {
+                grid: { display: false },
+                ticks: {
+                  maxRotation: 0,
+                  autoSkip: true,
+                  maxTicksLimit: isMobile ? 6 : 12,
+                  font: { size: isMobile ? 10 : 12 }
+                }
+              }
             },
             plugins: {
-              legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+              legend: {
+                position: 'bottom',
+                labels: {
+                  usePointStyle: true,
+                  boxWidth: isMobile ? 6 : 8,
+                  padding: isMobile ? 10 : 16,
+                  font: { size: isMobile ? 10 : 12 }
+                }
+              },
               tooltip: { mode: 'index', intersect: false }
             },
             interaction: { mode: 'index', intersect: false }

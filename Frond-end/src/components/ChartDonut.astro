@@ -5,16 +5,16 @@ import { Fragment } from 'astro/jsx-runtime';
 
 <Fragment>
   <div id="donut-wrapper" class="w-full flex flex-col items-center">
-    <div id="donut-container" class="relative w-full max-w-sm aspect-square">
+    <div id="donut-container" class="relative w-full max-w-[240px] sm:max-w-sm aspect-square">
       <canvas id="chartDonut"></canvas>
       <div class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
-        <span id="donut-pct" class="text-4xl font-extrabold text-[#2e594d]">0%</span>
-        <span class="text-sm font-medium text-gray-500">Recaudado</span>
+        <span id="donut-pct" class="text-3xl sm:text-4xl font-extrabold text-[#2e594d]">0%</span>
+        <span class="text-xs sm:text-sm font-medium text-gray-500">Recaudado</span>
       </div>
     </div>
 
     <div id="meta-total-container" class="mt-4 py-2 border-t border-gray-200 w-full text-center">
-      <p class="text-lg font-semibold text-gray-700">
+      <p class="text-base sm:text-lg font-semibold text-gray-700">
         Meta Total: <span id="meta-monto-dinamico" class="text-[#3b7666] font-bold">$0.00</span>
       </p>
     </div>
@@ -84,6 +84,8 @@ import { Fragment } from 'astro/jsx-runtime';
         // Dibujar o refrescar la gráfica
         if (window.myDonutChart) window.myDonutChart.destroy();
 
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
+
         window.myDonutChart = new Chart(ctx, {
           type: 'doughnut',
           data: {
@@ -97,9 +99,17 @@ import { Fragment } from 'astro/jsx-runtime';
           },
           options: {
             cutout: '78%',
-            layout: { padding: { top: 8, bottom: 8 } },
+            layout: { padding: isMobile ? { top: 4, bottom: 4 } : { top: 8, bottom: 8 } },
             plugins: { 
-              legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 16 } },
+              legend: {
+                position: 'bottom',
+                labels: {
+                  usePointStyle: true,
+                  boxWidth: isMobile ? 6 : 8,
+                  padding: isMobile ? 10 : 16,
+                  font: { size: isMobile ? 10 : 12 }
+                }
+              },
               tooltip: {
                 callbacks: {
                   label: (context) => {
