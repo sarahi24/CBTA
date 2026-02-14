@@ -248,9 +248,11 @@ window.StudentAPI = {
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const useStudentId = shouldUseStudentId(effectiveRole, studentId);
       // If studentId provided, use /pending-payments/{studentId}
       // Otherwise use /pending-payments for current user
-      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
+      const endpoint = useStudentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
+      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, useStudentId: ${useStudentId}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
       console.log(`🔍 [StudentAPI] getPendingPayments - Endpoint: ${endpoint}, forceRefresh: ${forceRefresh}`);
       
       const url = new URL(endpoint);
@@ -574,4 +576,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260214r4)');
