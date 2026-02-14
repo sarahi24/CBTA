@@ -51,9 +51,14 @@ function getRoleFromStorage() {
 }
 
 function resolveStudentPortalRole(role) {
+  const roleValue = typeof role === 'string' ? role.trim() : role;
+  if (roleValue) {
+    return normalizeStudentPortalRole(roleValue);
+  }
+
   const storageRole = getRoleFromStorage();
   if (storageRole) return storageRole;
-  return normalizeStudentPortalRole(role);
+  return 'student';
 }
 
 function handleAuthError(statusCode) {
