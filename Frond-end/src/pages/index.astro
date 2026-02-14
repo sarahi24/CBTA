@@ -404,7 +404,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     // Normalizar el rol a minúsculas para comparación
                     const roleLower = (userRole || '').toLowerCase().trim();
                     
-                    if (roleLower === 'student' || roleLower === 'estudiante' || roleLower === 'parent' || roleLower === 'padre') {
+                    if (roleLower === 'student' || roleLower === 'estudiante' || roleLower === 'parent' || roleLower === 'padre' || roleLower === 'applicant' || roleLower === 'solicitante') {
                         redirectUrl = '/Estudiante/PortalEstudiante';
                     } else if (roleLower === 'admin' || roleLower === 'administrador') {
                         redirectUrl = '/roles';
