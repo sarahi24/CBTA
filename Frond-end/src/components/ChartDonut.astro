@@ -5,16 +5,16 @@ import { Fragment } from 'astro/jsx-runtime';
 
 <Fragment>
   <div id="donut-wrapper" class="w-full flex flex-col items-center">
-    <div id="donut-container" class="relative w-full max-w-[240px] sm:max-w-sm aspect-square">
+    <div id="donut-container" class="relative w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[330px] aspect-square">
       <canvas id="chartDonut"></canvas>
       <div class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
-        <span id="donut-pct" class="text-3xl sm:text-4xl font-extrabold text-[#2e594d]">0%</span>
-        <span class="text-xs sm:text-sm font-medium text-gray-500">Recaudado</span>
+        <span id="donut-pct" class="text-2xl sm:text-4xl lg:text-[2.6rem] font-extrabold text-[#2e594d] leading-none">0%</span>
+        <span class="text-[11px] sm:text-sm font-medium text-gray-500 mt-1">Recaudado</span>
       </div>
     </div>
 
     <div id="meta-total-container" class="mt-4 py-2 border-t border-gray-200 w-full text-center">
-      <p class="text-base sm:text-lg font-semibold text-gray-700">
+      <p class="text-sm sm:text-lg font-semibold text-gray-700">
         Meta Total: <span id="meta-monto-dinamico" class="text-[#3b7666] font-bold">$0.00</span>
       </p>
     </div>
@@ -85,21 +85,30 @@ import { Fragment } from 'astro/jsx-runtime';
         if (window.myDonutChart) window.myDonutChart.destroy();
 
         const isMobile = window.matchMedia('(max-width: 640px)').matches;
+        const labels = isMobile
+          ? ['Recaudado', 'Pendiente']
+          : ['Recaudado (Pagado)', 'Pendiente (Adeudo)'];
 
         window.myDonutChart = new Chart(ctx, {
           type: 'doughnut',
           data: {
-            labels: ['Recaudado (Pagado)', 'Pendiente (Adeudo)'],
+            labels,
             datasets: [{
               data: [paid, pending],
               backgroundColor: ['#2E584C', '#dc2626'], // Verde y Rojo
               borderWidth: 0,
-              hoverOffset: 10
+              hoverOffset: isMobile ? 6 : 10
             }]
           },
           options: {
-            cutout: '78%',
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: isMobile ? '74%' : '78%',
             layout: { padding: isMobile ? { top: 4, bottom: 4 } : { top: 8, bottom: 8 } },
+            animation: {
+              duration: isMobile ? 550 : 850,
+              easing: 'easeOutQuart'
+            },
             plugins: { 
               legend: {
                 position: 'bottom',
@@ -136,11 +145,27 @@ import { Fragment } from 'astro/jsx-runtime';
     };
     
     document.addEventListener('DOMContentLoaded', initChartDonut);
+    document.addEventListener('astro:page-load', initChartDonut);
     window.addEventListener('storage', window.updateChartDonut);
     window.addEventListener('chargesUpdated', window.updateChartDonut);
     window.addEventListener('paymentsDataLoaded', () => {
       console.log('📊 ChartDonut escuchó evento paymentsDataLoaded');
       setTimeout(window.updateChartDonut, 50);
     });
+
+    if (!window.__chartDonutResizeBound) {
+      window.__chartDonutResizeBound = true;
+      let resizeTimeout;
+      const onResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          if (typeof window.updateChartDonut === 'function') {
+            window.updateChartDonut();
+          }
+        }, 120);
+      };
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+    }
   </script>
 </Fragment>
