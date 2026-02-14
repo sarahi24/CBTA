@@ -12,9 +12,13 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (roleLower === 'applicant' || roleLower === 'solicitante') return 'applicant';
+  if (roleLower === 'applicant' || roleLower === 'solicitante') return 'student';
 
   return roleLower;
+}
+
+function shouldUseStudentId(effectiveRole, studentId) {
+  return effectiveRole === 'parent' && !!studentId;
 }
 
 function getRoleFromStorage() {
@@ -71,7 +75,7 @@ window.StudentAPI = {
   async getPaymentHistory(studentId, token, forceRefresh = false, role = 'student', perPage = 15, page = 1) {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const url = new URL(studentId ? `${API_BASE}/payments/history/${studentId}` : `${API_BASE}/payments/history`);
+      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/payments/history/${studentId}` : `${API_BASE}/payments/history`);
       if (perPage) url.searchParams.append('perPage', String(perPage));
       if (page) url.searchParams.append('page', String(page));
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
@@ -121,7 +125,7 @@ window.StudentAPI = {
   async getPendingTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const url = new URL(studentId ? `${API_BASE}/dashboard/pending/${studentId}` : `${API_BASE}/dashboard/pending`);
+      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/pending/${studentId}` : `${API_BASE}/dashboard/pending`);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -144,7 +148,7 @@ window.StudentAPI = {
   async getPaidTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const url = new URL(studentId ? `${API_BASE}/dashboard/paid/${studentId}` : `${API_BASE}/dashboard/paid`);
+      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/paid/${studentId}` : `${API_BASE}/dashboard/paid`);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -167,7 +171,7 @@ window.StudentAPI = {
   async getOverdueTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const url = new URL(studentId ? `${API_BASE}/dashboard/overdue/${studentId}` : `${API_BASE}/dashboard/overdue`);
+      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/overdue/${studentId}` : `${API_BASE}/dashboard/overdue`);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -190,7 +194,7 @@ window.StudentAPI = {
   async refreshDashboardCache(studentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const endpoint = studentId ? `${API_BASE}/dashboard/refresh/${studentId}` : `${API_BASE}/dashboard/refresh`;
+      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/refresh/${studentId}` : `${API_BASE}/dashboard/refresh`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -212,7 +216,7 @@ window.StudentAPI = {
   async getDashboardHistory(studentId, token, page = 1, perPage = 15, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const endpoint = studentId ? `${API_BASE}/dashboard/history/${studentId}` : `${API_BASE}/dashboard/history`;
+      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/history/${studentId}` : `${API_BASE}/dashboard/history`;
       const url = new URL(endpoint);
       url.searchParams.append('page', String(page));
       url.searchParams.append('perPage', String(perPage));
@@ -241,7 +245,7 @@ window.StudentAPI = {
       const effectiveRole = resolveStudentPortalRole(role);
       // If studentId provided, use /pending-payments/{studentId}
       // Otherwise use /pending-payments for current user
-      const endpoint = studentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
+      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
       console.log(`🔍 [StudentAPI] getPendingPayments - Endpoint: ${endpoint}, forceRefresh: ${forceRefresh}`);
       
       const url = new URL(endpoint);
@@ -286,7 +290,7 @@ window.StudentAPI = {
       const effectiveRole = resolveStudentPortalRole(role);
       // If studentId provided, use /pending-payments/overdue/{studentId}
       // Otherwise use /pending-payments/overdue for current user
-      const endpoint = studentId ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
+      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
       console.log('📡 Fetching overdue payments from:', endpoint);
       
       const url = new URL(endpoint);
@@ -331,7 +335,7 @@ window.StudentAPI = {
   async getPaymentMethods(studentId, token, forceRefresh = false) {
     try {
       const effectiveRole = resolveStudentPortalRole('student');
-      let endpoint = studentId ? `${API_BASE}/cards/${studentId}` : `${API_BASE}/cards`;
+      let endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/cards/${studentId}` : `${API_BASE}/cards`;
       if (forceRefresh) endpoint += (studentId ? '?' : '?') + 'forceRefresh=true';
       const response = await fetch(endpoint, {
         method: 'GET',
