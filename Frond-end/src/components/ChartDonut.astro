@@ -7,9 +7,11 @@ import { Fragment } from 'astro/jsx-runtime';
   <div id="donut-wrapper" class="w-full flex flex-col items-center">
     <div id="donut-container" class="relative w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[330px] aspect-square">
       <canvas id="chartDonut"></canvas>
-      <div class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
-        <span id="donut-pct" class="text-2xl sm:text-4xl lg:text-[2.6rem] font-extrabold text-[#2e594d] leading-none">0%</span>
-        <span class="text-[11px] sm:text-sm font-medium text-gray-500 mt-1">Recaudado</span>
+      <div class="absolute inset-0 flex justify-center items-center pointer-events-none">
+        <div class="text-center -translate-y-1 sm:-translate-y-0.5">
+          <span id="donut-pct" class="block text-2xl sm:text-4xl lg:text-[2.6rem] font-extrabold text-[#2e594d] leading-none">0%</span>
+          <span class="block text-[11px] sm:text-sm font-medium text-gray-500 leading-none mt-0.5">Recaudado</span>
+        </div>
       </div>
     </div>
 
