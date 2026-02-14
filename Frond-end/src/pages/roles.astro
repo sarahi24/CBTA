@@ -1444,6 +1444,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (key === 'caja' || key === 'financial-staff' || key === 'financial staff') return 'financial-staff';
                 if (key === 'student' || key === 'estudiante') return 'student';
                 if (key === 'parent' || key === 'padre') return 'parent';
+                if (key === 'applicant' || key === 'solicitante') return 'applicant';
                 return key;
             },
 
@@ -1489,7 +1490,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'padre': 'Padre/Tutor',
                     'supervisor': 'Supervisor',
                     'unverified': 'Sin Verificar',
-                    'applicant': 'Solicitante'
+                    'applicant': 'Solicitante',
+                    'solicitante': 'Solicitante'
                 };
                 
                 if (!rolesArray || rolesArray.length === 0) return 'Sin rol';
@@ -1559,7 +1561,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'padre': 'Padre/Tutor',
                     'supervisor': 'Supervisor',
                     'unverified': 'Sin Verificar',
-                    'applicant': 'Solicitante'
+                    'applicant': 'Solicitante',
+                    'solicitante': 'Solicitante'
                 };
                 
                 let roleLabel = 'Sin rol';
@@ -3866,7 +3869,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
                         
                         // Lista de roles válidos del sistema - EXPANDIR para incluir variaciones comunes
-                        const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor', 'financial', 'staff', 'director', 'financial-staff'];
+                        const validRoles = ['admin', 'student', 'financial staff', 'parent', 'teacher', 'supervisor', 'financial', 'staff', 'director', 'financial-staff', 'applicant', 'solicitante'];
                         
                         // Guardar roles originales ANTES de normalizar (para enviar al backend)
                         const originalRoles = [...userRoles];
