@@ -36,11 +36,15 @@ const title = 'Panel de Estudiante';
           this.loading = true;
           try {
             const parsedUserId = parseInt(userId, 10);
+            const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase().trim();
+            const roleForPortal = rawRole === 'parent' || rawRole === 'padre' ? 'parent' : 'student';
+            const scopedStudentId = roleForPortal === 'parent' ? parsedUserId : null;
+
             const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-              window.StudentAPI.getPendingPayments(parsedUserId, token, false).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getOverdueTotal(parsedUserId, token, false).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPaidTotal(parsedUserId, token, false).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPendingTotal(parsedUserId, token, false).catch(function(e) { return { error: e.message }; })
+              window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPaidTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPendingTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; })
             ]);
 
             if (pendingPaymentsRes && !pendingPaymentsRes.error) {
@@ -1230,6 +1234,9 @@ const title = 'Panel de Estudiante';
           // Get token and user ID from localStorage
           const token = localStorage.getItem('access_token');
           const userId = localStorage.getItem('userId');
+          const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase().trim();
+          const roleForPortal = rawRole === 'parent' || rawRole === 'padre' ? 'parent' : 'student';
+          const scopedStudentId = roleForPortal === 'parent' && userId ? parseInt(userId) : null;
           
           if (!token) {
             showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
@@ -1245,7 +1252,7 @@ const title = 'Panel de Estudiante';
           }
 
           // Call API to refresh cache
-          const response = await studentAPI.refreshDashboardCache(userId ? parseInt(userId) : null, token);
+          const response = await studentAPI.refreshDashboardCache(scopedStudentId, token, roleForPortal);
           
           if (response.success) {
             showToast('success', response.message || 'Caché actualizado correctamente');
