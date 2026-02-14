@@ -8,7 +8,7 @@
     <a href="/concepts" class="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors whitespace-nowrap">Ver todos →</a>
   </div>
 
-  <div class="md:hidden p-3" id="dashboard-concepts-mobile">
+  <div class="sm:hidden p-3" id="dashboard-concepts-mobile">
     <div class="py-8 text-center text-gray-400">
       <div class="flex flex-col items-center gap-2">
         <svg class="animate-spin h-6 w-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <div class="hidden md:block overflow-x-auto">
+  <div class="hidden sm:block overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-[#2E594D]">
         <tr>
@@ -114,18 +114,18 @@
         return;
       }
 
-      const formatCurrency = (n: number) => new Intl.NumberFormat('es-MX', { 
+      const formatCurrency = (n) => new Intl.NumberFormat('es-MX', { 
         style: 'currency', 
         currency: 'MXN' 
       }).format(n);
 
-      const formatDate = (dateStr: string) => {
+      const formatDate = (dateStr) => {
         if (!dateStr || dateStr === '---') return 'N/A';
         return dateStr.split('T')[0];
       };
 
       if (tbody) {
-        tbody.innerHTML = concepts.map((concept: any) => {
+        tbody.innerHTML = concepts.map((concept) => {
           const isInactive = concept.status !== 'activo';
           const badgeClass = isInactive 
             ? 'bg-red-50 text-red-600 border border-red-100' 
@@ -156,7 +156,7 @@
       }
 
       if (mobileContainer) {
-        mobileContainer.innerHTML = concepts.map((concept: any) => {
+        mobileContainer.innerHTML = concepts.map((concept) => {
           const isInactive = concept.status !== 'activo';
           const badgeClass = isInactive
             ? 'bg-red-50 text-red-600 border border-red-100'
