@@ -37,10 +37,10 @@ const title = 'Panel de Estudiante';
           try {
             const parsedUserId = parseInt(userId, 10);
             const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-              window.StudentAPI.getPendingPayments(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getOverdueTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPaidTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPendingTotal(parsedUserId, token, false, 'student').catch(function(e) { return { error: e.message }; })
+              window.StudentAPI.getPendingPayments(parsedUserId, token, false).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getOverdueTotal(parsedUserId, token, false).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPaidTotal(parsedUserId, token, false).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPendingTotal(parsedUserId, token, false).catch(function(e) { return { error: e.message }; })
             ]);
 
             if (pendingPaymentsRes && !pendingPaymentsRes.error) {
@@ -1236,14 +1236,16 @@ const title = 'Panel de Estudiante';
             return;
           }
 
-          // Usar window.StudentAPI que es el script global cargado arriba
-          if (!window.StudentAPI) {
+          const studentAPI = (window as any).StudentAPI;
+
+          // Usar StudentAPI global cargado arriba
+          if (!studentAPI) {
             showToast('error', 'API no disponible. Por favor, recarga la página.');
             return;
           }
 
           // Call API to refresh cache
-          const response = await window.StudentAPI.refreshDashboardCache(userId ? parseInt(userId) : null, token, 'student');
+          const response = await studentAPI.refreshDashboardCache(userId ? parseInt(userId) : null, token);
           
           if (response.success) {
             showToast('success', response.message || 'Caché actualizado correctamente');
