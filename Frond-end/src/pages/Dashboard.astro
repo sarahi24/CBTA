@@ -10,43 +10,43 @@ const pageTitle = "Dashboard - SIGE";
 ---
 
 <Layout title={pageTitle}>
-  <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-    <header class="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 md:mb-8 border-b pb-4 mt-6"> 
-      <div class="flex items-center gap-3 sm:gap-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="text-gray-700 w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <header class="flex items-center justify-between mb-6 md:mb-8 border-b pb-4 mt-6"> 
+      <div class="flex items-center gap-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="text-gray-700" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 4h8v4h-8zM4 12h8v8h-8zM16 4h4v8h-4zM16 16h4v4h-4z"></path>
         </svg>
-        <h1 class="text-lg sm:text-2xl md:text-3xl font-bold text-gray-800">Resumen General</h1>
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Resumen General</h1>
       </div>
       
-      <div class="flex items-center gap-2 w-auto self-start sm:self-auto">
+      <div class="flex items-center gap-2">
         <button 
           id="createPayoutBtn"
-          class="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base"
+          class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Crear payout con balance disponible"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
           </svg>
-          <span class="inline">Payout</span>
+          <span class="hidden sm:inline">Crear Payout</span>
         </button>
         
         <button 
           id="refreshCacheBtn"
-          class="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Limpiar caché del dashboard"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
           </svg>
-          <span class="inline">Limpiar</span>
+          <span class="hidden sm:inline">Limpiar Caché</span>
         </button>
       </div>
     </header>
 
     {/* TARJETAS */}
-    <section class="flex flex-row space-x-4 mb-6 sm:mb-8 overflow-x-auto pb-4">
+    <section class="flex flex-row space-x-4 mb-8 overflow-x-auto pb-4">
       <CardInfo title="Total Estudiantes" icon="students" />
       <CardInfo title="Pagos Pendientes" icon="pending" />
       <CardInfo title="Total Recaudado" icon="recaudado" />
@@ -54,21 +54,21 @@ const pageTitle = "Dashboard - SIGE";
     </section>
 
     {/* GRÁFICOS */}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-      <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 lg:col-span-2">
-        <h2 class="text-lg sm:text-xl font-bold text-gray-800 mb-4 border-b pb-3">Evolución de Pagos</h2>
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 lg:col-span-2">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Evolución de Pagos</h2>
         <ChartLine />
       </div>
       
-      <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 lg:col-span-1">
-        <h2 class="text-lg sm:text-xl font-bold text-gray-800 mb-4 text-center border-b pb-3">Distribucion de Cobros</h2>
+      <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 lg:col-span-1">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 text-center border-b pb-3">Distribucion de Cobros</h2>
         <ChartDonut /> 
       </div>
     </section>
 
     {/* TABLA DE CONCEPTOS (Ahora se llena sola) */}
-    <section class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 mb-8"> 
-      <h2 class="text-lg sm:text-xl font-bold text-gray-800 mb-6 border-b pb-3">Conceptos Registrados</h2>
+    <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 mb-8"> 
+      <h2 class="text-xl font-bold text-gray-800 mb-6 border-b pb-3">Conceptos Registrados</h2>
       <ConceptsTable />
     </section>
 
