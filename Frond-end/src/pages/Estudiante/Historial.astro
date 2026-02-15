@@ -165,6 +165,8 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
+        const fallbackTab = receiptUrl ? window.open('', '_blank') : null;
+
         const token = localStorage.getItem('access_token');
         if (!token) {
           this.errorMessage = 'Usuario no autenticado';
@@ -181,10 +183,17 @@ const forceRefresh = forceRefreshParam === 'true';
           link.click();
           link.remove();
           window.URL.revokeObjectURL(downloadUrl);
+          if (fallbackTab && !fallbackTab.closed) {
+            fallbackTab.close();
+          }
         } catch (err) {
           console.error('❌ Error al descargar recibo:', err);
           if (receiptUrl) {
-            window.open(receiptUrl, '_blank', 'noopener,noreferrer');
+            if (fallbackTab && !fallbackTab.closed) {
+              fallbackTab.location.href = receiptUrl;
+            } else {
+              window.location.href = receiptUrl;
+            }
             return;
           }
           this.errorMessage = err?.message || 'Error al descargar el recibo';

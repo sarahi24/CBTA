@@ -209,7 +209,7 @@ window.StudentAPI = {
         contentType: response.headers.get('Content-Type') || 'application/pdf'
       };
     } catch (err) {
-      console.error('❌ StudentAPI.downloadPaymentReceipt:', err);
+      console.warn('⚠️ StudentAPI.downloadPaymentReceipt fallback:', err?.message || err);
       throw err;
     }
   },

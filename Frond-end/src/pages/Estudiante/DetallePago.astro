@@ -125,6 +125,8 @@ const paymentId = Astro.url.searchParams.get('id');
 
       this.downloadingReceipt = true;
       this.errorMessage = '';
+      const receiptUrl = this.paymentDetail?.url || null;
+      const fallbackTab = receiptUrl ? window.open('', '_blank') : null;
 
       try {
         const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
@@ -136,10 +138,17 @@ const paymentId = Astro.url.searchParams.get('id');
         link.click();
         link.remove();
         window.URL.revokeObjectURL(downloadUrl);
+        if (fallbackTab && !fallbackTab.closed) {
+          fallbackTab.close();
+        }
       } catch (err) {
         console.error('❌ Error al descargar recibo:', err);
-        if (this.paymentDetail?.url) {
-          window.open(this.paymentDetail.url, '_blank', 'noopener,noreferrer');
+        if (receiptUrl) {
+          if (fallbackTab && !fallbackTab.closed) {
+            fallbackTab.location.href = receiptUrl;
+          } else {
+            window.location.href = receiptUrl;
+          }
           return;
         }
         this.errorMessage = err?.message || 'Error al descargar el recibo';
