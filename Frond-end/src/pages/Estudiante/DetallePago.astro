@@ -155,11 +155,17 @@ const paymentId = Astro.url.searchParams.get('id');
       this.downloadingReceipt = true;
       this.errorMessage = '';
       let receiptUrl = this.paymentDetail?.url || null;
+      const pendingTab = window.open('', '_blank');
 
       try {
         const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
-        if (result?.url) {
-          this.openUrlInNewTab(result.url);
+        const receiptResultUrl = result?.url || result?.data?.url || null;
+        if (receiptResultUrl) {
+          if (pendingTab && !pendingTab.closed) {
+            pendingTab.location.href = receiptResultUrl;
+          } else {
+            this.openUrlInNewTab(receiptResultUrl);
+          }
         }
         this.downloadingReceipt = false;
         return;
@@ -173,11 +179,18 @@ const paymentId = Astro.url.searchParams.get('id');
       }
 
       if (receiptUrl) {
-        this.openUrlInNewTab(receiptUrl);
+        if (pendingTab && !pendingTab.closed) {
+          pendingTab.location.href = receiptUrl;
+        } else {
+          this.openUrlInNewTab(receiptUrl);
+        }
         this.downloadingReceipt = false;
         return;
       }
 
+      if (pendingTab && !pendingTab.closed) {
+        pendingTab.close();
+      }
       this.errorMessage = 'Recibo no disponible para este pago';
       this.downloadingReceipt = false;
     }
