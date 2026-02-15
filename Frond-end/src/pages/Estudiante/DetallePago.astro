@@ -14,6 +14,20 @@ const paymentId = Astro.url.searchParams.get('id');
     errorMessage: '',
     downloadingReceipt: false,
 
+    openUrlInNewTab(url) {
+      if (!url) return false;
+      const popup = window.open(url, '_blank', 'noopener,noreferrer');
+      if (popup) return true;
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return true;
+    },
+
     async init() {
       console.log('🔍 DetallePago init - paymentId recibido:', this.paymentId);
       console.log('🔍 URL completa:', window.location.href);
@@ -126,7 +140,6 @@ const paymentId = Astro.url.searchParams.get('id');
       this.downloadingReceipt = true;
       this.errorMessage = '';
       let receiptUrl = this.paymentDetail?.url || null;
-      const fallbackTab = window.open('', '_blank');
 
       try {
         const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
@@ -143,18 +156,10 @@ const paymentId = Astro.url.searchParams.get('id');
           link.remove();
           window.URL.revokeObjectURL(downloadUrl);
         } else {
-          if (fallbackTab && !fallbackTab.closed) {
-            fallbackTab.location.href = downloadUrl;
-          } else {
-            window.open(downloadUrl, '_blank');
-          }
+          this.openUrlInNewTab(downloadUrl);
           setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
           this.downloadingReceipt = false;
           return;
-        }
-
-        if (fallbackTab && !fallbackTab.closed) {
-          fallbackTab.close();
         }
         this.downloadingReceipt = false;
         return;
@@ -168,17 +173,9 @@ const paymentId = Astro.url.searchParams.get('id');
       }
 
       if (receiptUrl) {
-        if (fallbackTab && !fallbackTab.closed) {
-          fallbackTab.location.href = receiptUrl;
-        } else {
-          window.location.href = receiptUrl;
-        }
+        this.openUrlInNewTab(receiptUrl);
         this.downloadingReceipt = false;
         return;
-      }
-
-      if (fallbackTab && !fallbackTab.closed) {
-        fallbackTab.close();
       }
       this.errorMessage = 'Recibo no disponible para este pago';
       this.downloadingReceipt = false;

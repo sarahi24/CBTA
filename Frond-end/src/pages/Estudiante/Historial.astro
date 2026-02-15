@@ -43,9 +43,24 @@ const forceRefresh = forceRefreshParam === 'true';
       pagos: [],
       loading: true,
       errorMessage: '',
+      downloadingReceiptId: null,
       alumnoBackend: '${alumnoBackend}',
       showResultModal: false,
       resultType: '${resultParam || ''}',
+
+      openUrlInNewTab(url) {
+        if (!url) return false;
+        const popup = window.open(url, '_blank', 'noopener,noreferrer');
+        if (popup) return true;
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return true;
+      },
 
       async init() {
         await this.loadHistory();
@@ -161,12 +176,18 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
+        if (this.downloadingReceiptId === paymentId) {
+          return;
+        }
+
+        this.downloadingReceiptId = paymentId;
+
         let fallbackUrl = receiptUrl || null;
-        const fallbackTab = window.open('', '_blank');
 
         const token = localStorage.getItem('access_token');
         if (!token) {
           this.errorMessage = 'Usuario no autenticado';
+          this.downloadingReceiptId = null;
           return;
         }
 
@@ -185,17 +206,9 @@ const forceRefresh = forceRefreshParam === 'true';
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
           } else {
-            if (fallbackTab && !fallbackTab.closed) {
-              fallbackTab.location.href = downloadUrl;
-            } else {
-              window.open(downloadUrl, '_blank');
-            }
+            this.openUrlInNewTab(downloadUrl);
             setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
             return;
-          }
-
-          if (fallbackTab && !fallbackTab.closed) {
-            fallbackTab.close();
           }
           return;
         } catch (err) {
@@ -212,18 +225,12 @@ const forceRefresh = forceRefreshParam === 'true';
           }
 
           if (fallbackUrl) {
-            if (fallbackTab && !fallbackTab.closed) {
-              fallbackTab.location.href = fallbackUrl;
-            } else {
-              window.location.href = fallbackUrl;
-            }
+            this.openUrlInNewTab(fallbackUrl);
             return;
           }
-
-          if (fallbackTab && !fallbackTab.closed) {
-            fallbackTab.close();
-          }
           this.errorMessage = err?.message || 'Recibo no disponible para este pago';
+        } finally {
+          this.downloadingReceiptId = null;
         }
       }
     }`}
@@ -343,7 +350,7 @@ const forceRefresh = forceRefreshParam === 'true';
                     </a>
 
                     <template x-if="pago.id">
-                      <button type="button" @click="downloadReceipt(pago.id, pago.url)" class="view-receipt-btn" title="Descargar recibo">
+                      <button type="button" @click="downloadReceipt(pago.id, pago.url)" :disabled="downloadingReceiptId === pago.id" class="view-receipt-btn" title="Descargar recibo">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                       </button>
                     </template>
