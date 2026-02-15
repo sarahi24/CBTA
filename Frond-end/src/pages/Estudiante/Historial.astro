@@ -100,7 +100,6 @@ const forceRefresh = forceRefreshParam === 'true';
 
           const paymentData = historyRes?.data?.payment_history;
           this.pagos = Array.isArray(paymentData?.items) ? paymentData.items.map(payment => {
-            console.log('📦 Mapeando pago:', { id: payment.id, concept: payment.concept });
             return {
               id: payment.id,
               concept: payment.concept || 'Pago',
@@ -114,9 +113,6 @@ const forceRefresh = forceRefreshParam === 'true';
               paymentMethod: payment.payment_method_details?.[0] || 'Metodo desconocido'
             };
           }) : [];
-          
-          console.log('✅ Total de pagos cargados:', this.pagos.length);
-          console.log('📋 Primer pago (muestra):', this.pagos[0]);
 
           this.currentPage = paymentData?.currentPage || 1;
           this.lastPage = paymentData?.lastPage || 1;
@@ -165,7 +161,8 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
-        const fallbackTab = receiptUrl ? window.open('', '_blank') : null;
+        let fallbackUrl = receiptUrl || null;
+        const fallbackTab = window.open('', '_blank');
 
         const token = localStorage.getItem('access_token');
         if (!token) {
@@ -187,14 +184,29 @@ const forceRefresh = forceRefreshParam === 'true';
             fallbackTab.close();
           }
         } catch (err) {
-          console.error('❌ Error al descargar recibo:', err);
-          if (receiptUrl) {
+          if (!fallbackUrl) {
+            const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;
+            fallbackUrl = localPayment?.url || null;
+          }
+
+          if (!fallbackUrl) {
+            try {
+              const detailRes = await window.StudentAPI.getPaymentById(paymentId, token, 'student');
+              fallbackUrl = detailRes?.data?.payment?.url || null;
+            } catch (_) {}
+          }
+
+          if (fallbackUrl) {
             if (fallbackTab && !fallbackTab.closed) {
-              fallbackTab.location.href = receiptUrl;
+              fallbackTab.location.href = fallbackUrl;
             } else {
-              window.location.href = receiptUrl;
+              window.location.href = fallbackUrl;
             }
             return;
+          }
+
+          if (fallbackTab && !fallbackTab.closed) {
+            fallbackTab.close();
           }
           this.errorMessage = err?.message || 'Error al descargar el recibo';
         }
