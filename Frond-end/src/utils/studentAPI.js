@@ -226,7 +226,7 @@ export const StudentAPI = {
   async downloadPaymentReceipt(paymentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const endpoint = `${API_BASE}/payments/history/receipt/${paymentId}`;
+      const endpoint = `/api/receipts/${paymentId}`;
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: {

@@ -128,6 +128,24 @@ const paymentId = Astro.url.searchParams.get('id');
       let receiptUrl = this.paymentDetail?.url || null;
       const fallbackTab = window.open('', '_blank');
 
+      try {
+        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
+        const downloadUrl = window.URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = result.fileName || ('recibo-' + this.paymentId + '.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+        if (fallbackTab && !fallbackTab.closed) {
+          fallbackTab.close();
+        }
+        this.downloadingReceipt = false;
+        return;
+      } catch (_) {}
+
       if (!receiptUrl) {
         try {
           const detailRes = await window.StudentAPI.getPaymentById(this.paymentId, token, 'student');
