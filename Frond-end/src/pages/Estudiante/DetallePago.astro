@@ -138,6 +138,10 @@ const paymentId = Astro.url.searchParams.get('id');
         window.URL.revokeObjectURL(downloadUrl);
       } catch (err) {
         console.error('❌ Error al descargar recibo:', err);
+        if (this.paymentDetail?.url) {
+          window.open(this.paymentDetail.url, '_blank', 'noopener,noreferrer');
+          return;
+        }
         this.errorMessage = err?.message || 'Error al descargar el recibo';
       } finally {
         this.downloadingReceipt = false;
