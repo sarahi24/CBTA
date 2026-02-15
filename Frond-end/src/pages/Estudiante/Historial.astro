@@ -207,24 +207,10 @@ const forceRefresh = forceRefreshParam === 'true';
 
         try {
           const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, 'student');
-          const downloadUrl = window.URL.createObjectURL(result.blob);
-          const responseType = (result.contentType || '').toLowerCase();
-          const isPdf = responseType.includes('application/pdf');
-
-          if (isPdf) {
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = result.fileName || ('recibo-' + paymentId + '.pdf');
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(downloadUrl);
-          } else {
-            this.openUrlInNewTab(downloadUrl);
-            setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
+          if (result?.url) {
+            this.openUrlInNewTab(result.url);
             return;
           }
-          return;
         } catch (err) {
           if (!fallbackUrl) {
             const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;

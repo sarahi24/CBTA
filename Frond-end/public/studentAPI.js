@@ -181,7 +181,7 @@ window.StudentAPI = {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/pdf',
+          'Accept': 'application/json',
           'X-User-Role': effectiveRole,
           'X-User-Permission': 'view.receipt'
         }
@@ -194,19 +194,17 @@ window.StudentAPI = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al descargar el recibo');
+        throw new Error(errorData.message || 'Error al obtener el recibo');
       }
 
-      const blob = await response.blob();
-      const contentDisposition = response.headers.get('Content-Disposition') || '';
-      const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
-      const rawFileName = fileNameMatch?.[1] || `recibo-${paymentId}.pdf`;
-      const fileName = decodeURIComponent(rawFileName).replace(/^\"|\"$/g, '');
+      const payload = await response.json().catch(() => ({}));
+      const data = payload?.data || {};
 
       return {
-        blob,
-        fileName,
-        contentType: response.headers.get('Content-Type') || 'application/pdf'
+        url: data.url || null,
+        expiresIn: data.expires_in ?? null,
+        contentType: data.content_type || null,
+        message: payload?.message || ''
       };
     } catch (err) {
       console.warn('⚠️ StudentAPI.downloadPaymentReceipt fallback:', err?.message || err);

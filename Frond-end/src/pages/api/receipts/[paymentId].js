@@ -30,30 +30,18 @@ export async function GET({ params, request }) {
       method: 'GET',
       headers: {
         'Authorization': auth,
-        'Accept': 'application/pdf',
+        'Accept': 'application/json',
         'X-User-Role': role,
         'X-User-Permission': permission
       }
     });
 
-    if (!upstreamRes.ok) {
-      const bodyText = await upstreamRes.text();
-      return new Response(bodyText, {
-        status: upstreamRes.status,
-        headers: {
-          'Content-Type': upstreamRes.headers.get('content-type') || 'application/json'
-        }
-      });
-    }
-
-    const pdfBuffer = await upstreamRes.arrayBuffer();
-
-    return new Response(pdfBuffer, {
-      status: 200,
+    const bodyText = await upstreamRes.text();
+    return new Response(bodyText, {
+      status: upstreamRes.status,
       headers: {
-        'Content-Type': upstreamRes.headers.get('content-type') || 'application/pdf',
-        'Content-Disposition': upstreamRes.headers.get('content-disposition') || `attachment; filename=recibo-${paymentId}.pdf`,
-        'Cache-Control': upstreamRes.headers.get('cache-control') || 'no-store, no-cache, must-revalidate, max-age=0'
+        'Content-Type': upstreamRes.headers.get('content-type') || 'application/json',
+        'Cache-Control': 'no-store'
       }
     });
   } catch (error) {
