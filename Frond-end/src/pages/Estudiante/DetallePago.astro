@@ -4,7 +4,7 @@ import StudentLayout from '../../layouts/LayoutEstu.astro';
 const paymentId = Astro.url.searchParams.get('id');
 ---
 
-<script src="/studentAPI.js" is:inline></script>
+<script src="/studentAPI.js?v=20260215r8" is:inline></script>
 
 <StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper" x-data={`{
@@ -154,7 +154,6 @@ const paymentId = Astro.url.searchParams.get('id');
 
       this.downloadingReceipt = true;
       this.errorMessage = '';
-      let receiptUrl = this.paymentDetail?.url || null;
       const pendingTab = window.open('', '_blank');
 
       try {
@@ -171,27 +170,10 @@ const paymentId = Astro.url.searchParams.get('id');
         }
       } catch (_) {}
 
-      if (!receiptUrl) {
-        try {
-          const detailRes = await window.StudentAPI.getPaymentById(this.paymentId, token, 'student');
-          receiptUrl = detailRes?.data?.payment?.url || detailRes?.data?.payment?.receipt_url || detailRes?.data?.payment?.receiptUrl || null;
-        } catch (_) {}
-      }
-
-      if (receiptUrl) {
-        if (pendingTab && !pendingTab.closed) {
-          pendingTab.location.href = receiptUrl;
-        } else {
-          this.openUrlInNewTab(receiptUrl);
-        }
-        this.downloadingReceipt = false;
-        return;
-      }
-
       if (pendingTab && !pendingTab.closed) {
         pendingTab.close();
       }
-      this.errorMessage = 'Recibo no disponible para este pago';
+      this.errorMessage = 'No se pudo generar el recibo nuevo para este pago';
       this.downloadingReceipt = false;
     }
   }`}>

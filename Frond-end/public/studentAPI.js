@@ -661,4 +661,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r7)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r8)');
