@@ -7,26 +7,13 @@ let historialData = {
   items: [],
   currentPage: 1,
   lastPage: 1,
-  perPage: 15,
-  total: 0,
-  hasMorePages: false,
-  nextPage: null,
-  previousPage: null
-};
-let error = null;
-let loading = false;
-
-const pageParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('page') : null;
-const perPageParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('perPage') : null;
+          if (fallbackTab && !fallbackTab.closed) {
+            fallbackTab.location.href = downloadUrl;
 const forceRefreshParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('forceRefresh') : null;
-const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.searchParams.get('result') : null;
-const page = pageParam ? Number(pageParam) : 1;
-const perPage = perPageParam ? Number(perPageParam) : 15;
+            this.openUrlInNewTab(downloadUrl);
 const forceRefresh = forceRefreshParam === 'true';
+          setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
 
----
-
-<script src="/studentAPI.js" is:inline></script>
 
 <StudentLayout title={title}>
   <div 
