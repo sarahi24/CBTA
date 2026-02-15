@@ -116,16 +116,27 @@ const forceRefresh = forceRefreshParam === 'true';
 
           const paymentData = historyRes?.data?.payment_history;
           this.pagos = Array.isArray(paymentData?.items) ? paymentData.items.map(payment => {
+            const amountValue = payment.amount ?? payment.total_amount ?? payment.total ?? payment.monto ?? '0.00';
+            const amountReceivedValue = payment.amount_received ?? payment.received_amount ?? payment.paid_amount ?? amountValue;
+            const balanceValue = payment.balance ?? payment.pending_amount ?? payment.amount_pending ?? payment.remaining_amount ?? payment.remaining_balance ?? '0.00';
+            const conceptValue = payment.concept ?? payment.concept_name ?? payment.concepto ?? payment.description ?? 'Pago';
+            const dateValue = payment.date ?? payment.payment_date ?? payment.created_at_human ?? payment.created_at ?? new Date().toLocaleDateString('es-MX');
+            const referenceValue = payment.reference ?? payment.payment_reference ?? payment.folio ?? payment.payment_intent_id ?? ('REF-' + payment.id);
+            const receiptUrlValue = payment.url ?? payment.receipt_url ?? payment.receiptUrl ?? payment.receipt?.url ?? null;
+
+            let normalizedStatus = payment.status || 'completed';
+            if (normalizedStatus === 'paid') normalizedStatus = 'completed';
+
             return {
               id: payment.id,
-              concept: payment.concept || 'Pago',
-              amount: payment.amount || '0.00',
-              amountReceived: payment.amount_received || payment.amount || '0.00',
-              balance: payment.balance || '0.00',
-              date: payment.date || new Date().toLocaleDateString('es-MX'),
-              status: payment.status === 'paid' ? 'completed' : (payment.status || 'completed'),
-              reference: payment.reference || ('REF-' + payment.id),
-              url: payment.url || null,
+              concept: conceptValue,
+              amount: String(amountValue),
+              amountReceived: String(amountReceivedValue),
+              balance: String(balanceValue),
+              date: dateValue,
+              status: normalizedStatus,
+              reference: referenceValue,
+              url: receiptUrlValue,
               paymentMethod: payment.payment_method_details?.[0] || 'Metodo desconocido'
             };
           }) : [];
@@ -148,9 +159,11 @@ const forceRefresh = forceRefreshParam === 'true';
 
       get pagosFiltrados() {
         if(!this.search) return this.pagos;
+        const searchValue = this.search.toLowerCase();
         return this.pagos.filter(p => 
-          p.concept.toLowerCase().includes(this.search.toLowerCase()) || 
-          p.reference.toLowerCase().includes(this.search.toLowerCase())
+          p.concept.toLowerCase().includes(searchValue) || 
+          p.reference.toLowerCase().includes(searchValue) ||
+          String(p.id).includes(searchValue)
         );
       },
 
@@ -329,9 +342,9 @@ const forceRefresh = forceRefreshParam === 'true';
                     </div>
                   </div>
                   
-                  <template x-if="pago.balance != '0.00'">
+                  <template x-if="Number(pago.balance || 0) > 0">
                     <div class="amount-section balance">
-                      <div class="label">Saldo</div>
+                      <div class="label">Monto pendiente</div>
                       <div class="amount-display">
                         <span class="currency">$</span>
                         <span class="amount" x-text="pago.balance"></span>

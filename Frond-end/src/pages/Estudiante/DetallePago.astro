@@ -87,28 +87,39 @@ const paymentId = Astro.url.searchParams.get('id');
           return;
         }
 
-        const methodDetails = payment.payment_method_details || {};
+        const methodDetails = payment.payment_method_details || payment.payment_method || {};
         let methodLabel = 'Metodo desconocido';
         if (methodDetails.brand && methodDetails.last4) {
           methodLabel = methodDetails.brand.toUpperCase() + ' •••• ' + methodDetails.last4;
         } else if (methodDetails.type) {
           methodLabel = methodDetails.type;
         }
-        const normalizedStatus = payment.status === 'completed' ? 'paid' : payment.status;
+        const normalizedStatus = payment.status === 'completed' ? 'paid' : (payment.status || 'unknown');
+
+        const amountValue = payment.amount ?? payment.total_amount ?? payment.total ?? payment.monto ?? '0';
+        const amountReceivedValue = payment.amount_received ?? payment.received_amount ?? payment.paid_amount ?? amountValue;
+        const balanceValue = payment.balance ?? payment.pending_amount ?? payment.amount_pending ?? payment.remaining_amount ?? payment.remaining_balance ?? '0';
+        const conceptValue = payment.concept_name ?? payment.concept ?? payment.concepto ?? payment.description ?? 'Pago';
+        const referenceValue = payment.reference ?? payment.payment_reference ?? payment.folio ?? payment.payment_intent_id ?? null;
+        const receiptUrlValue = payment.url ?? payment.receipt_url ?? payment.receiptUrl ?? payment.receipt?.url ?? null;
+        const createdAtValue = payment.created_at_human ?? payment.payment_date ?? payment.created_at ?? payment.date ?? null;
 
         this.paymentDetail = {
           id: payment.id,
-          concept: payment.concept_name || 'Pago',
-          amount: payment.amount || '0',
-          amountReceived: payment.amount_received || '0',
+          concept: conceptValue,
+          amount: String(amountValue),
+          amountReceived: String(amountReceivedValue),
+          balance: String(balanceValue),
+          pendingAmount: String(balanceValue),
+          reference: referenceValue,
           status: normalizedStatus || 'unknown',
           paymentMethod: methodLabel,
           userId: payment.user_id,
-          createdAt: payment.created_at_human || payment.created_at,
+          createdAt: createdAtValue,
           updatedAt: payment.updated_at,
           stripePaymentId: payment.stripe_payment_method_id,
           paymentIntentId: payment.payment_intent_id,
-          url: payment.url,
+          url: receiptUrlValue,
           stripeSessionId: payment.stripe_session_id,
           allMethods: methodDetails.type ? [methodLabel] : []
         };
@@ -118,14 +129,29 @@ const paymentId = Astro.url.searchParams.get('id');
       } finally {
         this.loading = false;
       }
-        if (fallbackTab && !fallbackTab.closed) {
-          fallbackTab.location.href = downloadUrl;
-      }
-          this.openUrlInNewTab(downloadUrl);
+    },
+
+    async downloadReceipt() {
+      if (!this.paymentId) {
+        this.errorMessage = 'ID de pago no proporcionado';
         return;
-        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
       }
-        this.downloadingReceipt = false;
+
+      if (!window.StudentAPI) {
+        this.errorMessage = 'StudentAPI no esta disponible.';
+        return;
+      }
+
+      if (this.downloadingReceipt) {
+        return;
+      }
+
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        this.errorMessage = 'Usuario no autenticado';
+        return;
+      }
+
       this.downloadingReceipt = true;
       this.errorMessage = '';
       let receiptUrl = this.paymentDetail?.url || null;
@@ -133,24 +159,8 @@ const paymentId = Astro.url.searchParams.get('id');
       try {
         const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
         const downloadUrl = window.URL.createObjectURL(result.blob);
-        const responseType = (result.contentType || '').toLowerCase();
-        const isPdf = responseType.includes('application/pdf');
-
-        if (isPdf) {
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = result.fileName || ('recibo-' + this.paymentId + '.pdf');
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(downloadUrl);
-        } else {
-          this.openUrlInNewTab(downloadUrl);
-          setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
-          this.downloadingReceipt = false;
-          return;
-        }
-        this.downloadingReceipt = false;
+        this.openUrlInNewTab(downloadUrl);
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
         return;
       } catch (_) {}
 
@@ -166,6 +176,7 @@ const paymentId = Astro.url.searchParams.get('id');
         this.downloadingReceipt = false;
         return;
       }
+
       this.errorMessage = 'Recibo no disponible para este pago';
       this.downloadingReceipt = false;
     }
@@ -274,6 +285,20 @@ const paymentId = Astro.url.searchParams.get('id');
               <span class="info-label">Monto recibido</span>
               <span class="info-value" x-text="'$' + paymentDetail.amountReceived"></span>
             </div>
+
+            <template x-if="Number(paymentDetail.pendingAmount || 0) > 0">
+              <div class="info-item">
+                <span class="info-label">Monto pendiente</span>
+                <span class="info-value" x-text="'$' + paymentDetail.pendingAmount"></span>
+              </div>
+            </template>
+
+            <template x-if="paymentDetail.reference">
+              <div class="info-item">
+                <span class="info-label">Referencia</span>
+                <span class="info-value mono" x-text="paymentDetail.reference"></span>
+              </div>
+            </template>
 
             <template x-if="paymentDetail.paymentIntentId">
               <div class="info-item">
