@@ -173,6 +173,47 @@ window.StudentAPI = {
     }
   },
 
+  async downloadPaymentReceipt(paymentId, token, role = 'student') {
+    try {
+      const effectiveRole = resolveStudentPortalRole(role);
+      const endpoint = `${API_BASE}/payments/history/receipt/${paymentId}`;
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf',
+          'X-User-Role': effectiveRole,
+          'X-User-Permission': 'view.receipt'
+        }
+      });
+
+      if (response.status === 401) {
+        handleAuthError(401);
+        throw new Error('No autenticado - sesión expirada');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al descargar el recibo');
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition') || '';
+      const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
+      const rawFileName = fileNameMatch?.[1] || `recibo-${paymentId}.pdf`;
+      const fileName = decodeURIComponent(rawFileName).replace(/^\"|\"$/g, '');
+
+      return {
+        blob,
+        fileName,
+        contentType: response.headers.get('Content-Type') || 'application/pdf'
+      };
+    } catch (err) {
+      console.error('❌ StudentAPI.downloadPaymentReceipt:', err);
+      throw err;
+    }
+  },
+
   async getPendingTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
@@ -622,4 +663,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r5)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r6)');
