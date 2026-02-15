@@ -173,13 +173,26 @@ const forceRefresh = forceRefreshParam === 'true';
         try {
           const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, 'student');
           const downloadUrl = window.URL.createObjectURL(result.blob);
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = result.fileName || ('recibo-' + paymentId + '.pdf');
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(downloadUrl);
+          const responseType = (result.contentType || '').toLowerCase();
+          const isPdf = responseType.includes('application/pdf');
+
+          if (isPdf) {
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = result.fileName || ('recibo-' + paymentId + '.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+          } else {
+            if (fallbackTab && !fallbackTab.closed) {
+              fallbackTab.location.href = downloadUrl;
+            } else {
+              window.open(downloadUrl, '_blank');
+            }
+            setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
+            return;
+          }
 
           if (fallbackTab && !fallbackTab.closed) {
             fallbackTab.close();
