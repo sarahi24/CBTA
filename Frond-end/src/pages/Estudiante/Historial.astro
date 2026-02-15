@@ -161,6 +161,16 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
+        if (receiptUrl) {
+          const directTab = window.open('', '_blank');
+          if (directTab && !directTab.closed) {
+            directTab.location.href = receiptUrl;
+          } else {
+            window.location.href = receiptUrl;
+          }
+          return;
+        }
+
         let fallbackUrl = receiptUrl || null;
         const fallbackTab = window.open('', '_blank');
 

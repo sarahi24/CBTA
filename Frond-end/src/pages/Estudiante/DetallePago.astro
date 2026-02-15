@@ -126,6 +126,18 @@ const paymentId = Astro.url.searchParams.get('id');
       this.downloadingReceipt = true;
       this.errorMessage = '';
       let receiptUrl = this.paymentDetail?.url || null;
+
+      if (receiptUrl) {
+        const directTab = window.open('', '_blank');
+        if (directTab && !directTab.closed) {
+          directTab.location.href = receiptUrl;
+        } else {
+          window.location.href = receiptUrl;
+        }
+        this.downloadingReceipt = false;
+        return;
+      }
+
       const fallbackTab = window.open('', '_blank');
 
       try {
