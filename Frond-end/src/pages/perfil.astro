@@ -3,9 +3,9 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Mi Perfil">
-    <div x-data="perfilData" x-cloak class="max-w-5xl mx-auto px-4 sm:px-0 overflow-x-hidden">
+    <div x-data="perfilData" x-cloak class="max-w-4xl mx-auto px-4 sm:px-0 overflow-x-hidden">
         <!-- Encabezado -->
-        <div class="flex flex-col md:flex-row md:items-center items-start gap-3 md:gap-4 mb-4 md:mb-5">
+        <div class="bg-white rounded-xl shadow-lg p-4 md:p-5 flex flex-col md:flex-row md:items-center items-start gap-3 md:gap-4 mb-4">
             <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-xl">
                 <svg class="w-9 h-9 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.5 0-7 1.8-7 4v1h14v-1c0-2.2-3.5-4-7-4Z" />
@@ -20,7 +20,7 @@ import Layout from '../layouts/Layout.astro';
                     </template>
                 </div>
             </div>
-            <div class="w-full md:w-auto md:ml-auto flex flex-col md:flex-row gap-2">
+            <div class="w-full md:w-auto md:ml-auto flex flex-col sm:flex-row gap-2">
                 <button @click="editProfile()" class="w-full md:w-auto px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md text-sm font-semibold whitespace-nowrap">
                     Editar Perfil
                 </button>
@@ -36,7 +36,7 @@ import Layout from '../layouts/Layout.astro';
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h2 class="text-2xl font-bold">Información de Perfil</h2>
+                <h2 class="text-xl md:text-2xl font-bold">Información de Perfil</h2>
             </div>
             
             <div class="p-4 md:p-6">
@@ -94,7 +94,7 @@ import Layout from '../layouts/Layout.astro';
         </div>
 
         <!-- Sección de Permisos -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden mt-5 md:mt-6">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mt-4 md:mt-5">
             <div class="bg-institucional text-white p-6 flex items-center gap-3">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -572,6 +572,118 @@ import Layout from '../layouts/Layout.astro';
                     }
                 },
 
+                firstNonEmpty(...values) {
+                    for (const value of values) {
+                        if (value === null || value === undefined) continue;
+                        const text = String(value).trim();
+                        if (text.length > 0) return text;
+                    }
+                    return '';
+                },
+
+                normalizeRoleNames(user) {
+                    const roleSource = [];
+                    if (Array.isArray(user.roles)) roleSource.push(...user.roles);
+                    if (user.role) roleSource.push(user.role);
+                    if (user.role_name) roleSource.push(user.role_name);
+                    if (user.type) roleSource.push(user.type);
+
+                    const names = roleSource
+                        .map((roleItem) => {
+                            if (typeof roleItem === 'string') return roleItem.trim();
+                            if (roleItem && typeof roleItem === 'object') {
+                                return this.firstNonEmpty(roleItem.name, roleItem.role_name, roleItem.label);
+                            }
+                            return '';
+                        })
+                        .filter(Boolean);
+
+                    return [...new Set(names)];
+                },
+
+                normalizePermissionNames(user) {
+                    const permissionSource = [];
+                    if (Array.isArray(user.permissions)) permissionSource.push(...user.permissions);
+                    if (Array.isArray(user.permisos)) permissionSource.push(...user.permisos);
+
+                    const names = permissionSource
+                        .map((permissionItem) => {
+                            if (typeof permissionItem === 'string') return permissionItem.trim();
+                            if (permissionItem && typeof permissionItem === 'object') {
+                                return this.firstNonEmpty(permissionItem.name, permissionItem.permission, permissionItem.key, permissionItem.slug);
+                            }
+                            return '';
+                        })
+                        .filter(Boolean);
+
+                    return [...new Set(names)];
+                },
+
+                normalizeAddress(user) {
+                    const addressValue = user.address ?? user.addresses ?? user.direccion ?? user.domicio ?? user.address_line;
+
+                    if (Array.isArray(addressValue) && addressValue.length > 0) {
+                        return addressValue.filter(Boolean).join(', ');
+                    }
+
+                    if (addressValue && typeof addressValue === 'object') {
+                        return [
+                            addressValue.street,
+                            addressValue.number,
+                            addressValue.neighborhood,
+                            addressValue.city,
+                            addressValue.state,
+                            addressValue.zip,
+                            addressValue.postal_code
+                        ].filter(Boolean).join(', ');
+                    }
+
+                    return this.firstNonEmpty(addressValue);
+                },
+
+                normalizeBirthdate(value) {
+                    const birthdateRaw = this.firstNonEmpty(value);
+                    if (!birthdateRaw) return '';
+                    return birthdateRaw.includes('T') ? birthdateRaw.split('T')[0] : birthdateRaw;
+                },
+
+                normalizeUserPayload(user) {
+                    const firstName = this.firstNonEmpty(user.name, user.first_name, user.nombre);
+                    const lastName = this.firstNonEmpty(user.last_name, user.lastname, user.second_name, user.surname, user.apellidos);
+                    const fullName = this.firstNonEmpty(
+                        [firstName, lastName].filter(Boolean).join(' '),
+                        user.full_name,
+                        user.fullName,
+                        user.display_name,
+                        user.username
+                    );
+
+                    const normalized = {
+                        firstName,
+                        lastName,
+                        fullName: fullName || 'Usuario',
+                        email: this.firstNonEmpty(user.email, user.correo, user.mail) || 'No disponible',
+                        userId: this.firstNonEmpty(user.id, user.user_id, user.uuid, user.matricula) || 'N/A',
+                        roleNames: this.normalizeRoleNames(user),
+                        permissionNames: this.normalizePermissionNames(user),
+                        phoneNumber: this.firstNonEmpty(user.phone_number, user.phone, user.telefono, user.mobile),
+                        birthdate: this.normalizeBirthdate(user.birthdate ?? user.birth_date ?? user.fecha_nacimiento),
+                        gender: this.firstNonEmpty(user.gender, user.sexo),
+                        bloodType: this.firstNonEmpty(user.blood_type, user.tipo_sangre),
+                        addressText: this.normalizeAddress(user),
+                        lastLogin: this.firstNonEmpty(
+                            user.last_login_human,
+                            user.last_login,
+                            user.lastLogin,
+                            user.last_access,
+                            user.updated_at,
+                            user.created_at
+                        )
+                    };
+
+                    return normalized;
+                },
+
                 showErrorState(message) {
                     this.userName = 'Error al cargar datos';
                     this.userEmail = message;
@@ -590,38 +702,23 @@ import Layout from '../layouts/Layout.astro';
                         hasId: !!user.id
                     });
 
-                    // Mapear nombre - usar name + last_name
-                    const firstName = (user.name || '').trim();
-                    const lastName = (user.last_name || '').trim();
-                    const fullName = [firstName, lastName]
-                        .filter(n => n.length > 0)
-                        .join(' ')
-                        .trim();
-                    
-                    this.userName = fullName || 'Usuario';
-                    this.userEmail = (user.email || '').trim() || 'No disponible';
-                    this.userId = user.id || 'N/A';
+                    const normalized = this.normalizeUserPayload(user);
+
+                    this.userName = normalized.fullName;
+                    this.userEmail = normalized.email;
+                    this.userId = normalized.userId;
                     
                     console.log('📝 Name mapping:', {
-                        firstName,
-                        lastName,
+                        firstName: normalized.firstName,
+                        lastName: normalized.lastName,
                         fullName: this.userName,
                         email: this.userEmail,
                         id: this.userId
                     });
                     
-                    // Mapear roles correctamente - si son objetos con propiedades, extraer nombre
-                    if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-                        const roleNames = user.roles
-                            .map(r => {
-                                if (typeof r === 'string') return r;
-                                if (r && typeof r === 'object' && r.name) return r.name;
-                                return null;
-                            })
-                            .filter(r => r && r.length > 0);
-                        
-                        this.userRole = roleNames.length > 0 ? roleNames[0] : 'Usuario';
-                        this.userRoles = roleNames;
+                    if (normalized.roleNames.length > 0) {
+                        this.userRole = normalized.roleNames[0];
+                        this.userRoles = normalized.roleNames;
                         console.log('👥 Roles loaded:', this.userRoles);
                     } else {
                         this.userRole = 'Usuario';
@@ -629,54 +726,33 @@ import Layout from '../layouts/Layout.astro';
                         console.log('👥 No roles found');
                     }
                     
-                    // Mapear permisos - pueden no existir en todos los usuarios
-                    if (user.permissions && Array.isArray(user.permissions) && user.permissions.length > 0) {
-                        this.userPermissions = user.permissions
-                            .map(p => {
-                                if (typeof p === 'string') return p;
-                                if (p && typeof p === 'object' && p.name) return p.name;
-                                return null;
-                            })
-                            .filter(p => p && p.length > 0);
+                    if (normalized.permissionNames.length > 0) {
+                        this.userPermissions = normalized.permissionNames;
                         console.log('🔐 Permissions loaded:', this.userPermissions.length, 'items');
                     } else {
                         this.userPermissions = [];
                         console.log('🔐 No permissions found');
                     }
                     
-                    this.lastLogin = new Date().toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                    this.lastLogin = normalized.lastLogin
+                        ? normalized.lastLogin
+                        : new Date().toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
 
                     // Populate form data
-                    this.formData.name = firstName;
-                    this.formData.last_name = lastName;
-                    this.formData.email = (user.email || '').trim();
-                    this.formData.phone_number = (user.phone_number || '').trim();
-                    this.formData.birthdate = user.birthdate 
-                        ? (user.birthdate.includes('T') ? user.birthdate.split('T')[0] : user.birthdate)
-                        : '';
-                    this.formData.gender = (user.gender || '').trim();
-                    this.formData.blood_type = (user.blood_type || '').trim();
-                    const addressValue = user.address;
-                    let addressText = '';
-                    if (Array.isArray(addressValue) && addressValue.length > 0) {
-                        addressText = addressValue.join(', ');
-                    } else if (addressValue && typeof addressValue === 'object') {
-                        addressText = [
-                            addressValue.street,
-                            addressValue.city,
-                            addressValue.state,
-                            addressValue.zip
-                        ].filter(Boolean).join(', ');
-                    } else {
-                        addressText = (addressValue || '').toString();
-                    }
-                    this.formData.address = addressText;
+                    this.formData.name = normalized.firstName;
+                    this.formData.last_name = normalized.lastName;
+                    this.formData.email = normalized.email === 'No disponible' ? '' : normalized.email;
+                    this.formData.phone_number = normalized.phoneNumber;
+                    this.formData.birthdate = normalized.birthdate;
+                    this.formData.gender = normalized.gender;
+                    this.formData.blood_type = normalized.bloodType;
+                    this.formData.address = normalized.addressText;
 
                     console.log('✅ User data population complete:', {
                         userName: this.userName,
@@ -699,30 +775,17 @@ import Layout from '../layouts/Layout.astro';
                     if (userData) {
                         try {
                             const user = JSON.parse(userData);
-                            const addressValue = user.address;
-                            let addressText = '';
-                            if (Array.isArray(addressValue) && addressValue.length > 0) {
-                                addressText = addressValue.join(', ');
-                            } else if (addressValue && typeof addressValue === 'object') {
-                                addressText = [
-                                    addressValue.street,
-                                    addressValue.city,
-                                    addressValue.state,
-                                    addressValue.zip
-                                ].filter(Boolean).join(', ');
-                            } else {
-                                addressText = (addressValue || '').toString();
-                            }
+                            const normalized = this.normalizeUserPayload(user);
 
                             this.formData = {
-                                name: user.name || '',
-                                last_name: user.last_name || '',
-                                email: user.email || '',
-                                phone_number: user.phone_number || '',
-                                birthdate: user.birthdate ? (user.birthdate.includes('T') ? user.birthdate.split('T')[0] : user.birthdate) : '',
-                                gender: user.gender || '',
-                                blood_type: user.blood_type || '',
-                                address: addressText
+                                name: normalized.firstName,
+                                last_name: normalized.lastName,
+                                email: normalized.email === 'No disponible' ? '' : normalized.email,
+                                phone_number: normalized.phoneNumber,
+                                birthdate: normalized.birthdate,
+                                gender: normalized.gender,
+                                blood_type: normalized.bloodType,
+                                address: normalized.addressText
                             };
                             console.log('📝 Form data loaded for editing:', this.formData);
                         } catch (e) {
