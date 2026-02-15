@@ -87,6 +87,28 @@ function handleAuthError(statusCode) {
   return false;
 }
 
+function parseRetryAfterMs(retryAfterHeader) {
+  const fallbackMs = 2000;
+  if (!retryAfterHeader) return fallbackMs;
+
+  const asNumber = Number(retryAfterHeader);
+  if (!Number.isNaN(asNumber) && asNumber > 0) {
+    return Math.max(500, Math.min(asNumber * 1000, 10000));
+  }
+
+  const asDate = Date.parse(retryAfterHeader);
+  if (!Number.isNaN(asDate)) {
+    const diff = asDate - Date.now();
+    return Math.max(500, Math.min(diff, 10000));
+  }
+
+  return fallbackMs;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export const StudentAPI = {
   /**
    * PAGOS - GET /api/v1/payments/history/{studentId?}
@@ -112,29 +134,43 @@ export const StudentAPI = {
         url.searchParams.append('forceRefresh', 'true');
       }
 
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
-          'X-User-Permission': 'view.payments.history'
+      const maxAttempts = 2;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-User-Role': effectiveRole,
+            'X-User-Permission': 'view.payments.history'
+          }
+        });
+
+        if (response.status === 401) {
+          handleAuthError(401);
+          throw new Error('No autenticado - sesión expirada');
         }
-      });
 
-      // Detectar error de autenticación
-      if (response.status === 401) {
-        handleAuthError(401);
-        throw new Error('No autenticado - sesión expirada');
+        if (response.status === 429) {
+          const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+          if (attempt < maxAttempts) {
+            console.warn(`⚠️ 429 en historial. Reintentando en ${retryAfterMs}ms (intento ${attempt + 1}/${maxAttempts})`);
+            await wait(retryAfterMs);
+            continue;
+          }
+          throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Error al cargar historial de pagos');
+        }
+
+        return await response.json();
       }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar historial de pagos');
-      }
-
-      return await response.json();
+      throw new Error('No se pudo cargar el historial de pagos');
     } catch (err) {
       console.error('❌ StudentAPI.getPaymentHistory:', err);
       throw err;
