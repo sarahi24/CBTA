@@ -166,15 +166,15 @@ const paymentId = Astro.url.searchParams.get('id');
           } else {
             this.openUrlInNewTab(receiptResultUrl);
           }
+          this.downloadingReceipt = false;
+          return;
         }
-        this.downloadingReceipt = false;
-        return;
       } catch (_) {}
 
       if (!receiptUrl) {
         try {
           const detailRes = await window.StudentAPI.getPaymentById(this.paymentId, token, 'student');
-          receiptUrl = detailRes?.data?.payment?.url || null;
+          receiptUrl = detailRes?.data?.payment?.url || detailRes?.data?.payment?.receipt_url || detailRes?.data?.payment?.receiptUrl || null;
         } catch (_) {}
       }
 
