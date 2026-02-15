@@ -206,9 +206,10 @@ window.StudentAPI = {
   async downloadPaymentReceipt(paymentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const endpoint = `/api/receipts/${paymentId}`;
+      const endpoint = `/api/receipts/${paymentId}?_=${Date.now()}`;
       const response = await fetch(endpoint, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',

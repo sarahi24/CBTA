@@ -4,7 +4,7 @@ import StudentLayout from '../../layouts/LayoutEstu.astro';
 const paymentId = Astro.url.searchParams.get('id');
 ---
 
-<script src="/studentAPI.js?v=20260215r11" is:inline></script>
+<script src="/studentAPI.js?v=20260215r12" is:inline></script>
 
 <StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper" x-data={`{
@@ -156,6 +156,7 @@ const paymentId = Astro.url.searchParams.get('id');
       this.errorMessage = '';
       const pendingTab = window.open('', '_blank');
       let receiptResultUrl = null;
+      const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(this.paymentId) + '?mode=open&_=' + Date.now();
 
       try {
         const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
@@ -177,11 +178,11 @@ const paymentId = Astro.url.searchParams.get('id');
       }
 
       if (pendingTab && !pendingTab.closed) {
-        pendingTab.close();
+        pendingTab.location.href = proxyOpenUrl;
+        this.downloadingReceipt = false;
+        return;
       }
-      if (!this.errorMessage) {
-        this.errorMessage = 'No se pudo generar el recibo nuevo para este pago';
-      }
+      window.location.assign(proxyOpenUrl);
       this.downloadingReceipt = false;
     }
   }`}>

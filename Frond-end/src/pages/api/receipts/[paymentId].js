@@ -33,6 +33,9 @@ export const prerender = false;
 
 export async function GET({ params, request }) {
   const paymentId = params?.paymentId;
+  const requestUrl = new URL(request.url);
+  const mode = (requestUrl.searchParams.get('mode') || '').toLowerCase();
+  const openMode = mode === 'open';
 
   if (!paymentId) {
     return new Response(JSON.stringify({ success: false, message: 'paymentId requerido', errors: {} }), {
@@ -70,6 +73,10 @@ export async function GET({ params, request }) {
     const locationHeader = upstreamRes.headers.get('location');
 
     if (locationHeader && [301, 302, 303, 307, 308].includes(upstreamRes.status)) {
+      if (openMode) {
+        return Response.redirect(locationHeader, 302);
+      }
+
       const expiresIn = (() => {
         try {
           const url = new URL(locationHeader);
@@ -109,6 +116,10 @@ export async function GET({ params, request }) {
       if (parsed && upstreamRes.ok) {
         const url = firstUrl(parsed);
         if (url) {
+          if (openMode) {
+            return Response.redirect(url, 302);
+          }
+
           const data = parsed?.data && typeof parsed.data === 'object' ? parsed.data : {};
           return new Response(JSON.stringify({
             ...parsed,
@@ -128,6 +139,16 @@ export async function GET({ params, request }) {
         }
       }
 
+      if (openMode) {
+        return new Response(bodyText || JSON.stringify({ success: false, message: 'No se encontró URL de recibo', errors: {} }), {
+          status: upstreamRes.status,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store'
+          }
+        });
+      }
+
       return new Response(bodyText, {
         status: upstreamRes.status,
         headers: {
@@ -138,6 +159,17 @@ export async function GET({ params, request }) {
     }
 
     if (upstreamRes.ok) {
+      if (openMode) {
+        const htmlBody = await upstreamRes.text();
+        return new Response(htmlBody, {
+          status: 200,
+          headers: {
+            'Content-Type': contentType || 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store'
+          }
+        });
+      }
+
       return new Response(JSON.stringify({
         success: true,
         data: {
