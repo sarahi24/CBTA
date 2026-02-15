@@ -161,16 +161,6 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
-        if (receiptUrl) {
-          const directTab = window.open('', '_blank');
-          if (directTab && !directTab.closed) {
-            directTab.location.href = receiptUrl;
-          } else {
-            window.location.href = receiptUrl;
-          }
-          return;
-        }
-
         let fallbackUrl = receiptUrl || null;
         const fallbackTab = window.open('', '_blank');
 
@@ -180,46 +170,31 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
-        try {
-          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, 'student');
-          const downloadUrl = window.URL.createObjectURL(result.blob);
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = result.fileName || ('recibo-' + paymentId + '.pdf');
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(downloadUrl);
-          if (fallbackTab && !fallbackTab.closed) {
-            fallbackTab.close();
-          }
-        } catch (err) {
-          if (!fallbackUrl) {
-            const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;
-            fallbackUrl = localPayment?.url || null;
-          }
-
-          if (!fallbackUrl) {
-            try {
-              const detailRes = await window.StudentAPI.getPaymentById(paymentId, token, 'student');
-              fallbackUrl = detailRes?.data?.payment?.url || null;
-            } catch (_) {}
-          }
-
-          if (fallbackUrl) {
-            if (fallbackTab && !fallbackTab.closed) {
-              fallbackTab.location.href = fallbackUrl;
-            } else {
-              window.location.href = fallbackUrl;
-            }
-            return;
-          }
-
-          if (fallbackTab && !fallbackTab.closed) {
-            fallbackTab.close();
-          }
-          this.errorMessage = err?.message || 'Error al descargar el recibo';
+        if (!fallbackUrl) {
+          const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;
+          fallbackUrl = localPayment?.url || null;
         }
+
+        if (!fallbackUrl) {
+          try {
+            const detailRes = await window.StudentAPI.getPaymentById(paymentId, token, 'student');
+            fallbackUrl = detailRes?.data?.payment?.url || null;
+          } catch (_) {}
+        }
+
+        if (fallbackUrl) {
+          if (fallbackTab && !fallbackTab.closed) {
+            fallbackTab.location.href = fallbackUrl;
+          } else {
+            window.location.href = fallbackUrl;
+          }
+          return;
+        }
+
+        if (fallbackTab && !fallbackTab.closed) {
+          fallbackTab.close();
+        }
+        this.errorMessage = 'Recibo no disponible para este pago';
       }
     }`}
   >
