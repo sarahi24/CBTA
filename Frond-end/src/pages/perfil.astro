@@ -90,6 +90,36 @@ import Layout from '../layouts/Layout.astro';
                         </div>
                     </div>
                 </div>
+
+                <div class="mt-5 pt-5 border-t border-slate-200">
+                    <h3 class="text-xl font-bold text-institucional mb-4">Datos Complementarios</h3>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div class="border-l-4 border-cyan-500 rounded-lg p-3.5 bg-gradient-to-r from-cyan-50 to-sky-50">
+                            <label class="text-sm font-semibold text-cyan-700">Teléfono</label>
+                            <p class="text-base mt-1 text-gray-800 font-medium break-all" x-text="formData.phone_number || 'No disponible'"></p>
+                        </div>
+
+                        <div class="border-l-4 border-rose-500 rounded-lg p-3.5 bg-gradient-to-r from-rose-50 to-pink-50">
+                            <label class="text-sm font-semibold text-rose-700">Fecha de Nacimiento</label>
+                            <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="formData.birthdate || 'No disponible'"></p>
+                        </div>
+
+                        <div class="border-l-4 border-violet-500 rounded-lg p-3.5 bg-gradient-to-r from-violet-50 to-fuchsia-50">
+                            <label class="text-sm font-semibold text-violet-700">Género</label>
+                            <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="formData.gender || 'No disponible'"></p>
+                        </div>
+
+                        <div class="border-l-4 border-red-500 rounded-lg p-3.5 bg-gradient-to-r from-red-50 to-rose-50">
+                            <label class="text-sm font-semibold text-red-700">Tipo de Sangre</label>
+                            <p class="text-base mt-1 text-gray-800 font-medium" x-text="formData.blood_type || 'No disponible'"></p>
+                        </div>
+
+                        <div class="border-l-4 border-amber-500 rounded-lg p-3.5 bg-gradient-to-r from-amber-50 to-yellow-50 sm:col-span-2 lg:col-span-2">
+                            <label class="text-sm font-semibold text-amber-700">Dirección</label>
+                            <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="formData.address || 'No disponible'"></p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -575,18 +605,49 @@ import Layout from '../layouts/Layout.astro';
                 firstNonEmpty(...values) {
                     for (const value of values) {
                         if (value === null || value === undefined) continue;
+                        if (Array.isArray(value)) {
+                            const item = value.find((entry) => typeof entry === 'string' && entry.trim().length > 0);
+                            if (item) return item.trim();
+                            continue;
+                        }
+                        if (typeof value === 'object') continue;
                         const text = String(value).trim();
                         if (text.length > 0) return text;
                     }
                     return '';
                 },
 
-                normalizeRoleNames(user) {
+                getPathValue(obj, path) {
+                    if (!obj || typeof obj !== 'object' || !path) return undefined;
+                    return path.split('.').reduce((acc, key) => {
+                        if (acc && typeof acc === 'object' && key in acc) {
+                            return acc[key];
+                        }
+                        return undefined;
+                    }, obj);
+                },
+
+                pickFromCandidates(candidates, paths) {
+                    for (const candidate of candidates) {
+                        if (!candidate || typeof candidate !== 'object') continue;
+                        for (const path of paths) {
+                            const value = this.getPathValue(candidate, path);
+                            const normalized = this.firstNonEmpty(value);
+                            if (normalized) return normalized;
+                        }
+                    }
+                    return '';
+                },
+
+                normalizeRoleNames(candidates) {
                     const roleSource = [];
-                    if (Array.isArray(user.roles)) roleSource.push(...user.roles);
-                    if (user.role) roleSource.push(user.role);
-                    if (user.role_name) roleSource.push(user.role_name);
-                    if (user.type) roleSource.push(user.type);
+                    for (const user of candidates) {
+                        if (!user || typeof user !== 'object') continue;
+                        if (Array.isArray(user.roles)) roleSource.push(...user.roles);
+                        if (user.role) roleSource.push(user.role);
+                        if (user.role_name) roleSource.push(user.role_name);
+                        if (user.type) roleSource.push(user.type);
+                    }
 
                     const names = roleSource
                         .map((roleItem) => {
@@ -601,10 +662,13 @@ import Layout from '../layouts/Layout.astro';
                     return [...new Set(names)];
                 },
 
-                normalizePermissionNames(user) {
+                normalizePermissionNames(candidates) {
                     const permissionSource = [];
-                    if (Array.isArray(user.permissions)) permissionSource.push(...user.permissions);
-                    if (Array.isArray(user.permisos)) permissionSource.push(...user.permisos);
+                    for (const user of candidates) {
+                        if (!user || typeof user !== 'object') continue;
+                        if (Array.isArray(user.permissions)) permissionSource.push(...user.permissions);
+                        if (Array.isArray(user.permisos)) permissionSource.push(...user.permisos);
+                    }
 
                     const names = permissionSource
                         .map((permissionItem) => {
@@ -619,8 +683,13 @@ import Layout from '../layouts/Layout.astro';
                     return [...new Set(names)];
                 },
 
-                normalizeAddress(user) {
-                    const addressValue = user.address ?? user.addresses ?? user.direccion ?? user.domicio ?? user.address_line;
+                normalizeAddress(candidates) {
+                    let addressValue = null;
+                    for (const user of candidates) {
+                        if (!user || typeof user !== 'object') continue;
+                        addressValue = user.address ?? user.addresses ?? user.direccion ?? user.domicilio ?? user.address_line ?? user.street;
+                        if (addressValue) break;
+                    }
 
                     if (Array.isArray(addressValue) && addressValue.length > 0) {
                         return addressValue.filter(Boolean).join(', ');
@@ -648,36 +717,58 @@ import Layout from '../layouts/Layout.astro';
                 },
 
                 normalizeUserPayload(user) {
-                    const firstName = this.firstNonEmpty(user.name, user.first_name, user.nombre);
-                    const lastName = this.firstNonEmpty(user.last_name, user.lastname, user.second_name, user.surname, user.apellidos);
+                    const directCandidates = [
+                        user,
+                        user?.profile,
+                        user?.student_profile,
+                        user?.studentProfile,
+                        user?.details,
+                        user?.contact,
+                        user?.personal_data,
+                        user?.personalData,
+                        user?.metadata,
+                        user?.data,
+                        user?.extra,
+                        user?.extra_data
+                    ].filter((entry) => entry && typeof entry === 'object');
+
+                    const nestedCandidates = [];
+                    for (const candidate of directCandidates) {
+                        if (candidate.profile) nestedCandidates.push(candidate.profile);
+                        if (candidate.student_profile) nestedCandidates.push(candidate.student_profile);
+                        if (candidate.studentProfile) nestedCandidates.push(candidate.studentProfile);
+                        if (candidate.details) nestedCandidates.push(candidate.details);
+                        if (candidate.contact) nestedCandidates.push(candidate.contact);
+                        if (candidate.personal_data) nestedCandidates.push(candidate.personal_data);
+                        if (candidate.personalData) nestedCandidates.push(candidate.personalData);
+                        if (candidate.metadata) nestedCandidates.push(candidate.metadata);
+                        if (candidate.data && typeof candidate.data === 'object') nestedCandidates.push(candidate.data);
+                    }
+
+                    const candidates = [...new Set([...directCandidates, ...nestedCandidates])];
+
+                    const firstName = this.pickFromCandidates(candidates, ['name', 'first_name', 'nombre']);
+                    const lastName = this.pickFromCandidates(candidates, ['last_name', 'lastname', 'second_name', 'surname', 'apellidos']);
                     const fullName = this.firstNonEmpty(
                         [firstName, lastName].filter(Boolean).join(' '),
-                        user.full_name,
-                        user.fullName,
-                        user.display_name,
-                        user.username
+                        this.pickFromCandidates(candidates, ['full_name', 'fullName', 'display_name', 'username'])
                     );
 
                     const normalized = {
                         firstName,
                         lastName,
                         fullName: fullName || 'Usuario',
-                        email: this.firstNonEmpty(user.email, user.correo, user.mail) || 'No disponible',
-                        userId: this.firstNonEmpty(user.id, user.user_id, user.uuid, user.matricula) || 'N/A',
-                        roleNames: this.normalizeRoleNames(user),
-                        permissionNames: this.normalizePermissionNames(user),
-                        phoneNumber: this.firstNonEmpty(user.phone_number, user.phone, user.telefono, user.mobile),
-                        birthdate: this.normalizeBirthdate(user.birthdate ?? user.birth_date ?? user.fecha_nacimiento),
-                        gender: this.firstNonEmpty(user.gender, user.sexo),
-                        bloodType: this.firstNonEmpty(user.blood_type, user.tipo_sangre),
-                        addressText: this.normalizeAddress(user),
+                        email: this.pickFromCandidates(candidates, ['email', 'correo', 'mail']) || 'No disponible',
+                        userId: this.pickFromCandidates(candidates, ['id', 'user_id', 'uuid', 'matricula']) || 'N/A',
+                        roleNames: this.normalizeRoleNames(candidates),
+                        permissionNames: this.normalizePermissionNames(candidates),
+                        phoneNumber: this.pickFromCandidates(candidates, ['phone_number', 'phone', 'telefono', 'mobile', 'contact_phone', 'phoneNumber']),
+                        birthdate: this.normalizeBirthdate(this.pickFromCandidates(candidates, ['birthdate', 'birth_date', 'fecha_nacimiento', 'dob', 'date_of_birth'])),
+                        gender: this.pickFromCandidates(candidates, ['gender', 'sexo', 'sex']),
+                        bloodType: this.pickFromCandidates(candidates, ['blood_type', 'tipo_sangre', 'bloodType']),
+                        addressText: this.normalizeAddress(candidates),
                         lastLogin: this.firstNonEmpty(
-                            user.last_login_human,
-                            user.last_login,
-                            user.lastLogin,
-                            user.last_access,
-                            user.updated_at,
-                            user.created_at
+                            this.pickFromCandidates(candidates, ['last_login_human', 'last_login', 'lastLogin', 'last_access', 'updated_at', 'created_at'])
                         )
                     };
 
