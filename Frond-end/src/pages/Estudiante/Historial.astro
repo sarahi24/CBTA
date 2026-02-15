@@ -157,6 +157,34 @@ const forceRefresh = forceRefreshParam === 'true';
         const names = this.alumnoBackend.trim().split(' ');
         if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
         return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+      },
+
+      async downloadReceipt(paymentId) {
+        if (!window.StudentAPI) {
+          this.errorMessage = 'StudentAPI no esta disponible.';
+          return;
+        }
+
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          this.errorMessage = 'Usuario no autenticado';
+          return;
+        }
+
+        try {
+          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, 'student');
+          const downloadUrl = window.URL.createObjectURL(result.blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = result.fileName || ('recibo-' + paymentId + '.pdf');
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+          console.error('❌ Error al descargar recibo:', err);
+          this.errorMessage = err?.message || 'Error al descargar el recibo';
+        }
       }
     }`}
   >
@@ -274,10 +302,10 @@ const forceRefresh = forceRefreshParam === 'true';
                       Detalle
                     </a>
 
-                    <template x-if="pago.url">
-                      <a :href="pago.url" target="_blank" class="view-receipt-btn" title="Ver recibo">
+                    <template x-if="pago.id">
+                      <button type="button" @click="downloadReceipt(pago.id)" class="view-receipt-btn" title="Descargar recibo">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                      </a>
+                      </button>
                     </template>
                   </div>
                 </div>

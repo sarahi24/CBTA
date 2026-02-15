@@ -181,6 +181,54 @@ export const StudentAPI = {
   },
 
   /**
+   * PAGOS - GET /api/v1/payments/history/receipt/{paymentId}
+   * Descargar recibo de pago en PDF
+   * @param {number|string} paymentId - ID del pago
+   * @param {string} token - Token de autenticacion
+   * @param {string} role - Rol del usuario (student|parent)
+   */
+  async downloadPaymentReceipt(paymentId, token, role = 'student') {
+    try {
+      const effectiveRole = resolveStudentPortalRole(role);
+      const endpoint = `${API_BASE}/payments/history/receipt/${paymentId}`;
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf',
+          'X-User-Role': effectiveRole,
+          'X-User-Permission': 'view.receipt'
+        }
+      });
+
+      if (response.status === 401) {
+        handleAuthError(401);
+        throw new Error('No autenticado - sesión expirada');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al descargar el recibo');
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition') || '';
+      const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
+      const rawFileName = fileNameMatch?.[1] || `recibo-${paymentId}.pdf`;
+      const fileName = decodeURIComponent(rawFileName).replace(/^\"|\"$/g, '');
+
+      return {
+        blob,
+        fileName,
+        contentType: response.headers.get('Content-Type') || 'application/pdf'
+      };
+    } catch (err) {
+      console.error('❌ StudentAPI.downloadPaymentReceipt:', err);
+      throw err;
+    }
+  },
+
+  /**
    * DASHBOARD - GET /api/v1/dashboard/pending/{studentId?}
    * Obtener total de pagos pendientes del usuario
    * @param {number|null} studentId - ID del estudiante (opcional para padres)

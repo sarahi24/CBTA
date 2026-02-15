@@ -8,10 +8,11 @@ const paymentId = Astro.url.searchParams.get('id');
 
 <StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper" x-data={`{
-    paymentId: ${paymentId ? `'${paymentId}'` : "''"},
+    paymentId: ${paymentId ? JSON.stringify(paymentId) : "''"},
     paymentDetail: null,
     loading: true,
     errorMessage: '',
+    downloadingReceipt: false,
 
     async init() {
       console.log('🔍 DetallePago init - paymentId recibido:', this.paymentId);
@@ -102,6 +103,44 @@ const paymentId = Astro.url.searchParams.get('id');
         this.errorMessage = err?.message || 'Error al cargar la informacion del pago';
       } finally {
         this.loading = false;
+      }
+    },
+
+    async downloadReceipt() {
+      if (!this.paymentId) {
+        this.errorMessage = 'ID de pago no proporcionado';
+        return;
+      }
+
+      if (!window.StudentAPI) {
+        this.errorMessage = 'StudentAPI no esta disponible.';
+        return;
+      }
+
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        this.errorMessage = 'Usuario no autenticado';
+        return;
+      }
+
+      this.downloadingReceipt = true;
+      this.errorMessage = '';
+
+      try {
+        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
+        const downloadUrl = window.URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = result.fileName || ('recibo-' + this.paymentId + '.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (err) {
+        console.error('❌ Error al descargar recibo:', err);
+        this.errorMessage = err?.message || 'Error al descargar el recibo';
+      } finally {
+        this.downloadingReceipt = false;
       }
     }
   }`}>
@@ -255,11 +294,11 @@ const paymentId = Astro.url.searchParams.get('id');
 
         <!-- ACTION BUTTONS -->
         <div class="action-section">
-          <template x-if="paymentDetail.url">
-            <a :href="paymentDetail.url" target="_blank" class="btn btn-primary">
+          <template x-if="paymentDetail.id">
+            <button type="button" @click="downloadReceipt()" :disabled="downloadingReceipt" class="btn btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Descargar recibo
-            </a>
+              <span x-text="downloadingReceipt ? 'Descargando...' : 'Descargar recibo'"></span>
+            </button>
           </template>
           
           <a href="/Estudiante/Historial" class="btn btn-secondary">
