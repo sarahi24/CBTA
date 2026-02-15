@@ -66,6 +66,7 @@ const pageTitle = "Notificaciones";
   </div>
 
   <script>
+    // @ts-nocheck
     const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
     let allNotifications = [];
     let currentFilter = 'all';
@@ -150,6 +151,12 @@ const pageTitle = "Notificaciones";
     }
 
     function asObject(value) {
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+        } catch (_) {}
+      }
       return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     }
 
@@ -162,9 +169,19 @@ const pageTitle = "Notificaciones";
         .replace(/'/g, '&#039;');
     }
 
-    function collectExtraFields(payload) {
+    function collectExtraFields(payload, rootNotif = {}) {
       const data = asObject(payload);
+      const root = asObject(rootNotif);
       const nested = [
+        asObject(root.data),
+        asObject(root.payload),
+        asObject(root.metadata),
+        asObject(root.meta),
+        asObject(root.extra),
+        asObject(root.extra_info),
+        asObject(root.additional_data),
+        asObject(root.details),
+        asObject(root.context),
         asObject(data.data),
         asObject(data.metadata),
         asObject(data.meta),
@@ -176,8 +193,10 @@ const pageTitle = "Notificaciones";
         asObject(data.context)
       ];
 
+      const allSources = [root, data, ...nested];
+
       const pick = (...keys) => {
-        for (const source of [data, ...nested]) {
+        for (const source of allSources) {
           for (const key of keys) {
             const value = source[key];
             const normalized = firstNonEmpty(value);
@@ -188,6 +207,10 @@ const pageTitle = "Notificaciones";
       };
 
       const amountValue = firstNonEmpty(
+        root.amount,
+        root.total,
+        root.total_amount,
+        root.monto,
         data.amount,
         data.total,
         data.total_amount,
@@ -209,7 +232,7 @@ const pageTitle = "Notificaciones";
         period: pick('period', 'periodo', 'semester', 'semestre', 'month', 'mes'),
         studentName: pick('student_name', 'alumno', 'student', 'user_name'),
         group: pick('group', 'grupo', 'classroom'),
-        originalType: firstNonEmpty(payload?.type)
+        originalType: firstNonEmpty(root.type, payload?.type)
       };
 
       info.extraItems = [
@@ -222,19 +245,69 @@ const pageTitle = "Notificaciones";
         { label: 'Grupo', value: info.group }
       ].filter(item => item.value);
 
+      if (info.extraItems.length === 0) {
+        const genericIgnore = new Set([
+          'id', 'title', 'subject', 'heading', 'message', 'body', 'description', 'type',
+          'created_at', 'updated_at', 'read_at', 'notifiable_id', 'notifiable_type'
+        ]);
+
+        const genericLabels = {
+          amount: 'Monto',
+          total: 'Total',
+          total_amount: 'Total',
+          monto: 'Monto',
+          concept_name: 'Concepto',
+          concept: 'Concepto',
+          concepto: 'Concepto',
+          reference: 'Referencia',
+          folio: 'Folio',
+          status: 'Estado',
+          due_date: 'Vence',
+          period: 'Periodo',
+          student_name: 'Alumno',
+          group: 'Grupo'
+        };
+
+        const genericItems = [];
+        for (const source of allSources) {
+          for (const [key, rawValue] of Object.entries(source)) {
+            if (genericIgnore.has(key)) continue;
+            if (rawValue === null || rawValue === undefined) continue;
+            if (typeof rawValue === 'object') continue;
+            const value = String(rawValue).trim();
+            if (!value) continue;
+            genericItems.push({
+              label: genericLabels[key] || key.replace(/_/g, ' '),
+              value
+            });
+          }
+        }
+
+        const dedup = [];
+        const seen = new Set();
+        for (const item of genericItems) {
+          const sig = `${item.label}:${item.value}`;
+          if (seen.has(sig)) continue;
+          seen.add(sig);
+          dedup.push(item);
+          if (dedup.length >= 6) break;
+        }
+        info.extraItems = dedup;
+      }
+
       return info;
     }
 
     function normalizeNotification(notif, isRead) {
-      const data = notif.data || {};
+      const data = asObject(notif.data);
       const type = getNotificationType(notif.type, data.type);
-      const extras = collectExtraFields(data);
+      const extras = collectExtraFields(data, notif);
       
       return {
         id: notif.id,
         type: type.key,
-        title: firstNonEmpty(data.title, data.subject, data.heading) || 'Notificación',
-        message: firstNonEmpty(data.message, data.body, data.description),
+        title: firstNonEmpty(data.title, data.subject, data.heading, notif.title) || 'Notificación',
+        message: firstNonEmpty(data.message, data.body, data.description, notif.message),
         date: new Date(notif.created_at),
         read: isRead,
         icon: type.icon,
@@ -257,13 +330,16 @@ const pageTitle = "Notificaciones";
 
     // Determinar tipo de notificación
     function getNotificationType(classType, dataType) {
-      if (classType.includes('Payment') || dataType?.includes('payment')) {
+      const className = String(classType || '');
+      const dataKind = String(dataType || '').toLowerCase();
+
+      if (className.includes('Payment') || dataKind.includes('payment') || dataKind.includes('pago')) {
         return { key: 'payment', icon: '💰', color: 'emerald' };
       }
-      if (classType.includes('Academic') || dataType?.includes('academic')) {
+      if (className.includes('Academic') || dataKind.includes('academic') || dataKind.includes('academ')) {
         return { key: 'academic', icon: '📚', color: 'blue' };
       }
-      if (classType.includes('Administrative') || dataType?.includes('administrative')) {
+      if (className.includes('Administrative') || dataKind.includes('administrative') || dataKind.includes('admin')) {
         return { key: 'administrative', icon: '📋', color: 'purple' };
       }
       return { key: 'general', icon: '📢', color: 'pink' };
