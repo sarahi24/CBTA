@@ -28,6 +28,7 @@ export async function GET({ params, request }) {
   try {
     const upstreamRes = await fetch(upstreamUrl, {
       method: 'GET',
+      redirect: 'manual',
       headers: {
         'Authorization': auth,
         'Accept': 'application/json',
@@ -36,11 +37,70 @@ export async function GET({ params, request }) {
       }
     });
 
-    const bodyText = await upstreamRes.text();
-    return new Response(bodyText, {
+    const contentType = upstreamRes.headers.get('content-type') || '';
+    const locationHeader = upstreamRes.headers.get('location');
+
+    if (locationHeader && [301, 302, 303, 307, 308].includes(upstreamRes.status)) {
+      const expiresIn = (() => {
+        try {
+          const url = new URL(locationHeader);
+          return Number(url.searchParams.get('X-Goog-Expires') || url.searchParams.get('Expires') || 0) || null;
+        } catch {
+          return null;
+        }
+      })();
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          url: locationHeader,
+          expires_in: expiresIn,
+          content_type: 'text/html'
+        },
+        message: 'Recibo generado correctamente'
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
+      });
+    }
+
+    if (contentType.includes('application/json')) {
+      const bodyText = await upstreamRes.text();
+      return new Response(bodyText, {
+        status: upstreamRes.status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
+      });
+    }
+
+    if (upstreamRes.ok) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          url: upstreamRes.url,
+          expires_in: null,
+          content_type: contentType || 'text/html'
+        },
+        message: 'Recibo generado correctamente'
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
+      });
+    }
+
+    const errorText = await upstreamRes.text();
+    return new Response(errorText || JSON.stringify({ success: false, message: 'Error al generar el recibo', errors: {} }), {
       status: upstreamRes.status,
       headers: {
-        'Content-Type': upstreamRes.headers.get('content-type') || 'application/json',
+        'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       }
     });

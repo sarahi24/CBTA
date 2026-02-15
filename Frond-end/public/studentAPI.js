@@ -199,9 +199,14 @@ window.StudentAPI = {
 
       const payload = await response.json().catch(() => ({}));
       const data = payload?.data || {};
+      const receiptUrl = data.url || data.receipt_url || payload?.url || null;
+
+      if (!receiptUrl) {
+        throw new Error(payload?.message || 'No se recibió URL del recibo');
+      }
 
       return {
-        url: data.url || null,
+        url: receiptUrl,
         expiresIn: data.expires_in ?? null,
         contentType: data.content_type || null,
         message: payload?.message || ''
