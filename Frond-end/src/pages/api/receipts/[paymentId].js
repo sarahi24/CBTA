@@ -1,5 +1,7 @@
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 
+export const prerender = false;
+
 export async function GET({ params, request }) {
   const paymentId = params?.paymentId;
 
