@@ -109,6 +109,36 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function pickReceiptUrl(payload) {
+  const search = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      return (value.startsWith('http://') || value.startsWith('https://')) ? value : null;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = search(item);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (typeof value === 'object') {
+      const direct = value.url || value.receipt_url || value.signed_url || value.link || value.href;
+      const directFound = search(direct);
+      if (directFound) return directFound;
+
+      const nested = [value.data, value.result, value.receipt, value.payload];
+      for (const item of nested) {
+        const found = search(item);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  return search(payload);
+}
+
 export const StudentAPI = {
   /**
    * PAGOS - GET /api/v1/payments/history/{studentId?}
@@ -249,7 +279,7 @@ export const StudentAPI = {
 
       const payload = await response.json().catch(() => ({}));
       const data = payload?.data || {};
-      const receiptUrl = data.url || data.receipt_url || payload?.url || null;
+      const receiptUrl = pickReceiptUrl(payload);
 
       if (!receiptUrl) {
         throw new Error(payload?.message || 'No se recibió URL del recibo');

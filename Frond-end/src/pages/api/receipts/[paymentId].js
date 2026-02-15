@@ -1,5 +1,34 @@
 const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
 
+function firstUrl(value) {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    return null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = firstUrl(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value === 'object') {
+    const direct = value.url || value.receipt_url || value.signed_url || value.link || value.href;
+    const directFound = firstUrl(direct);
+    if (directFound) return directFound;
+
+    const nestedKeys = ['data', 'result', 'receipt', 'payload'];
+    for (const key of nestedKeys) {
+      if (key in value) {
+        const found = firstUrl(value[key]);
+        if (found) return found;
+      }
+    }
+  }
+  return null;
+}
+
 export const prerender = false;
 
 export async function GET({ params, request }) {
@@ -69,6 +98,36 @@ export async function GET({ params, request }) {
 
     if (contentType.includes('application/json')) {
       const bodyText = await upstreamRes.text();
+      const parsed = (() => {
+        try {
+          return JSON.parse(bodyText);
+        } catch {
+          return null;
+        }
+      })();
+
+      if (parsed && upstreamRes.ok) {
+        const url = firstUrl(parsed);
+        if (url) {
+          const data = parsed?.data && typeof parsed.data === 'object' ? parsed.data : {};
+          return new Response(JSON.stringify({
+            ...parsed,
+            success: parsed?.success ?? true,
+            data: {
+              ...data,
+              url,
+              content_type: data.content_type || 'text/html'
+            }
+          }), {
+            status: upstreamRes.status,
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-store'
+            }
+          });
+        }
+      }
+
       return new Response(bodyText, {
         status: upstreamRes.status,
         headers: {
