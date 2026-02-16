@@ -509,11 +509,22 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 passwordSuccessMessage: '',
                 passwordErrorMessage: '',
                 isStudent: true,
+                isApplicant: false,
 
                 async init() {
-                    await this.loadStudentData();
-                    this.loadStudentDetails();
                     this.detectRole();
+                    await this.loadStudentData();
+                    this.detectRole();
+
+                    if (this.isStudent) {
+                        await this.loadStudentDetails();
+                    } else {
+                        this.nControl = this.nControl || 'No disponible';
+                        this.semestre = this.semestre || 'No disponible';
+                        this.group = this.group || 'No disponible';
+                        this.workshop = this.workshop || 'No disponible';
+                        this.careerName = this.careerName || 'No disponible';
+                    }
                 },
 
                 detectRole() {
@@ -549,6 +560,18 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
 
                             this.rol = roleNames[0] || '';
 
+                            const hasApplicantRole = roleNames.some(role =>
+                                role.includes('applicant') ||
+                                role.includes('aspirante') ||
+                                role.includes('solicitante')
+                            );
+
+                            const hasStudentRole = roleNames.some(role =>
+                                role === 'student' ||
+                                role.includes('estudiante') ||
+                                role.includes('alumno')
+                            );
+
                             const hasAdminRole = roleNames.some(role =>
                                 role.includes('admin') ||
                                 role.includes('administrador') ||
@@ -556,11 +579,13 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 role.includes('financial-staff')
                             );
 
-                            this.isStudent = !hasAdminRole;
+                            this.isApplicant = hasApplicantRole;
+                            this.isStudent = hasStudentRole && !hasAdminRole && !hasApplicantRole;
                         }
                     } catch (e) {
                         console.error('Error detecting role:', e);
                         this.rol = '';
+                        this.isApplicant = false;
                         this.isStudent = true;
                     }
                 },
