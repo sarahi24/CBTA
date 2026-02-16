@@ -6,9 +6,7 @@ const MAX_SEMESTER = 10;
 const SEMESTERS = Array.from({ length: MAX_SEMESTER }, (_, i) => i + 1);
 
 // Las carreras se cargarán dinámicamente desde API en el cliente
-const CAREERS = [];
-
-const careerEntries = CAREERS.map(c => [c.id, c.career_name]);
+const careerEntries: Array<[string, string]> = [];
 const CAREER_MAP = Object.fromEntries([['', 'Sin Carrera'], ...careerEntries]);
 
 const careerMapJSON = JSON.stringify(CAREER_MAP);
@@ -26,6 +24,7 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 body {
   font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   background-color: #F8F9FA;
+    overflow-x: hidden;
 }
 
 .badge-pending { background-color: var(--status-pending-bg); color: var(--status-pending-text); }
@@ -50,19 +49,19 @@ body {
   <!-- Load StudentAPI globally before any module scripts -->
   <script src="/studentAPI.js" is:inline></script>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 min-h-screen bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5">
+<div class="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-10 min-h-screen bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5 overflow-x-hidden">
 
-  <header class="flex flex-wrap items-center justify-between mb-10 gap-4 bg-white rounded-2xl shadow-lg px-6 py-5">
-    <div class="flex items-center gap-4">
+    <header class="flex flex-wrap items-center justify-between mb-10 gap-4 bg-white rounded-2xl shadow-lg px-4 sm:px-6 py-4 sm:py-5 overflow-hidden">
+        <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 w-full">
       <div class="p-3 bg-gradient-to-br from-[#2D584C] to-[#1e3d35] rounded-2xl text-white shadow-xl shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
       </div>
-      <div>
-        <h1 class="text-xl sm:text-3xl font-black text-[#2D584C] tracking-tight leading-tight flex items-center gap-3">
-          Estudiantes Registrados
-          <span class="text-[10px] sm:text-xs bg-[#2D584C]/10 text-[#2D584C] px-3 py-1 rounded-full font-semibold">Gestión Académica</span>
+            <div class="min-w-0 flex-1">
+                <h1 class="text-lg sm:text-3xl font-black text-[#2D584C] tracking-tight leading-tight flex flex-wrap items-center gap-2 sm:gap-3 break-words">
+                    <span class="min-w-0 break-words">Estudiantes Registrados</span>
+                    <span class="text-[10px] sm:text-xs bg-[#2D584C]/10 text-[#2D584C] px-2 sm:px-3 py-1 rounded-full font-semibold whitespace-nowrap">Gestión Académica</span>
         </h1>
-        <p class="text-gray-600 text-xs sm:text-sm mt-2 font-medium">Registro y control de alumnos inscritos</p>
+                <p class="text-gray-600 text-xs sm:text-sm mt-2 font-medium break-words">Registro y control de alumnos inscritos</p>
       </div>
     </div>
   </header>
