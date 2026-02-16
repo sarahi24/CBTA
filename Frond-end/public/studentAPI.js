@@ -68,6 +68,10 @@ function resolveStudentPortalRole(role) {
   return 'student';
 }
 
+function resolveApiAccessRole(effectiveRole) {
+  return effectiveRole === 'applicant' ? 'student' : effectiveRole;
+}
+
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
     const currentToken = localStorage.getItem('access_token');
@@ -139,6 +143,7 @@ window.StudentAPI = {
   async getPaymentHistory(studentId, token, forceRefresh = false, role = 'student', perPage = 15, page = 1) {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/payments/history/${studentId}` : `${API_BASE}/payments/history`);
       if (perPage) url.searchParams.append('perPage', String(perPage));
       if (page) url.searchParams.append('page', String(page));
@@ -152,7 +157,7 @@ window.StudentAPI = {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'X-User-Role': effectiveRole,
+            'X-User-Role': apiRole,
             'X-User-Permission': 'view.payments.history'
           }
         });
@@ -210,6 +215,7 @@ window.StudentAPI = {
   async getPaymentById(paymentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const endpoint = `${API_BASE}/payments/history/payment/${paymentId}`;
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -217,7 +223,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.payments.history'
         }
       });
@@ -233,6 +239,7 @@ window.StudentAPI = {
   async downloadPaymentReceipt(paymentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const endpoint = `/api/receipts/${paymentId}?_=${Date.now()}`;
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -240,7 +247,7 @@ window.StudentAPI = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.receipt'
         }
       });
@@ -278,6 +285,7 @@ window.StudentAPI = {
   async getPendingTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/pending/${studentId}` : `${API_BASE}/dashboard/pending`);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {
@@ -286,7 +294,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.own.pending.concepts.summary'
         }
       });
@@ -305,6 +313,7 @@ window.StudentAPI = {
   async getPaidTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/paid/${studentId}` : `${API_BASE}/dashboard/paid`);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {
@@ -313,7 +322,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.own.paid.concepts.summary'
         }
       });
@@ -332,6 +341,7 @@ window.StudentAPI = {
   async getOverdueTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/overdue/${studentId}` : `${API_BASE}/dashboard/overdue`);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
       const response = await fetch(url.toString(), {
@@ -340,7 +350,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.own.overdue.concepts.summary'
         }
       });
@@ -389,6 +399,7 @@ window.StudentAPI = {
   async getDashboardHistory(studentId, token, page = 1, perPage = 15, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/history/${studentId}` : `${API_BASE}/dashboard/history`;
       const url = new URL(endpoint);
       url.searchParams.append('page', String(page));
@@ -401,7 +412,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.payments.summary'
         }
       });
@@ -416,11 +427,12 @@ window.StudentAPI = {
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       const useStudentId = shouldUseStudentId(effectiveRole, studentId);
       // If studentId provided, use /pending-payments/{studentId}
       // Otherwise use /pending-payments for current user
       const endpoint = useStudentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
-      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, useStudentId: ${useStudentId}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
+      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRole: ${apiRole}, useStudentId: ${useStudentId}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
       console.log(`🔍 [StudentAPI] getPendingPayments - Endpoint: ${endpoint}, forceRefresh: ${forceRefresh}`);
       
       const url = new URL(endpoint);
@@ -437,7 +449,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'view.pending.concepts'
         }
       });
@@ -468,6 +480,7 @@ window.StudentAPI = {
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
       // If studentId provided, use /pending-payments/overdue/{studentId}
       // Otherwise use /pending-payments/overdue for current user
       const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
@@ -482,7 +495,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole
+          'X-User-Role': apiRole
         }
       });
       if (response.status === 403) {
