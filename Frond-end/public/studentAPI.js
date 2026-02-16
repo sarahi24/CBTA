@@ -71,7 +71,7 @@ function resolveStudentPortalRole(role) {
 }
 
 function resolveApiAccessRole(effectiveRole) {
-  return effectiveRole === 'applicant' ? 'student' : effectiveRole;
+  return effectiveRole === 'parent' ? 'parent' : 'student';
 }
 
 function handleAuthError(statusCode) {
@@ -894,4 +894,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r23)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r24)');

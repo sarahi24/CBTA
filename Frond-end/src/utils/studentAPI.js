@@ -56,6 +56,10 @@ function resolveStudentPortalRole(role) {
   return normalizeStudentPortalRole(role);
 }
 
+function resolveApiAccessRole(effectiveRole) {
+  return effectiveRole === 'parent' ? 'parent' : 'student';
+}
+
 /**
  * Helper: Detecta errores de autenticación (401)
  */
