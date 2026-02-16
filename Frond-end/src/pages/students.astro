@@ -193,6 +193,190 @@ document.addEventListener('click', (e) => {
     }
 });
 
+function toNumber(value) {
+    if (value === null || value === undefined || value === '') return 0;
+    const parsed = Number(String(value).replace(/[$,\s]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function pickFirst(item, keys) {
+    for (const key of keys) {
+        if (item?.[key] !== undefined && item?.[key] !== null && item?.[key] !== '') {
+            return item[key];
+        }
+    }
+    return null;
+}
+
+function extractPaginatedList(response) {
+    const payload = response?.data;
+    if (!payload) return null;
+
+    const topPage = payload.currentPage ?? payload.current_page ?? 1;
+    const topLast = payload.lastPage ?? payload.last_page ?? 1;
+    const topTotal = payload.total ?? 0;
+
+    const candidates = [
+        payload?.payments,
+        payload?.students,
+        payload?.items,
+        payload?.data?.payments,
+        payload?.data?.students,
+        payload?.data?.items,
+        payload?.data,
+        payload
+    ];
+
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+
+        if (Array.isArray(candidate)) {
+            return {
+                items: candidate,
+                currentPage: topPage,
+                lastPage: topLast,
+                total: topTotal || candidate.length
+            };
+        }
+
+        if (Array.isArray(candidate.items)) {
+            return {
+                items: candidate.items,
+                currentPage: candidate.currentPage ?? candidate.current_page ?? topPage,
+                lastPage: candidate.lastPage ?? candidate.last_page ?? topLast,
+                total: candidate.total ?? topTotal ?? candidate.items.length
+            };
+        }
+    }
+
+    return null;
+}
+
+function normalizeStudentSummary(rawStudent) {
+    const userData = rawStudent?.user_data || rawStudent?.student || rawStudent?.user || {};
+    const careerObj = rawStudent?.career || userData?.career || {};
+
+    const controlNumber = String(
+        pickFirst(rawStudent, ['n_control', 'control_number', 'numero_control', 'student_control_number', 'matricula', 'no_control']) ??
+        pickFirst(userData, ['n_control', 'control_number', 'numero_control', 'student_control_number', 'matricula', 'no_control']) ??
+        ''
+    ).trim();
+
+    const fullName = String(
+        pickFirst(rawStudent, ['fullName', 'full_name', 'student_name', 'name', 'nombre_completo']) ??
+        pickFirst(userData, ['fullName', 'full_name', 'student_name', 'name', 'nombre_completo']) ??
+        `${rawStudent?.name || userData?.name || ''} ${rawStudent?.lastName || userData?.lastName || userData?.apellido_paterno || ''} ${rawStudent?.secondLastName || userData?.secondLastName || userData?.apellido_materno || ''}`
+    ).replace(/\s+/g, ' ').trim();
+
+    const careerId = String(
+        pickFirst(rawStudent, ['career_id', 'id_career', 'carrera_id', 'id_carrera']) ??
+        pickFirst(userData, ['career_id', 'id_career', 'carrera_id', 'id_carrera']) ??
+        careerObj?.id ??
+        ''
+    ).trim();
+
+    const careerName = String(
+        pickFirst(rawStudent, ['career_name', 'careerName', 'nombre_carrera', 'program_name', 'carrera']) ??
+        pickFirst(userData, ['career_name', 'careerName', 'nombre_carrera', 'program_name', 'carrera']) ??
+        careerObj?.career_name ??
+        careerObj?.name ??
+        (window.careerMap?.[careerId] || '')
+    ).trim();
+
+    const semesterValue = pickFirst(rawStudent, ['semestre', 'semester', 'current_semester']) ??
+        pickFirst(userData, ['semestre', 'semester', 'current_semester']);
+
+    return {
+        n_control: controlNumber || 'N/A',
+        fullName: fullName || 'Sin nombre',
+        semestre: semesterValue ?? '-',
+        career_id: careerId,
+        career_name: careerName || 'N/A',
+        num_pending: toNumber(pickFirst(rawStudent, ['num_pending', 'pending_count', 'pendientes', 'pending', 'numPending'])),
+        num_expired: toNumber(pickFirst(rawStudent, ['num_expired', 'expired_count', 'overdue_count', 'vencidos', 'expired', 'overdue'])),
+        total_amount_pending: toNumber(pickFirst(rawStudent, ['total_amount_pending', 'pending_amount', 'amount_pending', 'adeudo_total', 'debt_amount', 'total_pending', 'amount_due'])),
+        total_paid: toNumber(pickFirst(rawStudent, ['total_paid', 'paid_amount', 'amount_paid', 'total_pagado', 'total_paid_amount']))
+    };
+}
+
+function buildStudentSummariesFromPayments(paymentRows) {
+    const groupedByStudent = new Map();
+
+    for (const row of paymentRows) {
+        const normalizedBase = normalizeStudentSummary(row);
+        const studentId = pickFirst(row, ['student_id', 'user_id', 'id_student', 'idUser']) || normalizedBase.n_control;
+        const key = String(studentId || normalizedBase.n_control || normalizedBase.fullName || Math.random());
+
+        if (!groupedByStudent.has(key)) {
+            groupedByStudent.set(key, {
+                ...normalizedBase,
+                num_pending: 0,
+                num_expired: 0,
+                total_amount_pending: 0,
+                total_paid: 0
+            });
+        }
+
+        const current = groupedByStudent.get(key);
+        const amount = toNumber(pickFirst(row, ['amount', 'total', 'amount_total', 'price', 'monto', 'total_amount', 'amount_paid']));
+        const status = String(pickFirst(row, ['status', 'payment_status', 'estado']) || '').toLowerCase();
+        const dueDate = pickFirst(row, ['due_date', 'dueDate', 'fecha_limite', 'expiration_date']);
+        const isPastDue = dueDate ? new Date(dueDate).getTime() < Date.now() : false;
+        const isPaid = ['paid', 'pagado', 'completed', 'succeeded', 'success'].some(token => status.includes(token));
+
+        if (isPaid) {
+            current.total_paid += amount;
+        } else {
+            current.num_pending += 1;
+            current.total_amount_pending += amount;
+            if (isPastDue || ['expired', 'vencido', 'overdue'].some(token => status.includes(token))) {
+                current.num_expired += 1;
+            }
+        }
+    }
+
+    return Array.from(groupedByStudent.values());
+}
+
+function applyStudentFilters(students) {
+    let filteredStudents = Array.isArray(students) ? students : [];
+
+    if (filters.carrera) {
+        const selectedCareer = String(filters.carrera).trim();
+        const selectedCareerName = (window.careerMap?.[selectedCareer] || '').trim().toLowerCase();
+
+        filteredStudents = filteredStudents.filter(student => {
+            const studentCareerId = String(student.career_id || '').trim();
+            const studentCareerName = String(student.career_name || '').trim().toLowerCase();
+            return (
+                studentCareerId === selectedCareer ||
+                (selectedCareerName && studentCareerName === selectedCareerName)
+            );
+        });
+    }
+
+    if (filters.semestre) {
+        const selectedSemester = String(filters.semestre).trim();
+        filteredStudents = filteredStudents.filter(student => String(student.semestre || '').trim() === selectedSemester);
+    }
+
+    return filteredStudents;
+}
+
+async function fetchStudentsResponse(token, requestOptions) {
+    try {
+        return await window.StudentAPI.getPaymentStudents(token, requestOptions);
+    } catch (primaryError) {
+        console.warn('⚠️ /payments/students falló, intentando /payments como fallback:', primaryError);
+        return await window.StudentAPI.getAllPayments(token, {
+            search: requestOptions.search,
+            page: requestOptions.page,
+            perPage: requestOptions.perPage,
+            forceRefresh: requestOptions.forceRefresh
+        });
+    }
+}
+
 // Cargar estudiantes desde API
 async function loadStudents(forceRefresh = false) {
     if (isLoading) return;
@@ -231,131 +415,47 @@ async function loadStudents(forceRefresh = false) {
             return;
         }
 
-        const response = await window.StudentAPI.getPaymentStudents(token, {
+        const requestOptions = {
             search: searchTerm,
             page: currentPage,
             perPage: ITEMS_PER_PAGE,
             forceRefresh: forceRefresh,
             role: role,
             permission: 'view.payments.student.summary'
-        });
+        };
+
+        const response = await fetchStudentsResponse(token, requestOptions);
 
         console.log('📡 Respuesta del servidor:', response);
         console.log('📊 Estructura completa:', JSON.stringify(response, null, 2));
 
-        if (response.success && response.data) {
-            let studentsData = null;
-            
-            console.log('🔍 Buscando datos en:', {
-                'response.data.payments': !!response.data.payments,
-                'response.data.students': !!response.data.students,
-                'Array.isArray(response.data)': Array.isArray(response.data),
-                'response.data.data': !!response.data.data,
-                'response.data.items': !!response.data.items
-            });
-            
-            if (response.data.payments) {
-                console.log('✅ Usando response.data.payments');
-                studentsData = response.data.payments;
-            }
-            else if (response.data.students) {
-                console.log('✅ Usando response.data.students');
-                studentsData = response.data.students;
-            }
-            else if (response.data.items) {
-                console.log('✅ Usando response.data.items directamente');
-                studentsData = response.data;
-            }
-            else if (Array.isArray(response.data)) {
-                console.log('✅ response.data es un array');
-                studentsData = {
-                    items: response.data,
-                    currentPage: 1,
-                    lastPage: 1,
-                    total: response.data.length
-                };
-            }
-            else if (response.data.data) {
-                console.log('✅ Usando response.data.data');
-                studentsData = response.data.data.payments || response.data.data;
-            }
-            
-            console.log('📦 studentsData:', studentsData);
-            
-            if (studentsData && studentsData.items) {
-                console.log(`✅ Estudiantes cargados: ${studentsData.items.length}`);
-                console.log('🔍 Primer estudiante completo:', studentsData.items[0]);
-                console.log('📋 Todas las claves del estudiante:', Object.keys(studentsData.items[0]).join(', '));
-                
-                // Debug de campos de carrera
-                const firstStudent = studentsData.items[0];
-                console.log('🏫 Campos relacionados con CARRERA:');
-                console.log('  - career_id:', firstStudent.career_id);
-                console.log('  - id_career:', firstStudent.id_career);
-                console.log('  - carrera_id:', firstStudent.carrera_id);
-                console.log('  - career:', firstStudent.career);
-                console.log('  - id_carrera:', firstStudent.id_carrera);
-                console.log('  - career_name:', firstStudent.career_name);
-                console.log('  - careerName:', firstStudent.careerName);
-                console.log('  - nombre_carrera:', firstStudent.nombre_carrera);
-                
-                // Debug de campos de semestre (para comparación)
-                console.log('📚 Campo de SEMESTRE:');
-                console.log('  - semestre:', firstStudent.semestre);
-                
-                // Aplicar filtros locales
-                let filteredStudents = studentsData.items;
-                
-                // Filtrar por carrera
-                if (filters.carrera) {
-                    console.log(`\n🎓 Filtrando por carrera ID: "${filters.carrera}"`);
-                    
-                    // Obtener el nombre de la carrera desde el mapa
-                    const careerName = window.careerMap ? window.careerMap[filters.carrera] : null;
-                    console.log(`   Nombre de carrera asociado: "${careerName}"`);
-                    
-                    const before = filteredStudents.length;
-                    
-                    if (careerName) {
-                        // Filtrar por nombre de carrera
-                        filteredStudents = filteredStudents.filter(s => {
-                            const match = String(s.career_name || '').trim() === String(careerName).trim();
-                            return match;
-                        });
-                    } else {
-                        // Si no hay nombre, intentar por ID
-                        filteredStudents = filteredStudents.filter(s => {
-                            const careerField = s.career_id || s.id_career || s.carrera_id || s.career || s.id_carrera;
-                            const match = String(careerField) === String(filters.carrera);
-                            return match;
-                        });
-                    }
-                    
-                    console.log(`📊 Resultado: ${before} → ${filteredStudents.length} estudiantes`);
-                }
-                
-                // Filtrar por semestre
-                if (filters.semestre) {
-                    console.log(`\n📚 Filtrando por semestre: "${filters.semestre}"`);
-                    const before = filteredStudents.length;
-                    
-                    filteredStudents = filteredStudents.filter(s => {
-                        const match = String(s.semestre || '') === String(filters.semestre);
-                        return match;
-                    });
-                    
-                    console.log(`📊 Resultado: ${before} → ${filteredStudents.length} estudiantes`);
-                }
-                
-                currentPage = studentsData.currentPage || 1;
-                lastPage = studentsData.lastPage || 1;
-                totalRecords = filteredStudents.length;
-                
-                renderTable(filteredStudents);
-                updatePaginationInfo();
-            } else {
+        const isResponseOk = response?.success !== false && !!response?.data;
+
+        if (isResponseOk) {
+            const extracted = extractPaginatedList(response);
+
+            if (!extracted || !Array.isArray(extracted.items)) {
                 showError('Estructura de datos incorrecta del servidor');
+                return;
             }
+
+            const normalizedList = extracted.items.map(normalizeStudentSummary);
+            const hasSummaryFields = normalizedList.some(student =>
+                student.num_pending > 0 || student.num_expired > 0 || student.total_amount_pending > 0 || student.total_paid > 0
+            );
+
+            const studentsList = hasSummaryFields
+                ? normalizedList
+                : buildStudentSummariesFromPayments(extracted.items);
+
+            const filteredStudents = applyStudentFilters(studentsList);
+
+            currentPage = Number(extracted.currentPage || 1);
+            lastPage = Number(extracted.lastPage || 1);
+            totalRecords = Number(extracted.total || filteredStudents.length);
+
+            renderTable(filteredStudents);
+            updatePaginationInfo();
         } else {
             showError('No se pudieron cargar los estudiantes');
         }
