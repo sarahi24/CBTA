@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r29" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r30" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -76,6 +76,10 @@ const title = 'Panel de Estudiante';
                 return String(roleValue).toLowerCase().trim();
               });
 
+            const hasApplicantLikeRole = roleCandidates.some(function(roleValue) {
+              return roleValue === 'applicant' || roleValue === 'unverified';
+            });
+
             const hasParentRole = roleCandidates.some(function(roleValue) {
               return roleValue === 'parent' || roleValue === 'padre';
             });
@@ -83,7 +87,9 @@ const title = 'Panel de Estudiante';
             const roleForPortal = hasParentRole ? 'parent' : 'student';
             this.portalRole = roleForPortal;
             const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
-            this.roleNotice = '';
+            this.roleNotice = hasApplicantLikeRole
+              ? 'Tu cuenta está como applicant/unverified. Si el backend no tiene habilitados permisos de lectura de dashboard, los totales pueden mostrarse en 0 temporalmente.'
+              : '';
             this.emptyPaymentsMessage = 'No hay registros de pagos';
 
             const pendingPaymentsRes = await window.StudentAPI

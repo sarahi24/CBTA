@@ -71,7 +71,7 @@ function resolveApiAccessRole(effectiveRole) {
 function getApiRoleCandidates(effectiveRole) {
   const primaryRole = resolveApiAccessRole(effectiveRole);
   if (primaryRole === 'applicant' || primaryRole === 'unverified') {
-    return ['student', primaryRole];
+    return ['student'];
   }
   return [primaryRole];
 }
@@ -554,9 +554,7 @@ window.StudentAPI = {
       const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         ...(useIdRoute ? [`${API_BASE}/pending-payments/${studentId}`] : []),
-        `${API_BASE}/pending-payments`,
-        ...(useIdRoute ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : []),
-        `${API_BASE}/pending-payment`
+        `${API_BASE}/pending-payments`
       ];
 
       console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRoles: ${apiRoles.join(',')}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
@@ -626,9 +624,7 @@ window.StudentAPI = {
       const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         ...(useIdRoute ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
-        `${API_BASE}/pending-payments/overdue`,
-        ...(useIdRoute ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : []),
-        `${API_BASE}/pending-payment/overdue`
+        `${API_BASE}/pending-payments/overdue`
       ];
 
       for (const rawEndpoint of endpointCandidates) {
@@ -957,4 +953,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r29)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r30)');
