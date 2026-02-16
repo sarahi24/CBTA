@@ -54,31 +54,39 @@ const forceRefresh = forceRefreshParam === 'true';
       resultType: '${resultParam || ''}',
 
       detectPortalRole() {
-        const userDataRaw = localStorage.getItem('user_data');
-        let inferredRole = '';
+        const userDataCandidates = [
+          localStorage.getItem('user_data'),
+          localStorage.getItem('userData')
+        ].filter(Boolean);
 
-        if (userDataRaw) {
+        const roleValues = [];
+
+        userDataCandidates.forEach((userDataRaw) => {
           try {
-            const userData = JSON.parse(userDataRaw);
+            const parsed = JSON.parse(userDataRaw);
+            const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+
             const roles = [];
             if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
             if (userData?.role) roles.push(userData.role);
             if (userData?.role_name) roles.push(userData.role_name);
             if (userData?.type) roles.push(userData.type);
 
-            const firstRole = roles.find(Boolean);
-            const normalizedFirstRole = typeof firstRole === 'string'
-              ? firstRole
-              : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
-
-            inferredRole = String(normalizedFirstRole || '').toLowerCase().trim();
+            roles.forEach((entry) => {
+              if (!entry) return;
+              if (typeof entry === 'string') {
+                roleValues.push(entry);
+                return;
+              }
+              roleValues.push(entry?.name || entry?.slug || entry?.role || '');
+            });
           } catch (_) {}
-        }
+        });
 
         const roleCandidates = [
           localStorage.getItem('userRole'),
           localStorage.getItem('role'),
-          inferredRole
+          ...roleValues
         ]
           .filter(Boolean)
           .map(function(roleValue) {
@@ -96,6 +104,53 @@ const forceRefresh = forceRefreshParam === 'true';
         if (hasParentRole) return 'parent';
         if (hasApplicantRole) return 'applicant';
         return 'student';
+      },
+
+      async syncPortalRoleFromApi(token) {
+        if (!token || !window.StudentAPI?.getAuthenticatedUser) return;
+
+        try {
+          const response = await window.StudentAPI.getAuthenticatedUser(token);
+          const user = response?.data?.user || response?.user || response?.data || {};
+
+          const rawRoles = [];
+          if (Array.isArray(user?.roles)) rawRoles.push(...user.roles);
+          if (user?.role) rawRoles.push(user.role);
+          if (user?.role_name) rawRoles.push(user.role_name);
+          if (user?.type) rawRoles.push(user.type);
+
+          const normalizedRoles = rawRoles
+            .map((entry) => {
+              if (!entry) return '';
+              if (typeof entry === 'string') return entry;
+              return entry?.name || entry?.slug || entry?.role || '';
+            })
+            .map((value) => String(value).toLowerCase().trim())
+            .filter(Boolean);
+
+          if (!normalizedRoles.length) return;
+
+          const hasParentRole = normalizedRoles.some((roleValue) => roleValue === 'parent' || roleValue === 'padre');
+          const hasApplicantRole = normalizedRoles.some((roleValue) => roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante');
+          const hasStudentRole = normalizedRoles.some((roleValue) => roleValue === 'student' || roleValue === 'estudiante' || roleValue === 'alumno');
+
+          const resolvedRole = hasParentRole
+            ? 'parent'
+            : hasApplicantRole
+              ? 'applicant'
+              : hasStudentRole
+                ? 'student'
+                : '';
+
+          if (!resolvedRole) return;
+
+          this.roleForPortal = resolvedRole;
+          localStorage.setItem('userRole', resolvedRole);
+          localStorage.setItem('role', resolvedRole);
+          console.log('🔍 [Historial] Rol sincronizado desde API:', resolvedRole);
+        } catch (error) {
+          console.warn('⚠️ [Historial] No se pudo sincronizar rol desde API:', error?.message || error);
+        }
       },
 
       openUrlInNewTab(url) {
@@ -121,6 +176,20 @@ const forceRefresh = forceRefreshParam === 'true';
         this.roleForPortal = this.detectPortalRole();
         this.roleNotice = '';
 
+        const token = localStorage.getItem('access_token');
+        if (token && window.StudentAPI) {
+          await this.syncPortalRoleFromApi(token);
+        }
+
+        if (this.roleForPortal === 'applicant') {
+          this.roleNotice = 'Tu cuenta está en proceso. El historial de pagos y recibos estará disponible cuando se active tu perfil de estudiante.';
+          this.pagos = [];
+          this.loading = false;
+          this.initCompleted = true;
+          this.initInProgress = false;
+          return;
+        }
+
         await this.loadHistory();
         // Mostrar modal si hay parÃ¡metro result
         if (this.resultType === 'paid') {
@@ -144,6 +213,12 @@ const forceRefresh = forceRefreshParam === 'true';
       async loadHistory() {
         this.loading = true;
         this.errorMessage = '';
+
+        if (this.roleForPortal === 'applicant') {
+          this.pagos = [];
+          this.loading = false;
+          return;
+        }
 
         if (!window.StudentAPI) {
           this.errorMessage = 'StudentAPI no esta disponible.';
@@ -245,6 +320,11 @@ const forceRefresh = forceRefreshParam === 'true';
       },
 
       async downloadReceipt(paymentId, receiptUrl = null) {
+        if (this.roleForPortal === 'applicant') {
+          this.errorMessage = 'Tu cuenta aún no tiene recibos disponibles.';
+          return;
+        }
+
         if (!window.StudentAPI) {
           this.errorMessage = 'StudentAPI no esta disponible.';
           return;

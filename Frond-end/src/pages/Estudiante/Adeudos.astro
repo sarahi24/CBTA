@@ -112,6 +112,86 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         });
       },
 
+      async syncPortalRoleFromApi(token) {
+        if (!token || !window.StudentAPI?.getAuthenticatedUser) return;
+
+        try {
+          const response = await window.StudentAPI.getAuthenticatedUser(token);
+          const user = response?.data?.user || response?.user || response?.data || {};
+
+          const rawRoles = [];
+          if (Array.isArray(user?.roles)) rawRoles.push(...user.roles);
+          if (user?.role) rawRoles.push(user.role);
+          if (user?.role_name) rawRoles.push(user.role_name);
+          if (user?.type) rawRoles.push(user.type);
+
+          const normalizedRoles = rawRoles
+            .map((entry) => {
+              if (!entry) return '';
+              if (typeof entry === 'string') return entry;
+              return entry?.name || entry?.slug || entry?.role || '';
+            })
+            .map((value) => String(value).toLowerCase().trim())
+            .filter(Boolean);
+
+          if (!normalizedRoles.length) return;
+
+          const hasParentRole = normalizedRoles.some((roleValue) => roleValue === 'parent' || roleValue === 'padre');
+          const hasApplicantRole = normalizedRoles.some((roleValue) => roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante');
+          const hasStudentRole = normalizedRoles.some((roleValue) => roleValue === 'student' || roleValue === 'estudiante' || roleValue === 'alumno');
+
+          const resolvedRole = hasParentRole
+            ? 'parent'
+            : hasApplicantRole
+              ? 'applicant'
+              : hasStudentRole
+                ? 'student'
+                : '';
+
+          if (!resolvedRole) return;
+
+          this.portalRole = resolvedRole;
+          localStorage.setItem('userRole', resolvedRole);
+          localStorage.setItem('role', resolvedRole);
+          console.log('ðŸ” [Adeudos] Rol sincronizado desde API:', resolvedRole);
+        } catch (error) {
+          console.warn('š ï¸ [Adeudos] No se pudo sincronizar rol desde API:', error?.message || error);
+        }
+      },
+
+      async verifyFinancialAccess(token) {
+        if (!token) return false;
+        if (this.portalRole === 'applicant') return false;
+
+        try {
+          const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/users/student-details', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            return true;
+          }
+
+          if (response.status === 404 || response.status === 403) {
+            this.portalRole = 'applicant';
+            localStorage.setItem('userRole', 'applicant');
+            localStorage.setItem('role', 'applicant');
+            this.roleNotice = 'Tu cuenta está en proceso. Los adeudos y métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
+            console.log('🔍 [Adeudos] Acceso financiero no disponible, modo applicant activado por student-details:', response.status);
+            return false;
+          }
+
+          return true;
+        } catch (error) {
+          console.warn('⚠️ [Adeudos] No se pudo validar student-details para acceso financiero:', error?.message || error);
+          return true;
+        }
+      },
+
       closeResultModal() {
         this.showResultModal = false;
       },
@@ -159,6 +239,24 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         console.log('ðŸ” [Adeudos] Rol detectado:', this.portalRole);
         const apiReady = await this.ensureStudentAPI();
         console.log('ðŸ” [Adeudos] StudentAPI disponible:', apiReady);
+
+        if (token && apiReady) {
+          await this.syncPortalRoleFromApi(token);
+          if (this.portalRole === 'applicant') {
+            this.roleNotice = 'Tu cuenta está en proceso. Los adeudos y métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
+          }
+
+          const hasFinancialAccess = await this.verifyFinancialAccess(token);
+          if (!hasFinancialAccess) {
+            this.adeudos = [];
+            this.overdueAdeudos = [];
+            this.tarjetas = [];
+            this.showOverdueAlert = false;
+            this.activeTab = 'pending';
+            this.loadingTab = false;
+            return;
+          }
+        }
 
         if (this.portalRole === 'applicant') {
           this.adeudos = [];
