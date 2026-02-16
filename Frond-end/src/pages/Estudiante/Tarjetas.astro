@@ -192,35 +192,78 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             this.error = '';
 
             try {
-              let endpoint = `https://nginx-production-728f.up.railway.app/api/v1/cards/${this.userId}`;
-              if (forceRefresh) endpoint += '?forceRefresh=true';
-              
               console.log('ðŸ” Cargando tarjetas con token:', this.token ? `${this.token.substring(0, 20)}...` : 'VACÃO');
               if (forceRefresh) console.log('ðŸ”„ Forzando actualizaciÃ³n de tarjetas (POST de pago completado)');
-              
-              const response = await fetch(endpoint, {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${this.token}`,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                  'X-User-Role': this.portalRole,
-                  'X-User-Permission': 'delete.card'
-                }
-              });
 
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('âŒ Response no OK:', response.status, response.statusText, errorData);
-                
-                if (response.status === 429) {
-                  throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+              let data = null;
+
+              if (window.StudentAPI?.getPaymentMethods) {
+                data = await window.StudentAPI.getPaymentMethods(this.userId ? Number(this.userId) : null, this.token, forceRefresh, this.portalRole);
+              } else {
+                const endpointCandidates = [
+                  'https://nginx-production-728f.up.railway.app/api/v1/cards',
+                  `https://nginx-production-728f.up.railway.app/api/v1/cards/${this.userId}`
+                ];
+
+                for (const rawEndpoint of endpointCandidates) {
+                  const url = new URL(rawEndpoint);
+                  if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+
+                  const withPermission = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': 'Bearer ' + this.token,
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                      'X-User-Role': this.portalRole,
+                      'X-User-Permission': 'view.cards'
+                    }
+                  });
+
+                  if (withPermission.ok) {
+                    data = await withPermission.json();
+                    break;
+                  }
+
+                  if (withPermission.status === 429) {
+                    throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+                  }
+
+                  if (withPermission.status !== 403 && withPermission.status !== 404) {
+                    const errorData = await withPermission.json().catch(() => ({}));
+                    throw new Error(errorData.message || `Error ${withPermission.status}: ${withPermission.statusText}`);
+                  }
+
+                  const withoutPermission = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': 'Bearer ' + this.token,
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                      'X-User-Role': this.portalRole
+                    }
+                  });
+
+                  if (withoutPermission.ok) {
+                    data = await withoutPermission.json();
+                    break;
+                  }
+
+                  if (withoutPermission.status === 429) {
+                    throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+                  }
+
+                  if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+                    const errorData = await withoutPermission.json().catch(() => ({}));
+                    throw new Error(errorData.message || `Error ${withoutPermission.status}: ${withoutPermission.statusText}`);
+                  }
                 }
-                
-                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+
+                if (!data) {
+                  data = { success: true, data: { cards: [] } };
+                }
               }
 
-              const data = await response.json();
               console.log('ðŸ“¦ Respuesta completa del servidor:', data);
               
               const cardsArray = Array.isArray(data.data) ? data.data : 
