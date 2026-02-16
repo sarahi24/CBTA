@@ -18,7 +18,7 @@ function normalizeStudentPortalRole(role) {
 }
 
 function shouldUseStudentId(effectiveRole, studentId) {
-  return effectiveRole === 'parent' && !!studentId;
+  return (effectiveRole === 'parent' || effectiveRole === 'applicant') && !!studentId;
 }
 
 function getRoleFromStorage() {
@@ -746,4 +746,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r15)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r16)');

@@ -26,7 +26,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
 ---
 
-<script src="/studentAPI.js?v=20260215r15" is:inline></script>
+<script src="/studentAPI.js?v=20260215r16" is:inline></script>
 
 
 <StudentLayout title={title}>
@@ -119,7 +119,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
         this.roleForPortal = this.detectPortalRole();
         if (this.roleForPortal === 'applicant') {
-          this.roleNotice = 'Tu cuenta está como solicitante. El historial de pagos estará disponible cuando se active como estudiante.';
+          this.roleNotice = 'Tu cuenta está como solicitante. Si tienes cobros o pagos registrados, se mostrarán aquí.';
         }
 
         await this.loadHistory();
@@ -161,18 +161,6 @@ const forceRefresh = forceRefreshParam === 'true';
 
         if (!token) {
           this.errorMessage = 'Usuario no autenticado';
-          this.loading = false;
-          return;
-        }
-
-        if (this.roleForPortal === 'applicant') {
-          this.pagos = [];
-          this.currentPage = 1;
-          this.lastPage = 1;
-          this.total = 0;
-          this.hasMorePages = false;
-          this.nextPage = null;
-          this.previousPage = null;
           this.loading = false;
           return;
         }
