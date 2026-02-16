@@ -6,7 +6,7 @@ const MAX_SEMESTER = 10;
 const SEMESTERS = Array.from({ length: MAX_SEMESTER }, (_, i) => i + 1);
 
 // Las carreras se cargarán dinámicamente desde API en el cliente
-const CAREERS = [];
+const CAREERS: Array<{ id: number | string; career_name: string }> = [];
 
 const careerEntries = CAREERS.map(c => [c.id, c.career_name]);
 const CAREER_MAP = Object.fromEntries([['', 'Sin Carrera'], ...careerEntries]);
@@ -155,8 +155,40 @@ let isLoading = false;
 let searchTerm = '';
 let filters = { carrera: '', semestre: '' };
 let searchTimeout = null;
+let careerLookupNormalized = [];
 
 const CAREER_MAP = window.__CAREER_MAP;
+
+function normalizeCareerText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function resolveCareerIdFromStudent(student) {
+    const directCareerId = student?.career_id ?? student?.id_career ?? student?.carrera_id ?? student?.career ?? student?.id_carrera;
+    if (directCareerId !== undefined && directCareerId !== null && String(directCareerId).trim() !== '') {
+        return String(directCareerId);
+    }
+
+    const rawCareerName = student?.career_name ?? student?.careerName ?? student?.nombre_carrera ?? '';
+    const normalizedStudentCareer = normalizeCareerText(rawCareerName);
+    if (!normalizedStudentCareer) return '';
+
+    const exactMatch = careerLookupNormalized.find(item => item.normalized === normalizedStudentCareer);
+    if (exactMatch) return exactMatch.id;
+
+    const fuzzyMatch = careerLookupNormalized.find(item =>
+        item.normalized.startsWith(normalizedStudentCareer) || normalizedStudentCareer.startsWith(item.normalized)
+    );
+    if (fuzzyMatch) return fuzzyMatch.id;
+
+    return '';
+}
 
 // Wait for StudentAPI to be available
 async function ensureStudentAPI() {
@@ -317,20 +349,10 @@ async function loadStudents(forceRefresh = false) {
                     
                     const before = filteredStudents.length;
                     
-                    if (careerName) {
-                        // Filtrar por nombre de carrera
-                        filteredStudents = filteredStudents.filter(s => {
-                            const match = String(s.career_name || '').trim() === String(careerName).trim();
-                            return match;
-                        });
-                    } else {
-                        // Si no hay nombre, intentar por ID
-                        filteredStudents = filteredStudents.filter(s => {
-                            const careerField = s.career_id || s.id_career || s.carrera_id || s.career || s.id_carrera;
-                            const match = String(careerField) === String(filters.carrera);
-                            return match;
-                        });
-                    }
+                    filteredStudents = filteredStudents.filter(s => {
+                        const resolvedCareerId = resolveCareerIdFromStudent(s);
+                        return String(resolvedCareerId) === String(filters.carrera);
+                    });
                     
                     console.log(`📊 Resultado: ${before} → ${filteredStudents.length} estudiantes`);
                 }
@@ -568,6 +590,12 @@ async function loadCareers() {
             careers.forEach(career => {
                 window.careerMap[career.id] = career.career_name;
             });
+            careerLookupNormalized = careers
+                .map(career => ({
+                    id: String(career.id),
+                    normalized: normalizeCareerText(career.career_name)
+                }))
+                .filter(item => item.normalized);
             console.log('📌 Mapa de carreras guardado:', window.careerMap);
 
             // Llenar el select con las opciones

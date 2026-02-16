@@ -1298,6 +1298,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               return;
             } else {
               const tagsForApi = normalizeApplicantTagsForApi(this.formData.applicantTags);
+              if (!tagsForApi.length) {
+                this.errorMessage = '⚠️ Los tags seleccionados no son válidos para el backend. Usa Aplicantes/Aspirantes o Sin Detalles de Estudiante.';
+                this.isSaving = false;
+                return;
+              }
               payload.applicantTags = tagsForApi;
               payload.applicant_tags = tagsForApi;
             }
@@ -1422,18 +1427,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('✅ Modo: Carrera | Carreras seleccionadas:', payload.careers);
           } else {
-            // Sin filtros seleccionados - aplicar a todos por defecto
-            payload.applies_to = 'todos';
-            console.log('✅ Modo: Todos los estudiantes');
-            // Explícitamente NO incluir campos de filtro
-            delete payload.students;
-            delete payload.student;
-            delete payload.semestre;
-            delete payload.semestres;
-            delete payload.career;
-            delete payload.carrera;
-            delete payload.careers;
-            delete payload.carreras;
+            // Modo restringido sin filtros válidos: bloquear guardado para evitar asignación global accidental.
+            this.errorMessage = '⚠️ Alcance restringido incompleto: selecciona al menos un filtro válido antes de guardar.';
+            this.isSaving = false;
+            return;
           }
         }
         console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
