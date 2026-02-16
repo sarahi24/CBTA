@@ -208,6 +208,82 @@ function pickFirst(item, keys) {
     return null;
 }
 
+function normalizeControlNumber(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized || normalized.toLowerCase() === 'n/a' || normalized === '-') return 'N/A';
+    return normalized;
+}
+
+function normalizeSemesterValue(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    const asString = String(value).trim();
+    const match = asString.match(/\d+/);
+    if (!match) return '-';
+    const parsed = Number(match[0]);
+    if (!Number.isFinite(parsed) || parsed <= 0) return '-';
+    return String(parsed);
+}
+
+function getStudentUniqueKey(student) {
+    const explicitId = pickFirst(student, ['student_id', 'user_id', 'id_student', 'idUser', 'studentId', 'userId', 'id']);
+    if (explicitId !== null && explicitId !== undefined && explicitId !== '') {
+        return `id:${String(explicitId).trim()}`;
+    }
+
+    const control = normalizeControlNumber(pickFirst(student, ['n_control', 'nControl', 'control_number', 'controlNumber', 'numero_control', 'student_control_number', 'matricula', 'no_control']));
+    if (control !== 'N/A') {
+        return `control:${control}`;
+    }
+
+    const fullName = String(
+        pickFirst(student, ['fullName', 'full_name', 'student_name', 'name', 'nombre_completo']) ||
+        `${student?.name || ''} ${student?.lastName || student?.last_name || ''} ${student?.secondLastName || ''}`
+    ).replace(/\s+/g, ' ').trim().toLowerCase();
+
+    return `name:${fullName || Math.random().toString(36).slice(2)}`;
+}
+
+function mergeStudentSummaries(students) {
+    const grouped = new Map();
+
+    for (const student of (Array.isArray(students) ? students : [])) {
+        const key = getStudentUniqueKey(student);
+        const current = grouped.get(key);
+
+        if (!current) {
+            grouped.set(key, { ...student });
+            continue;
+        }
+
+        const currentControl = normalizeControlNumber(current.n_control);
+        const nextControl = normalizeControlNumber(student.n_control);
+        if (currentControl === 'N/A' && nextControl !== 'N/A') {
+            current.n_control = nextControl;
+        }
+
+        if ((!current.career_name || current.career_name === 'N/A') && student.career_name && student.career_name !== 'N/A') {
+            current.career_name = student.career_name;
+        }
+
+        if ((!current.career_id || String(current.career_id).trim() === '') && student.career_id) {
+            current.career_id = student.career_id;
+        }
+
+        const currentSemester = normalizeSemesterValue(current.semestre);
+        const nextSemester = normalizeSemesterValue(student.semestre);
+        if (currentSemester === '-' && nextSemester !== '-') {
+            current.semestre = nextSemester;
+        }
+
+        current.num_pending = Math.max(toNumber(current.num_pending), toNumber(student.num_pending));
+        current.num_expired = Math.max(toNumber(current.num_expired), toNumber(student.num_expired));
+        current.total_amount_pending = Math.max(toNumber(current.total_amount_pending), toNumber(student.total_amount_pending));
+        current.total_paid = Math.max(toNumber(current.total_paid), toNumber(student.total_paid));
+    }
+
+    return Array.from(grouped.values());
+}
+
 function extractPaginatedList(response) {
     const payload = response?.data;
     if (!payload) return null;
@@ -256,11 +332,11 @@ function normalizeStudentSummary(rawStudent) {
     const userData = rawStudent?.user_data || rawStudent?.student || rawStudent?.user || {};
     const careerObj = rawStudent?.career || userData?.career || {};
 
-    const controlNumber = String(
-        pickFirst(rawStudent, ['n_control', 'control_number', 'numero_control', 'student_control_number', 'matricula', 'no_control']) ??
-        pickFirst(userData, ['n_control', 'control_number', 'numero_control', 'student_control_number', 'matricula', 'no_control']) ??
+    const controlNumber = normalizeControlNumber(
+        pickFirst(rawStudent, ['n_control', 'nControl', 'control_number', 'controlNumber', 'numero_control', 'student_control_number', 'matricula', 'no_control']) ??
+        pickFirst(userData, ['n_control', 'nControl', 'control_number', 'controlNumber', 'numero_control', 'student_control_number', 'matricula', 'no_control']) ??
         ''
-    ).trim();
+    );
 
     const fullName = String(
         pickFirst(rawStudent, ['fullName', 'full_name', 'student_name', 'name', 'nombre_completo']) ??
@@ -287,9 +363,9 @@ function normalizeStudentSummary(rawStudent) {
         pickFirst(userData, ['semestre', 'semester', 'current_semester']);
 
     return {
-        n_control: controlNumber || 'N/A',
+        n_control: controlNumber,
         fullName: fullName || 'Sin nombre',
-        semestre: semesterValue ?? '-',
+        semestre: normalizeSemesterValue(semesterValue),
         career_id: careerId,
         career_name: careerName || 'N/A',
         num_pending: toNumber(pickFirst(rawStudent, ['num_pending', 'pending_count', 'pendientes', 'pending', 'numPending'])),
@@ -444,9 +520,11 @@ async function loadStudents(forceRefresh = false) {
                 student.num_pending > 0 || student.num_expired > 0 || student.total_amount_pending > 0 || student.total_paid > 0
             );
 
-            const studentsList = hasSummaryFields
+            const studentsListRaw = hasSummaryFields
                 ? normalizedList
                 : buildStudentSummariesFromPayments(extracted.items);
+
+            const studentsList = mergeStudentSummaries(studentsListRaw);
 
             const filteredStudents = applyStudentFilters(studentsList);
 
@@ -492,12 +570,13 @@ function renderTable(students) {
         const hasExpired = Number(s.num_expired || 0) > 0;
         const pendingAmount = Number(s.total_amount_pending || 0);
         const paidAmount = Number(s.total_paid || 0);
+        const semesterDisplay = normalizeSemesterValue(s.semestre);
 
         return `
             <tr class="hover:bg-[#2D584C]/5 transition border-b border-gray-50">
                 <td class="px-4 py-4 font-mono text-xs font-bold text-gray-600">${s.n_control || 'N/A'}</td>
                 <td class="px-4 py-4 font-bold text-gray-900 text-sm">${s.fullName || 'Sin nombre'}</td>
-                <td class="px-4 py-4 text-center font-medium">${s.semestre || '-'}º</td>
+                <td class="px-4 py-4 text-center font-medium">${semesterDisplay === '-' ? '—' : `${semesterDisplay}º`}</td>
                 <td class="px-4 py-4 text-gray-600 text-xs">${s.career_name || 'N/A'}</td>
                 <td class="px-3 py-4 text-center">
                     <span class="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-black ${
