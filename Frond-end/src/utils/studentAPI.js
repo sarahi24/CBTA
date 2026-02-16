@@ -12,7 +12,8 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante' || roleLower === 'unverified' || roleLower === 'nverified' || roleLower === 'not_verified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') return 'student';
+  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante') return 'applicant';
+  if (roleLower === 'unverified' || roleLower === 'nverified' || roleLower === 'not_verified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') return 'unverified';
 
   return roleLower;
 }
@@ -51,13 +52,20 @@ function shouldUseStudentId(effectiveRole, studentId) {
 }
 
 function resolveStudentPortalRole(role) {
+  const roleValue = typeof role === 'string' ? role.trim() : role;
+  const normalizedRoleArg = roleValue ? normalizeStudentPortalRole(roleValue) : '';
   const storageRole = getRoleFromStorage();
+  if (normalizedRoleArg && normalizedRoleArg !== 'student') return normalizedRoleArg;
   if (storageRole) return storageRole;
-  return normalizeStudentPortalRole(role);
+  if (normalizedRoleArg) return normalizedRoleArg;
+  return 'student';
 }
 
 function resolveApiAccessRole(effectiveRole) {
-  return effectiveRole === 'parent' ? 'parent' : 'student';
+  if (effectiveRole === 'parent') return 'parent';
+  if (effectiveRole === 'applicant') return 'applicant';
+  if (effectiveRole === 'unverified') return 'unverified';
+  return 'student';
 }
 
 /**

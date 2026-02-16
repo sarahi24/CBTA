@@ -12,16 +12,8 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (
-    roleLower === 'applicant' ||
-    roleLower === 'solicitante' ||
-    roleLower === 'aspirante' ||
-    roleLower === 'unverified' ||
-    roleLower === 'nverified' ||
-    roleLower === 'not_verified' ||
-    roleLower === 'sin_verificar' ||
-    roleLower === 'sin verificar'
-  ) return 'student';
+  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante') return 'applicant';
+  if (roleLower === 'unverified' || roleLower === 'nverified' || roleLower === 'not_verified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') return 'unverified';
 
   return roleLower;
 }
@@ -61,17 +53,19 @@ function getRoleFromStorage() {
 
 function resolveStudentPortalRole(role) {
   const roleValue = typeof role === 'string' ? role.trim() : role;
-  if (roleValue) {
-    return normalizeStudentPortalRole(roleValue);
-  }
-
+  const normalizedRoleArg = roleValue ? normalizeStudentPortalRole(roleValue) : '';
   const storageRole = getRoleFromStorage();
+  if (normalizedRoleArg && normalizedRoleArg !== 'student') return normalizedRoleArg;
   if (storageRole) return storageRole;
+  if (normalizedRoleArg) return normalizedRoleArg;
   return 'student';
 }
 
 function resolveApiAccessRole(effectiveRole) {
-  return effectiveRole === 'parent' ? 'parent' : 'student';
+  if (effectiveRole === 'parent') return 'parent';
+  if (effectiveRole === 'applicant') return 'applicant';
+  if (effectiveRole === 'unverified') return 'unverified';
+  return 'student';
 }
 
 function handleAuthError(statusCode) {
@@ -453,13 +447,7 @@ window.StudentAPI = {
   async refreshDashboardCache(studentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-
-      if (effectiveRole === 'applicant') {
-        return {
-          success: true,
-          message: 'La vista de solicitante no requiere actualización de caché.'
-        };
-      }
+      const apiRole = resolveApiAccessRole(effectiveRole);
 
       const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/refresh/${studentId}` : `${API_BASE}/dashboard/refresh`;
       const response = await fetch(endpoint, {
@@ -468,7 +456,7 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
+          'X-User-Role': apiRole,
           'X-User-Permission': 'refresh.all.dashboard'
         }
       });
@@ -894,4 +882,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r24)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r25)');
