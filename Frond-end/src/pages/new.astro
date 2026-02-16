@@ -1171,8 +1171,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         if (this.formData.scopeType === 'estudiantes') {
           this.formData.allStudents = false;
         }
-        if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) < 10) {
-          this.errorMessage = '⚠️ Rellene Título y Monto (mínimo $10.00).';
+        if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) <= 0) {
+          this.errorMessage = '⚠️ Rellene Título y Monto (mayor a $0).';
           return;
         }
         if (!this.formData.startDate || !this.formData.endDate) {
@@ -1227,19 +1227,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         const isCreateMode = !this.formData.id;
         const shouldDisableAfterCreate = isCreateMode && this.formData.status === 'inactive';
 
-        const normalizeApplicantTagsForApi = (tags = []) => {
-          return [...new Set(
-            (Array.isArray(tags) ? tags : [tags])
-              .map(tag => String(tag || '').trim().toLowerCase())
-              .map(tag => {
-                if (tag === 'applicant' || tag === 'aspirante' || tag === 'aspirantes' || tag === 'applicants') return 'applicant';
-                if (tag === 'no_student_details' || tag === 'sin_detalles' || tag === 'sin_datos') return 'no_student_details';
-                return tag;
-              })
-              .filter(Boolean)
-          )];
-        };
-
         const payload = {
           concept_name: this.formData.title,
           description: safeDescription,
@@ -1289,7 +1276,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           if (this.formData.scopeType === 'tags') {
             // Casos especiales - aplica solo a usuarios con esos tags
             payload.applies_to = 'tag';
-            payload.is_global = false;
             // Según documentación OpenAPI: applicantTags debe ser un array con valores singulares
             // Valores válidos: ["applicant", "no_student_details"]
             if (this.formData.applicantTags.length === 0) {
@@ -1297,14 +1283,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               this.isSaving = false;
               return;
             } else {
-              const tagsForApi = normalizeApplicantTagsForApi(this.formData.applicantTags);
-              if (!tagsForApi.length) {
-                this.errorMessage = '⚠️ Los tags seleccionados no son válidos para el backend. Usa Aplicantes/Aspirantes o Sin Detalles de Estudiante.';
-                this.isSaving = false;
-                return;
-              }
-              payload.applicantTags = tagsForApi;
-              payload.applicant_tags = tagsForApi;
+              payload.applicantTags = this.formData.applicantTags;
             }
             
             // LIMPIAR TODOS LOS OTROS CAMPOS de filtro para evitar conflictos
@@ -1317,6 +1296,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             delete payload.careers;
             delete payload.carreras;
             delete payload.exceptionStudents;
+            delete payload.applicant_tags; // Eliminar versión snake_case si existe
             delete payload.replaceRelations;
             delete payload.removeAllExceptions;
             delete payload.replaceExceptions;
@@ -1427,15 +1407,23 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             
             console.log('✅ Modo: Carrera | Carreras seleccionadas:', payload.careers);
           } else {
-            // Modo restringido sin filtros válidos: bloquear guardado para evitar asignación global accidental.
-            this.errorMessage = '⚠️ Alcance restringido incompleto: selecciona al menos un filtro válido antes de guardar.';
-            this.isSaving = false;
-            return;
+            // Sin filtros seleccionados - aplicar a todos por defecto
+            payload.applies_to = 'todos';
+            console.log('✅ Modo: Todos los estudiantes');
+            // Explícitamente NO incluir campos de filtro
+            delete payload.students;
+            delete payload.student;
+            delete payload.semestre;
+            delete payload.semestres;
+            delete payload.career;
+            delete payload.carrera;
+            delete payload.careers;
+            delete payload.carreras;
           }
         }
         console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
         console.log('📋 Payload object:', payload);
-        if (payload.applies_to === 'tag' || payload.applies_to === 'tags') {
+        if (payload.applies_to === 'tag') {
           console.log('🏷️  applicantTags específicamente:', payload.applicantTags);
           console.log('🏷️  Tipo de applicantTags:', typeof payload.applicantTags, Array.isArray(payload.applicantTags) ? 'ARRAY' : 'NO ARRAY');
         }
@@ -1606,10 +1594,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     replaceExceptions: self.formData.replaceExceptions,
                     removeAllExceptions: self.formData.removeAllExceptions
                   };
-
-                  if (payload.applies_to === 'tags' || payload.applies_to === 'tag') {
-                    relationsPayload.applies_to = 'tag';
-                  }
                   
                   // Agregar campos según el tipo de scope
                   if (self.formData.selectedCareers.length > 0) {
@@ -1625,18 +1609,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     relationsPayload.exceptionStudents = self.formData.exceptionStudents.map(e => String(e.id || e));
                   }
                   if (self.formData.applicantTags.length > 0) {
-                    const tagsForApi = [...new Set(
-                      self.formData.applicantTags
-                        .map(tag => String(tag || '').trim().toLowerCase())
-                        .map(tag => {
-                          if (tag === 'applicant' || tag === 'aspirante' || tag === 'aspirantes' || tag === 'applicants') return 'applicant';
-                          if (tag === 'no_student_details' || tag === 'sin_detalles' || tag === 'sin_datos') return 'no_student_details';
-                          return tag;
-                        })
-                        .filter(Boolean)
-                    )];
-                    relationsPayload.applicantTags = tagsForApi;
-                    relationsPayload.applicant_tags = tagsForApi;
+                    relationsPayload.applicantTags = self.formData.applicantTags;
                   }
                   
                   console.log('🔗 Payload para PATCH update-relations:', relationsPayload);
@@ -1682,10 +1655,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 applies_to: payload.applies_to
               };
 
-              if (payload.applies_to === 'tags' || payload.applies_to === 'tag') {
-                relationsData.applies_to = 'tag';
-              }
-
               if (payload.students) relationsData.students = payload.students;
               if (payload.careers) relationsData.careers = payload.careers;
               if (payload.semestres) relationsData.semestres = payload.semestres;
@@ -1695,18 +1664,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
               }
 
               if (payload.applicantTags && payload.applicantTags.length > 0) {
-                const tagsForApi = [...new Set(
-                  payload.applicantTags
-                    .map(tag => String(tag || '').trim().toLowerCase())
-                    .map(tag => {
-                      if (tag === 'applicant' || tag === 'aspirante' || tag === 'aspirantes' || tag === 'applicants') return 'applicant';
-                      if (tag === 'no_student_details' || tag === 'sin_detalles' || tag === 'sin_datos') return 'no_student_details';
-                      return tag;
-                    })
-                    .filter(Boolean)
-                )];
-                relationsData.applicantTags = tagsForApi;
-                relationsData.applicant_tags = tagsForApi;
+                relationsData.applicantTags = payload.applicantTags;
+                relationsData.applicant_tags = payload.applicantTags;
               }
 
               if (payload.replaceRelations !== undefined) relationsData.replaceRelations = payload.replaceRelations;
@@ -2172,7 +2131,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 </label>
                 <div class="relative">
                   <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold text-base">$</span>
-                  <input type="number" id="amount" x-model.number="formData.amount" min="10" step="0.01" placeholder="0.00"
+                  <input type="number" id="amount" x-model.number="formData.amount" min="0.01" step="0.01" placeholder="0.00"
                     class="w-full px-4 py-3 pl-9 border-2 border-gray-300 rounded-xl input-focus-style transition duration-200 text-sm font-bold shadow-sm hover:border-emerald-400" required>
                 </div>
               </div>

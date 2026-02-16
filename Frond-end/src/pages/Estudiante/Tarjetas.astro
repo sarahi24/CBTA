@@ -6,7 +6,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r30" is:inline></script>
   <script is:inline>
     // Crear la definiciÃ³n del componente
     const tarjetasComponent = () => ({
@@ -118,15 +117,35 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             this.error = '';
 
             try {
+              let endpoint = `https://nginx-production-728f.up.railway.app/api/v1/cards/${this.userId}`;
+              if (forceRefresh) endpoint += '?forceRefresh=true';
+              
               console.log('ðŸ” Cargando tarjetas con token:', this.token ? `${this.token.substring(0, 20)}...` : 'VACÃO');
               if (forceRefresh) console.log('ðŸ”„ Forzando actualizaciÃ³n de tarjetas (POST de pago completado)');
+              
+              const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${this.token}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'X-User-Role': 'student',
+                  'X-User-Permission': 'delete.card'
+                }
+              });
 
-              const studentAPI = window.StudentAPI;
-              if (!studentAPI || typeof studentAPI.getPaymentMethods !== 'function') {
-                throw new Error('StudentAPI no disponible para cargar tarjetas');
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('âŒ Response no OK:', response.status, response.statusText, errorData);
+                
+                if (response.status === 429) {
+                  throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+                }
+                
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
               }
 
-              const data = await studentAPI.getPaymentMethods(this.userId, this.token, forceRefresh);
+              const data = await response.json();
               console.log('ðŸ“¦ Respuesta completa del servidor:', data);
               
               const cardsArray = Array.isArray(data.data) ? data.data : 
@@ -220,30 +239,16 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           this.error = '';
 
           try {
-            const endpoint = 'https://nginx-production-728f.up.railway.app/api/v1/cards/' + paymentMethodId;
-            let response = await fetch(endpoint, {
+            const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + paymentMethodId, {
               method: 'DELETE',
               headers: {
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-User-Role': 'student',
-                'X-User-Permission': 'delete.card'
+                'X-User-Permission': 'view.cards'
               }
             });
-
-            if (response.status === 403) {
-              response = await fetch(endpoint, {
-                method: 'DELETE',
-                headers: {
-                  'Authorization': 'Bearer ' + this.token,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                  'X-User-Role': 'student',
-                  'X-User-Permission': 'view.cards'
-                }
-              });
-            }
 
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
