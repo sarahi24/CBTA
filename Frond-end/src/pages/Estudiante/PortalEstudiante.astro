@@ -24,6 +24,104 @@ const title = 'Panel de Estudiante';
         initCompleted: false,
         initInProgress: false,
 
+        normalizePortalRole(roleValue) {
+          const role = String(roleValue || '').toLowerCase().trim();
+          if (!role) return '';
+          if (role === 'parent' || role === 'padre') return 'parent';
+          if (role === 'applicant' || role === 'aspirante' || role === 'solicitante') return 'applicant';
+          if (role === 'student' || role === 'estudiante' || role === 'alumno') return 'student';
+          return role;
+        },
+
+        detectPortalRoleFromStorage() {
+          const roleValues = [];
+          const rawUserCandidates = [
+            localStorage.getItem('user_data'),
+            localStorage.getItem('userData')
+          ].filter(Boolean);
+
+          rawUserCandidates.forEach((rawValue) => {
+            try {
+              const parsed = JSON.parse(rawValue);
+              const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+              const roles = [];
+
+              if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+              if (userData?.role) roles.push(userData.role);
+              if (userData?.role_name) roles.push(userData.role_name);
+              if (userData?.type) roles.push(userData.type);
+
+              roles.forEach((entry) => {
+                if (!entry) return;
+                if (typeof entry === 'string') {
+                  roleValues.push(entry);
+                  return;
+                }
+                roleValues.push(entry?.name || entry?.slug || entry?.role || '');
+              });
+            } catch (error) {
+              console.warn('⚠️ [PortalEstudiante] No se pudo parsear user_data/userData:', error?.message || error);
+            }
+          });
+
+          const roleCandidates = [
+            localStorage.getItem('userRole'),
+            localStorage.getItem('role'),
+            ...roleValues
+          ]
+            .filter(Boolean)
+            .map((value) => this.normalizePortalRole(value))
+            .filter(Boolean);
+
+          if (roleCandidates.includes('parent')) return 'parent';
+          if (roleCandidates.includes('student')) return 'student';
+          if (roleCandidates.includes('applicant')) return 'applicant';
+          return 'student';
+        },
+
+        async syncPortalRoleFromApi(token) {
+          if (!token || !window.StudentAPI?.getAuthenticatedUser) return '';
+
+          try {
+            const response = await window.StudentAPI.getAuthenticatedUser(token);
+            const user = response?.data?.user || response?.user || response?.data || {};
+            const rawRoles = [];
+
+            if (Array.isArray(user?.roles)) rawRoles.push(...user.roles);
+            if (user?.role) rawRoles.push(user.role);
+            if (user?.role_name) rawRoles.push(user.role_name);
+            if (user?.type) rawRoles.push(user.type);
+
+            const normalizedRoles = rawRoles
+              .map((entry) => {
+                if (!entry) return '';
+                if (typeof entry === 'string') return entry;
+                return entry?.name || entry?.slug || entry?.role || '';
+              })
+              .map((value) => this.normalizePortalRole(value))
+              .filter(Boolean);
+
+            const resolvedRole = normalizedRoles.includes('parent')
+              ? 'parent'
+              : normalizedRoles.includes('student')
+                ? 'student'
+                : normalizedRoles.includes('applicant')
+                  ? 'applicant'
+                  : '';
+
+            if (resolvedRole) {
+              localStorage.setItem('userRole', resolvedRole);
+              localStorage.setItem('role', resolvedRole);
+              console.log('🔍 [PortalEstudiante] Rol sincronizado desde API:', resolvedRole);
+            }
+
+            return resolvedRole;
+          } catch (error) {
+            console.warn('⚠️ [PortalEstudiante] No se pudo sincronizar rol desde API:', error?.message || error);
+            return '';
+          }
+        },
+
         async init() {
           if (this.initCompleted || this.initInProgress) {
             return;
@@ -46,45 +144,12 @@ const title = 'Panel de Estudiante';
           this.loading = true;
           try {
             const parsedUserId = parseInt(userId, 10);
-            const userDataRaw = localStorage.getItem('user_data');
-            let inferredRoleFromUserData = '';
-            if (userDataRaw) {
-              try {
-                const userData = JSON.parse(userDataRaw);
-                const roles = [];
-                if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
-                if (userData?.role) roles.push(userData.role);
-                if (userData?.role_name) roles.push(userData.role_name);
-                if (userData?.type) roles.push(userData.type);
-
-                const firstRole = roles.find(Boolean);
-                const normalizedFirstRole = typeof firstRole === 'string'
-                  ? firstRole
-                  : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
-
-                inferredRoleFromUserData = String(normalizedFirstRole || '').toLowerCase().trim();
-              } catch (_) {}
+            let roleForPortal = this.detectPortalRoleFromStorage();
+            const roleFromApi = await this.syncPortalRoleFromApi(token);
+            if (roleFromApi) {
+              roleForPortal = roleFromApi;
             }
 
-            const roleCandidates = [
-              localStorage.getItem('userRole'),
-              localStorage.getItem('role'),
-              inferredRoleFromUserData
-            ]
-              .filter(Boolean)
-              .map(function(roleValue) {
-                return String(roleValue).toLowerCase().trim();
-              });
-
-            const hasParentRole = roleCandidates.some(function(roleValue) {
-              return roleValue === 'parent' || roleValue === 'padre';
-            });
-
-            const hasApplicantRole = roleCandidates.some(function(roleValue) {
-              return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
-            });
-
-            const roleForPortal = hasParentRole ? 'parent' : (hasApplicantRole ? 'applicant' : 'student');
             this.portalRole = roleForPortal;
             const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
             this.roleNotice = '';
@@ -1347,6 +1412,103 @@ const title = 'Panel de Estudiante';
 </div>
 
 <script>
+  function normalizePortalRoleForDashboard(roleValue) {
+    const role = String(roleValue || '').toLowerCase().trim();
+    if (!role) return '';
+    if (role === 'parent' || role === 'padre') return 'parent';
+    if (role === 'student' || role === 'estudiante' || role === 'alumno') return 'student';
+    if (role === 'applicant' || role === 'aspirante' || role === 'solicitante') return 'applicant';
+    return role;
+  }
+
+  function detectPortalRoleFromStorageForDashboard() {
+    const roleValues = [];
+    const rawUserCandidates = [
+      localStorage.getItem('user_data'),
+      localStorage.getItem('userData')
+    ].filter(Boolean);
+
+    rawUserCandidates.forEach((rawValue) => {
+      try {
+        const parsed = JSON.parse(rawValue);
+        const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+        const roles = [];
+
+        if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+        if (userData?.role) roles.push(userData.role);
+        if (userData?.role_name) roles.push(userData.role_name);
+        if (userData?.type) roles.push(userData.type);
+
+        roles.forEach((entry) => {
+          if (!entry) return;
+          if (typeof entry === 'string') {
+            roleValues.push(entry);
+            return;
+          }
+          roleValues.push(entry?.name || entry?.slug || entry?.role || '');
+        });
+      } catch (error) {
+        console.warn('⚠️ [PortalEstudiante] No se pudo parsear user_data/userData (refresh):', error?.message || error);
+      }
+    });
+
+    const roleCandidates = [
+      localStorage.getItem('userRole'),
+      localStorage.getItem('role'),
+      ...roleValues
+    ]
+      .filter(Boolean)
+      .map((value) => normalizePortalRoleForDashboard(value))
+      .filter(Boolean);
+
+    if (roleCandidates.includes('parent')) return 'parent';
+    if (roleCandidates.includes('student')) return 'student';
+    if (roleCandidates.includes('applicant')) return 'applicant';
+    return 'student';
+  }
+
+  async function syncPortalRoleFromApiForDashboard(token, studentAPI) {
+    if (!token || !studentAPI?.getAuthenticatedUser) return '';
+
+    try {
+      const response = await studentAPI.getAuthenticatedUser(token);
+      const user = response?.data?.user || response?.user || response?.data || {};
+      const rawRoles = [];
+
+      if (Array.isArray(user?.roles)) rawRoles.push(...user.roles);
+      if (user?.role) rawRoles.push(user.role);
+      if (user?.role_name) rawRoles.push(user.role_name);
+      if (user?.type) rawRoles.push(user.type);
+
+      const normalizedRoles = rawRoles
+        .map((entry) => {
+          if (!entry) return '';
+          if (typeof entry === 'string') return entry;
+          return entry?.name || entry?.slug || entry?.role || '';
+        })
+        .map((value) => normalizePortalRoleForDashboard(value))
+        .filter(Boolean);
+
+      const resolvedRole = normalizedRoles.includes('parent')
+        ? 'parent'
+        : normalizedRoles.includes('student')
+          ? 'student'
+          : normalizedRoles.includes('applicant')
+            ? 'applicant'
+            : '';
+
+      if (resolvedRole) {
+        localStorage.setItem('userRole', resolvedRole);
+        localStorage.setItem('role', resolvedRole);
+      }
+
+      return resolvedRole;
+    } catch (error) {
+      console.warn('⚠️ [PortalEstudiante] No se pudo sincronizar rol desde API (refresh):', error?.message || error);
+      return '';
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
 
@@ -1356,46 +1518,13 @@ const title = 'Panel de Estudiante';
           // Disable button and show loading state
           refreshBtn.disabled = true;
           const originalHTML = refreshBtn.innerHTML;
-          refreshBtn.innerHTML = `
-            <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="btn-text">Actualizando...</span>
-          `;
 
-          // Get token and user ID from localStorage
-          const token = localStorage.getItem('access_token');
-          const userId = localStorage.getItem('userId');
-          const userDataRaw = localStorage.getItem('user_data');
-          let inferredRoleFromUserData = '';
-          if (userDataRaw) {
-            try {
-              const userData = JSON.parse(userDataRaw);
-              const roles = [];
-              if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
-              if (userData?.role) roles.push(userData.role);
-              if (userData?.role_name) roles.push(userData.role_name);
-              if (userData?.type) roles.push(userData.type);
-
-              const firstRole = roles.find(Boolean);
-              const normalizedFirstRole = typeof firstRole === 'string'
-                ? firstRole
-                : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
-
-              inferredRoleFromUserData = String(normalizedFirstRole || '').toLowerCase().trim();
-            } catch (_) {}
+          let roleForPortal = detectPortalRoleFromStorageForDashboard();
+          const roleFromApi = await syncPortalRoleFromApiForDashboard(token, studentAPI);
+          if (roleFromApi) {
+            roleForPortal = roleFromApi;
           }
-
-          const roleCandidates = [
-            localStorage.getItem('userRole'),
-            localStorage.getItem('role'),
-            inferredRoleFromUserData
-          ]
-            .filter(Boolean)
-            .map(function(roleValue) {
-              return String(roleValue).toLowerCase().trim();
-            });
+          refreshBtn.innerHTML = `
 
           const hasParentRole = roleCandidates.some(function(roleValue) {
             return roleValue === 'parent' || roleValue === 'padre';

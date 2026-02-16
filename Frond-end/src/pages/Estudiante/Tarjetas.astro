@@ -23,6 +23,16 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           showResultModal: false,
           resultType: '',
 
+          logError(context, error, extra = {}) {
+            const message = error?.message || String(error || 'Error desconocido');
+            console.error(`❌ [Tarjetas][${context}]`, {
+              message,
+              stack: error?.stack || null,
+              ...extra,
+              raw: error
+            });
+          },
+
           detectPortalRole() {
             const userDataCandidates = [
               localStorage.getItem('user_data'),
@@ -50,7 +60,9 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                   }
                   roleValues.push(entry?.name || entry?.slug || entry?.role || '');
                 });
-              } catch (_) {}
+              } catch (error) {
+                this.logError('detectPortalRole.parseUserData', error, { userDataRaw });
+              }
             });
 
             const roleCandidates = [
@@ -130,6 +142,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               localStorage.setItem('role', resolvedRole);
               console.log('🔍 [Tarjetas] Rol sincronizado desde API:', resolvedRole);
             } catch (error) {
+              this.logError('syncPortalRoleFromApi', error, { hasToken: !!this.token });
               console.warn('⚠️ [Tarjetas] No se pudo sincronizar rol desde API:', error?.message || error);
             }
           },
@@ -144,40 +157,50 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             }
             this.initInProgress = true;
 
-            // Obtener parámetro de resultado del URL
-            const urlParams = new URLSearchParams(window.location.search);
-            this.resultType = urlParams.get('result') || '';
-            
-            // Mostrar modal si hay parÃ¡metro result
-            if (this.resultType === 'added' || this.resultType === 'canceled') {
-              this.showResultModal = true;
-              // Limpiar URL despuÃ©s de 3 segundos
-              setTimeout(() => {
-                const url = new URL(window.location.href);
-                url.searchParams.delete('result');
-                window.history.replaceState({}, '', url);
-              }, 3000);
-            }
+            try {
+              // Obtener parámetro de resultado del URL
+              const urlParams = new URLSearchParams(window.location.search);
+              this.resultType = urlParams.get('result') || '';
+              
+              // Mostrar modal si hay parÃ¡metro result
+              if (this.resultType === 'added' || this.resultType === 'canceled') {
+                this.showResultModal = true;
+                // Limpiar URL despuÃ©s de 3 segundos
+                setTimeout(() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('result');
+                  window.history.replaceState({}, '', url);
+                }, 3000);
+              }
 
-            this.token = localStorage.getItem('access_token');
-            this.userId = localStorage.getItem('userId');
-            this.portalRole = this.detectPortalRole();
-            const userName = localStorage.getItem('userName');
-            
-            if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
-              this.alumno = userName;
-            }
+              this.token = localStorage.getItem('access_token');
+              this.userId = localStorage.getItem('userId');
+              this.portalRole = this.detectPortalRole();
+              const userName = localStorage.getItem('userName');
+              
+              if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
+                this.alumno = userName;
+              }
 
-            this.roleNotice = '';
+              this.roleNotice = '';
 
-            if (this.token) {
-              await this.syncPortalRoleFromApi();
+              if (this.token) {
+                await this.syncPortalRoleFromApi();
+              }
+              
+              console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
+              await this.cargarTarjetas();
+              this.initCompleted = true;
+            } catch (error) {
+              this.logError('init', error, {
+                hasToken: !!this.token,
+                userId: this.userId,
+                portalRole: this.portalRole
+              });
+              this.error = error?.message || 'Error al inicializar la pantalla de tarjetas';
+            } finally {
+              this.initInProgress = false;
             }
-            
-            console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
-            await this.cargarTarjetas();
-            this.initCompleted = true;
-            this.initInProgress = false;
           },
 
           async cargarTarjetas(forceRefresh = false) {
@@ -282,6 +305,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
               localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
             } catch (err) {
+              this.logError('cargarTarjetas', err, {
+                hasToken: !!this.token,
+                userId: this.userId,
+                portalRole: this.portalRole,
+                forceRefresh
+              });
               console.error('âŒ Error al cargar tarjetas:', err);
               this.error = err.message || 'Error al cargar tarjetas';
             } finally {
@@ -369,6 +398,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               throw new Error('No se recibió URL de Stripe del backend');
             }
           } catch (err) {
+            this.logError('agregarNuevaTarjeta', err, {
+              hasToken: !!this.token,
+              userId: this.userId,
+              portalRole: this.portalRole
+            });
             console.error('âŒ Error:', err);
             this.error = err.message || 'Error al redirigir a Stripe';
             this.isLoading = false;
@@ -405,6 +439,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             
             setTimeout(() => this.success = '', 3000);
           } catch (err) {
+            this.logError('eliminarTarjeta', err, {
+              paymentMethodId,
+              hasToken: !!this.token,
+              userId: this.userId,
+              portalRole: this.portalRole
+            });
             console.error('âŒ Error:', err);
             this.error = err.message || 'Error al eliminar tarjeta';
             setTimeout(() => this.error = '', 3000);
@@ -423,6 +463,20 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
     // Intentar registrar inmediatamente
     registerTarjetas();
+
+    window.addEventListener('error', (event) => {
+      console.error('❌ [Tarjetas][GlobalError]', {
+        message: event?.message || 'Error no controlado',
+        file: event?.filename || null,
+        line: event?.lineno || null,
+        column: event?.colno || null,
+        error: event?.error || null
+      });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('❌ [Tarjetas][UnhandledRejection]', event?.reason || event);
+    });
 
     // Fallback: esperar a que Alpine cargue si no estaba disponible
     document.addEventListener('alpine:init', registerTarjetas);
