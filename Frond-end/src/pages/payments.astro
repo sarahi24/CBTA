@@ -15,6 +15,15 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
     body {
         overflow-x: hidden;
     }
+
+    @keyframes refreshSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .refresh-icon-spin {
+        animation: refreshSpin 0.9s linear infinite;
+    }
     
     .page-link {
         width: 2.5rem; height: 2.5rem;
@@ -69,7 +78,9 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
 
         <div class="flex items-center gap-2 shrink-0">
             <button id="refresh-btn" class="flex items-center justify-center gap-1.5 px-3 sm:px-4 h-[42px] sm:h-[48px] border-2 border-green-600 text-green-600 font-bold text-xs sm:text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md whitespace-nowrap" title="Actualizar caché">
-                <i class="fas fa-sync-alt text-xs sm:text-sm"></i>
+                <svg class="refresh-icon w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
                 <span class="hidden sm:inline">Actualizar</span>
             </button>
         </div>
@@ -584,10 +595,10 @@ const tableBody = document.getElementById('payments-table-body');
     });
 
     refreshBtn.onclick = () => {
-        const icon = refreshBtn.querySelector('i');
-        icon.classList.add('fa-spin');
+        const icon = refreshBtn.querySelector('.refresh-icon');
+        icon?.classList.add('refresh-icon-spin');
         loadPayments(true).finally(() => {
-            icon.classList.remove('fa-spin');
+            icon?.classList.remove('refresh-icon-spin');
         });
     };
 
