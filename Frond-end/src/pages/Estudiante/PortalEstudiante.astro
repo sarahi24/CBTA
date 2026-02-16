@@ -74,8 +74,8 @@ const title = 'Panel de Estudiante';
             .filter(Boolean);
 
           if (roleCandidates.includes('parent')) return 'parent';
-          if (roleCandidates.includes('student')) return 'student';
           if (roleCandidates.includes('applicant')) return 'applicant';
+          if (roleCandidates.includes('student')) return 'student';
           return 'student';
         },
 
@@ -103,10 +103,10 @@ const title = 'Panel de Estudiante';
 
             const resolvedRole = normalizedRoles.includes('parent')
               ? 'parent'
-              : normalizedRoles.includes('student')
-                ? 'student'
-                : normalizedRoles.includes('applicant')
+              : normalizedRoles.includes('applicant')
                   ? 'applicant'
+                  : normalizedRoles.includes('student')
+                    ? 'student'
                   : '';
 
             if (resolvedRole) {
@@ -1463,8 +1463,8 @@ const title = 'Panel de Estudiante';
       .filter(Boolean);
 
     if (roleCandidates.includes('parent')) return 'parent';
-    if (roleCandidates.includes('student')) return 'student';
     if (roleCandidates.includes('applicant')) return 'applicant';
+    if (roleCandidates.includes('student')) return 'student';
     return 'student';
   }
 
@@ -1492,10 +1492,10 @@ const title = 'Panel de Estudiante';
 
       const resolvedRole = normalizedRoles.includes('parent')
         ? 'parent'
-        : normalizedRoles.includes('student')
-          ? 'student'
-          : normalizedRoles.includes('applicant')
+        : normalizedRoles.includes('applicant')
             ? 'applicant'
+            : normalizedRoles.includes('student')
+              ? 'student'
             : '';
 
       if (resolvedRole) {
