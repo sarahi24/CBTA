@@ -12,7 +12,7 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante' || roleLower === 'unverified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') return 'applicant';
+  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante' || roleLower === 'unverified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') return 'student';
 
   return roleLower;
 }
@@ -44,6 +44,11 @@ function getRoleFromStorage() {
     console.warn('No se pudo detectar rol desde user_data:', error);
     return null;
   }
+}
+
+function shouldUseStudentId(effectiveRole, studentId) {
+  if (!studentId) return false;
+  return effectiveRole === 'parent' || effectiveRole === 'student';
 }
 
 function resolveStudentPortalRole(role) {

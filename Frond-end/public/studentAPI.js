@@ -19,13 +19,14 @@ function normalizeStudentPortalRole(role) {
     roleLower === 'unverified' ||
     roleLower === 'sin_verificar' ||
     roleLower === 'sin verificar'
-  ) return 'applicant';
+  ) return 'student';
 
   return roleLower;
 }
 
 function shouldUseStudentId(effectiveRole, studentId) {
-  return effectiveRole === 'parent' && !!studentId;
+  if (!studentId) return false;
+  return effectiveRole === 'parent' || effectiveRole === 'student';
 }
 
 function getRoleFromStorage() {
@@ -766,4 +767,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r17)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r19)');
