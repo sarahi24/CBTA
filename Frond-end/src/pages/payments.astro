@@ -11,6 +11,10 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
   
 <style is:global>
     :root { --cbta-green: #2E594D; }
+
+    body {
+        overflow-x: hidden;
+    }
     
     .page-link {
         width: 2.5rem; height: 2.5rem;
@@ -33,38 +37,38 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
     .filter-card.show { display: block; }
 </style>
 
-<div class="max-w-7xl mx-auto px-6 py-10 bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5 min-h-screen">
+<div class="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-10 bg-gradient-to-br from-gray-50 via-white to-[#2E594D]/5 min-h-screen overflow-x-hidden">
 
-    <header class="flex items-center gap-5 mb-10 pb-6 bg-white rounded-2xl shadow-lg px-6 py-5">
-        <div class="p-4 bg-gradient-to-br from-[#2D584C] to-[#1e3d35] rounded-2xl shadow-xl shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+    <header class="flex items-start sm:items-center gap-3 sm:gap-5 mb-8 sm:mb-10 bg-white rounded-2xl shadow-lg px-4 sm:px-6 py-4 sm:py-5 overflow-hidden">
+        <div class="p-3 sm:p-4 bg-gradient-to-br from-[#2D584C] to-[#1e3d35] rounded-2xl shadow-xl shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="1" x2="12" y2="23"></line>
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
         </div>
-        <div>
-            <h1 class="text-3xl font-black text-[#2D584C] tracking-tight leading-none flex items-center gap-3">
-                Historial de Pagos Realizados
-                <span class="text-xs bg-[#2D584C]/10 text-[#2D584C] px-3 py-1 rounded-full font-semibold">Auditoría</span>
+        <div class="min-w-0 flex-1">
+            <h1 class="text-xl sm:text-3xl font-black text-[#2D584C] tracking-tight leading-tight flex flex-wrap items-center gap-2 sm:gap-3">
+                <span class="min-w-0 break-words">Historial de Pagos Realizados</span>
+                <span class="text-[10px] sm:text-xs bg-[#2D584C]/10 text-[#2D584C] px-2 sm:px-3 py-1 rounded-full font-semibold whitespace-nowrap">Auditoría</span>
             </h1>
-            <p class="text-sm text-gray-600 mt-2 font-medium flex items-center gap-2">
+            <p class="text-xs sm:text-sm text-gray-600 mt-2 font-medium flex items-center gap-2 break-words">
                 <i class="fas fa-chart-line text-[#2D584C]"></i>
                 Panel de control y auditoría financiera
             </p>
         </div>
     </header>
 
-    <div class="flex flex-row items-center gap-3 mb-8 w-full">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8 w-full">
         <div class="relative flex-grow">
-            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-[#2E594D] text-xl font-black" style="z-index: 10; pointer-events: none;"></i>
+            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-[#2E594D] text-base sm:text-xl font-black" style="z-index: 10; pointer-events: none;"></i>
             <input type="text" id="search-input" placeholder="Buscar por concepto..." class="w-full pl-12 pr-12 h-[48px] bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-4 focus:ring-[#2E594D]/10 focus:border-[#2E594D] outline-none transition-all shadow-md" />
             <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors hidden">
                 <i class="fas fa-times-circle"></i>
             </button>
         </div>
 
-        <div class="flex items-center gap-2">
-            <button id="refresh-btn" class="flex items-center gap-2 px-5 h-[48px] border-2 border-green-600 text-green-600 font-bold text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md" title="Actualizar caché">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <button id="refresh-btn" class="flex items-center justify-center gap-2 w-full sm:w-auto px-5 h-[48px] border-2 border-green-600 text-green-600 font-bold text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md" title="Actualizar caché">
                 <i class="fas fa-sync-alt"></i>
                 <span>Actualizar</span>
             </button>
