@@ -727,11 +727,6 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
 
-      if (effectiveRole === 'applicant') {
-        console.info('ℹ️ getPaymentMethods omitido para applicant. Regresando lista vacía controlada.');
-        return { success: true, data: { cards: [] } };
-      }
-
       const endpointCandidates = [
         `${API_BASE}/cards`,
         ...(studentId ? [`${API_BASE}/cards/${studentId}`] : [])

@@ -173,15 +173,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             if (this.token) {
               await this.syncPortalRoleFromApi();
             }
-
-            if (this.portalRole === 'applicant') {
-              this.roleNotice = 'Tu cuenta está en proceso. Los métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
-              this.tarjetas = [];
-              this.isLoading = false;
-              this.initCompleted = true;
-              this.initInProgress = false;
-              return;
-            }
             
             console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
             await this.cargarTarjetas();
@@ -190,12 +181,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           },
 
           async cargarTarjetas(forceRefresh = false) {
-
-            if (this.portalRole === 'applicant') {
-              this.tarjetas = [];
-              this.error = '';
-              return;
-            }
 
             if (!this.token || !this.userId) {
               console.error('âŒ Token o userId vacÃ­os:', { token: !!this.token, userId: this.userId });
@@ -273,11 +258,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
         async agregarNuevaTarjeta() {
 
-          if (this.portalRole === 'applicant') {
-            this.error = 'Tu cuenta aún no puede agregar métodos de pago.';
-            return;
-          }
-
           this.error = '';
           this.isLoading = true;
           console.log('ðŸ”„ Iniciando proceso de vincular tarjeta con Stripe...');
@@ -327,11 +307,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         },
 
         async eliminarTarjeta(paymentMethodId) {
-
-          if (this.portalRole === 'applicant') {
-            this.error = 'Tu cuenta aún no puede eliminar métodos de pago.';
-            return;
-          }
 
           if (!confirm('¿Estás seguro de que deseas eliminar esta tarjeta?')) return;
 
