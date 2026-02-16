@@ -32,31 +32,39 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       resultType: '${resultParam || ''}',
 
       detectPortalRole() {
-        const userDataRaw = localStorage.getItem('user_data');
-        let inferredRole = '';
+        const userDataCandidates = [
+          localStorage.getItem('user_data'),
+          localStorage.getItem('userData')
+        ].filter(Boolean);
 
-        if (userDataRaw) {
+        const roleValues = [];
+
+        userDataCandidates.forEach((userDataRaw) => {
           try {
-            const userData = JSON.parse(userDataRaw);
+            const parsed = JSON.parse(userDataRaw);
+            const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+
             const roles = [];
             if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
             if (userData?.role) roles.push(userData.role);
             if (userData?.role_name) roles.push(userData.role_name);
             if (userData?.type) roles.push(userData.type);
 
-            const firstRole = roles.find(Boolean);
-            const normalizedFirstRole = typeof firstRole === 'string'
-              ? firstRole
-              : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
-
-            inferredRole = String(normalizedFirstRole || '').toLowerCase().trim();
+            roles.forEach((entry) => {
+              if (!entry) return;
+              if (typeof entry === 'string') {
+                roleValues.push(entry);
+                return;
+              }
+              roleValues.push(entry?.name || entry?.slug || entry?.role || '');
+            });
           } catch (_) {}
-        }
+        });
 
         const roleCandidates = [
           localStorage.getItem('userRole'),
           localStorage.getItem('role'),
-          inferredRole
+          ...roleValues
         ]
           .filter(Boolean)
           .map(function(roleValue) {
