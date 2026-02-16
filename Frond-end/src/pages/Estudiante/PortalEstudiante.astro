@@ -24,6 +24,95 @@ const title = 'Panel de Estudiante';
         initCompleted: false,
         initInProgress: false,
 
+        parseAmount(value) {
+          const normalized = String(value || '0').replace(/,/g, '').trim();
+          const parsed = parseFloat(normalized);
+          return Number.isFinite(parsed) ? parsed : 0;
+        },
+
+        extractPaymentsArray(apiResponse, preferredKey = '') {
+          const data = apiResponse?.data ?? apiResponse ?? {};
+          const candidates = [
+            preferredKey ? data?.[preferredKey] : null,
+            preferredKey ? data?.[preferredKey]?.items : null,
+            data,
+            data?.pending_payments,
+            data?.pending_payments?.items,
+            data?.overdue_payments,
+            data?.overdue_payments?.items,
+            data?.payments,
+            data?.payments?.items,
+            apiResponse?.pending_payments,
+            apiResponse?.pending_payments?.items,
+            apiResponse?.overdue_payments,
+            apiResponse?.overdue_payments?.items,
+            apiResponse?.items
+          ];
+
+          const firstArray = candidates.find(function(item) {
+            return Array.isArray(item);
+          });
+
+          return firstArray || [];
+        },
+
+        summarizePayments(items) {
+          const list = Array.isArray(items) ? items : [];
+          const totalAmount = list.reduce((acc, payment) => {
+            const amount = payment?.amount ?? payment?.monto ?? payment?.total_amount ?? payment?.totalAmount ?? 0;
+            return acc + this.parseAmount(amount);
+          }, 0);
+
+          return {
+            totalAmount: totalAmount.toFixed(2),
+            totalCount: list.length
+          };
+        },
+
+        resolveScopedStudentId() {
+          const parseValidId = (value) => {
+            const numericValue = Number.parseInt(String(value || '').trim(), 10);
+            return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : null;
+          };
+
+          const directCandidates = [
+            localStorage.getItem('studentId'),
+            localStorage.getItem('student_id'),
+            localStorage.getItem('id_student'),
+            localStorage.getItem('idStudent'),
+            localStorage.getItem('userId'),
+            localStorage.getItem('user_id')
+          ];
+
+          for (const candidate of directCandidates) {
+            const parsed = parseValidId(candidate);
+            if (parsed) return parsed;
+          }
+
+          const userDataRaw = localStorage.getItem('user_data') || localStorage.getItem('userData');
+          if (!userDataRaw) return null;
+
+          try {
+            const userData = JSON.parse(userDataRaw);
+            const nestedCandidates = [
+              userData?.student_id,
+              userData?.studentId,
+              userData?.id_student,
+              userData?.idStudent,
+              userData?.user_id,
+              userData?.userId,
+              userData?.id
+            ];
+
+            for (const candidate of nestedCandidates) {
+              const parsed = parseValidId(candidate);
+              if (parsed) return parsed;
+            }
+          } catch (_) {}
+
+          return null;
+        },
+
         async init() {
           if (this.initCompleted || this.initInProgress) {
             return;
@@ -31,7 +120,6 @@ const title = 'Panel de Estudiante';
           this.initInProgress = true;
 
           const token = localStorage.getItem('access_token');
-          const userId = localStorage.getItem('userId');
           const userName = localStorage.getItem('userName');
 
           if (userName) {
@@ -45,7 +133,7 @@ const title = 'Panel de Estudiante';
 
           this.loading = true;
           try {
-            const parsedUserId = parseInt(userId, 10);
+            const scopedStudentId = this.resolveScopedStudentId();
             const userDataRaw = localStorage.getItem('user_data');
             let inferredRoleFromUserData = '';
             if (userDataRaw) {
@@ -86,7 +174,6 @@ const title = 'Panel de Estudiante';
 
             const roleForPortal = hasParentRole ? 'parent' : 'student';
             this.portalRole = roleForPortal;
-            const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
             this.roleNotice = hasApplicantLikeRole
               ? 'Tu cuenta está como applicant/unverified. Si el backend no tiene habilitados permisos de lectura de dashboard, los totales pueden mostrarse en 0 temporalmente.'
               : '';
@@ -94,6 +181,10 @@ const title = 'Panel de Estudiante';
 
             const pendingPaymentsRes = await window.StudentAPI
               .getPendingPayments(scopedStudentId, token, false, roleForPortal)
+              .catch(function(e) { return { error: e.message }; });
+
+            const overduePaymentsRes = await window.StudentAPI
+              .getOverduePayments(scopedStudentId, token, false, roleForPortal)
               .catch(function(e) { return { error: e.message }; });
 
             const overdueRes = await window.StudentAPI
@@ -109,7 +200,7 @@ const title = 'Panel de Estudiante';
               .catch(function(e) { return { error: e.message }; });
 
             if (pendingPaymentsRes && !pendingPaymentsRes.error) {
-              const items = pendingPaymentsRes.data && pendingPaymentsRes.data.pending_payments ? pendingPaymentsRes.data.pending_payments : [];
+              const items = this.extractPaymentsArray(pendingPaymentsRes, 'pending_payments');
               this.history = items.map(function(payment) {
                 return {
                   id: payment.id,
@@ -123,8 +214,24 @@ const title = 'Panel de Estudiante';
               console.log('✅ Pagos pendientes cargados:', this.history.length);
             }
 
+            const pendingItems = (pendingPaymentsRes && !pendingPaymentsRes.error)
+              ? this.extractPaymentsArray(pendingPaymentsRes, 'pending_payments')
+              : [];
+
+            const overdueItems = (overduePaymentsRes && !overduePaymentsRes.error)
+              ? this.extractPaymentsArray(overduePaymentsRes, 'overdue_payments')
+              : [];
+
+            const pendingFromList = this.summarizePayments(pendingItems);
+            const overdueFromList = this.summarizePayments(overdueItems);
+
             if (overdueRes && !overdueRes.error) {
-              this.overdue = overdueRes.data && overdueRes.data.total_overdue ? overdueRes.data.total_overdue : { totalAmount: '0.00', totalCount: 0 };
+              const overdueSummary = overdueRes.data && overdueRes.data.total_overdue
+                ? overdueRes.data.total_overdue
+                : { totalAmount: '0.00', totalCount: 0 };
+              this.overdue = overdueFromList.totalCount > 0 ? overdueFromList : overdueSummary;
+            } else if (overdueFromList.totalCount > 0) {
+              this.overdue = overdueFromList;
             }
 
             if (paidRes && !paidRes.error) {
@@ -132,7 +239,12 @@ const title = 'Panel de Estudiante';
             }
 
             if (pendingRes && !pendingRes.error) {
-              this.pending = pendingRes.data && pendingRes.data.total_pending ? pendingRes.data.total_pending : { totalAmount: '0.00', totalCount: 0 };
+              const pendingSummary = pendingRes.data && pendingRes.data.total_pending
+                ? pendingRes.data.total_pending
+                : { totalAmount: '0.00', totalCount: 0 };
+              this.pending = pendingFromList.totalCount > 0 ? pendingFromList : pendingSummary;
+            } else if (pendingFromList.totalCount > 0) {
+              this.pending = pendingFromList;
             }
 
             const paidAmount = parseFloat(this.paid && this.paid.totalPayments ? this.paid.totalPayments : '0');
@@ -1298,12 +1410,53 @@ const title = 'Panel de Estudiante';
 
           // Get token and user ID from localStorage
           const token = localStorage.getItem('access_token');
-          const userId = localStorage.getItem('userId');
+          const parseValidId = (value: unknown) => {
+            const parsed = Number.parseInt(String(value || '').trim(), 10);
+            return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+          };
+
+          const directIdCandidates = [
+            localStorage.getItem('studentId'),
+            localStorage.getItem('student_id'),
+            localStorage.getItem('id_student'),
+            localStorage.getItem('idStudent'),
+            localStorage.getItem('userId'),
+            localStorage.getItem('user_id')
+          ];
+
+          let scopedStudentId = null;
+          for (const candidate of directIdCandidates) {
+            const parsed = parseValidId(candidate);
+            if (parsed) {
+              scopedStudentId = parsed;
+              break;
+            }
+          }
+
           const userDataRaw = localStorage.getItem('user_data');
           let inferredRoleFromUserData = '';
           if (userDataRaw) {
             try {
               const userData = JSON.parse(userDataRaw);
+              if (!scopedStudentId) {
+                const nestedIdCandidates = [
+                  userData?.student_id,
+                  userData?.studentId,
+                  userData?.id_student,
+                  userData?.idStudent,
+                  userData?.user_id,
+                  userData?.userId,
+                  userData?.id
+                ];
+                for (const candidate of nestedIdCandidates) {
+                  const parsed = parseValidId(candidate);
+                  if (parsed) {
+                    scopedStudentId = parsed;
+                    break;
+                  }
+                }
+              }
+
               const roles = [];
               if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
               if (userData?.role) roles.push(userData.role);
@@ -1334,8 +1487,6 @@ const title = 'Panel de Estudiante';
           });
 
           const roleForPortal = hasParentRole ? 'parent' : 'student';
-          const parsedUserId = userId ? parseInt(userId, 10) : null;
-          const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
           
           if (!token) {
             showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
