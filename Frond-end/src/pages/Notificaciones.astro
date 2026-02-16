@@ -539,19 +539,27 @@ const pageTitle = "Notificaciones";
           : '';
         const extraInfoBlock = Array.isArray(notif.metadata.extra_items) && notif.metadata.extra_items.length
           ? `
-            <div class="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              ${notif.metadata.extra_items.map(item => {
-                const normalizedLabel = String(item?.label || '').toLowerCase();
-                const rawValue = String(item?.value || '');
-                const isLongDetail = normalizedLabel.includes('detalle') || normalizedLabel.includes('resumen') || rawValue.length > 140 || rawValue.includes('\n') || rawValue.includes('<pre>');
-                const cardSpan = isLongDetail ? 'sm:col-span-2 lg:col-span-3' : '';
-                return `
-                <div class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 ${cardSpan}">
-                  <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">${escapeHtml(item.label)}</p>
-                  <p class="text-xs font-medium text-slate-700 break-words whitespace-pre-wrap leading-relaxed">${escapeHtml(item.value)}</p>
-                </div>
-              `;
-              }).join('')}
+            <div class="mt-3 notification-details">
+              <button class="toggle-details-btn inline-flex items-center gap-2 text-xs font-bold text-[#2e594d] hover:text-[#86efad] transition-colors" data-id="${notif.id}" aria-expanded="false">
+                <span>Detalles</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 details-chevron transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div class="details-content hidden mt-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                ${notif.metadata.extra_items.map(item => {
+                  const normalizedLabel = String(item?.label || '').toLowerCase();
+                  const rawValue = String(item?.value || '');
+                  const isLongDetail = normalizedLabel.includes('detalle') || normalizedLabel.includes('resumen') || rawValue.length > 140 || rawValue.includes('\n') || rawValue.includes('<pre>');
+                  const cardSpan = isLongDetail ? 'sm:col-span-2 lg:col-span-3' : '';
+                  return `
+                  <div class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 ${cardSpan}">
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">${escapeHtml(item.label)}</p>
+                    <p class="text-xs font-medium text-slate-700 break-words whitespace-pre-wrap leading-relaxed">${escapeHtml(item.value)}</p>
+                  </div>
+                `;
+                }).join('')}
+              </div>
             </div>
           `
           : '';
@@ -604,6 +612,30 @@ const pageTitle = "Notificaciones";
           e.stopPropagation();
           const id = btn.dataset.id;
           deleteNotification(id);
+        });
+      });
+
+      // Event listeners para mostrar/ocultar detalles
+      document.querySelectorAll('.toggle-details-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const detailsWrapper = btn.closest('.notification-details');
+          if (!detailsWrapper) return;
+
+          const detailsContent = detailsWrapper.querySelector('.details-content');
+          const chevron = detailsWrapper.querySelector('.details-chevron');
+          if (!detailsContent || !chevron) return;
+
+          const isHidden = detailsContent.classList.contains('hidden');
+          detailsContent.classList.toggle('hidden', !isHidden);
+          chevron.classList.toggle('rotate-180', isHidden);
+          btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        });
+      });
+
+      document.querySelectorAll('.notification-details').forEach(section => {
+        section.addEventListener('click', (e) => {
+          e.stopPropagation();
         });
       });
 
