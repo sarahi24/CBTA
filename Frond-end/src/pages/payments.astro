@@ -58,8 +58,8 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
         </div>
     </header>
 
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8 w-full">
-        <div class="relative flex-grow">
+    <div class="flex flex-row items-center gap-2 sm:gap-3 mb-8 w-full">
+        <div class="relative flex-1 min-w-0">
             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-[#2E594D] text-base sm:text-xl font-black" style="z-index: 10; pointer-events: none;"></i>
             <input type="text" id="search-input" placeholder="Buscar por concepto..." class="w-full pl-12 pr-12 h-[48px] bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-4 focus:ring-[#2E594D]/10 focus:border-[#2E594D] outline-none transition-all shadow-md" />
             <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors hidden">
@@ -67,10 +67,10 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
             </button>
         </div>
 
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button id="refresh-btn" class="flex items-center justify-center gap-2 w-full sm:w-auto px-5 h-[48px] border-2 border-green-600 text-green-600 font-bold text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md" title="Actualizar caché">
-                <i class="fas fa-sync-alt"></i>
-                <span>Actualizar</span>
+        <div class="flex items-center gap-2 shrink-0">
+            <button id="refresh-btn" class="flex items-center justify-center gap-1.5 px-3 sm:px-4 h-[42px] sm:h-[48px] border-2 border-green-600 text-green-600 font-bold text-xs sm:text-sm rounded-xl hover:bg-green-600 hover:text-white hover:scale-105 hover:shadow-xl transition-all shadow-md whitespace-nowrap" title="Actualizar caché">
+                <i class="fas fa-sync-alt text-xs sm:text-sm"></i>
+                <span class="hidden sm:inline">Actualizar</span>
             </button>
         </div>
     </div>
