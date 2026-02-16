@@ -2524,30 +2524,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
           </div>
         </section>
 
-        <section class="bg-gradient-to-br from-white via-purple-50/30 to-white p-4 sm:p-6 rounded-2xl shadow-2xl border-2 border-purple-200/50 space-y-5 overflow-x-hidden">
-          <div class="flex items-center gap-3 pb-3 border-b-2 border-purple-200/50">
-            <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 text-white font-extrabold text-sm shadow-lg">
+        <section class="bg-gradient-to-br from-white via-purple-50/30 to-white p-3 sm:p-5 rounded-2xl shadow-2xl border-2 border-purple-200/50 space-y-4 overflow-x-hidden">
+          <div class="flex items-center gap-2.5 pb-2 border-b-2 border-purple-200/50">
+            <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 text-white font-extrabold text-xs shadow-lg">
                 <i class="fas fa-toggle-on"></i>
             </span>
-            <h2 class="text-xl font-extrabold text-purple-900">Estado y Aplicación</h2>
+            <h2 class="text-lg sm:text-xl font-extrabold text-purple-900">Estado y Aplicación</h2>
           </div>
           
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             <label class="cursor-pointer">
               <input type="radio" name="status" value="active" x-model="formData.status" class="sr-only peer">
-              <div class="p-4 sm:p-6 rounded-2xl border-2 border-gray-300 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:shadow-xl transition-all text-center flex flex-col items-center gap-2 shadow-lg hover:shadow-xl sm:hover:scale-105">
-                <i class="fas fa-check-circle text-4xl transition" :class="formData.status === 'active' ? 'text-emerald-600' : 'text-gray-400'"></i>
-                <p class="font-extrabold text-gray-950 text-base mt-2">Concepto Activo</p>
-                <p class="text-xs text-gray-600">Visible para estudiantes</p>
+              <div class="p-3 sm:p-3.5 rounded-xl border-2 border-gray-300 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:shadow-lg transition-all shadow-sm hover:shadow-md sm:hover:scale-[1.01] flex items-center gap-2.5 min-h-[68px]">
+                <i class="fas fa-check-circle text-xl sm:text-2xl transition flex-shrink-0" :class="formData.status === 'active' ? 'text-emerald-600' : 'text-gray-400'"></i>
+                <div class="min-w-0">
+                  <p class="font-extrabold text-gray-950 text-sm sm:text-base leading-tight">Concepto Activo</p>
+                  <p class="text-[11px] sm:text-xs text-gray-600 mt-0.5 leading-tight">Visible para estudiantes</p>
+                </div>
               </div>
             </label>
             
             <label class="cursor-pointer">
               <input type="radio" name="status" value="inactive" x-model="formData.status" class="sr-only peer">
-              <div class="p-4 sm:p-6 rounded-2xl border-2 border-gray-300 peer-checked:border-gray-500 peer-checked:bg-gray-100 peer-checked:shadow-xl transition-all text-center flex flex-col items-center gap-2 shadow-lg hover:shadow-xl sm:hover:scale-105">
-                <i class="fas fa-pause-circle text-4xl transition" :class="formData.status === 'inactive' ? 'text-gray-600' : 'text-gray-400'"></i>
-                <p class="font-extrabold text-gray-950 text-base mt-2">Concepto Inactivo</p>
-                <p class="text-xs text-gray-600">No visible para estudiantes</p>
+              <div class="p-3 sm:p-3.5 rounded-xl border-2 border-gray-300 peer-checked:border-gray-500 peer-checked:bg-gray-100 peer-checked:shadow-lg transition-all shadow-sm hover:shadow-md sm:hover:scale-[1.01] flex items-center gap-2.5 min-h-[68px]">
+                <i class="fas fa-pause-circle text-xl sm:text-2xl transition flex-shrink-0" :class="formData.status === 'inactive' ? 'text-gray-600' : 'text-gray-400'"></i>
+                <div class="min-w-0">
+                  <p class="font-extrabold text-gray-950 text-sm sm:text-base leading-tight">Concepto Inactivo</p>
+                  <p class="text-[11px] sm:text-xs text-gray-600 mt-0.5 leading-tight">No visible para estudiantes</p>
+                </div>
               </div>
             </label>
           </div>
