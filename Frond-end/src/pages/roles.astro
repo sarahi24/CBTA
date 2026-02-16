@@ -1522,18 +1522,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     .join(' ');
             },
 
+            extractUserRoleKeys(user) {
+                const rawValues = [];
+
+                if (Array.isArray(user?.roles) && user.roles.length) {
+                    rawValues.push(...user.roles);
+                }
+
+                if (user?.roleKey) rawValues.push(user.roleKey);
+                if (user?.role) rawValues.push(user.role);
+
+                if (user?.roleLabel) {
+                    if (typeof user.roleLabel === 'function') {
+                        rawValues.push(user.roleLabel());
+                    } else {
+                        rawValues.push(user.roleLabel);
+                    }
+                }
+
+                const normalized = rawValues
+                    .flatMap(value => String(value ?? '').split(','))
+                    .map(value => this.normalizeRoleForFilter(value))
+                    .filter(Boolean);
+
+                return Array.from(new Set(normalized));
+            },
+
             get roleFilterOptions() {
                 const keys = new Set();
 
                 this.users.forEach(user => {
-                    const sourceRoles = Array.isArray(user?.roles) && user.roles.length
-                        ? user.roles
-                        : (user?.roleKey ? [user.roleKey] : []);
+                    this.extractUserRoleKeys(user).forEach(role => keys.add(role));
+                });
 
-                    sourceRoles.forEach(role => {
-                        const normalized = this.normalizeRoleForFilter(role);
-                        if (normalized) keys.add(normalized);
-                    });
+                (this.availableRoles || []).forEach(role => {
+                    const rawRoleName = role?.name || role?.slug || role?.role || role?.value || role;
+                    const normalized = this.normalizeRoleForFilter(rawRoleName);
+                    if (normalized) keys.add(normalized);
                 });
 
                 return Array.from(keys)
@@ -2053,14 +2078,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 // Filtrar por rol
                 if (this.filterRole) {
                     filtered = filtered.filter(u => {
-                        const sourceRoles = Array.isArray(u?.roles) && u.roles.length
-                            ? u.roles
-                            : (u?.roleKey ? [u.roleKey] : []);
-
-                        const normalizedRoles = sourceRoles
-                            .map(role => this.normalizeRoleForFilter(role))
-                            .filter(Boolean);
-
+                        const normalizedRoles = this.extractUserRoleKeys(u);
                         return normalizedRoles.includes(this.filterRole);
                     });
                 }
