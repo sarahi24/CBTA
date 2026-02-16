@@ -167,7 +167,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/users/student-details', {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`,
+              'Authorization': 'Bearer ' + token,
               'Accept': 'application/json'
             }
           });
