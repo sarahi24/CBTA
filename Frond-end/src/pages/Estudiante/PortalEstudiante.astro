@@ -1412,7 +1412,7 @@ const title = 'Panel de Estudiante';
 </div>
 
 <script>
-  function normalizePortalRoleForDashboard(roleValue) {
+  function normalizePortalRoleForDashboard(roleValue: unknown): string {
     const role = String(roleValue || '').toLowerCase().trim();
     if (!role) return '';
     if (role === 'parent' || role === 'padre') return 'parent';
@@ -1422,11 +1422,11 @@ const title = 'Panel de Estudiante';
   }
 
   function detectPortalRoleFromStorageForDashboard() {
-    const roleValues = [];
+    const roleValues: string[] = [];
     const rawUserCandidates = [
       localStorage.getItem('user_data'),
       localStorage.getItem('userData')
-    ].filter(Boolean);
+    ].filter((value): value is string => Boolean(value));
 
     rawUserCandidates.forEach((rawValue) => {
       try {
@@ -1448,7 +1448,8 @@ const title = 'Panel de Estudiante';
           roleValues.push(entry?.name || entry?.slug || entry?.role || '');
         });
       } catch (error) {
-        console.warn('⚠️ [PortalEstudiante] No se pudo parsear user_data/userData (refresh):', error?.message || error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn('⚠️ [PortalEstudiante] No se pudo parsear user_data/userData (refresh):', errorMessage);
       }
     });
 
@@ -1467,7 +1468,7 @@ const title = 'Panel de Estudiante';
     return 'student';
   }
 
-  async function syncPortalRoleFromApiForDashboard(token, studentAPI) {
+  async function syncPortalRoleFromApiForDashboard(token: string, studentAPI: any): Promise<string> {
     if (!token || !studentAPI?.getAuthenticatedUser) return '';
 
     try {
@@ -1504,20 +1505,22 @@ const title = 'Panel de Estudiante';
 
       return resolvedRole;
     } catch (error) {
-      console.warn('⚠️ [PortalEstudiante] No se pudo sincronizar rol desde API (refresh):', error?.message || error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn('⚠️ [PortalEstudiante] No se pudo sincronizar rol desde API (refresh):', errorMessage);
       return '';
     }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
+    let originalHTML = '';
 
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
         try {
           // Disable button and show loading state
           refreshBtn.disabled = true;
-          const originalHTML = refreshBtn.innerHTML;
+          originalHTML = refreshBtn.innerHTML;
 
           refreshBtn.innerHTML = `
             <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24">
