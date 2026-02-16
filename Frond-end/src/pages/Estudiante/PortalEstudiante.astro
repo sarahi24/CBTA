@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r13" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r14" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -36,7 +36,22 @@ const title = 'Panel de Estudiante';
           this.loading = true;
           try {
             const parsedUserId = parseInt(userId, 10);
-            const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase().trim();
+            const userDataRaw = localStorage.getItem('user_data');
+            let inferredRoleFromUserData = '';
+            if (userDataRaw) {
+              try {
+                const userData = JSON.parse(userDataRaw);
+                const roles = [];
+                if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+                if (userData?.role) roles.push(userData.role);
+                if (userData?.role_name) roles.push(userData.role_name);
+                if (userData?.type) roles.push(userData.type);
+
+                inferredRoleFromUserData = String((roles.find(Boolean) || '')).toLowerCase().trim();
+              } catch (_) {}
+            }
+
+            const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRoleFromUserData || '').toLowerCase().trim();
             const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
               ? 'parent'
               : (rawRole === 'applicant' || rawRole === 'solicitante' ? 'applicant' : 'student');

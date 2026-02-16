@@ -263,7 +263,8 @@ window.StudentAPI = {
           'X-User-Permission': 'view.own.pending.concepts.summary'
         }
       });
-      if (response.status === 403 && effectiveRole === 'applicant') {
+      if (response.status === 403) {
+        console.warn(`⚠️ getPendingTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
         return { success: true, data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } };
       }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -289,7 +290,8 @@ window.StudentAPI = {
           'X-User-Permission': 'view.own.paid.concepts.summary'
         }
       });
-      if (response.status === 403 && effectiveRole === 'applicant') {
+      if (response.status === 403) {
+        console.warn(`⚠️ getPaidTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
         return { success: true, data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } };
       }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -315,7 +317,8 @@ window.StudentAPI = {
           'X-User-Permission': 'view.own.overdue.concepts.summary'
         }
       });
-      if (response.status === 403 && effectiveRole === 'applicant') {
+      if (response.status === 403) {
+        console.warn(`⚠️ getOverdueTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
         return { success: true, data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } };
       }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -406,7 +409,8 @@ window.StudentAPI = {
 
       console.log(`📡 [StudentAPI] getPendingPayments Response Status: ${response.status}`);
 
-      if (response.status === 403 && effectiveRole === 'applicant') {
+      if (response.status === 403) {
+        console.warn(`⚠️ getPendingPayments 403 para rol ${effectiveRole}. Se devuelve lista vacía.`);
         return { success: true, data: { pending_payments: [] } };
       }
 
@@ -446,6 +450,10 @@ window.StudentAPI = {
           'X-User-Role': effectiveRole
         }
       });
+      if (response.status === 403) {
+        console.warn(`⚠️ getOverduePayments 403 para rol ${effectiveRole}. Se devuelve lista vacía.`);
+        return { success: true, data: { overdue_payments: [] } };
+      }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
       return await response.json();
     } catch (err) {
@@ -710,4 +718,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r8)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r14)');

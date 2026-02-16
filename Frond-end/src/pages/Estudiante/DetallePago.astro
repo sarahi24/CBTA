@@ -4,7 +4,7 @@ import StudentLayout from '../../layouts/LayoutEstu.astro';
 const paymentId = Astro.url.searchParams.get('id');
 ---
 
-<script src="/studentAPI.js?v=20260215r12" is:inline></script>
+<script src="/studentAPI.js?v=20260215r14" is:inline></script>
 
 <StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper" x-data={`{
