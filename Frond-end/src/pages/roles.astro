@@ -364,7 +364,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                                         </svg>
-                                        <span x-text="user.roles_count || 0"></span>
+                                        <span x-text="user.role || (Array.isArray(user.roles) && user.roles.length ? getRoleLabel(user.roles) : (user.roles_count ? `${user.roles_count} rol(es)` : 'Sin rol'))"></span>
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
@@ -1524,6 +1524,21 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     .join(' ');
             },
 
+            normalizeRoleList(values) {
+                if (!Array.isArray(values)) return [];
+
+                const normalized = values
+                    .map(value => {
+                        if (typeof value === 'string') return value;
+                        if (value && typeof value === 'object') return value.name || value.slug || value.role || value.value || '';
+                        return String(value || '');
+                    })
+                    .map(value => String(value || '').trim())
+                    .filter(Boolean);
+
+                return Array.from(new Set(normalized));
+            },
+
             extractUserRoleKeys(user) {
                 const rawValues = [];
 
@@ -1566,6 +1581,54 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 return Array.from(keys)
                     .sort((a, b) => this.getRoleDisplayName(a).localeCompare(this.getRoleDisplayName(b), 'es'))
                     .map(key => ({ value: key, label: this.getRoleDisplayName(key) }));
+            },
+
+            async enrichUsersWithDetailRoles() {
+                const usersToEnrich = this.users.filter(user => {
+                    const hasRoles = Array.isArray(user?.roles) && user.roles.length > 0;
+                    const hasRoleText = user?.role && String(user.role).trim() && String(user.role).toLowerCase() !== 'sin rol';
+                    return !hasRoles && !hasRoleText;
+                });
+
+                if (!usersToEnrich.length) return;
+
+                console.log(`🔄 Enriqueciendo roles para ${usersToEnrich.length} usuario(s)...`);
+
+                const detailResults = await Promise.allSettled(
+                    usersToEnrich.map(user => this.getUserDetails(user.id, true))
+                );
+
+                const rolesByUserId = new Map();
+                usersToEnrich.forEach((user, index) => {
+                    const result = detailResults[index];
+                    if (result.status !== 'fulfilled' || !result.value) return;
+
+                    const detail = result.value;
+                    const detailRoles = this.normalizeRoleList(
+                        detail.roles || detail.role || detail.role_name || []
+                    );
+
+                    if (detailRoles.length) {
+                        rolesByUserId.set(user.id, detailRoles);
+                    }
+                });
+
+                if (!rolesByUserId.size) return;
+
+                this.users = this.users.map(user => {
+                    const roles = rolesByUserId.get(user.id);
+                    if (!roles) return user;
+
+                    return {
+                        ...user,
+                        roles,
+                        roles_count: roles.length,
+                        role: this.getRoleLabel(roles),
+                        roleKey: this.normalizeRoleForFilter(roles[0]) || user.roleKey
+                    };
+                });
+
+                console.log(`✅ Roles enriquecidos para ${rolesByUserId.size} usuario(s)`);
             },
 
             generatePassword() {
@@ -2009,6 +2072,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         } else {
                             this.users = [];
                         }
+
+                        await this.enrichUsersWithDetailRoles();
                         
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
                         console.log('📋 Estructura del primer usuario:');
@@ -4723,10 +4788,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
             // ==================== OBTENER DETALLES DE USUARIO ====================
 
-            async getUserDetails(userId) {
+            async getUserDetails(userId, silent = false) {
                 const token = localStorage.getItem('access_token');
                 if (!token) {
-                    this.showNotify('No hay token de autenticación', 'error');
+                    if (!silent) this.showNotify('No hay token de autenticación', 'error');
                     return null;
                 }
 
@@ -4745,11 +4810,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (response.ok && result.success) {
                         return result.data?.user;
                     } else {
-                        this.showNotify('Error al obtener detalles del usuario', 'error');
+                        if (!silent) this.showNotify('Error al obtener detalles del usuario', 'error');
                         return null;
                     }
                 } catch (error) {
                     console.error('❌ Error al obtener detalles:', error);
+                    if (!silent) this.showNotify('Error al obtener detalles del usuario', 'error');
                     return null;
                 }
             },
