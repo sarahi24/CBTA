@@ -48,7 +48,8 @@ class ConceptsController extends Controller
             'applies_to',
             'semestre',
             'career',
-            'students'
+            'students',
+            'applicantTags'
         ]);
         $rules = [
             'concept_name'  =>'required|string|max:50',
@@ -61,7 +62,9 @@ class ConceptsController extends Controller
             'applies_to'            =>'required|string',
             'semestre'              =>'nullable|numeric',
             'career'                =>'nullable|string',
-            'students'              =>'nullable|array'
+            'students'              =>'nullable|array',
+            'applicantTags'         =>'nullable|array',
+            'applicantTags.*'       =>'string|in:applicant,no_student_details'
 
         ];
 
@@ -88,7 +91,8 @@ class ConceptsController extends Controller
             strtolower($data['applies_to'] ?? 'todos'),
             $data['semestre'] ?? null,
             $data['career'] ?? null,
-            $data['students'] ?? []
+            $data['students'] ?? [],
+            $data['applicantTags'] ?? []
         );
 
         return response()->json([
@@ -114,7 +118,8 @@ class ConceptsController extends Controller
             'applies_to',
             'semestre',
             'career',
-            'students'
+            'students',
+            'applicantTags'
         ]);
 
         $rules = [
@@ -125,10 +130,12 @@ class ConceptsController extends Controller
             'end_date'      => 'nullable|date',
             'amount'        => 'sometimes|required|numeric',
             'is_global'     => 'sometimes|required|boolean',
-            'applies_to'    => 'nullable|string|in:carrera,semestre,estudiantes,todos',
+            'applies_to'    => 'nullable|string|in:carrera,semestre,estudiantes,todos,tag',
             'semestre'      => 'nullable|numeric',
             'career'        => 'nullable|string',
             'students'      => 'nullable|array',
+            'applicantTags' => 'nullable|array',
+            'applicantTags.*' => 'string|in:applicant,no_student_details',
         ];
 
         $validator = Validator::make($data, $rules);
@@ -146,7 +153,8 @@ class ConceptsController extends Controller
             $data,
             $data['semestre'] ?? null,
             $data['career'] ?? null,
-            $data['students'] ?? null
+            $data['students'] ?? null,
+            $data['applicantTags'] ?? []
         );
 
         return response()->json([

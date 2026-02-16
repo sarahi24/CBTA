@@ -16,6 +16,36 @@ use Illuminate\Support\Facades\Notification;
 
 class ConceptsService{
 
+    private function recipientsByApplicantTags(array $tags)
+    {
+        $normalizedTags = collect($tags)
+            ->filter(fn($tag) => is_string($tag) && trim($tag) !== '')
+            ->map(fn($tag) => strtolower(trim($tag)))
+            ->unique()
+            ->values();
+
+        if ($normalizedTags->isEmpty()) {
+            return collect();
+        }
+
+        $query = User::query()->where('status', 'activo');
+
+        $query->where(function ($q) use ($normalizedTags) {
+            if ($normalizedTags->contains('applicant')) {
+                $q->orWhereHas('roles', fn($roleQuery) => $roleQuery->whereIn('name', ['applicant', 'unverified']));
+            }
+
+            if ($normalizedTags->contains('no_student_details')) {
+                $q->orWhereNull('n_control')
+                  ->orWhereNull('career_id')
+                  ->orWhereNull('semestre')
+                  ->orWhereHas('roles', fn($roleQuery) => $roleQuery->where('name', 'unverified'));
+            }
+        });
+
+        return $query->get();
+    }
+
 
     public function showConcepts(string $status = 'todos'){
             $paymentConcepts = PaymentConcept::select('concept_name',
@@ -47,7 +77,14 @@ class ConceptsService{
 
     }
 
-    public function createPaymentConcept(PaymentConcept $pc, string $appliesTo='todos', ?int $semestre=null, ?string $career=null, array|string|null $students = null)
+    public function createPaymentConcept(
+        PaymentConcept $pc,
+        string $appliesTo='todos',
+        ?int $semestre=null,
+        ?string $career=null,
+        array|string|null $students = null,
+        array $applicantTags = []
+    )
     {
         $paymentConcept= DB::transaction(function() use ($pc, $appliesTo, $semestre, $career, $students){
         PaymentConceptValidator::ensureConceptHasRequiredFields($pc);
@@ -91,6 +128,13 @@ class ConceptsService{
                     }
                     break;
 
+                case 'tag':
+                    $ids = $this->recipientsByApplicantTags($applicantTags)->pluck('id');
+                    if ($ids->isNotEmpty()) {
+                        $paymentConcept->users()->syncWithoutDetaching($ids->all());
+                    }
+                    break;
+
                 case 'todos':
                 default:
                     break;
@@ -103,6 +147,7 @@ class ConceptsService{
                 'carrera' => $paymentConcept->careers()->with('users')->get()->pluck('users')->flatten(),
                 'semestre' => $paymentConcept->paymentConceptSemesters()->with('users')->get()->pluck('users')->flatten(),
                 'estudiantes' => $paymentConcept->users,
+              'tag' => $this->recipientsByApplicantTags($applicantTags),
                 'todos' => User::where('status','activo')->get(),
             };
 
@@ -120,7 +165,14 @@ class ConceptsService{
         return $paymentConcept;
     }
 
-    public function updatePaymentConcept(PaymentConcept $pc, array $data, ?int $semestre = null, ?string $career = null, array|string|null $students = null)
+    public function updatePaymentConcept(
+        PaymentConcept $pc,
+        array $data,
+        ?int $semestre = null,
+        ?string $career = null,
+        array|string|null $students = null,
+        array $applicantTags = []
+    )
     {
          $pc= DB::transaction(function() use ($pc, $data, $semestre, $career, $students){
 
@@ -165,6 +217,11 @@ class ConceptsService{
                     }
                     break;
 
+                case 'tag':
+                    $ids = $this->recipientsByApplicantTags($applicantTags)->pluck('id');
+                    $pc->users()->sync($ids->all());
+                    break;
+
                 case 'todos':
                 default:
                     break;
@@ -177,6 +234,7 @@ class ConceptsService{
                 'carrera' => $pc->careers()->with('users')->get()->pluck('users')->flatten(),
                 'semestre' => $pc->paymentConceptSemesters()->with('users')->get()->pluck('users')->flatten(),
                 'estudiantes' => $pc->users,
+                'tag' => $this->recipientsByApplicantTags($applicantTags),
                 'todos' => User::where('status','activo')->get(),
             };
 

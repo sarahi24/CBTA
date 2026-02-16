@@ -74,7 +74,7 @@ Route::post('/stripe/webhook', [WebhookController::class, 'handle']);
 
 
 Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
-    Route::prefix('dashboard')->middleware('role:student')->group(function (){
+    Route::prefix('dashboard')->middleware('role:student|applicant')->group(function (){
         Route::middleware('permission:view own financial overview')->get('/data',[DashboardController::class,'index']);
         Route::middleware('permission:view own pending concepts summary')->get('/pending/{studentId?}',[DashboardController::class,'pending']);
         Route::middleware('permission:view own paid concepts summary')->get('/paid/{studentId?}',[DashboardController::class,'paid']);
@@ -83,16 +83,16 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:refresh.all.dashboard')->post('/refresh/{studentId?}',[DashboardController::class,'refresh']);
 
     });
-    Route::prefix('cards')->middleware('role:student')->group(function(){
+    Route::prefix('cards')->middleware('role:student|applicant')->group(function(){
         Route::middleware('permission:view cards')->get('/',[CardsController::class,'index']);
         Route::middleware('permission:create setup')->post('/',[CardsController::class,'store']);
         Route::middleware('permission:create and view card')->get('/save', [CardsController::class, 'save']);
         Route::middleware('permission:delete card')->delete('/{paymentMethodId}',[CardsController::class,'destroy']);
     });
-    Route::prefix('history')->middleware('role:student')->group(function(){
+    Route::prefix('history')->middleware('role:student|applicant')->group(function(){
         Route::middleware('permission:view payment history')->get('/',[PaymentHistoryController::class,'index']);
     });
-    Route::prefix('pending-payments')->middleware('role:student')->group(function(){
+    Route::prefix('pending-payments')->middleware('role:student|applicant')->group(function(){
         Route::middleware('permission:view pending concepts')->get('/',[PendingPaymentController::class,'index']);
         Route::middleware('permission:view pending concepts')->get('/{studentId?}',[PendingPaymentController::class,'getAllPending']);
         Route::middleware('permission:create payment','throttle:5,1')->post('/',[PendingPaymentController::class,'store']);
