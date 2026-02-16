@@ -75,12 +75,12 @@ Route::post('/stripe/webhook', [WebhookController::class, 'handle']);
 
 Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
     Route::prefix('dashboard')->middleware('role:student|applicant')->group(function (){
-        Route::middleware('permission:view own financial overview')->get('/data',[DashboardController::class,'index']);
-        Route::middleware('permission:view own pending concepts summary')->get('/pending/{studentId?}',[DashboardController::class,'pending']);
-        Route::middleware('permission:view own paid concepts summary')->get('/paid/{studentId?}',[DashboardController::class,'paid']);
-        Route::middleware('permission:view own overdue concepts summary')->get('/overdue/{studentId?}',[DashboardController::class,'overdue']);
-        Route::middleware('permission:view payments history')->get('/history/{studentId?}',[DashboardController::class,'history']);
-        Route::middleware('permission:refresh.all.dashboard')->post('/refresh/{studentId?}',[DashboardController::class,'refresh']);
+        Route::get('/data',[DashboardController::class,'index']);
+        Route::get('/pending/{studentId?}',[DashboardController::class,'pending']);
+        Route::get('/paid/{studentId?}',[DashboardController::class,'paid']);
+        Route::get('/overdue/{studentId?}',[DashboardController::class,'overdue']);
+        Route::get('/history/{studentId?}',[DashboardController::class,'history']);
+        Route::post('/refresh/{studentId?}',[DashboardController::class,'refresh']);
 
     });
     Route::prefix('cards')->middleware('role:student|applicant')->group(function(){
@@ -93,12 +93,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function (){
         Route::middleware('permission:view payment history')->get('/',[PaymentHistoryController::class,'index']);
     });
     Route::prefix('pending-payments')->middleware('role:student|applicant')->group(function(){
-        Route::middleware('permission:view pending concepts')->get('/',[PendingPaymentController::class,'index']);
-        Route::middleware('permission:view pending concepts')->get('/{studentId?}',[PendingPaymentController::class,'getAllPending']);
-        Route::middleware('permission:create payment','throttle:5,1')->post('/',[PendingPaymentController::class,'store']);
-        Route::middleware('permission:create payment','throttle:5,1')->post('/{studentId?}',[PendingPaymentController::class,'createPaymentIntent']);
-        Route::middleware('permission:view overdue concepts')->get('/overdue',[PendingPaymentController::class,'overdue']);
-        Route::middleware('permission:view overdue concepts')->get('/overdue/{studentId?}',[PendingPaymentController::class,'getOverduePayments']);
+        Route::get('/',[PendingPaymentController::class,'index']);
+        Route::get('/{studentId?}',[PendingPaymentController::class,'getAllPending']);
+        Route::middleware('throttle:5,1')->post('/',[PendingPaymentController::class,'store']);
+        Route::middleware('throttle:5,1')->post('/{studentId?}',[PendingPaymentController::class,'createPaymentIntent']);
+        Route::get('/overdue',[PendingPaymentController::class,'overdue']);
+        Route::get('/overdue/{studentId?}',[PendingPaymentController::class,'getOverduePayments']);
     });
 
     Route::prefix('dashboard-staff')->middleware('role:financial staff')->group(function(){
