@@ -565,6 +565,12 @@ window.StudentAPI = {
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+
+      if (effectiveRole === 'applicant') {
+        console.info('ℹ️ getPendingPayments omitido para applicant. Regresando lista vacía controlada.');
+        return { success: true, data: { pending_payments: [] } };
+      }
+
       const apiRoles = getApiRoleCandidates(effectiveRole);
       const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
@@ -635,6 +641,12 @@ window.StudentAPI = {
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+
+      if (effectiveRole === 'applicant') {
+        console.info('ℹ️ getOverduePayments omitido para applicant. Regresando lista vacía controlada.');
+        return { success: true, data: { overdue_payments: [] } };
+      }
+
       const apiRoles = getApiRoleCandidates(effectiveRole);
       const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
@@ -711,9 +723,15 @@ window.StudentAPI = {
     }
   },
 
-  async getPaymentMethods(studentId, token, forceRefresh = false) {
+  async getPaymentMethods(studentId, token, forceRefresh = false, role = 'student') {
     try {
-      const effectiveRole = resolveStudentPortalRole('student');
+      const effectiveRole = resolveStudentPortalRole(role);
+
+      if (effectiveRole === 'applicant') {
+        console.info('ℹ️ getPaymentMethods omitido para applicant. Regresando lista vacía controlada.');
+        return { success: true, data: { cards: [] } };
+      }
+
       const endpointCandidates = [
         `${API_BASE}/cards`,
         ...(studentId ? [`${API_BASE}/cards/${studentId}`] : [])

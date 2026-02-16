@@ -221,7 +221,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           try {
             console.log('ðŸ“¥ Cargando tarjetas desde StudentAPI...');
             // Pasar null para obtener m©todos de pago del usuario autenticado
-            const cardsData = await window.StudentAPI.getPaymentMethods(null, token);
+            const cardsData = await window.StudentAPI.getPaymentMethods(null, token, false, this.portalRole);
             const cardsArray = Array.isArray(cardsData.data) ? cardsData.data : 
                                Array.isArray(cardsData) ? cardsData : [];
             
