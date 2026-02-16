@@ -18,8 +18,15 @@ const title = 'Panel de Estudiante';
         porcentajeProgreso: 0,
         loading: false,
         error: '',
+        initCompleted: false,
+        initInProgress: false,
 
         async init() {
+          if (this.initCompleted || this.initInProgress) {
+            return;
+          }
+          this.initInProgress = true;
+
           const token = localStorage.getItem('access_token');
           const userId = localStorage.getItem('userId');
           const userName = localStorage.getItem('userName');
@@ -59,7 +66,7 @@ const title = 'Panel de Estudiante';
 
             const dashboardCalls = roleForPortal === 'applicant'
               ? [
-                  window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+                  Promise.resolve({ data: { pending_payments: [] } }),
                   Promise.resolve({ data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } }),
                   Promise.resolve({ data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } }),
                   Promise.resolve({ data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } })
@@ -104,11 +111,13 @@ const title = 'Panel de Estudiante';
             const pendingAmount = parseFloat(this.pending && this.pending.totalAmount ? this.pending.totalAmount : '0');
             const totalAmount = paidAmount + pendingAmount;
             this.porcentajeProgreso = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+            this.initCompleted = true;
           } catch (err) {
             console.error('Error loading dashboard data:', err);
             this.error = 'Error al cargar los datos del panel';
           } finally {
             this.loading = false;
+            this.initInProgress = false;
           }
         },
 
