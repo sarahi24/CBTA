@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r16" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r17" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -77,7 +77,7 @@ const title = 'Panel de Estudiante';
               });
 
             const hasApplicantRole = roleCandidates.some(function(roleValue) {
-              return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante';
+              return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante' || roleValue === 'unverified' || roleValue === 'sin_verificar' || roleValue === 'sin verificar';
             });
             const hasParentRole = roleCandidates.some(function(roleValue) {
               return roleValue === 'parent' || roleValue === 'padre';
@@ -87,7 +87,7 @@ const title = 'Panel de Estudiante';
               ? 'applicant'
               : (hasParentRole ? 'parent' : 'student');
             this.portalRole = roleForPortal;
-            const scopedStudentId = (roleForPortal === 'parent' || roleForPortal === 'applicant') ? parsedUserId : null;
+            const scopedStudentId = roleForPortal === 'parent' ? parsedUserId : null;
 
             if (roleForPortal === 'applicant') {
               this.roleNotice = 'Tu cuenta está como solicitante. Si tienes conceptos asignados, se mostrarán aquí.';
@@ -1328,7 +1328,7 @@ const title = 'Panel de Estudiante';
             });
 
           const hasApplicantRole = roleCandidates.some(function(roleValue) {
-            return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante';
+            return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante' || roleValue === 'unverified' || roleValue === 'sin_verificar' || roleValue === 'sin verificar';
           });
           const hasParentRole = roleCandidates.some(function(roleValue) {
             return roleValue === 'parent' || roleValue === 'padre';

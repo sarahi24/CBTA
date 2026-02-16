@@ -12,13 +12,20 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante') return 'applicant';
+  if (
+    roleLower === 'applicant' ||
+    roleLower === 'solicitante' ||
+    roleLower === 'aspirante' ||
+    roleLower === 'unverified' ||
+    roleLower === 'sin_verificar' ||
+    roleLower === 'sin verificar'
+  ) return 'applicant';
 
   return roleLower;
 }
 
 function shouldUseStudentId(effectiveRole, studentId) {
-  return (effectiveRole === 'parent' || effectiveRole === 'applicant') && !!studentId;
+  return effectiveRole === 'parent' && !!studentId;
 }
 
 function getRoleFromStorage() {
@@ -746,4 +753,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r16)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r17)');
