@@ -68,6 +68,14 @@ function resolveApiAccessRole(effectiveRole) {
   return 'student';
 }
 
+function getApiRoleCandidates(effectiveRole) {
+  const primaryRole = resolveApiAccessRole(effectiveRole);
+  if (primaryRole === 'applicant' || primaryRole === 'unverified') {
+    return [primaryRole, 'student'];
+  }
+  return [primaryRole];
+}
+
 /**
  * Helper: Detecta errores de autenticación (401)
  */

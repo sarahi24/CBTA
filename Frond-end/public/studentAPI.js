@@ -68,6 +68,14 @@ function resolveApiAccessRole(effectiveRole) {
   return 'student';
 }
 
+function getApiRoleCandidates(effectiveRole) {
+  const primaryRole = resolveApiAccessRole(effectiveRole);
+  if (primaryRole === 'applicant' || primaryRole === 'unverified') {
+    return [primaryRole, 'student'];
+  }
+  return [primaryRole];
+}
+
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
     const currentToken = localStorage.getItem('access_token');
@@ -312,37 +320,39 @@ window.StudentAPI = {
   async getPendingTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
+      const apiRoles = getApiRoleCandidates(effectiveRole);
       const endpointCandidates = [
         `${API_BASE}/dashboard/pending`,
-        ...(useIdRoute ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
+        ...(studentId ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
         const url = new URL(endpoint);
         if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-        const withPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole, 'view.own.pending.concepts.summary')
-        });
+        for (const apiRole of apiRoles) {
 
-        if (withPermission.status === 401) handleAuthError(401);
-        if (withPermission.ok) return await withPermission.json();
-        if (!isSkippableFallbackStatus(withPermission.status)) {
-          throw new Error(await parseErrorMessage(withPermission, 'Error'));
-        }
+          const withPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole, 'view.own.pending.concepts.summary')
+          });
 
-        const withoutPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole)
-        });
+          if (withPermission.status === 401) handleAuthError(401);
+          if (withPermission.ok) return await withPermission.json();
+          if (!isSkippableFallbackStatus(withPermission.status)) {
+            throw new Error(await parseErrorMessage(withPermission, 'Error'));
+          }
 
-        if (withoutPermission.status === 401) handleAuthError(401);
-        if (withoutPermission.ok) return await withoutPermission.json();
-        if (!isSkippableFallbackStatus(withoutPermission.status)) {
-          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole)
+          });
+
+          if (withoutPermission.status === 401) handleAuthError(401);
+          if (withoutPermission.ok) return await withoutPermission.json();
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          }
         }
       }
 
@@ -357,37 +367,39 @@ window.StudentAPI = {
   async getPaidTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
+      const apiRoles = getApiRoleCandidates(effectiveRole);
       const endpointCandidates = [
         `${API_BASE}/dashboard/paid`,
-        ...(useIdRoute ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
+        ...(studentId ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
         const url = new URL(endpoint);
         if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-        const withPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole, 'view.own.paid.concepts.summary')
-        });
+        for (const apiRole of apiRoles) {
 
-        if (withPermission.status === 401) handleAuthError(401);
-        if (withPermission.ok) return await withPermission.json();
-        if (!isSkippableFallbackStatus(withPermission.status)) {
-          throw new Error(await parseErrorMessage(withPermission, 'Error'));
-        }
+          const withPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole, 'view.own.paid.concepts.summary')
+          });
 
-        const withoutPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole)
-        });
+          if (withPermission.status === 401) handleAuthError(401);
+          if (withPermission.ok) return await withPermission.json();
+          if (!isSkippableFallbackStatus(withPermission.status)) {
+            throw new Error(await parseErrorMessage(withPermission, 'Error'));
+          }
 
-        if (withoutPermission.status === 401) handleAuthError(401);
-        if (withoutPermission.ok) return await withoutPermission.json();
-        if (!isSkippableFallbackStatus(withoutPermission.status)) {
-          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole)
+          });
+
+          if (withoutPermission.status === 401) handleAuthError(401);
+          if (withoutPermission.ok) return await withoutPermission.json();
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          }
         }
       }
 
@@ -402,37 +414,39 @@ window.StudentAPI = {
   async getOverdueTotal(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
+      const apiRoles = getApiRoleCandidates(effectiveRole);
       const endpointCandidates = [
         `${API_BASE}/dashboard/overdue`,
-        ...(useIdRoute ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
+        ...(studentId ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
         const url = new URL(endpoint);
         if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
 
-        const withPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole, 'view.own.overdue.concepts.summary')
-        });
+        for (const apiRole of apiRoles) {
 
-        if (withPermission.status === 401) handleAuthError(401);
-        if (withPermission.ok) return await withPermission.json();
-        if (!isSkippableFallbackStatus(withPermission.status)) {
-          throw new Error(await parseErrorMessage(withPermission, 'Error'));
-        }
+          const withPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole, 'view.own.overdue.concepts.summary')
+          });
 
-        const withoutPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole)
-        });
+          if (withPermission.status === 401) handleAuthError(401);
+          if (withPermission.ok) return await withPermission.json();
+          if (!isSkippableFallbackStatus(withPermission.status)) {
+            throw new Error(await parseErrorMessage(withPermission, 'Error'));
+          }
 
-        if (withoutPermission.status === 401) handleAuthError(401);
-        if (withoutPermission.ok) return await withoutPermission.json();
-        if (!isSkippableFallbackStatus(withoutPermission.status)) {
-          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole)
+          });
+
+          if (withoutPermission.status === 401) handleAuthError(401);
+          if (withoutPermission.ok) return await withoutPermission.json();
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          }
         }
       }
 
@@ -499,16 +513,15 @@ window.StudentAPI = {
   async getPendingPayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
+      const apiRoles = getApiRoleCandidates(effectiveRole);
       const endpointCandidates = [
         `${API_BASE}/pending-payments`,
-        ...(useIdRoute ? [`${API_BASE}/pending-payments/${studentId}`] : []),
+        ...(studentId ? [`${API_BASE}/pending-payments/${studentId}`] : []),
         `${API_BASE}/pending-payment`,
-        ...(useIdRoute ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
+        ...(studentId ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
       ];
 
-      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRole: ${apiRole}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
+      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRoles: ${apiRoles.join(',')}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
 
       for (const rawEndpoint of endpointCandidates) {
         const url = new URL(rawEndpoint);
@@ -516,36 +529,39 @@ window.StudentAPI = {
 
         console.log(`🔍 [StudentAPI] getPendingPayments probando: ${url.toString()}`);
 
-        const withPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole, 'view.pending.concepts')
-        });
+        for (const apiRole of apiRoles) {
 
-        console.log(`📡 [StudentAPI] getPendingPayments status (perm): ${withPermission.status}`);
-        if (withPermission.status === 401) handleAuthError(401);
-        if (withPermission.ok) {
-          const data = await withPermission.json();
-          console.log(`✅ [StudentAPI] getPendingPayments Success (perm):`, data);
-          return data;
-        }
-        if (!isSkippableFallbackStatus(withPermission.status)) {
-          throw new Error(await parseErrorMessage(withPermission, `Error ${withPermission.status}: ${withPermission.statusText}`));
-        }
+          const withPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole, 'view.pending.concepts')
+          });
 
-        const withoutPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole)
-        });
+          console.log(`📡 [StudentAPI] getPendingPayments status (perm:${apiRole}): ${withPermission.status}`);
+          if (withPermission.status === 401) handleAuthError(401);
+          if (withPermission.ok) {
+            const data = await withPermission.json();
+            console.log(`✅ [StudentAPI] getPendingPayments Success (perm:${apiRole}):`, data);
+            return data;
+          }
+          if (!isSkippableFallbackStatus(withPermission.status)) {
+            throw new Error(await parseErrorMessage(withPermission, `Error ${withPermission.status}: ${withPermission.statusText}`));
+          }
 
-        console.log(`📡 [StudentAPI] getPendingPayments status (sin perm): ${withoutPermission.status}`);
-        if (withoutPermission.status === 401) handleAuthError(401);
-        if (withoutPermission.ok) {
-          const data = await withoutPermission.json();
-          console.log(`✅ [StudentAPI] getPendingPayments Success (sin perm):`, data);
-          return data;
-        }
-        if (!isSkippableFallbackStatus(withoutPermission.status)) {
-          throw new Error(await parseErrorMessage(withoutPermission, `Error ${withoutPermission.status}: ${withoutPermission.statusText}`));
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole)
+          });
+
+          console.log(`📡 [StudentAPI] getPendingPayments status (sin perm:${apiRole}): ${withoutPermission.status}`);
+          if (withoutPermission.status === 401) handleAuthError(401);
+          if (withoutPermission.ok) {
+            const data = await withoutPermission.json();
+            console.log(`✅ [StudentAPI] getPendingPayments Success (sin perm:${apiRole}):`, data);
+            return data;
+          }
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, `Error ${withoutPermission.status}: ${withoutPermission.statusText}`));
+          }
         }
       }
 
@@ -560,13 +576,12 @@ window.StudentAPI = {
   async getOverduePayments(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
+      const apiRoles = getApiRoleCandidates(effectiveRole);
       const endpointCandidates = [
         `${API_BASE}/pending-payments/overdue`,
-        ...(useIdRoute ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
+        ...(studentId ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
         `${API_BASE}/pending-payment/overdue`,
-        ...(useIdRoute ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
+        ...(studentId ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
       ];
 
       for (const rawEndpoint of endpointCandidates) {
@@ -575,26 +590,29 @@ window.StudentAPI = {
 
         console.log('📡 Fetching overdue payments from:', url.toString());
 
-        const withPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole, 'view.overdue.concepts')
-        });
+        for (const apiRole of apiRoles) {
 
-        if (withPermission.status === 401) handleAuthError(401);
-        if (withPermission.ok) return await withPermission.json();
-        if (!isSkippableFallbackStatus(withPermission.status)) {
-          throw new Error(await parseErrorMessage(withPermission, 'Error'));
-        }
+          const withPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole, 'view.overdue.concepts')
+          });
 
-        const withoutPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, apiRole)
-        });
+          if (withPermission.status === 401) handleAuthError(401);
+          if (withPermission.ok) return await withPermission.json();
+          if (!isSkippableFallbackStatus(withPermission.status)) {
+            throw new Error(await parseErrorMessage(withPermission, 'Error'));
+          }
 
-        if (withoutPermission.status === 401) handleAuthError(401);
-        if (withoutPermission.ok) return await withoutPermission.json();
-        if (!isSkippableFallbackStatus(withoutPermission.status)) {
-          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole)
+          });
+
+          if (withoutPermission.status === 401) handleAuthError(401);
+          if (withoutPermission.ok) return await withoutPermission.json();
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          }
         }
       }
 
@@ -882,4 +900,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r25)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r26)');
