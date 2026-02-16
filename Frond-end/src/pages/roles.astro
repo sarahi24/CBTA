@@ -222,6 +222,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <label class="text-sm font-medium">Rol:</label>
                     <select
                         x-model="filterRole"
+                        @change="handleRoleFilterChange()"
                         class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-institucional"
                     >
                         <option value="">Todos</option>
@@ -229,6 +230,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             <option :value="role.value" x-text="role.label"></option>
                         </template>
                     </select>
+
+                    <button @click="enrichUsersWithDetailRoles({ maxRequests: roleEnrichmentBatchSize })"
+                            type="button"
+                            class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition-colors"
+                            :disabled="roleEnrichmentInProgress"
+                            :title="`Carga roles detallados en lotes de ${roleEnrichmentBatchSize}`">
+                        <span x-show="!roleEnrichmentInProgress">Cargar roles</span>
+                        <span x-show="roleEnrichmentInProgress">Cargando...</span>
+                    </button>
                 </div>
             </div>
             <!-- Acciones Masivas -->
@@ -1350,6 +1360,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 filterStatus: '',
                 filterRole: '',
                 roleOptionsLoaded: false,
+                roleEnrichmentInProgress: false,
+                roleEnrichmentBatchSize: 5,
+                roleFilterAutoBatchDone: false,
                 newUser: { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
@@ -1583,52 +1596,96 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     .map(key => ({ value: key, label: this.getRoleDisplayName(key) }));
             },
 
-            async enrichUsersWithDetailRoles() {
+            async enrichUsersWithDetailRoles(options = {}) {
+                if (this.roleEnrichmentInProgress) return;
+
+                const maxRequests = Math.max(0, Number(options.maxRequests ?? this.roleEnrichmentBatchSize ?? 5));
+                if (!maxRequests) return;
+
+                let roleCache = {};
+                try {
+                    roleCache = JSON.parse(localStorage.getItem('roles_user_detail_cache') || '{}') || {};
+                } catch (_) {
+                    roleCache = {};
+                }
+
+                // Aplicar cache antes de pedir al backend
+                this.users = this.users.map(user => {
+                    const cachedRoles = this.normalizeRoleList(roleCache?.[user.id]?.roles || []);
+                    if (!cachedRoles.length) return user;
+
+                    return {
+                        ...user,
+                        roles: cachedRoles,
+                        roles_count: cachedRoles.length,
+                        role: this.getRoleLabel(cachedRoles),
+                        roleKey: this.normalizeRoleForFilter(cachedRoles[0]) || user.roleKey
+                    };
+                });
+
                 const usersToEnrich = this.users.filter(user => {
                     const hasRoles = Array.isArray(user?.roles) && user.roles.length > 0;
                     const hasRoleText = user?.role && String(user.role).trim() && String(user.role).toLowerCase() !== 'sin rol';
                     return !hasRoles && !hasRoleText;
-                });
+                }).slice(0, maxRequests);
 
                 if (!usersToEnrich.length) return;
 
                 console.log(`🔄 Enriqueciendo roles para ${usersToEnrich.length} usuario(s)...`);
 
-                const detailResults = await Promise.allSettled(
-                    usersToEnrich.map(user => this.getUserDetails(user.id, true))
-                );
-
-                const rolesByUserId = new Map();
-                usersToEnrich.forEach((user, index) => {
-                    const result = detailResults[index];
-                    if (result.status !== 'fulfilled' || !result.value) return;
-
-                    const detail = result.value;
-                    const detailRoles = this.normalizeRoleList(
-                        detail.roles || detail.role || detail.role_name || []
+                this.roleEnrichmentInProgress = true;
+                try {
+                    const detailResults = await Promise.allSettled(
+                        usersToEnrich.map(user => this.getUserDetails(user.id, true))
                     );
 
-                    if (detailRoles.length) {
-                        rolesByUserId.set(user.id, detailRoles);
-                    }
-                });
+                    const rolesByUserId = new Map();
+                    usersToEnrich.forEach((user, index) => {
+                        const result = detailResults[index];
+                        if (result.status !== 'fulfilled' || !result.value) return;
 
-                if (!rolesByUserId.size) return;
+                        const detail = result.value;
+                        const detailRoles = this.normalizeRoleList(
+                            detail.roles || detail.role || detail.role_name || []
+                        );
 
-                this.users = this.users.map(user => {
-                    const roles = rolesByUserId.get(user.id);
-                    if (!roles) return user;
+                        if (detailRoles.length) {
+                            roleCache[user.id] = { roles: detailRoles, updatedAt: Date.now() };
+                            rolesByUserId.set(user.id, detailRoles);
+                        }
+                    });
 
-                    return {
-                        ...user,
-                        roles,
-                        roles_count: roles.length,
-                        role: this.getRoleLabel(roles),
-                        roleKey: this.normalizeRoleForFilter(roles[0]) || user.roleKey
-                    };
-                });
+                    try {
+                        localStorage.setItem('roles_user_detail_cache', JSON.stringify(roleCache));
+                    } catch (_) {}
 
-                console.log(`✅ Roles enriquecidos para ${rolesByUserId.size} usuario(s)`);
+                    if (!rolesByUserId.size) return;
+
+                    this.users = this.users.map(user => {
+                        const roles = rolesByUserId.get(user.id);
+                        if (!roles) return user;
+
+                        return {
+                            ...user,
+                            roles,
+                            roles_count: roles.length,
+                            role: this.getRoleLabel(roles),
+                            roleKey: this.normalizeRoleForFilter(roles[0]) || user.roleKey
+                        };
+                    });
+
+                    console.log(`✅ Roles enriquecidos para ${rolesByUserId.size} usuario(s)`);
+                } finally {
+                    this.roleEnrichmentInProgress = false;
+                }
+            },
+
+            async handleRoleFilterChange() {
+                if (!this.filterRole) return;
+                if (this.roleFilterAutoBatchDone) return;
+
+                this.roleFilterAutoBatchDone = true;
+                await this.enrichUsersWithDetailRoles({ maxRequests: this.roleEnrichmentBatchSize });
             },
 
             generatePassword() {
@@ -2073,8 +2130,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             this.users = [];
                         }
 
-                        await this.enrichUsersWithDetailRoles();
-                        
+                        this.roleFilterAutoBatchDone = false;
+
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
                         console.log('📋 Estructura del primer usuario:');
                         if (this.users.length > 0) {
