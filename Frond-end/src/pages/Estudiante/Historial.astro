@@ -181,15 +181,6 @@ const forceRefresh = forceRefreshParam === 'true';
           await this.syncPortalRoleFromApi(token);
         }
 
-        if (this.roleForPortal === 'applicant') {
-          this.roleNotice = 'Tu cuenta está en proceso. El historial de pagos y recibos estará disponible cuando se active tu perfil de estudiante.';
-          this.pagos = [];
-          this.loading = false;
-          this.initCompleted = true;
-          this.initInProgress = false;
-          return;
-        }
-
         await this.loadHistory();
         // Mostrar modal si hay parÃ¡metro result
         if (this.resultType === 'paid') {
@@ -213,12 +204,7 @@ const forceRefresh = forceRefreshParam === 'true';
       async loadHistory() {
         this.loading = true;
         this.errorMessage = '';
-
-        if (this.roleForPortal === 'applicant') {
-          this.pagos = [];
-          this.loading = false;
-          return;
-        }
+        this.roleNotice = '';
 
         if (!window.StudentAPI) {
           this.errorMessage = 'StudentAPI no esta disponible.';
@@ -285,7 +271,17 @@ const forceRefresh = forceRefreshParam === 'true';
           this.previousPage = paymentData?.previousPage ?? null;
         } catch (err) {
           console.error('âŒ Error fetching payment history:', err);
-          this.errorMessage = err?.message || 'Error al cargar el historial de pagos';
+          const rawMessage = String(err?.message || 'Error al cargar el historial de pagos');
+          const lowerMessage = rawMessage.toLowerCase();
+          const isForbidden = lowerMessage.includes('403') || lowerMessage.includes('forbidden') || lowerMessage.includes('prohibido');
+          const isNotFound = lowerMessage.includes('404') || lowerMessage.includes('not found') || lowerMessage.includes('no encontrado');
+
+          if ((isForbidden || isNotFound) && this.roleForPortal === 'applicant') {
+            this.roleNotice = 'Tu cuenta está en proceso. El historial de pagos y recibos estará disponible cuando se active tu perfil de estudiante.';
+            this.errorMessage = '';
+          } else {
+            this.errorMessage = rawMessage;
+          }
           this.pagos = [];
         } finally {
           this.loading = false;
@@ -320,11 +316,6 @@ const forceRefresh = forceRefreshParam === 'true';
       },
 
       async downloadReceipt(paymentId, receiptUrl = null) {
-        if (this.roleForPortal === 'applicant') {
-          this.errorMessage = 'Tu cuenta aún no tiene recibos disponibles.';
-          return;
-        }
-
         if (!window.StudentAPI) {
           this.errorMessage = 'StudentAPI no esta disponible.';
           return;
@@ -368,7 +359,17 @@ const forceRefresh = forceRefreshParam === 'true';
             this.openUrlInNewTab(fallbackUrl);
             return;
           }
-          this.errorMessage = err?.message || 'Recibo no disponible para este pago';
+          const rawMessage = String(err?.message || 'Recibo no disponible para este pago');
+          const lowerMessage = rawMessage.toLowerCase();
+          const isForbidden = lowerMessage.includes('403') || lowerMessage.includes('forbidden') || lowerMessage.includes('prohibido');
+          const isNotFound = lowerMessage.includes('404') || lowerMessage.includes('not found') || lowerMessage.includes('no encontrado');
+
+          if ((isForbidden || isNotFound) && this.roleForPortal === 'applicant') {
+            this.roleNotice = 'Tu cuenta está en proceso. Los recibos estarán disponibles cuando se active tu perfil de estudiante.';
+            this.errorMessage = '';
+          } else {
+            this.errorMessage = rawMessage;
+          }
         } finally {
           this.downloadingReceiptId = null;
         }

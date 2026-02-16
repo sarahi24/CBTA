@@ -159,39 +159,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         }
       },
 
-      async verifyFinancialAccess(token) {
-        if (!token) return false;
-        if (this.portalRole === 'applicant') return false;
-
-        try {
-          const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/users/student-details', {
-            method: 'GET',
-            headers: {
-              'Authorization': 'Bearer ' + token,
-              'Accept': 'application/json'
-            }
-          });
-
-          if (response.ok) {
-            return true;
-          }
-
-          if (response.status === 404 || response.status === 403) {
-            this.portalRole = 'applicant';
-            localStorage.setItem('userRole', 'applicant');
-            localStorage.setItem('role', 'applicant');
-            this.roleNotice = 'Tu cuenta está en proceso. Los adeudos y métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
-            console.log('🔍 [Adeudos] Acceso financiero no disponible, modo applicant activado por student-details:', response.status);
-            return false;
-          }
-
-          return true;
-        } catch (error) {
-          console.warn('⚠️ [Adeudos] No se pudo validar student-details para acceso financiero:', error?.message || error);
-          return true;
-        }
-      },
-
       closeResultModal() {
         this.showResultModal = false;
       },
@@ -229,9 +196,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const userId = localStorage.getItem('userId');
         this.userId = userId;  // Guardar en el estado
         this.portalRole = this.detectPortalRole();
-        if (this.portalRole === 'applicant') {
-          this.roleNotice = 'Tu cuenta está en proceso. Los adeudos y métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
-        }
+        this.roleNotice = '';
         
         console.log('ðŸ” [Adeudos] Usuario cargado:', this.alumnoNombre);
         console.log('ðŸ” [Adeudos] Token disponible:', !!token);
@@ -242,30 +207,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
         if (token && apiReady) {
           await this.syncPortalRoleFromApi(token);
-          if (this.portalRole === 'applicant') {
-            this.roleNotice = 'Tu cuenta está en proceso. Los adeudos y métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
-          }
-
-          const hasFinancialAccess = await this.verifyFinancialAccess(token);
-          if (!hasFinancialAccess) {
-            this.adeudos = [];
-            this.overdueAdeudos = [];
-            this.tarjetas = [];
-            this.showOverdueAlert = false;
-            this.activeTab = 'pending';
-            this.loadingTab = false;
-            return;
-          }
-        }
-
-        if (this.portalRole === 'applicant') {
-          this.adeudos = [];
-          this.overdueAdeudos = [];
-          this.tarjetas = [];
-          this.showOverdueAlert = false;
-          this.activeTab = 'pending';
-          this.loadingTab = false;
-          return;
         }
         
         if (token && apiReady) {
@@ -318,10 +259,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       async loadPendingPayments() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
-        if (this.portalRole === 'applicant') {
-          this.adeudos = [];
-          return;
-        }
 
         this.loadingTab = true;
         try {
@@ -351,11 +288,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const token = localStorage.getItem('access_token');
         if (!token) {
           console.warn('š ï¸ No token available for overdue payments');
-          return;
-        }
-        if (this.portalRole === 'applicant') {
-          this.overdueAdeudos = [];
-          this.showOverdueAlert = false;
           return;
         }
 
@@ -404,7 +336,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
       switchTab(tab) {
         this.activeTab = tab;
-        if (this.portalRole === 'applicant') return;
         if (tab === 'pending' && this.adeudos.length === 0) {
           this.loadPendingPayments();
         } else if (tab === 'overdue' && this.overdueAdeudos.length === 0) {
