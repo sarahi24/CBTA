@@ -90,6 +90,25 @@ const title = 'Panel de Estudiante';
             this.roleNotice = '';
             this.emptyPaymentsMessage = 'No hay registros de pagos';
 
+            if (roleForPortal === 'applicant') {
+              this.roleNotice = 'Tu cuenta está en modo aspirante. El portal está habilitado, pero la información financiera se mostrará cuando tu perfil sea estudiante activo.';
+              this.emptyPaymentsMessage = 'Sin información financiera disponible para aspirantes';
+              this.history = [];
+              this.overdue = { totalAmount: '0.00', totalCount: 0 };
+              this.paid = { totalPayments: '0.00', paymentsByMonth: {} };
+              this.pending = { totalAmount: '0.00', totalCount: 0 };
+              this.porcentajeProgreso = 0;
+
+              const refreshButton = document.getElementById('refreshCacheBtn');
+              if (refreshButton) {
+                refreshButton.setAttribute('disabled', 'true');
+                refreshButton.setAttribute('title', 'No disponible para aspirantes');
+              }
+
+              this.initCompleted = true;
+              return;
+            }
+
             const dashboardCalls = [
               window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
@@ -1389,6 +1408,11 @@ const title = 'Panel de Estudiante';
           const roleForPortal = hasParentRole ? 'parent' : (hasApplicantRole ? 'applicant' : 'student');
           const parsedUserId = userId ? parseInt(userId, 10) : null;
           const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
+
+          if (roleForPortal === 'applicant') {
+            showToast('success', 'No hay caché financiero para actualizar en cuentas aspirante.');
+            return;
+          }
           
           if (!token) {
             showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
