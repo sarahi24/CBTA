@@ -75,9 +75,25 @@ const forceRefresh = forceRefreshParam === 'true';
           } catch (_) {}
         }
 
-        const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRole || '').toLowerCase().trim();
-        if (rawRole === 'parent' || rawRole === 'padre') return 'parent';
-        if (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante') return 'applicant';
+        const roleCandidates = [
+          localStorage.getItem('userRole'),
+          localStorage.getItem('role'),
+          inferredRole
+        ]
+          .filter(Boolean)
+          .map(function(roleValue) {
+            return String(roleValue).toLowerCase().trim();
+          });
+
+        const hasApplicantRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante';
+        });
+        const hasParentRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'parent' || roleValue === 'padre';
+        });
+
+        if (hasApplicantRole) return 'applicant';
+        if (hasParentRole) return 'parent';
         return 'student';
       },
 

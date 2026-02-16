@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r14" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r15" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -38,7 +38,7 @@ const title = 'Panel de Estudiante';
             this.alumnoNombre = userName;
           }
 
-          if (!token || !userId || !window.StudentAPI) {
+          if (!token || !window.StudentAPI) {
             this.error = 'Usuario no autenticado';
             return;
           }
@@ -66,10 +66,26 @@ const title = 'Panel de Estudiante';
               } catch (_) {}
             }
 
-            const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRoleFromUserData || '').toLowerCase().trim();
-            const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
-              ? 'parent'
-              : (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante' ? 'applicant' : 'student');
+            const roleCandidates = [
+              localStorage.getItem('userRole'),
+              localStorage.getItem('role'),
+              inferredRoleFromUserData
+            ]
+              .filter(Boolean)
+              .map(function(roleValue) {
+                return String(roleValue).toLowerCase().trim();
+              });
+
+            const hasApplicantRole = roleCandidates.some(function(roleValue) {
+              return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante';
+            });
+            const hasParentRole = roleCandidates.some(function(roleValue) {
+              return roleValue === 'parent' || roleValue === 'padre';
+            });
+
+            const roleForPortal = hasApplicantRole
+              ? 'applicant'
+              : (hasParentRole ? 'parent' : 'student');
             this.portalRole = roleForPortal;
             const scopedStudentId = roleForPortal === 'parent' ? parsedUserId : null;
 
@@ -1308,10 +1324,26 @@ const title = 'Panel de Estudiante';
             } catch (_) {}
           }
 
-          const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRoleFromUserData || '').toLowerCase().trim();
-          const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
-            ? 'parent'
-            : (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante' ? 'applicant' : 'student');
+          const roleCandidates = [
+            localStorage.getItem('userRole'),
+            localStorage.getItem('role'),
+            inferredRoleFromUserData
+          ]
+            .filter(Boolean)
+            .map(function(roleValue) {
+              return String(roleValue).toLowerCase().trim();
+            });
+
+          const hasApplicantRole = roleCandidates.some(function(roleValue) {
+            return roleValue === 'applicant' || roleValue === 'solicitante' || roleValue === 'aspirante';
+          });
+          const hasParentRole = roleCandidates.some(function(roleValue) {
+            return roleValue === 'parent' || roleValue === 'padre';
+          });
+
+          const roleForPortal = hasApplicantRole
+            ? 'applicant'
+            : (hasParentRole ? 'parent' : 'student');
           const scopedStudentId = roleForPortal === 'parent' && userId ? parseInt(userId) : null;
           
           if (!token) {
