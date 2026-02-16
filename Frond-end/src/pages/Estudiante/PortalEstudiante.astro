@@ -1274,8 +1274,30 @@ const title = 'Panel de Estudiante';
           // Get token and user ID from localStorage
           const token = localStorage.getItem('access_token');
           const userId = localStorage.getItem('userId');
-          const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase().trim();
-          const roleForPortal = rawRole === 'parent' || rawRole === 'padre' ? 'parent' : 'student';
+          const userDataRaw = localStorage.getItem('user_data');
+          let inferredRoleFromUserData = '';
+          if (userDataRaw) {
+            try {
+              const userData = JSON.parse(userDataRaw);
+              const roles = [];
+              if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+              if (userData?.role) roles.push(userData.role);
+              if (userData?.role_name) roles.push(userData.role_name);
+              if (userData?.type) roles.push(userData.type);
+
+              const firstRole = roles.find(Boolean);
+              const normalizedFirstRole = typeof firstRole === 'string'
+                ? firstRole
+                : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
+
+              inferredRoleFromUserData = String(normalizedFirstRole || '').toLowerCase().trim();
+            } catch (_) {}
+          }
+
+          const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRoleFromUserData || '').toLowerCase().trim();
+          const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
+            ? 'parent'
+            : (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante' ? 'applicant' : 'student');
           const scopedStudentId = roleForPortal === 'parent' && userId ? parseInt(userId) : null;
           
           if (!token) {
@@ -1288,6 +1310,11 @@ const title = 'Panel de Estudiante';
           // Usar StudentAPI global cargado arriba
           if (!studentAPI) {
             showToast('error', 'API no disponible. Por favor, recarga la página.');
+            return;
+          }
+
+          if (roleForPortal === 'applicant') {
+            showToast('success', 'Vista de solicitante: no hay caché que actualizar.');
             return;
           }
 

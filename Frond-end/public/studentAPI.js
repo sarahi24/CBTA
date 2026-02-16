@@ -332,6 +332,14 @@ window.StudentAPI = {
   async refreshDashboardCache(studentId, token, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+
+      if (effectiveRole === 'applicant') {
+        return {
+          success: true,
+          message: 'La vista de solicitante no requiere actualización de caché.'
+        };
+      }
+
       const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/refresh/${studentId}` : `${API_BASE}/dashboard/refresh`;
       const response = await fetch(endpoint, {
         method: 'POST',
