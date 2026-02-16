@@ -1029,20 +1029,21 @@ const title = 'Panel de Estudiante';
     .main-container { padding: 1rem; gap: 1.5rem; max-width: none; }
     .welcome-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
     .header-left { gap: 0.8rem; }
+    .header-right { width: 100%; justify-content: flex-start; }
     .icon-box { padding: 0.8rem; border-radius: 1rem; }
     .header-icon-svg { width: 1.5rem; height: 1.5rem; }
     .welcome-label { font-size: 0.75rem; }
     .student-name { font-size: 1.5rem; }
     .mobile-hide { display: none; }
 
-    .stats-scroll-container > .collapsible-content {
-      grid-template-columns: 1fr !important;
+    .stats-scroll-container {
+      grid-template-columns: 1fr;
       gap: 1rem;
     }
 
     .stats-scroll-container .card-container {
-      padding: 1rem;
-      min-height: auto;
+      padding: 1rem 1.1rem;
+      min-height: 150px;
     }
 
     .stats-scroll-container .label {
@@ -1050,7 +1051,10 @@ const title = 'Panel de Estudiante';
     }
 
     .stats-scroll-container .amount {
-      font-size: 1.75rem;
+      font-size: clamp(1.8rem, 8vw, 2.2rem);
+      line-height: 1.1;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .stats-scroll-container .subtitle {
@@ -1064,14 +1068,15 @@ const title = 'Panel de Estudiante';
     .glass-effect { padding: 1.2rem; border-radius: 1.2rem; }
     .card-header { margin-bottom: 1.5rem; }
     .summary-title { font-size: 1.1rem; }
-    .summary-row { padding: 1rem 0; }
+    .summary-row { padding: 1rem 0; gap: 0.75rem; }
     .label-group { gap: 0.5rem; }
     .dot { width: 6px; height: 6px; }
     .summary-label { font-size: 0.9rem; }
-    .val-ok, .val-alert { font-size: 1.1rem; }
+    .val-ok, .val-alert, .val-warning { font-size: 1.2rem; }
     .progress-inner { padding: 1rem; }
     .table-header { margin-bottom: 1rem; }
     .payments-title { font-size: 1rem; }
+    .payments-section { padding: 1.25rem; }
 
     /* Tabla responsiva para móvil */
     .payments-table { font-size: 0.825rem; }
@@ -1107,6 +1112,59 @@ const title = 'Panel de Estudiante';
       flex: 1;
     }
     .btn-ver-mas { font-size: 0.9rem; padding: 0.75rem 1.25rem; }
+  }
+
+  @media (max-width: 480px) {
+    .main-container {
+      padding: 0.85rem;
+      gap: 1.1rem;
+    }
+
+    .student-name {
+      font-size: 1.15rem;
+      line-height: 1.15;
+    }
+
+    .stats-scroll-container .card-container {
+      border-radius: 1.2rem;
+      padding: 0.95rem 1rem;
+      min-height: 138px;
+    }
+
+    .stats-scroll-container .amount {
+      font-size: clamp(1.6rem, 9vw, 2rem);
+      letter-spacing: -0.02em;
+    }
+
+    .stats-scroll-container .subtitle {
+      font-size: 0.76rem;
+    }
+
+    .glass-effect {
+      padding: 1rem;
+      border-radius: 1rem;
+    }
+
+    .summary-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+    }
+
+    .val-ok,
+    .val-alert,
+    .val-warning {
+      width: 100%;
+      text-align: left;
+      font-size: 1.45rem;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+
+    .status-badge {
+      font-size: 0.7rem;
+      padding: 0.35rem 0.7rem;
+    }
   }
 
   /* Refresh Cache Button */
