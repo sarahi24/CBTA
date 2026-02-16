@@ -341,7 +341,6 @@ const pageTitle = "Acceso al Sistema - SIGE";
             phoneNumber: '+52',
             birthdate: '',
             curp: '',
-            status: 'activo',
             error: '',
             message: '',
             isLoading: false,
@@ -451,7 +450,7 @@ const pageTitle = "Acceso al Sistema - SIGE";
             this.message = '';
             this.isLoading = true;
 
-            if (!this.name || !this.lastName || !this.email || !this.password || !this.confirmPassword || !this.phoneNumber || !this.birthdate || !this.curp || !this.status) {
+            if (!this.name || !this.lastName || !this.email || !this.password || !this.confirmPassword || !this.phoneNumber || !this.birthdate || !this.curp) {
                 this.error = '⚠️ Por favor, completa todos los campos de registro.';
                 this.isLoading = false;
                 return;
@@ -503,7 +502,6 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     phone_number: this.phoneNumber,
                     birthdate: this.birthdate,
                     curp: this.curp,
-                    status: this.status,
                 };
                 
                 const response = await window.AuthService.register(userData);
@@ -519,7 +517,6 @@ const pageTitle = "Acceso al Sistema - SIGE";
                     this.phoneNumber = '+52';
                     this.birthdate = '';
                     this.curp = '';
-                    this.status = 'activo';
                 } else {
                     this.error = '❌ ' + (response.message || 'Error en el registro.');
                 }
@@ -644,14 +641,6 @@ const pageTitle = "Acceso al Sistema - SIGE";
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
                     <input type="text" x-model="curp" placeholder="CURP (18 caracteres)" autocomplete="username" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0 uppercase" maxlength="18" required>
-                </div>
-                <div class="flex items-center rounded-xl p-3 input-inset-shadow">
-                    <select x-model="status" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>
-                        <option value="">Selecciona un estado</option>
-                        <option value="activo">Activo</option>
-                        <option value="baja">Baja</option>
-                        <option value="eliminado">Eliminado</option>
-                    </select>
                 </div>
                 <div class="flex items-center rounded-xl p-3 input-inset-shadow">
                     <input :type="showRegisterPassword ? 'text' : 'password'" x-model="password" placeholder="Nueva Contraseña" autocomplete="new-password" class="w-full bg-transparent placeholder-gray-500 text-sm border-none focus:ring-0" required>

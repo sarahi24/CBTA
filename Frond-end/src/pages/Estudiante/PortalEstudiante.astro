@@ -154,31 +154,17 @@ const title = 'Panel de Estudiante';
             const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
             this.roleNotice = '';
             this.emptyPaymentsMessage = 'No hay registros de pagos';
+            const requestRole = roleForPortal === 'applicant' ? 'student' : roleForPortal;
 
             if (roleForPortal === 'applicant') {
               this.roleNotice = 'Tu cuenta está en modo aspirante. El portal está habilitado, pero la información financiera se mostrará cuando tu perfil sea estudiante activo.';
-              this.emptyPaymentsMessage = 'Sin información financiera disponible para aspirantes';
-              this.history = [];
-              this.overdue = { totalAmount: '0.00', totalCount: 0 };
-              this.paid = { totalPayments: '0.00', paymentsByMonth: {} };
-              this.pending = { totalAmount: '0.00', totalCount: 0 };
-              this.porcentajeProgreso = 0;
-
-              const refreshButton = document.getElementById('refreshCacheBtn');
-              if (refreshButton) {
-                refreshButton.setAttribute('disabled', 'true');
-                refreshButton.setAttribute('title', 'No disponible para aspirantes');
-              }
-
-              this.initCompleted = true;
-              return;
             }
 
             const dashboardCalls = [
-              window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPaidTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPendingTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; })
+              window.StudentAPI.getPendingPayments(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPaidTotal(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getPendingTotal(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; })
             ];
 
             const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
@@ -1549,16 +1535,12 @@ const title = 'Panel de Estudiante';
           if (roleFromApi) {
             roleForPortal = roleFromApi;
           }
+          const requestRole = roleForPortal === 'applicant' ? 'student' : roleForPortal;
 
           const parsedUserId = userId ? parseInt(userId, 10) : null;
           const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
 
-          if (roleForPortal === 'applicant') {
-            showToast('success', 'No hay caché financiero para actualizar en cuentas aspirante.');
-            return;
-          }
-
-          const response = await studentAPI.refreshDashboardCache(scopedStudentId, token, roleForPortal);
+          const response = await studentAPI.refreshDashboardCache(scopedStudentId, token, requestRole);
           
           if (response.success) {
             showToast('success', response.message || 'Caché actualizado correctamente');
