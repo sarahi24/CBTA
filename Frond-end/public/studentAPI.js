@@ -111,6 +111,33 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function buildAuthHeaders(token, role, permission = '') {
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-User-Role': role
+  };
+
+  if (permission) {
+    headers['X-User-Permission'] = permission;
+  }
+
+  return headers;
+}
+
+async function parseErrorMessage(response, fallback = 'Error') {
+  const errorText = await response.text().catch(() => '');
+  if (!errorText) return fallback;
+
+  try {
+    const parsed = JSON.parse(errorText);
+    return parsed?.message || fallback;
+  } catch (_) {
+    return errorText;
+  }
+}
+
 function pickReceiptUrl(payload) {
   const search = (value) => {
     if (!value) return null;
@@ -288,24 +315,40 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
-      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/pending/${studentId}` : `${API_BASE}/dashboard/pending`);
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': apiRole,
-          'X-User-Permission': 'view.own.pending.concepts.summary'
+      const endpointCandidates = [
+        `${API_BASE}/dashboard/pending`,
+        ...(studentId ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
+      ];
+
+      for (const endpoint of endpointCandidates) {
+        const url = new URL(endpoint);
+        if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+        const withPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole, 'view.own.pending.concepts.summary')
+        });
+
+        if (withPermission.status === 401) handleAuthError(401);
+        if (withPermission.ok) return await withPermission.json();
+        if (withPermission.status !== 403) {
+          throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
-      });
-      if (response.status === 403) {
-        console.warn(`⚠️ getPendingTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
-        return { success: true, data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } };
+
+        const withoutPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole)
+        });
+
+        if (withoutPermission.status === 401) handleAuthError(401);
+        if (withoutPermission.ok) return await withoutPermission.json();
+        if (withoutPermission.status !== 403) {
+          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+        }
       }
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+
+      console.warn(`⚠️ getPendingTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
+      return { success: true, data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } };
     } catch (err) {
       console.error('❌ StudentAPI.getPendingTotal:', err);
       throw err;
@@ -316,24 +359,40 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
-      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/paid/${studentId}` : `${API_BASE}/dashboard/paid`);
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': apiRole,
-          'X-User-Permission': 'view.own.paid.concepts.summary'
+      const endpointCandidates = [
+        `${API_BASE}/dashboard/paid`,
+        ...(studentId ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
+      ];
+
+      for (const endpoint of endpointCandidates) {
+        const url = new URL(endpoint);
+        if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+        const withPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole, 'view.own.paid.concepts.summary')
+        });
+
+        if (withPermission.status === 401) handleAuthError(401);
+        if (withPermission.ok) return await withPermission.json();
+        if (withPermission.status !== 403) {
+          throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
-      });
-      if (response.status === 403) {
-        console.warn(`⚠️ getPaidTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
-        return { success: true, data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } };
+
+        const withoutPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole)
+        });
+
+        if (withoutPermission.status === 401) handleAuthError(401);
+        if (withoutPermission.ok) return await withoutPermission.json();
+        if (withoutPermission.status !== 403) {
+          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+        }
       }
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+
+      console.warn(`⚠️ getPaidTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
+      return { success: true, data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } };
     } catch (err) {
       console.error('❌ StudentAPI.getPaidTotal:', err);
       throw err;
@@ -344,24 +403,40 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
-      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/overdue/${studentId}` : `${API_BASE}/dashboard/overdue`);
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': apiRole,
-          'X-User-Permission': 'view.own.overdue.concepts.summary'
+      const endpointCandidates = [
+        `${API_BASE}/dashboard/overdue`,
+        ...(studentId ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
+      ];
+
+      for (const endpoint of endpointCandidates) {
+        const url = new URL(endpoint);
+        if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+        const withPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole, 'view.own.overdue.concepts.summary')
+        });
+
+        if (withPermission.status === 401) handleAuthError(401);
+        if (withPermission.ok) return await withPermission.json();
+        if (withPermission.status !== 403) {
+          throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
-      });
-      if (response.status === 403) {
-        console.warn(`⚠️ getOverdueTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
-        return { success: true, data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } };
+
+        const withoutPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole)
+        });
+
+        if (withoutPermission.status === 401) handleAuthError(401);
+        if (withoutPermission.ok) return await withoutPermission.json();
+        if (withoutPermission.status !== 403) {
+          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+        }
       }
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+
+      console.warn(`⚠️ getOverdueTotal 403 para rol ${effectiveRole}. Se devuelve total en 0.`);
+      return { success: true, data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } };
     } catch (err) {
       console.error('❌ StudentAPI.getOverdueTotal:', err);
       throw err;
@@ -430,49 +505,56 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
-      const useStudentId = shouldUseStudentId(effectiveRole, studentId);
-      // If studentId provided, use /pending-payments/{studentId}
-      // Otherwise use /pending-payments for current user
-      const endpoint = useStudentId ? `${API_BASE}/pending-payments/${studentId}` : `${API_BASE}/pending-payments`;
-      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRole: ${apiRole}, useStudentId: ${useStudentId}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
-      console.log(`🔍 [StudentAPI] getPendingPayments - Endpoint: ${endpoint}, forceRefresh: ${forceRefresh}`);
-      
-      const url = new URL(endpoint);
-      
-      if (forceRefresh) {
-        url.searchParams.append('forceRefresh', 'true');
-      }
-      
-      console.log(`🔍 [StudentAPI] getPendingPayments URL final: ${url.toString()}`);
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': apiRole,
-          'X-User-Permission': 'view.pending.concepts'
+      const endpointCandidates = [
+        `${API_BASE}/pending-payments`,
+        ...(studentId ? [`${API_BASE}/pending-payments/${studentId}`] : []),
+        `${API_BASE}/pending-payment`,
+        ...(studentId ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
+      ];
+
+      console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRole: ${apiRole}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
+
+      for (const rawEndpoint of endpointCandidates) {
+        const url = new URL(rawEndpoint);
+        if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+
+        console.log(`🔍 [StudentAPI] getPendingPayments probando: ${url.toString()}`);
+
+        const withPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole, 'view.pending.concepts')
+        });
+
+        console.log(`📡 [StudentAPI] getPendingPayments status (perm): ${withPermission.status}`);
+        if (withPermission.status === 401) handleAuthError(401);
+        if (withPermission.ok) {
+          const data = await withPermission.json();
+          console.log(`✅ [StudentAPI] getPendingPayments Success (perm):`, data);
+          return data;
         }
-      });
+        if (withPermission.status !== 403 && withPermission.status !== 404) {
+          throw new Error(await parseErrorMessage(withPermission, `Error ${withPermission.status}: ${withPermission.statusText}`));
+        }
 
-      console.log(`📡 [StudentAPI] getPendingPayments Response Status: ${response.status}`);
+        const withoutPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole)
+        });
 
-      if (response.status === 403) {
-        console.warn(`⚠️ getPendingPayments 403 para rol ${effectiveRole}. Se devuelve lista vacía.`);
-        return { success: true, data: { pending_payments: [] } };
+        console.log(`📡 [StudentAPI] getPendingPayments status (sin perm): ${withoutPermission.status}`);
+        if (withoutPermission.status === 401) handleAuthError(401);
+        if (withoutPermission.ok) {
+          const data = await withoutPermission.json();
+          console.log(`✅ [StudentAPI] getPendingPayments Success (sin perm):`, data);
+          return data;
+        }
+        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+          throw new Error(await parseErrorMessage(withoutPermission, `Error ${withoutPermission.status}: ${withoutPermission.statusText}`));
+        }
       }
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        console.error(`❌ [StudentAPI] getPendingPayments Error Response (${response.status}):`, errorText);
-        const errorData = errorText ? JSON.parse(errorText) : {};
-        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log(`✅ [StudentAPI] getPendingPayments Success:`, data);
-      return data;
+      console.warn(`⚠️ getPendingPayments 403 para rol ${effectiveRole}. Se devuelve lista vacía.`);
+      return { success: true, data: { pending_payments: [] } };
     } catch (err) {
       console.error('❌ StudentAPI.getPendingPayments:', err);
       throw err;
@@ -483,29 +565,44 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
-      // If studentId provided, use /pending-payments/overdue/{studentId}
-      // Otherwise use /pending-payments/overdue for current user
-      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/pending-payments/overdue/${studentId}` : `${API_BASE}/pending-payments/overdue`;
-      console.log('📡 Fetching overdue payments from:', endpoint);
-      
-      const url = new URL(endpoint);
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': apiRole
+      const endpointCandidates = [
+        `${API_BASE}/pending-payments/overdue`,
+        ...(studentId ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
+        `${API_BASE}/pending-payment/overdue`,
+        ...(studentId ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
+      ];
+
+      for (const rawEndpoint of endpointCandidates) {
+        const url = new URL(rawEndpoint);
+        if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+
+        console.log('📡 Fetching overdue payments from:', url.toString());
+
+        const withPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole, 'view.overdue.concepts')
+        });
+
+        if (withPermission.status === 401) handleAuthError(401);
+        if (withPermission.ok) return await withPermission.json();
+        if (withPermission.status !== 403 && withPermission.status !== 404) {
+          throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
-      });
-      if (response.status === 403) {
-        console.warn(`⚠️ getOverduePayments 403 para rol ${effectiveRole}. Se devuelve lista vacía.`);
-        return { success: true, data: { overdue_payments: [] } };
+
+        const withoutPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, apiRole)
+        });
+
+        if (withoutPermission.status === 401) handleAuthError(401);
+        if (withoutPermission.ok) return await withoutPermission.json();
+        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+        }
       }
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+
+      console.warn(`⚠️ getOverduePayments 403 para rol ${effectiveRole}. Se devuelve lista vacía.`);
+      return { success: true, data: { overdue_payments: [] } };
     } catch (err) {
       console.error('❌ StudentAPI.getOverduePayments:', err);
       throw err;
@@ -534,20 +631,39 @@ window.StudentAPI = {
   async getPaymentMethods(studentId, token, forceRefresh = false) {
     try {
       const effectiveRole = resolveStudentPortalRole('student');
-      let endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/cards/${studentId}` : `${API_BASE}/cards`;
-      if (forceRefresh) endpoint += (studentId ? '?' : '?') + 'forceRefresh=true';
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': effectiveRole,
-          'X-User-Permission': 'view.cards'
+      const endpointCandidates = [
+        `${API_BASE}/cards`,
+        ...(studentId ? [`${API_BASE}/cards/${studentId}`] : [])
+      ];
+
+      for (const endpoint of endpointCandidates) {
+        const url = new URL(endpoint);
+        if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+
+        const withPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, effectiveRole, 'view.cards')
+        });
+
+        if (withPermission.status === 401) handleAuthError(401);
+        if (withPermission.ok) return await withPermission.json();
+        if (withPermission.status !== 403 && withPermission.status !== 404) {
+          throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
-      });
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+
+        const withoutPermission = await fetch(url.toString(), {
+          method: 'GET',
+          headers: buildAuthHeaders(token, effectiveRole)
+        });
+
+        if (withoutPermission.status === 401) handleAuthError(401);
+        if (withoutPermission.ok) return await withoutPermission.json();
+        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+        }
+      }
+
+      return { success: true, data: { cards: [] } };
     } catch (err) {
       console.error('❌ StudentAPI.getPaymentMethods:', err);
       throw err;
@@ -769,4 +885,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r21)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r22)');
