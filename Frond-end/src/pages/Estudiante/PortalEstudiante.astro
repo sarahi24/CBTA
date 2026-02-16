@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r26" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r27" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -86,14 +86,21 @@ const title = 'Panel de Estudiante';
             this.roleNotice = '';
             this.emptyPaymentsMessage = 'No hay registros de pagos';
 
-            const dashboardCalls = [
-              window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPaidTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPendingTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; })
-            ];
+            const pendingPaymentsRes = await window.StudentAPI
+              .getPendingPayments(scopedStudentId, token, false, roleForPortal)
+              .catch(function(e) { return { error: e.message }; });
 
-            const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
+            const overdueRes = await window.StudentAPI
+              .getOverdueTotal(scopedStudentId, token, false, roleForPortal)
+              .catch(function(e) { return { error: e.message }; });
+
+            const paidRes = await window.StudentAPI
+              .getPaidTotal(scopedStudentId, token, false, roleForPortal)
+              .catch(function(e) { return { error: e.message }; });
+
+            const pendingRes = await window.StudentAPI
+              .getPendingTotal(scopedStudentId, token, false, roleForPortal)
+              .catch(function(e) { return { error: e.message }; });
 
             if (pendingPaymentsRes && !pendingPaymentsRes.error) {
               const items = pendingPaymentsRes.data && pendingPaymentsRes.data.pending_payments ? pendingPaymentsRes.data.pending_payments : [];

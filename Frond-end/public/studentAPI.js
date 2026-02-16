@@ -132,6 +132,10 @@ function isSkippableFallbackStatus(statusCode) {
   return statusCode === 400 || statusCode === 403 || statusCode === 404 || statusCode === 405;
 }
 
+function isRateLimitedStatus(statusCode) {
+  return statusCode === 429;
+}
+
 async function parseErrorMessage(response, fallback = 'Error') {
   const errorText = await response.text().catch(() => '');
   if (!errorText) return fallback;
@@ -321,9 +325,10 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRoles = getApiRoleCandidates(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/dashboard/pending`,
-        ...(studentId ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
@@ -337,6 +342,11 @@ window.StudentAPI = {
             headers: buildAuthHeaders(token, apiRole, 'view.own.pending.concepts.summary')
           });
 
+          if (isRateLimitedStatus(withPermission.status)) {
+            console.warn('⚠️ getPendingTotal 429. Se devuelve total en 0 para evitar sobrecargar la API.');
+            return { success: true, data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } };
+          }
+
           if (withPermission.status === 401) handleAuthError(401);
           if (withPermission.ok) return await withPermission.json();
           if (!isSkippableFallbackStatus(withPermission.status)) {
@@ -347,6 +357,11 @@ window.StudentAPI = {
             method: 'GET',
             headers: buildAuthHeaders(token, apiRole)
           });
+
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            console.warn('⚠️ getPendingTotal 429. Se devuelve total en 0 para evitar sobrecargar la API.');
+            return { success: true, data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } };
+          }
 
           if (withoutPermission.status === 401) handleAuthError(401);
           if (withoutPermission.ok) return await withoutPermission.json();
@@ -368,9 +383,10 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRoles = getApiRoleCandidates(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/dashboard/paid`,
-        ...(studentId ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
@@ -384,6 +400,11 @@ window.StudentAPI = {
             headers: buildAuthHeaders(token, apiRole, 'view.own.paid.concepts.summary')
           });
 
+          if (isRateLimitedStatus(withPermission.status)) {
+            console.warn('⚠️ getPaidTotal 429. Se devuelve total en 0 para evitar sobrecargar la API.');
+            return { success: true, data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } };
+          }
+
           if (withPermission.status === 401) handleAuthError(401);
           if (withPermission.ok) return await withPermission.json();
           if (!isSkippableFallbackStatus(withPermission.status)) {
@@ -394,6 +415,11 @@ window.StudentAPI = {
             method: 'GET',
             headers: buildAuthHeaders(token, apiRole)
           });
+
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            console.warn('⚠️ getPaidTotal 429. Se devuelve total en 0 para evitar sobrecargar la API.');
+            return { success: true, data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } };
+          }
 
           if (withoutPermission.status === 401) handleAuthError(401);
           if (withoutPermission.ok) return await withoutPermission.json();
@@ -415,9 +441,10 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRoles = getApiRoleCandidates(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/dashboard/overdue`,
-        ...(studentId ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
@@ -431,6 +458,11 @@ window.StudentAPI = {
             headers: buildAuthHeaders(token, apiRole, 'view.own.overdue.concepts.summary')
           });
 
+          if (isRateLimitedStatus(withPermission.status)) {
+            console.warn('⚠️ getOverdueTotal 429. Se devuelve total en 0 para evitar sobrecargar la API.');
+            return { success: true, data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } };
+          }
+
           if (withPermission.status === 401) handleAuthError(401);
           if (withPermission.ok) return await withPermission.json();
           if (!isSkippableFallbackStatus(withPermission.status)) {
@@ -441,6 +473,11 @@ window.StudentAPI = {
             method: 'GET',
             headers: buildAuthHeaders(token, apiRole)
           });
+
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            console.warn('⚠️ getOverdueTotal 429. Se devuelve total en 0 para evitar sobrecargar la API.');
+            return { success: true, data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } };
+          }
 
           if (withoutPermission.status === 401) handleAuthError(401);
           if (withoutPermission.ok) return await withoutPermission.json();
@@ -514,11 +551,12 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRoles = getApiRoleCandidates(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/pending-payments`,
-        ...(studentId ? [`${API_BASE}/pending-payments/${studentId}`] : []),
+        ...(useIdRoute ? [`${API_BASE}/pending-payments/${studentId}`] : []),
         `${API_BASE}/pending-payment`,
-        ...(studentId ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
       ];
 
       console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRoles: ${apiRoles.join(',')}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
@@ -537,6 +575,10 @@ window.StudentAPI = {
           });
 
           console.log(`📡 [StudentAPI] getPendingPayments status (perm:${apiRole}): ${withPermission.status}`);
+          if (isRateLimitedStatus(withPermission.status)) {
+            console.warn('⚠️ getPendingPayments 429. Se devuelve lista vacía para evitar sobrecargar la API.');
+            return { success: true, data: { pending_payments: [] } };
+          }
           if (withPermission.status === 401) handleAuthError(401);
           if (withPermission.ok) {
             const data = await withPermission.json();
@@ -553,6 +595,10 @@ window.StudentAPI = {
           });
 
           console.log(`📡 [StudentAPI] getPendingPayments status (sin perm:${apiRole}): ${withoutPermission.status}`);
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            console.warn('⚠️ getPendingPayments 429. Se devuelve lista vacía para evitar sobrecargar la API.');
+            return { success: true, data: { pending_payments: [] } };
+          }
           if (withoutPermission.status === 401) handleAuthError(401);
           if (withoutPermission.ok) {
             const data = await withoutPermission.json();
@@ -577,11 +623,12 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRoles = getApiRoleCandidates(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/pending-payments/overdue`,
-        ...(studentId ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
+        ...(useIdRoute ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
         `${API_BASE}/pending-payment/overdue`,
-        ...(studentId ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
       ];
 
       for (const rawEndpoint of endpointCandidates) {
@@ -597,6 +644,11 @@ window.StudentAPI = {
             headers: buildAuthHeaders(token, apiRole, 'view.overdue.concepts')
           });
 
+          if (isRateLimitedStatus(withPermission.status)) {
+            console.warn('⚠️ getOverduePayments 429. Se devuelve lista vacía para evitar sobrecargar la API.');
+            return { success: true, data: { overdue_payments: [] } };
+          }
+
           if (withPermission.status === 401) handleAuthError(401);
           if (withPermission.ok) return await withPermission.json();
           if (!isSkippableFallbackStatus(withPermission.status)) {
@@ -607,6 +659,11 @@ window.StudentAPI = {
             method: 'GET',
             headers: buildAuthHeaders(token, apiRole)
           });
+
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            console.warn('⚠️ getOverduePayments 429. Se devuelve lista vacía para evitar sobrecargar la API.');
+            return { success: true, data: { overdue_payments: [] } };
+          }
 
           if (withoutPermission.status === 401) handleAuthError(401);
           if (withoutPermission.ok) return await withoutPermission.json();
@@ -900,4 +957,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r26)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r27)');
