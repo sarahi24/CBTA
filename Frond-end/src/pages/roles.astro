@@ -1349,6 +1349,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 searchTerm: '',
                 filterStatus: '',
                 filterRole: '',
+                roleOptionsLoaded: false,
                 newUser: { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
@@ -1491,6 +1492,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (!key) return '';
 
                 key = key.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+                if (key === 'sin rol' || key === 'none' || key === 'no role') return '';
 
                 if (key === 'admin' || key === 'administrador') return 'admin';
                 if (key === 'caja' || key === 'financial staff' || key === 'financial-staff') return 'financial-staff';
@@ -1821,6 +1823,50 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 
                 // Cargar usuarios desde la API
                 await this.loadUsers(token);
+
+                // Cargar roles para filtro (aunque no se abra el modal)
+                await this.loadAvailableRolesForFilter();
+            },
+
+            async loadAvailableRolesForFilter(force = false) {
+                if (this.roleOptionsLoaded && !force) return;
+
+                try {
+                    const response = await this.authenticatedFetch(
+                        `${this.apiBaseUrl}/v1/admin-actions/find-roles`,
+                        {
+                            headers: {
+                                'X-User-Role': 'admin',
+                                'X-User-Permission': 'view.roles'
+                            }
+                        }
+                    );
+
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        const rolesTranslation = {
+                            'admin': 'Administrador',
+                            'student': 'Estudiante',
+                            'financial-staff': 'Personal Financiero',
+                            'financial staff': 'Personal Financiero',
+                            'parent': 'Padre/Tutor',
+                            'teacher': 'Maestro',
+                            'supervisor': 'Supervisor',
+                            'unverified': 'Sin Verificar',
+                            'applicant': 'Solicitante'
+                        };
+
+                        const roles = result.data?.roles || [];
+                        this.availableRoles = roles.map(role => ({
+                            id: role.id,
+                            name: role.name,
+                            displayName: rolesTranslation[String(role.name || '').toLowerCase()] || role.name
+                        }));
+                        this.roleOptionsLoaded = true;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ No se pudieron cargar roles para el filtro:', error);
+                }
             },
 
             async refreshAuthToken() {
@@ -3713,46 +3759,16 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 }
 
                 try {
-                    // Cargar roles disponibles
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/find-roles`,
-                        {
-                            headers: {
-                                'X-User-Role': 'admin',
-                                'X-User-Permission': 'view.roles'
-                            }
-                        }
-                    );
+                    await this.loadAvailableRolesForFilter(true);
 
-                    const result = await response.json();
-                    if (response.ok && result.success) {
-                        // Traducir nombres de roles al español
-                        const rolesTranslation = {
-                            'admin': 'Administrador',
-                            'student': 'Estudiante',
-                            'financial-staff': 'Personal Financiero',
-                            'financial staff': 'Personal Financiero',
-                            'parent': 'Padre/Tutor',
-                            'teacher': 'Maestro',
-                            'supervisor': 'Supervisor',
-                            'unverified': 'Sin Verificar',
-                            'applicant': 'Solicitante'
-                        };
-                        
-                        const roles = result.data?.roles || [];
-                        this.availableRoles = roles.map(role => ({
-                            id: role.id,
-                            name: role.name,
-                            displayName: rolesTranslation[role.name.toLowerCase()] || role.name
-                        }));
-                        
-                        this.rolesToAdd = [];
-                        this.rolesToRemove = [];
-                        this.showRolesModal = true;
-                    } else {
-                        console.error('Error response:', result);
-                        this.showNotify('Error al cargar roles: ' + (result.message || 'Error desconocido'), 'error');
+                    if (!this.availableRoles.length) {
+                        this.showNotify('No se pudieron cargar roles disponibles', 'error');
+                        return;
                     }
+
+                    this.rolesToAdd = [];
+                    this.rolesToRemove = [];
+                    this.showRolesModal = true;
                 } catch (error) {
                     console.error('❌ Error al cargar roles:', error);
                     this.showNotify('Error al cargar roles disponibles', 'error');
