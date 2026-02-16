@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r12" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r13" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -37,15 +37,26 @@ const title = 'Panel de Estudiante';
           try {
             const parsedUserId = parseInt(userId, 10);
             const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase().trim();
-            const roleForPortal = rawRole === 'parent' || rawRole === 'padre' ? 'parent' : 'student';
+            const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
+              ? 'parent'
+              : (rawRole === 'applicant' || rawRole === 'solicitante' ? 'applicant' : 'student');
             const scopedStudentId = roleForPortal === 'parent' ? parsedUserId : null;
 
-            const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all([
-              window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPaidTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
-              window.StudentAPI.getPendingTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; })
-            ]);
+            const dashboardCalls = roleForPortal === 'applicant'
+              ? [
+                  window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+                  Promise.resolve({ data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } }),
+                  Promise.resolve({ data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } }),
+                  Promise.resolve({ data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } })
+                ]
+              : [
+                  window.StudentAPI.getPendingPayments(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+                  window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+                  window.StudentAPI.getPaidTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; }),
+                  window.StudentAPI.getPendingTotal(scopedStudentId, token, false, roleForPortal).catch(function(e) { return { error: e.message }; })
+                ];
+
+            const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
 
             if (pendingPaymentsRes && !pendingPaymentsRes.error) {
               const items = pendingPaymentsRes.data && pendingPaymentsRes.data.pending_payments ? pendingPaymentsRes.data.pending_payments : [];

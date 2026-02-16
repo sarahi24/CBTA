@@ -12,7 +12,7 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (roleLower === 'applicant' || roleLower === 'solicitante') return 'student';
+  if (roleLower === 'applicant' || roleLower === 'solicitante') return 'applicant';
 
   return roleLower;
 }
@@ -263,6 +263,9 @@ window.StudentAPI = {
           'X-User-Permission': 'view.own.pending.concepts.summary'
         }
       });
+      if (response.status === 403 && effectiveRole === 'applicant') {
+        return { success: true, data: { total_pending: { totalAmount: '0.00', totalCount: 0 } } };
+      }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
       return await response.json();
     } catch (err) {
@@ -286,6 +289,9 @@ window.StudentAPI = {
           'X-User-Permission': 'view.own.paid.concepts.summary'
         }
       });
+      if (response.status === 403 && effectiveRole === 'applicant') {
+        return { success: true, data: { paid_data: { totalPayments: '0.00', paymentsByMonth: {} } } };
+      }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
       return await response.json();
     } catch (err) {
@@ -309,6 +315,9 @@ window.StudentAPI = {
           'X-User-Permission': 'view.own.overdue.concepts.summary'
         }
       });
+      if (response.status === 403 && effectiveRole === 'applicant') {
+        return { success: true, data: { total_overdue: { totalAmount: '0.00', totalCount: 0 } } };
+      }
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
       return await response.json();
     } catch (err) {
@@ -396,6 +405,10 @@ window.StudentAPI = {
       });
 
       console.log(`📡 [StudentAPI] getPendingPayments Response Status: ${response.status}`);
+
+      if (response.status === 403 && effectiveRole === 'applicant') {
+        return { success: true, data: { pending_payments: [] } };
+      }
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
