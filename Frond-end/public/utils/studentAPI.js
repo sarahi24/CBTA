@@ -17,6 +17,8 @@ function normalizeStudentPortalRole(role) {
     roleLower === 'solicitante' ||
     roleLower === 'aspirante' ||
     roleLower === 'unverified' ||
+    roleLower === 'nverified' ||
+    roleLower === 'not_verified' ||
     roleLower === 'sin_verificar' ||
     roleLower === 'sin verificar'
   ) return 'student';
@@ -25,8 +27,7 @@ function normalizeStudentPortalRole(role) {
 }
 
 function shouldUseStudentId(effectiveRole, studentId) {
-  if (!studentId) return false;
-  return effectiveRole === 'parent' || effectiveRole === 'student';
+  return effectiveRole === 'parent' && !!studentId;
 }
 
 function handleAuthError(statusCode) {

@@ -17,6 +17,8 @@ function normalizeStudentPortalRole(role) {
     roleLower === 'solicitante' ||
     roleLower === 'aspirante' ||
     roleLower === 'unverified' ||
+    roleLower === 'nverified' ||
+    roleLower === 'not_verified' ||
     roleLower === 'sin_verificar' ||
     roleLower === 'sin verificar'
   ) return 'student';
@@ -25,8 +27,7 @@ function normalizeStudentPortalRole(role) {
 }
 
 function shouldUseStudentId(effectiveRole, studentId) {
-  if (!studentId) return false;
-  return effectiveRole === 'parent' || effectiveRole === 'student';
+  return effectiveRole === 'parent' && !!studentId;
 }
 
 function getRoleFromStorage() {
@@ -541,7 +542,8 @@ window.StudentAPI = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-User-Role': effectiveRole
+          'X-User-Role': effectiveRole,
+          'X-User-Permission': 'view.cards'
         }
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Error');
@@ -767,4 +769,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r19)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r21)');
