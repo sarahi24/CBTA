@@ -183,65 +183,80 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
-      const url = new URL(shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/payments/history/${studentId}` : `${API_BASE}/payments/history`);
-      if (perPage) url.searchParams.append('perPage', String(perPage));
-      if (page) url.searchParams.append('page', String(page));
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+      const endpointCandidates = [];
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId) && effectiveRole !== 'applicant';
+      if (useIdRoute) {
+        endpointCandidates.push(`${API_BASE}/payments/history/${studentId}`);
+      }
+      endpointCandidates.push(`${API_BASE}/payments/history`);
 
       const maxAttempts = 2;
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        const response = await fetch(url.toString(), {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-User-Role': apiRole,
-            'X-User-Permission': 'view.payments.history'
+
+      for (let endpointIndex = 0; endpointIndex < endpointCandidates.length; endpointIndex++) {
+        const endpoint = endpointCandidates[endpointIndex];
+        const url = new URL(endpoint);
+        if (perPage) url.searchParams.append('perPage', String(perPage));
+        if (page) url.searchParams.append('page', String(page));
+        if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-User-Role': apiRole,
+              'X-User-Permission': 'view.payments.history'
+            }
+          });
+
+          if (response.status === 401) {
+            handleAuthError(401);
+            throw new Error('No autenticado - sesión expirada');
           }
-        });
 
-        if (response.status === 401) {
-          handleAuthError(401);
-          throw new Error('No autenticado - sesión expirada');
-        }
-
-        if (response.status === 429) {
-          const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
-          if (attempt < maxAttempts) {
-            console.warn(`⚠️ 429 en historial. Reintentando en ${retryAfterMs}ms (intento ${attempt + 1}/${maxAttempts})`);
-            await wait(retryAfterMs);
-            continue;
+          if (response.status === 429) {
+            const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+            if (attempt < maxAttempts) {
+              console.warn(`⚠️ 429 en historial. Reintentando en ${retryAfterMs}ms (intento ${attempt + 1}/${maxAttempts})`);
+              await wait(retryAfterMs);
+              continue;
+            }
+            throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
           }
-          throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
-        }
 
-        if (response.status === 403 && effectiveRole === 'applicant') {
-          console.warn('⚠️ Historial no disponible para solicitante (403). Regresando respuesta vacía controlada.');
-          return {
-            success: true,
-            data: {
-              payment_history: {
-                items: [],
-                currentPage: Number(page) || 1,
-                lastPage: 1,
-                perPage: Number(perPage) || 15,
-                total: 0,
-                hasMorePages: false,
-                nextPage: null,
-                previousPage: null
-              }
-            },
-            message: 'Historial no disponible para solicitante'
-          };
-        }
+          if (response.ok) {
+            return await response.json();
+          }
 
-        if (!response.ok) {
+          if ((response.status === 403 || response.status === 404) && endpointIndex < endpointCandidates.length - 1) {
+            break;
+          }
+
+          if (response.status === 403 && effectiveRole === 'applicant') {
+            console.warn('⚠️ Historial no disponible para solicitante (403). Regresando respuesta vacía controlada.');
+            return {
+              success: true,
+              data: {
+                payment_history: {
+                  items: [],
+                  currentPage: Number(page) || 1,
+                  lastPage: 1,
+                  perPage: Number(perPage) || 15,
+                  total: 0,
+                  hasMorePages: false,
+                  nextPage: null,
+                  previousPage: null
+                }
+              },
+              message: 'Historial no disponible para solicitante'
+            };
+          }
+
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || 'Error al cargar historial de pagos');
         }
-
-        return await response.json();
       }
 
       throw new Error('No se pudo cargar el historial de pagos');
