@@ -1519,22 +1519,34 @@ const title = 'Panel de Estudiante';
           refreshBtn.disabled = true;
           const originalHTML = refreshBtn.innerHTML;
 
+          refreshBtn.innerHTML = `
+            <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="btn-text">Actualizando...</span>
+          `;
+
+          const token = localStorage.getItem('access_token');
+          const userId = localStorage.getItem('userId');
+          const studentAPI = (window as any).StudentAPI;
+
+          if (!token) {
+            showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
+            return;
+          }
+
+          if (!studentAPI) {
+            showToast('error', 'API no disponible. Por favor, recarga la página.');
+            return;
+          }
+
           let roleForPortal = detectPortalRoleFromStorageForDashboard();
           const roleFromApi = await syncPortalRoleFromApiForDashboard(token, studentAPI);
           if (roleFromApi) {
             roleForPortal = roleFromApi;
           }
-          refreshBtn.innerHTML = `
 
-          const hasParentRole = roleCandidates.some(function(roleValue) {
-            return roleValue === 'parent' || roleValue === 'padre';
-          });
-
-          const hasApplicantRole = roleCandidates.some(function(roleValue) {
-            return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
-          });
-
-          const roleForPortal = hasParentRole ? 'parent' : (hasApplicantRole ? 'applicant' : 'student');
           const parsedUserId = userId ? parseInt(userId, 10) : null;
           const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
 
@@ -1542,21 +1554,7 @@ const title = 'Panel de Estudiante';
             showToast('success', 'No hay caché financiero para actualizar en cuentas aspirante.');
             return;
           }
-          
-          if (!token) {
-            showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
-            return;
-          }
 
-          const studentAPI = (window as any).StudentAPI;
-
-          // Usar StudentAPI global cargado arriba
-          if (!studentAPI) {
-            showToast('error', 'API no disponible. Por favor, recarga la página.');
-            return;
-          }
-
-          // Call API to refresh cache
           const response = await studentAPI.refreshDashboardCache(scopedStudentId, token, roleForPortal);
           
           if (response.success) {
@@ -1578,12 +1576,7 @@ const title = 'Panel de Estudiante';
           setTimeout(() => {
             if (refreshBtn) {
               refreshBtn.disabled = false;
-              refreshBtn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                </svg>
-                <span class="btn-text">Actualizar</span>
-              `;
+              refreshBtn.innerHTML = originalHTML;
             }
           }, 100);
         }
