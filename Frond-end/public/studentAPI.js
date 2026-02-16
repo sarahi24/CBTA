@@ -126,6 +126,10 @@ function buildAuthHeaders(token, role, permission = '') {
   return headers;
 }
 
+function isSkippableFallbackStatus(statusCode) {
+  return statusCode === 400 || statusCode === 403 || statusCode === 404 || statusCode === 405;
+}
+
 async function parseErrorMessage(response, fallback = 'Error') {
   const errorText = await response.text().catch(() => '');
   if (!errorText) return fallback;
@@ -315,9 +319,10 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/dashboard/pending`,
-        ...(studentId ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/dashboard/pending/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
@@ -331,7 +336,7 @@ window.StudentAPI = {
 
         if (withPermission.status === 401) handleAuthError(401);
         if (withPermission.ok) return await withPermission.json();
-        if (withPermission.status !== 403) {
+        if (!isSkippableFallbackStatus(withPermission.status)) {
           throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
 
@@ -342,7 +347,7 @@ window.StudentAPI = {
 
         if (withoutPermission.status === 401) handleAuthError(401);
         if (withoutPermission.ok) return await withoutPermission.json();
-        if (withoutPermission.status !== 403) {
+        if (!isSkippableFallbackStatus(withoutPermission.status)) {
           throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
         }
       }
@@ -359,9 +364,10 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/dashboard/paid`,
-        ...(studentId ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/dashboard/paid/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
@@ -375,7 +381,7 @@ window.StudentAPI = {
 
         if (withPermission.status === 401) handleAuthError(401);
         if (withPermission.ok) return await withPermission.json();
-        if (withPermission.status !== 403) {
+        if (!isSkippableFallbackStatus(withPermission.status)) {
           throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
 
@@ -386,7 +392,7 @@ window.StudentAPI = {
 
         if (withoutPermission.status === 401) handleAuthError(401);
         if (withoutPermission.ok) return await withoutPermission.json();
-        if (withoutPermission.status !== 403) {
+        if (!isSkippableFallbackStatus(withoutPermission.status)) {
           throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
         }
       }
@@ -403,9 +409,10 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/dashboard/overdue`,
-        ...(studentId ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/dashboard/overdue/${studentId}`] : [])
       ];
 
       for (const endpoint of endpointCandidates) {
@@ -419,7 +426,7 @@ window.StudentAPI = {
 
         if (withPermission.status === 401) handleAuthError(401);
         if (withPermission.ok) return await withPermission.json();
-        if (withPermission.status !== 403) {
+        if (!isSkippableFallbackStatus(withPermission.status)) {
           throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
 
@@ -430,7 +437,7 @@ window.StudentAPI = {
 
         if (withoutPermission.status === 401) handleAuthError(401);
         if (withoutPermission.ok) return await withoutPermission.json();
-        if (withoutPermission.status !== 403) {
+        if (!isSkippableFallbackStatus(withoutPermission.status)) {
           throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
         }
       }
@@ -505,11 +512,12 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/pending-payments`,
-        ...(studentId ? [`${API_BASE}/pending-payments/${studentId}`] : []),
+        ...(useIdRoute ? [`${API_BASE}/pending-payments/${studentId}`] : []),
         `${API_BASE}/pending-payment`,
-        ...(studentId ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/pending-payment?id=${encodeURIComponent(studentId)}`] : [])
       ];
 
       console.log(`🔍 [StudentAPI] getPendingPayments - roleArg: ${role}, effectiveRole: ${effectiveRole}, apiRole: ${apiRole}, studentId: ${studentId}, forceRefresh: ${forceRefresh}`);
@@ -532,7 +540,7 @@ window.StudentAPI = {
           console.log(`✅ [StudentAPI] getPendingPayments Success (perm):`, data);
           return data;
         }
-        if (withPermission.status !== 403 && withPermission.status !== 404) {
+        if (!isSkippableFallbackStatus(withPermission.status)) {
           throw new Error(await parseErrorMessage(withPermission, `Error ${withPermission.status}: ${withPermission.statusText}`));
         }
 
@@ -548,7 +556,7 @@ window.StudentAPI = {
           console.log(`✅ [StudentAPI] getPendingPayments Success (sin perm):`, data);
           return data;
         }
-        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+        if (!isSkippableFallbackStatus(withoutPermission.status)) {
           throw new Error(await parseErrorMessage(withoutPermission, `Error ${withoutPermission.status}: ${withoutPermission.statusText}`));
         }
       }
@@ -565,11 +573,12 @@ window.StudentAPI = {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
       const endpointCandidates = [
         `${API_BASE}/pending-payments/overdue`,
-        ...(studentId ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
+        ...(useIdRoute ? [`${API_BASE}/pending-payments/overdue/${studentId}`] : []),
         `${API_BASE}/pending-payment/overdue`,
-        ...(studentId ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
+        ...(useIdRoute ? [`${API_BASE}/pending-payment/overdue?id=${encodeURIComponent(studentId)}`] : [])
       ];
 
       for (const rawEndpoint of endpointCandidates) {
@@ -585,7 +594,7 @@ window.StudentAPI = {
 
         if (withPermission.status === 401) handleAuthError(401);
         if (withPermission.ok) return await withPermission.json();
-        if (withPermission.status !== 403 && withPermission.status !== 404) {
+        if (!isSkippableFallbackStatus(withPermission.status)) {
           throw new Error(await parseErrorMessage(withPermission, 'Error'));
         }
 
@@ -596,7 +605,7 @@ window.StudentAPI = {
 
         if (withoutPermission.status === 401) handleAuthError(401);
         if (withoutPermission.ok) return await withoutPermission.json();
-        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+        if (!isSkippableFallbackStatus(withoutPermission.status)) {
           throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
         }
       }
@@ -885,4 +894,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r22)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r23)');
