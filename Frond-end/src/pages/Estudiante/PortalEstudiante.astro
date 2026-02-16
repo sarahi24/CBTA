@@ -54,14 +54,19 @@ const title = 'Panel de Estudiante';
                 if (userData?.role_name) roles.push(userData.role_name);
                 if (userData?.type) roles.push(userData.type);
 
-                inferredRoleFromUserData = String((roles.find(Boolean) || '')).toLowerCase().trim();
+                const firstRole = roles.find(Boolean);
+                const normalizedFirstRole = typeof firstRole === 'string'
+                  ? firstRole
+                  : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
+
+                inferredRoleFromUserData = String(normalizedFirstRole || '').toLowerCase().trim();
               } catch (_) {}
             }
 
             const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRoleFromUserData || '').toLowerCase().trim();
             const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
               ? 'parent'
-              : (rawRole === 'applicant' || rawRole === 'solicitante' ? 'applicant' : 'student');
+              : (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante' ? 'applicant' : 'student');
             const scopedStudentId = roleForPortal === 'parent' ? parsedUserId : null;
 
             const dashboardCalls = roleForPortal === 'applicant'

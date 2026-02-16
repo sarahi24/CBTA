@@ -12,7 +12,7 @@ function normalizeStudentPortalRole(role) {
 
   if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
   if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
-  if (roleLower === 'applicant' || roleLower === 'solicitante') return 'applicant';
+  if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante') return 'applicant';
 
   return roleLower;
 }
