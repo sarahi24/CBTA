@@ -374,7 +374,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                                         </svg>
-                                        <span x-text="user.role || (Array.isArray(user.roles) && user.roles.length ? getRoleLabel(user.roles) : (user.roles_count ? `${user.roles_count} rol(es)` : 'Sin rol'))"></span>
+                                        <span x-text="getVisibleRoleText(user)"></span>
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
@@ -1535,6 +1535,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     .split(' ')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' ');
+            },
+
+            getVisibleRoleText(user) {
+                const directRoles = this.normalizeRoleList(user?.roles || []);
+                const roleCount = Number(user?.roles_count || directRoles.length || 0);
+                if (roleCount > 0) return String(roleCount);
+
+                const roleText = String(user?.role || '').trim();
+                if (roleText && roleText.toLowerCase() !== 'sin rol') {
+                    return '1';
+                }
+
+                return '';
             },
 
             normalizeRoleList(values) {
