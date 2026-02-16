@@ -27,6 +27,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       activeTab: 'pending',
       userId: null,
       portalRole: 'student',
+      roleNotice: '',
       showResultModal: false,
       resultType: '${resultParam || ''}',
 
@@ -140,12 +141,26 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const userId = localStorage.getItem('userId');
         this.userId = userId;  // Guardar en el estado
         this.portalRole = this.detectPortalRole();
+        if (this.portalRole === 'applicant') {
+          this.roleNotice = 'Tu cuenta está en proceso. Los adeudos y métodos de pago estarán disponibles cuando se active tu perfil de estudiante.';
+        }
         
         console.log('ðŸ” [Adeudos] Usuario cargado:', this.alumnoNombre);
         console.log('ðŸ” [Adeudos] Token disponible:', !!token);
         console.log('ðŸ” [Adeudos] UserId:', userId);
+        console.log('ðŸ” [Adeudos] Rol detectado:', this.portalRole);
         const apiReady = await this.ensureStudentAPI();
         console.log('ðŸ” [Adeudos] StudentAPI disponible:', apiReady);
+
+        if (this.portalRole === 'applicant') {
+          this.adeudos = [];
+          this.overdueAdeudos = [];
+          this.tarjetas = [];
+          this.showOverdueAlert = false;
+          this.activeTab = 'pending';
+          this.loadingTab = false;
+          return;
+        }
         
         if (token && apiReady) {
           await Promise.all([
@@ -197,6 +212,10 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       async loadPendingPayments() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
+        if (this.portalRole === 'applicant') {
+          this.adeudos = [];
+          return;
+        }
 
         this.loadingTab = true;
         try {
@@ -226,6 +245,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const token = localStorage.getItem('access_token');
         if (!token) {
           console.warn('š ï¸ No token available for overdue payments');
+          return;
+        }
+        if (this.portalRole === 'applicant') {
+          this.overdueAdeudos = [];
+          this.showOverdueAlert = false;
           return;
         }
 
@@ -274,6 +298,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
       switchTab(tab) {
         this.activeTab = tab;
+        if (this.portalRole === 'applicant') return;
         if (tab === 'pending' && this.adeudos.length === 0) {
           this.loadPendingPayments();
         } else if (tab === 'overdue' && this.overdueAdeudos.length === 0) {
@@ -382,6 +407,16 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           <span class="amount" x-text="'$' + [...adeudos, ...overdueAdeudos].reduce((acc, item) => acc + parseFloat(String(item.monto || '0').replace(/,/g, '')), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })"></span>
         </div>
       </div>
+
+      <template x-if="roleNotice">
+        <div class="overdue-alert-banner">
+          <div class="alert-icon" aria-hidden="true">&#8505;</div>
+          <div class="alert-content">
+            <h3>Información de cuenta</h3>
+            <p x-text="roleNotice"></p>
+          </div>
+        </div>
+      </template>
     </header>
 
 
