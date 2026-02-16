@@ -5,25 +5,25 @@ const pageTitle = "Notificaciones";
 ---
 
 <Layout title={pageTitle}>
-  <div class="max-w-5xl mx-auto">
+  <div class="max-w-5xl mx-auto px-3 sm:px-0 overflow-x-hidden">
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-      <div>
-        <h1 class="text-4xl font-black text-[#2e594d] mb-2 flex items-center gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-[#86efad]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <div class="min-w-0 w-full">
+        <h1 class="text-3xl md:text-4xl font-black text-[#2e594d] mb-2 flex items-center gap-2 md:gap-3 leading-tight min-w-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 md:h-10 md:w-10 text-[#86efad] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          Notificaciones
+          <span class="break-words">Notificaciones</span>
         </h1>
-        <p class="text-gray-600 text-sm flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <p class="text-gray-600 text-sm flex items-start gap-2 min-w-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Mantente al tanto de tus avisos y actualizaciones importantes
+          <span class="break-words">Mantente al tanto de tus avisos y actualizaciones importantes</span>
         </p>
       </div>
       
-      <button id="mark-all-read-btn" class="px-6 py-3 bg-[#2e594d] hover:bg-[#86efad] hover:text-[#2e594d] text-white rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
+      <button id="mark-all-read-btn" class="w-full md:w-auto px-4 md:px-6 py-3 bg-[#2e594d] hover:bg-[#86efad] hover:text-[#2e594d] text-white rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
@@ -32,20 +32,20 @@ const pageTitle = "Notificaciones";
     </div>
 
     <!-- Filtros de notificaciones -->
-    <div class="mb-6 flex flex-wrap gap-3">
-      <button class="filter-btn active px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="all">
+    <div class="mb-6 flex flex-wrap gap-2 md:gap-3">
+      <button class="filter-btn active px-4 md:px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="all">
         Todas
       </button>
-      <button class="filter-btn px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="payment">
+      <button class="filter-btn px-4 md:px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="payment">
         💰 Pagos
       </button>
-      <button class="filter-btn px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="academic">
+      <button class="filter-btn px-4 md:px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="academic">
         📚 Académicas
       </button>
-      <button class="filter-btn px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="administrative">
+      <button class="filter-btn px-4 md:px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="administrative">
         📋 Administrativas
       </button>
-      <button class="filter-btn px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="general">
+      <button class="filter-btn px-4 md:px-5 py-2 rounded-full font-bold text-sm transition-all" data-filter="general">
         📢 Generales
       </button>
     </div>
@@ -541,19 +541,19 @@ const pageTitle = "Notificaciones";
           : '';
         
         return `
-          <div class="notification-item relative bg-white border-l-4 ${colors.border} rounded-xl p-5 shadow-md hover:shadow-xl transition-all ${notif.read ? 'opacity-60' : ''}" data-id="${notif.id}">
+          <div class="notification-item relative bg-white border-l-4 ${colors.border} rounded-xl p-4 md:p-5 shadow-md hover:shadow-xl transition-all overflow-hidden ${notif.read ? 'opacity-60' : ''}" data-id="${notif.id}">
             ${readBadge}
             <button class="delete-notif-btn absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 transition-colors" data-id="${notif.id}" title="Eliminar notificación">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div class="flex items-start gap-4">
+            <div class="flex items-start gap-3 md:gap-4 min-w-0">
               <div class="text-3xl">${notif.icon}</div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between mb-2 pr-6">
-                  <h3 class="text-lg font-bold text-gray-900">${escapeHtml(notif.title)}</h3>
-                  <span class="text-xs ${colors.text} font-semibold">${formatRelativeTime(notif.date)}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2 mb-2 pr-6 min-w-0">
+                  <h3 class="text-base md:text-lg font-bold text-gray-900 break-words leading-tight min-w-0">${escapeHtml(notif.title)}</h3>
+                  <span class="text-xs ${colors.text} font-semibold shrink-0">${formatRelativeTime(notif.date)}</span>
                 </div>
                 <p class="text-sm text-gray-600 mb-2 break-words">${escapeHtml(notif.message)}</p>
                 ${amountBlock}
