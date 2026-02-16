@@ -165,6 +165,26 @@ window.StudentAPI = {
           throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
         }
 
+        if (response.status === 403 && effectiveRole === 'applicant') {
+          console.warn('⚠️ Historial no disponible para solicitante (403). Regresando respuesta vacía controlada.');
+          return {
+            success: true,
+            data: {
+              payment_history: {
+                items: [],
+                currentPage: Number(page) || 1,
+                lastPage: 1,
+                perPage: Number(perPage) || 15,
+                total: 0,
+                hasMorePages: false,
+                nextPage: null,
+                previousPage: null
+              }
+            },
+            message: 'Historial no disponible para solicitante'
+          };
+        }
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || 'Error al cargar historial de pagos');
@@ -726,4 +746,4 @@ window.StudentAPI = {
   }
 };
 
-console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r14)');
+console.log('✅ StudentAPI cargado desde /public/studentAPI.js (v20260215r15)');

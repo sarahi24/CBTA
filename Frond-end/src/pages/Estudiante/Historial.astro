@@ -26,7 +26,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
 ---
 
-<script src="/studentAPI.js?v=20260215r14" is:inline></script>
+<script src="/studentAPI.js?v=20260215r15" is:inline></script>
 
 
 <StudentLayout title={title}>
@@ -46,8 +46,40 @@ const forceRefresh = forceRefreshParam === 'true';
       errorMessage: '',
       downloadingReceiptId: null,
       alumnoBackend: '${alumnoBackend}',
+      roleForPortal: 'student',
+      roleNotice: '',
+      initInProgress: false,
+      initCompleted: false,
       showResultModal: false,
       resultType: '${resultParam || ''}',
+
+      detectPortalRole() {
+        const userDataRaw = localStorage.getItem('user_data');
+        let inferredRole = '';
+
+        if (userDataRaw) {
+          try {
+            const userData = JSON.parse(userDataRaw);
+            const roles = [];
+            if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+            if (userData?.role) roles.push(userData.role);
+            if (userData?.role_name) roles.push(userData.role_name);
+            if (userData?.type) roles.push(userData.type);
+
+            const firstRole = roles.find(Boolean);
+            const normalizedFirstRole = typeof firstRole === 'string'
+              ? firstRole
+              : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
+
+            inferredRole = String(normalizedFirstRole || '').toLowerCase().trim();
+          } catch (_) {}
+        }
+
+        const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRole || '').toLowerCase().trim();
+        if (rawRole === 'parent' || rawRole === 'padre') return 'parent';
+        if (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante') return 'applicant';
+        return 'student';
+      },
 
       openUrlInNewTab(url) {
         if (!url) return false;
@@ -64,6 +96,16 @@ const forceRefresh = forceRefreshParam === 'true';
       },
 
       async init() {
+        if (this.initCompleted || this.initInProgress) {
+          return;
+        }
+        this.initInProgress = true;
+
+        this.roleForPortal = this.detectPortalRole();
+        if (this.roleForPortal === 'applicant') {
+          this.roleNotice = 'Tu cuenta está como solicitante. El historial de pagos estará disponible cuando se active como estudiante.';
+        }
+
         await this.loadHistory();
         // Mostrar modal si hay parÃ¡metro result
         if (this.resultType === 'paid') {
@@ -75,6 +117,9 @@ const forceRefresh = forceRefreshParam === 'true';
             window.history.replaceState({}, '', url);
           }, 3000);
         }
+
+        this.initCompleted = true;
+        this.initInProgress = false;
       },
 
       closeResultModal() {
@@ -104,12 +149,24 @@ const forceRefresh = forceRefreshParam === 'true';
           return;
         }
 
+        if (this.roleForPortal === 'applicant') {
+          this.pagos = [];
+          this.currentPage = 1;
+          this.lastPage = 1;
+          this.total = 0;
+          this.hasMorePages = false;
+          this.nextPage = null;
+          this.previousPage = null;
+          this.loading = false;
+          return;
+        }
+
         try {
           const historyRes = await window.StudentAPI.getPaymentHistory(
             userId ? parseInt(userId, 10) : null,
             token,
             ${forceRefresh},
-            'student',
+            this.roleForPortal,
             this.perPage,
             this.currentPage
           );
@@ -206,7 +263,7 @@ const forceRefresh = forceRefreshParam === 'true';
         }
 
         try {
-          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, 'student');
+          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, this.roleForPortal);
           if (result?.url) {
             this.openUrlInNewTab(result.url);
             return;
@@ -219,7 +276,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
           if (!fallbackUrl) {
             try {
-              const detailRes = await window.StudentAPI.getPaymentById(paymentId, token, 'student');
+              const detailRes = await window.StudentAPI.getPaymentById(paymentId, token, this.roleForPortal);
               fallbackUrl = detailRes?.data?.payment?.url || null;
             } catch (_) {}
           }
@@ -258,6 +315,8 @@ const forceRefresh = forceRefreshParam === 'true';
         </div>
       </div>
     </header>
+
+    <div x-show="roleNotice" class="mb-4 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-medium" x-text="roleNotice"></div>
 
     <main class="history-content">
       <template x-if="loading">

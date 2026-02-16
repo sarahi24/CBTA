@@ -14,16 +14,53 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           tarjetas: [],
           isLoading: false,
           error: '',
+          roleNotice: '',
+          portalRole: 'student',
+          initInProgress: false,
+          initCompleted: false,
           token: null,
           userId: null,
           showResultModal: false,
           resultType: '',
+
+          detectPortalRole() {
+            const userDataRaw = localStorage.getItem('user_data');
+            let inferredRole = '';
+
+            if (userDataRaw) {
+              try {
+                const userData = JSON.parse(userDataRaw);
+                const roles = [];
+                if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+                if (userData?.role) roles.push(userData.role);
+                if (userData?.role_name) roles.push(userData.role_name);
+                if (userData?.type) roles.push(userData.type);
+
+                const firstRole = roles.find(Boolean);
+                const normalizedFirstRole = typeof firstRole === 'string'
+                  ? firstRole
+                  : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
+
+                inferredRole = String(normalizedFirstRole || '').toLowerCase().trim();
+              } catch (_) {}
+            }
+
+            const rawRole = (localStorage.getItem('userRole') || localStorage.getItem('role') || inferredRole || '').toLowerCase().trim();
+            if (rawRole === 'parent' || rawRole === 'padre') return 'parent';
+            if (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante') return 'applicant';
+            return 'student';
+          },
 
           closeResultModal() {
             this.showResultModal = false;
           },
 
           async init() {
+            if (this.initCompleted || this.initInProgress) {
+              return;
+            }
+            this.initInProgress = true;
+
             // Obtener parámetro de resultado del URL
             const urlParams = new URLSearchParams(window.location.search);
             this.resultType = urlParams.get('result') || '';
@@ -41,17 +78,34 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
             this.token = localStorage.getItem('access_token');
             this.userId = localStorage.getItem('userId');
+            this.portalRole = this.detectPortalRole();
             const userName = localStorage.getItem('userName');
             
             if (userName && userName !== 'Usuario' && userName !== 'Estudiante') {
               this.alumno = userName;
             }
+
+            if (this.portalRole === 'applicant') {
+              this.roleNotice = 'Tu cuenta está como solicitante. La gestión de tarjetas se habilitará cuando pases a estudiante.';
+              this.tarjetas = [];
+              this.initCompleted = true;
+              this.initInProgress = false;
+              return;
+            }
             
             console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
             await this.cargarTarjetas();
+            this.initCompleted = true;
+            this.initInProgress = false;
           },
 
           async cargarTarjetas(forceRefresh = false) {
+            if (this.portalRole === 'applicant') {
+              this.tarjetas = [];
+              this.error = '';
+              return;
+            }
+
             if (!this.token || !this.userId) {
               console.error('âŒ Token o userId vacÃ­os:', { token: !!this.token, userId: this.userId });
               this.error = 'Por favor inicia sesión';
@@ -127,6 +181,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           },
 
         async agregarNuevaTarjeta() {
+          if (this.portalRole === 'applicant') {
+            this.error = 'La cuenta de solicitante no puede vincular tarjetas aún.';
+            return;
+          }
+
           this.error = '';
           this.isLoading = true;
           console.log('ðŸ”„ Iniciando proceso de vincular tarjeta con Stripe...');
@@ -176,6 +235,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         },
 
         async eliminarTarjeta(paymentMethodId) {
+          if (this.portalRole === 'applicant') {
+            this.error = 'La cuenta de solicitante no puede eliminar tarjetas.';
+            setTimeout(() => this.error = '', 3000);
+            return;
+          }
+
           if (!confirm('¿Estás seguro de que deseas eliminar esta tarjeta?')) return;
 
           this.isLoading = true;
@@ -258,13 +323,15 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         </div>
       </header>
 
+      <div x-show="roleNotice" style="margin-bottom: 1rem; padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 0.9rem; font-weight: 600;" x-text="roleNotice"></div>
+
 
 
     <main class="content-grid">
       <section class="section-container">
         <div class="section-header">
           <h2 class="section-title">Mis Tarjetas</h2>
-          <button @click="showModal = true" class="add-inline-btn">
+          <button @click="showModal = true" class="add-inline-btn" :disabled="portalRole === 'applicant'" :style="portalRole === 'applicant' ? 'opacity:.55;cursor:not-allowed;' : ''">
             + Añadir Nueva
           </button>
         </div>
@@ -290,8 +357,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           </template>
 
           <template x-if="tarjetas.length === 0">
-            <div class="empty-state" @click="showModal = true" style="text-align: center; padding: 3rem; background: white; border-radius: 24px; cursor: pointer; border: 2px dashed #e2e8f0;">
-                <p style="color: #64748b; font-weight: 600;">No tienes tarjetas registradas. Toca para añadir una.</p>
+            <div class="empty-state" @click="portalRole !== 'applicant' ? showModal = true : null" :style="portalRole === 'applicant' ? 'text-align:center;padding:3rem;background:white;border-radius:24px;border:2px dashed #e2e8f0;cursor:default;' : 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:pointer;border:2px dashed #e2e8f0;'">
+              <p style="color: #64748b; font-weight: 600;" x-text="portalRole === 'applicant' ? 'Aún no hay tarjetas disponibles para solicitante.' : 'No tienes tarjetas registradas. Toca para añadir una.'"></p>
             </div>
           </template>
         </div>

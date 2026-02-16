@@ -18,6 +18,9 @@ const title = 'Panel de Estudiante';
         porcentajeProgreso: 0,
         loading: false,
         error: '',
+        portalRole: 'student',
+        roleNotice: '',
+        emptyPaymentsMessage: 'No hay registros de pagos',
         initCompleted: false,
         initInProgress: false,
 
@@ -67,7 +70,16 @@ const title = 'Panel de Estudiante';
             const roleForPortal = rawRole === 'parent' || rawRole === 'padre'
               ? 'parent'
               : (rawRole === 'applicant' || rawRole === 'solicitante' || rawRole === 'aspirante' ? 'applicant' : 'student');
+            this.portalRole = roleForPortal;
             const scopedStudentId = roleForPortal === 'parent' ? parsedUserId : null;
+
+            if (roleForPortal === 'applicant') {
+              this.roleNotice = 'Tu cuenta está como solicitante. Los datos de adeudos y pagos se mostrarán cuando se active como estudiante.';
+              this.emptyPaymentsMessage = 'Aún no hay pagos disponibles para solicitante';
+            } else {
+              this.roleNotice = '';
+              this.emptyPaymentsMessage = 'No hay registros de pagos';
+            }
 
             const dashboardCalls = roleForPortal === 'applicant'
               ? [
@@ -193,6 +205,8 @@ const title = 'Panel de Estudiante';
         <span class="current-date mobile-hide">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
       </div>
     </header>
+
+    <div x-show="roleNotice" class="mb-4 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-medium" x-text="roleNotice"></div>
 
 
 
@@ -350,7 +364,7 @@ const title = 'Panel de Estudiante';
               </template>
               <template x-if="!history || history.length === 0">
                 <tr>
-                  <td colspan="3" class="empty-row">No hay registros de pagos</td>
+                  <td colspan="3" class="empty-row" x-text="emptyPaymentsMessage"></td>
                 </tr>
               </template>
             </tbody>
