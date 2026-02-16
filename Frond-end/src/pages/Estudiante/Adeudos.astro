@@ -26,8 +26,54 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       showOverdueAlert: false,
       activeTab: 'pending',
       userId: null,
+      portalRole: 'student',
       showResultModal: false,
       resultType: '${resultParam || ''}',
+
+      detectPortalRole() {
+        const userDataRaw = localStorage.getItem('user_data');
+        let inferredRole = '';
+
+        if (userDataRaw) {
+          try {
+            const userData = JSON.parse(userDataRaw);
+            const roles = [];
+            if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+            if (userData?.role) roles.push(userData.role);
+            if (userData?.role_name) roles.push(userData.role_name);
+            if (userData?.type) roles.push(userData.type);
+
+            const firstRole = roles.find(Boolean);
+            const normalizedFirstRole = typeof firstRole === 'string'
+              ? firstRole
+              : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
+
+            inferredRole = String(normalizedFirstRole || '').toLowerCase().trim();
+          } catch (_) {}
+        }
+
+        const roleCandidates = [
+          localStorage.getItem('userRole'),
+          localStorage.getItem('role'),
+          inferredRole
+        ]
+          .filter(Boolean)
+          .map(function(roleValue) {
+            return String(roleValue).toLowerCase().trim();
+          });
+
+        const hasParentRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'parent' || roleValue === 'padre';
+        });
+
+        const hasApplicantRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
+        });
+
+        if (hasParentRole) return 'parent';
+        if (hasApplicantRole) return 'applicant';
+        return 'student';
+      },
 
       async ensureStudentAPI() {
         if (window.StudentAPI) return true;
@@ -93,6 +139,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const token = localStorage.getItem('access_token');
         const userId = localStorage.getItem('userId');
         this.userId = userId;  // Guardar en el estado
+        this.portalRole = this.detectPortalRole();
         
         console.log('ðŸ” [Adeudos] Usuario cargado:', this.alumnoNombre);
         console.log('ðŸ” [Adeudos] Token disponible:', !!token);
@@ -157,7 +204,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           console.log('ðŸ” UserId:', this.userId);
           
           // Pasar el userId para que se construya el endpoint correcto
-          const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, false, 'student');
+          const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, false, this.portalRole);
           
           console.log('ðŸ“Š [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
 
@@ -196,7 +243,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           console.log('… window.StudentAPI disponible');
           
           // Pasar el userId para que se construya el endpoint correcto
-          const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, false, 'student');
+          const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, false, this.portalRole);
           
           console.log('ðŸ“Š [Adeudos] Respuesta completa del servidor:', overdueData);
           console.log('ðŸ“Š [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });

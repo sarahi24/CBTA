@@ -13,6 +13,52 @@ const paymentId = Astro.url.searchParams.get('id');
     loading: true,
     errorMessage: '',
     downloadingReceipt: false,
+    portalRole: 'student',
+
+    detectPortalRole() {
+      const userDataRaw = localStorage.getItem('user_data');
+      let inferredRole = '';
+
+      if (userDataRaw) {
+        try {
+          const userData = JSON.parse(userDataRaw);
+          const roles = [];
+          if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+          if (userData?.role) roles.push(userData.role);
+          if (userData?.role_name) roles.push(userData.role_name);
+          if (userData?.type) roles.push(userData.type);
+
+          const firstRole = roles.find(Boolean);
+          const normalizedFirstRole = typeof firstRole === 'string'
+            ? firstRole
+            : (firstRole?.name || firstRole?.slug || firstRole?.role || '');
+
+          inferredRole = String(normalizedFirstRole || '').toLowerCase().trim();
+        } catch (_) {}
+      }
+
+      const roleCandidates = [
+        localStorage.getItem('userRole'),
+        localStorage.getItem('role'),
+        inferredRole
+      ]
+        .filter(Boolean)
+        .map(function(roleValue) {
+          return String(roleValue).toLowerCase().trim();
+        });
+
+      const hasParentRole = roleCandidates.some(function(roleValue) {
+        return roleValue === 'parent' || roleValue === 'padre';
+      });
+
+      const hasApplicantRole = roleCandidates.some(function(roleValue) {
+        return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
+      });
+
+      if (hasParentRole) return 'parent';
+      if (hasApplicantRole) return 'applicant';
+      return 'student';
+    },
 
     openUrlInNewTab(url) {
       if (!url) return false;
@@ -43,6 +89,8 @@ const paymentId = Astro.url.searchParams.get('id');
           console.log('✅ ID rescatado de URL:', this.paymentId);
         }
       }
+
+      this.portalRole = this.detectPortalRole();
       
       await this.loadDetail();
     },
@@ -77,7 +125,7 @@ const paymentId = Astro.url.searchParams.get('id');
 
       try {
         console.log('📡 Llamando a API con paymentId:', this.paymentId);
-        const response = await window.StudentAPI.getPaymentById(this.paymentId, token, 'student');
+        const response = await window.StudentAPI.getPaymentById(this.paymentId, token, this.portalRole);
         console.log('✅ Respuesta del API:', response);
         const payment = response?.data?.payment;
         console.log('💾 Datos del pago:', payment);
@@ -159,7 +207,7 @@ const paymentId = Astro.url.searchParams.get('id');
       const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(this.paymentId) + '?mode=open&_=' + Date.now();
 
       try {
-        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, 'student');
+        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole);
         receiptResultUrl = result?.url || result?.data?.url || null;
         if (receiptResultUrl) {
           if (pendingTab && !pendingTab.closed) {

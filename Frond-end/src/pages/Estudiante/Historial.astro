@@ -26,7 +26,7 @@ const forceRefresh = forceRefreshParam === 'true';
 
 ---
 
-<script src="/studentAPI.js?v=20260215r30" is:inline></script>
+<script src="/studentAPI.js?v=20260215r19" is:inline></script>
 
 
 <StudentLayout title={title}>
@@ -89,7 +89,12 @@ const forceRefresh = forceRefreshParam === 'true';
           return roleValue === 'parent' || roleValue === 'padre';
         });
 
+        const hasApplicantRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
+        });
+
         if (hasParentRole) return 'parent';
+        if (hasApplicantRole) return 'applicant';
         return 'student';
       },
 

@@ -71,7 +71,7 @@ function resolveApiAccessRole(effectiveRole) {
 function getApiRoleCandidates(effectiveRole) {
   const primaryRole = resolveApiAccessRole(effectiveRole);
   if (primaryRole === 'applicant' || primaryRole === 'unverified') {
-    return ['student'];
+    return [primaryRole, 'student'];
   }
   return [primaryRole];
 }
