@@ -333,7 +333,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             estudiantes: 'estudiantes',
             students: 'estudiantes',
             tag: 'tags',
-            tags: 'tags'
+            tags: 'tags',
+            special_tags: 'tags',
+            'special-tags': 'tags'
           };
           return map[raw] || raw;
         };
@@ -385,12 +387,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         const scopeRules = concept.scopeRules || {};
         const normalizedAppliesTo = normalizeAppliesTo(concept.applies_to || concept.appliesTo);
 
-        // allStudents puede venir por scopeRules, is_global o applies_to
-        this.formData.allStudents = Boolean(
-          scopeRules.allStudents === true ||
-          concept.is_global === true ||
-          normalizedAppliesTo === 'todos'
-        );
+        // allStudents puede venir por scopeRules o is_global,
+        // pero si el applies_to indica alcance restringido, debe quedar en false
+        const restrictedScopes = ['carrera', 'semestre', 'carrera_semestre', 'estudiantes', 'tags'];
+        const isRestrictedScope = restrictedScopes.includes(normalizedAppliesTo);
+        this.formData.allStudents = isRestrictedScope
+          ? false
+          : Boolean(
+              scopeRules.allStudents === true ||
+              concept.is_global === true ||
+              normalizedAppliesTo === 'todos'
+            );
 
         // Carreras: soportar variants del endpoint/localStorage
         const careersRaw =
@@ -1272,7 +1279,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             // Según documentación OpenAPI: applicantTags debe ser un array con valores singulares
             // Valores válidos: ["applicant", "no_student_details"]
             if (this.formData.applicantTags.length === 0) {
-              payload.applicantTags = ['applicant', 'no_student_details'];
+              this.errorMessage = '⚠️ Seleccione al menos un Caso Especial.';
+              this.isSaving = false;
+              return;
             } else {
               payload.applicantTags = this.formData.applicantTags;
             }

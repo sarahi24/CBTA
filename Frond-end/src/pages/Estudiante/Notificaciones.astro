@@ -87,6 +87,56 @@ const pageTitle = "Notificaciones";
       return localStorage.getItem('access_token');
     }
 
+    function isLikelyNotification(value) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      return Boolean(
+        value.id ||
+        value.type ||
+        value.data ||
+        value.created_at ||
+        value.title ||
+        value.message ||
+        value.body
+      );
+    }
+
+    function extractNotificationsFromResponse(payload) {
+      const root = payload?.data ?? payload ?? {};
+      const candidates = [
+        root.notifications,
+        root.items,
+        root.results,
+        root.data,
+        root
+      ];
+
+      for (const candidate of candidates) {
+        if (Array.isArray(candidate)) {
+          return candidate.filter(isLikelyNotification);
+        }
+
+        if (candidate && typeof candidate === 'object') {
+          if (Array.isArray(candidate.data)) {
+            return candidate.data.filter(isLikelyNotification);
+          }
+          if (Array.isArray(candidate.items)) {
+            return candidate.items.filter(isLikelyNotification);
+          }
+          if (Array.isArray(candidate.notifications)) {
+            return candidate.notifications.filter(isLikelyNotification);
+          }
+
+          const values = Object.values(candidate);
+          if (values.length && values.every((item) => item && typeof item === 'object' && !Array.isArray(item))) {
+            const fromValues = values.filter(isLikelyNotification);
+            if (fromValues.length) return fromValues;
+          }
+        }
+      }
+
+      return [];
+    }
+
     // Fetch notificaciones desde la API
     async function fetchNotifications() {
       const token = getToken();
@@ -121,13 +171,30 @@ const pageTitle = "Notificaciones";
           console.log('✅ Notificaciones no leídas:', unreadData);
 
           const notificationsNode = readData.data?.notifications || {};
-          const notificationsList = notificationsNode?.data || notificationsNode?.items || [];
-          const unreadCount = unreadData.data?.count ?? unreadData.data?.unread_count ?? 0;
+          const readNotifications = extractNotificationsFromResponse(readData);
+          const unreadNotifications = extractNotificationsFromResponse(unreadData);
+
+          const mergedNotifications = [...unreadNotifications, ...readNotifications];
+          const dedupMap = new Map();
+          for (const notif of mergedNotifications) {
+            const key = notif?.id ?? `${notif?.type || 'unknown'}-${notif?.created_at || ''}-${JSON.stringify(notif?.data || {})}`;
+            if (!dedupMap.has(key)) {
+              dedupMap.set(key, notif);
+            }
+          }
+          const notificationsList = Array.from(dedupMap.values())
+            .sort((a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime());
+
+          const unreadCount =
+            unreadData.data?.count ??
+            unreadData.data?.unread_count ??
+            readData.data?.unread_count ??
+            notificationsList.filter(n => !(n?.read || n?.is_read || n?.read_at || n?.readAt)).length;
 
           const meta = notificationsNode?.meta || notificationsNode?.pagination || {};
           const apiCurrentPage = Number(meta.current_page ?? meta.currentPage ?? notificationsNode.current_page ?? currentPage) || currentPage;
           const apiLastPage = Number(meta.last_page ?? meta.lastPage ?? notificationsNode.last_page ?? 1) || 1;
-          const apiTotal = Number(meta.total ?? notificationsNode.total ?? notificationsList.length ?? 0) || 0;
+          const apiTotal = Number(meta.total ?? notificationsNode.total ?? notificationsList.length ?? 0) || notificationsList.length;
 
           paginationState.currentPage = apiCurrentPage;
           paginationState.lastPage = Math.max(1, apiLastPage);

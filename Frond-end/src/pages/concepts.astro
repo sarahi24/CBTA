@@ -820,8 +820,8 @@ window.editConcept = (id) => {
   const c = conceptsCache.find(x=>String(x.id)===String(id));
   
   // Determinar el tipo de scope basado en applies_to
-  let scopeType = 'all'; // por defecto
-  const appliesTo = (c.applies_to || c.appliesTo || '').toLowerCase();
+  const appliesTo = getConceptScope(c);
+  let scopeType = appliesTo === 'todos' ? 'all' : 'carrera';
   
   // Mapeo explícito de applies_to a scopeType
   const scopeTypeMap = {
@@ -830,7 +830,9 @@ window.editConcept = (id) => {
     'semestre': 'semestre',
     'carrera_semestre': 'carrera_semestre',
     'estudiantes': 'estudiantes',
-    'tag': 'tags'
+    'tag': 'tags',
+    'tags': 'tags',
+    'special_tags': 'tags'
   };
   
   scopeType = scopeTypeMap[appliesTo] || 'all';
