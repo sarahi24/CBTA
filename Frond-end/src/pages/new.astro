@@ -2171,89 +2171,89 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         </section>
 
 
-        <section class="bg-gradient-to-br from-white via-blue-50/30 to-white p-4 sm:p-6 rounded-2xl shadow-2xl border-2 border-blue-200/50 space-y-5 overflow-x-hidden">
-          <div class="flex items-center gap-3 pb-3 border-b-2 border-blue-200/50">
-            <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-extrabold text-sm shadow-lg">
+        <section class="bg-gradient-to-br from-white via-blue-50/30 to-white p-3 sm:p-5 rounded-2xl shadow-2xl border-2 border-blue-200/50 space-y-4 overflow-x-hidden">
+          <div class="flex items-center gap-2.5 pb-2 border-b-2 border-blue-200/50">
+            <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-extrabold text-xs shadow-lg">
                 <i class="fas fa-filter"></i>
             </span>
-            <h2 class="text-xl font-extrabold text-blue-900">Reglas de Aplicación (Alcance)</h2>
+            <h2 class="text-lg sm:text-xl font-extrabold text-blue-900">Reglas de Aplicación (Alcance)</h2>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div @click="formData.allStudents = true; formData.selectedCareers = []; formData.selectedSemesters = []; formData.selectedSpecificStudents = [];"
               :class="formData.allStudents ? 'check-active ring-4 ring-[#2E594D]/20' : 'border-gray-300 hover:border-gray-400'"
-              class="border-2 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all flex items-center gap-3 sm:gap-4 shadow-lg hover:shadow-xl sm:hover:scale-105 min-w-0">
-              <div :class="formData.allStudents ? 'bg-active' : 'bg-gray-200 text-gray-500'" class="p-4 rounded-xl transition">
-                <i class="fas fa-users-cog text-2xl"></i>
+              class="border-2 rounded-xl p-3 sm:p-4 cursor-pointer transition-all flex items-center gap-2.5 sm:gap-3 shadow-md hover:shadow-lg sm:hover:scale-105 min-w-0">
+              <div :class="formData.allStudents ? 'bg-active' : 'bg-gray-200 text-gray-500'" class="p-3 rounded-lg transition">
+                <i class="fas fa-users-cog text-lg sm:text-xl"></i>
               </div>
               <div>
-                <p class="font-extrabold text-gray-950 text-base">Matrícula Completa</p>
-                <p class="text-xs text-gray-600 mt-1">Aplica a todos los estudiantes</p>
+                <p class="font-extrabold text-gray-950 text-sm sm:text-base leading-tight">Matrícula Completa</p>
+                <p class="text-[11px] sm:text-xs text-gray-600 mt-0.5">Aplica a todos los estudiantes</p>
               </div>
             </div>
             
             <div @click="formData.allStudents = false; formData.scopeType = 'carrera'"
               :class="!formData.allStudents ? 'check-active ring-4 ring-[#2E594D]/20' : 'border-gray-300 hover:border-gray-400'"
-              class="border-2 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all flex items-center gap-3 sm:gap-4 shadow-lg hover:shadow-xl sm:hover:scale-105 min-w-0">
-              <div :class="!formData.allStudents ? 'bg-active' : 'bg-gray-200 text-gray-500'" class="p-4 rounded-xl transition">
-                <i class="fas fa-filter text-2xl"></i>
+              class="border-2 rounded-xl p-3 sm:p-4 cursor-pointer transition-all flex items-center gap-2.5 sm:gap-3 shadow-md hover:shadow-lg sm:hover:scale-105 min-w-0">
+              <div :class="!formData.allStudents ? 'bg-active' : 'bg-gray-200 text-gray-500'" class="p-3 rounded-lg transition">
+                <i class="fas fa-filter text-lg sm:text-xl"></i>
               </div>
               <div>
-                <p class="font-extrabold text-gray-950 text-base">Alcance Restringido</p>
-                <p class="text-xs text-gray-600 mt-1">Filtrar por un ámbito específico</p>
+                <p class="font-extrabold text-gray-950 text-sm sm:text-base leading-tight">Alcance Restringido</p>
+                <p class="text-[11px] sm:text-xs text-gray-600 mt-0.5">Filtrar por un ámbito específico</p>
               </div>
             </div>
           </div>
 
-          <div x-show="!formData.allStudents" x-cloak x-transition.opacity.duration.300ms class="space-y-4 pt-4">
+          <div x-show="!formData.allStudents" x-cloak x-transition.opacity.duration.300ms class="space-y-3 pt-3">
             
             <!-- Selector de tipo de ámbito -->
-            <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-              <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-3">
+              <label class="block text-xs sm:text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
                 <i class="fas fa-bullseye text-amber-600"></i>
                 Selecciona el tipo de ámbito (solo uno):
               </label>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
                 <label class="cursor-pointer">
                   <input type="radio" value="carrera" x-model="formData.scopeType" @change="formData.selectedSemesters = []; formData.selectedSpecificStudents = []" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-2 peer-checked:ring-blue-200 hover:shadow-md">
-                    <i class="fas fa-graduation-cap text-lg text-blue-600 mb-1"></i>
-                    <p class="text-xs font-bold">Por Carrera</p>
+                  <div class="p-2 sm:p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-2 peer-checked:ring-blue-200 hover:shadow-md">
+                    <i class="fas fa-graduation-cap text-sm sm:text-base text-blue-600 mb-0.5"></i>
+                    <p class="text-[11px] sm:text-xs font-bold leading-tight">Por Carrera</p>
                   </div>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" value="semestre" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSpecificStudents = []" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 peer-checked:ring-2 peer-checked:ring-purple-200 hover:shadow-md">
-                    <i class="fas fa-calendar-alt text-lg text-purple-600 mb-1"></i>
-                    <p class="text-xs font-bold">Por Semestre</p>
+                  <div class="p-2 sm:p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 peer-checked:ring-2 peer-checked:ring-purple-200 hover:shadow-md">
+                    <i class="fas fa-calendar-alt text-sm sm:text-base text-purple-600 mb-0.5"></i>
+                    <p class="text-[11px] sm:text-xs font-bold leading-tight">Por Semestre</p>
                   </div>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" value="carrera_semestre" x-model="formData.scopeType" @change="formData.selectedSpecificStudents = []" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:ring-2 peer-checked:ring-green-200 hover:shadow-md">
-                    <i class="fas fa-layer-group text-lg text-green-600 mb-1"></i>
-                    <p class="text-xs font-bold">Carrera + Semestre</p>
+                  <div class="p-2 sm:p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:ring-2 peer-checked:ring-green-200 hover:shadow-md">
+                    <i class="fas fa-layer-group text-sm sm:text-base text-green-600 mb-0.5"></i>
+                    <p class="text-[11px] sm:text-xs font-bold leading-tight">Carrera + Semestre</p>
                   </div>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" value="estudiantes" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSemesters = []; formData.exceptionStudents = []; formData.removeAllExceptions = false; formData.replaceExceptions = false" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:ring-2 peer-checked:ring-orange-200 hover:shadow-md">
-                    <i class="fas fa-user-check text-lg text-orange-600 mb-1"></i>
-                    <p class="text-xs font-bold">Estudiantes Específicos</p>
+                  <div class="p-2 sm:p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:ring-2 peer-checked:ring-orange-200 hover:shadow-md">
+                    <i class="fas fa-user-check text-sm sm:text-base text-orange-600 mb-0.5"></i>
+                    <p class="text-[11px] sm:text-xs font-bold leading-tight">Estudiantes Específicos</p>
                   </div>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" value="tags" x-model="formData.scopeType" @change="formData.selectedCareers = []; formData.selectedSemesters = []; formData.selectedSpecificStudents = []" class="sr-only peer">
-                  <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
-                    <i class="fas fa-star text-lg text-pink-600 mb-1"></i>
-                    <p class="text-xs font-bold">Casos Especiales</p>
+                  <div class="p-2 sm:p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
+                    <i class="fas fa-star text-sm sm:text-base text-pink-600 mb-0.5"></i>
+                    <p class="text-[11px] sm:text-xs font-bold leading-tight">Casos Especiales</p>
                   </div>
                 </label>
               </div>
             </div>
             
             <!-- Filtros según el ámbito seleccionado -->
-            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
               
               <!-- Solo Carreras -->
               <div x-show="formData.scopeType === 'carrera'" x-cloak>
@@ -2264,12 +2264,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 <div x-show="careers.length === 0" class="text-sm text-red-600 mb-2 p-2 bg-red-50 rounded">
                   ⚠️ No se cargaron carreras. Revisa la consola del navegador.
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   <template x-for="career in careers" :key="career.id">
                     <label class="cursor-pointer">
                       <input type="checkbox" :value="career.id" x-model="formData.selectedCareers" class="sr-only peer">
                       <div
-                        class="p-2 rounded-xl border-2 border-gray-300 text-center flex items-center justify-center min-h-[35px] text-xs transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
+                        class="px-2 py-1.5 rounded-lg border-2 border-gray-300 text-center flex items-center justify-center min-h-[32px] text-[11px] sm:text-xs leading-tight transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
                       >
                         <span class="font-semibold" x-text="career.name"></span>
                       </div>
@@ -2305,12 +2305,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <i class="fas fa-graduation-cap text-blue-600"></i>
                     Selecciona las Carreras:
                   </label>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     <template x-for="career in careers" :key="career.id">
                       <label class="cursor-pointer">
                         <input type="checkbox" :value="career.id" x-model="formData.selectedCareers" class="sr-only peer">
                         <div
-                          class="p-2 rounded-xl border-2 border-gray-300 text-center flex items-center justify-center min-h-[35px] text-xs transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
+                          class="px-2 py-1.5 rounded-lg border-2 border-gray-300 text-center flex items-center justify-center min-h-[32px] text-[11px] sm:text-xs leading-tight transition-all peer-checked:border-[var(--primary-solid)] peer-checked:bg-[var(--primary-lightest)] peer-checked:text-[var(--primary-text)] hover:shadow-md"
                         >
                           <span class="font-semibold" x-text="career.name"></span>
                         </div>
@@ -2345,19 +2345,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                   Selecciona los Casos Especiales:
                 </label>
                 <p class="text-sm text-gray-600 mb-3">Estos conceptos aplicarán a usuarios con características especiales.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <label class="cursor-pointer">
                     <input type="checkbox" value="applicant" x-model="formData.applicantTags" class="sr-only peer">
-                    <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
-                      <i class="fas fa-user-graduate text-lg text-pink-600 mb-1"></i>
+                    <div class="p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
+                      <i class="fas fa-user-graduate text-base text-pink-600 mb-0.5"></i>
                       <p class="text-xs font-bold">Aplicantes/Aspirantes</p>
                       <p class="text-xs text-gray-500 mt-1">Personas en proceso de admisión</p>
                     </div>
                   </label>
                   <label class="cursor-pointer">
                     <input type="checkbox" value="no_student_details" x-model="formData.applicantTags" class="sr-only peer">
-                    <div class="p-3 rounded-xl border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
-                      <i class="fas fa-user-slash text-lg text-pink-600 mb-1"></i>
+                    <div class="p-2.5 rounded-lg border-2 border-gray-300 text-center transition-all peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:ring-2 peer-checked:ring-pink-200 hover:shadow-md">
+                      <i class="fas fa-user-slash text-base text-pink-600 mb-0.5"></i>
                       <p class="text-xs font-bold">Sin Detalles de Estudiante</p>
                       <p class="text-xs text-gray-500 mt-1">Usuarios sin información completa</p>
                     </div>
@@ -2367,7 +2367,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
               <!-- Solo Estudiantes Específicos -->
               <div x-show="formData.scopeType === 'estudiantes'" x-cloak>
-                <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-4">
+                <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-3 mb-3">
                   <div class="flex items-start gap-3">
                     <i class="fas fa-info-circle text-blue-600 text-xl flex-shrink-0 mt-0.5"></i>
                     <div class="flex-1">
