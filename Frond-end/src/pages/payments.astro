@@ -86,6 +86,11 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
         </div>
     </div>
 
+        <div class="mb-4 bg-white rounded-xl shadow-md p-2 flex items-center gap-2 w-full sm:w-fit">
+            <button id="mode-by-concept" class="px-4 py-2 rounded-lg text-sm font-bold bg-[#2D584C] text-white">Por concepto</button>
+            <button id="mode-by-student" class="px-4 py-2 rounded-lg text-sm font-bold text-[#2D584C] hover:bg-[#2D584C]/10">Por alumnos</button>
+        </div>
+
     <!-- Indicador de búsqueda activa -->
     <div id="search-indicator" class="hidden mb-4 p-3 bg-green-50 border-2 border-green-200 rounded-xl flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -96,7 +101,7 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
             <span id="search-results-count" class="px-2 py-1 bg-green-600 text-white text-xs font-black rounded-full"></span>
           </div>
           <p class="text-[10px] text-green-600 mt-1">
-            <i class="fas fa-info-circle"></i> Se busca en: nombre del concepto
+                        <i class="fas fa-info-circle"></i> <span id="search-scope-label">Se busca en: nombre del concepto</span>
           </p>
         </div>
       </div>
@@ -108,43 +113,7 @@ const pageTitle = "Gestión de Pagos - CBTA 71";
     <div class="bg-gradient-to-br from-white via-[#2D584C]/5 to-white rounded-2xl shadow-2xl border-2 border-[#2D584C]/20 overflow-hidden mb-8">
         <div class="overflow-x-auto">
             <table class="w-full border-collapse">
-                <thead class="bg-gradient-to-r from-[#2D584C] to-[#1e3d35]">
-                    <tr>
-                        <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-file-invoice-dollar"></i>
-                                <span>Concepto</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center justify-end gap-2">
-                                <i class="fas fa-coins"></i>
-                                <span>Total</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center justify-end gap-2">
-                                <i class="fas fa-hand-holding-dollar"></i>
-                                <span>Recaudado</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center justify-end gap-2">
-                                <i class="fas fa-percentage"></i>
-                                <span>Tasa Cobranza</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-calendar-check"></i>
-                                <span>Período de Pagos</span>
-                            </div>
-                        </th>
-                        <th class="px-8 py-5 text-center text-xs font-black uppercase tracking-wider text-white">
-                            <i class="fas fa-chevron-down"></i>
-                        </th>
-                    </tr>
-                </thead>
+                <thead id="payments-table-head" class="bg-gradient-to-r from-[#2D584C] to-[#1e3d35]"></thead>
                 <tbody id="payments-table-body" class="bg-white divide-y divide-gray-100"></tbody>
             </table>
         </div>
@@ -187,10 +156,65 @@ let totalRecords = 0;
 let isLoading = false;
 let searchTerm = '';
 let searchTimeout = null;
+let viewMode = 'by-concept';
 
+const tableHead = document.getElementById('payments-table-head');
 const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
     const refreshBtn = document.getElementById('refresh-btn');
+    const modeByConceptBtn = document.getElementById('mode-by-concept');
+    const modeByStudentBtn = document.getElementById('mode-by-student');
+
+    const getColumnCount = () => viewMode === 'by-concept' ? 6 : 6;
+
+    const updateModeUI = () => {
+        const isConcept = viewMode === 'by-concept';
+
+        modeByConceptBtn.className = isConcept
+            ? 'px-4 py-2 rounded-lg text-sm font-bold bg-[#2D584C] text-white'
+            : 'px-4 py-2 rounded-lg text-sm font-bold text-[#2D584C] hover:bg-[#2D584C]/10';
+
+        modeByStudentBtn.className = !isConcept
+            ? 'px-4 py-2 rounded-lg text-sm font-bold bg-[#2D584C] text-white'
+            : 'px-4 py-2 rounded-lg text-sm font-bold text-[#2D584C] hover:bg-[#2D584C]/10';
+
+        searchInput.placeholder = isConcept
+            ? 'Buscar por concepto...'
+            : 'Buscar por alumno, concepto o método...';
+
+        document.getElementById('search-scope-label').textContent = isConcept
+            ? 'Se busca en: nombre del concepto'
+            : 'Se busca en: alumno, concepto y método';
+
+        renderTableHeader();
+    };
+
+    const renderTableHeader = () => {
+        if (viewMode === 'by-concept') {
+            tableHead.innerHTML = `
+                <tr>
+                    <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center gap-2"><i class="fas fa-file-invoice-dollar"></i><span>Concepto</span></div></th>
+                    <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center justify-end gap-2"><i class="fas fa-coins"></i><span>Total</span></div></th>
+                    <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center justify-end gap-2"><i class="fas fa-hand-holding-dollar"></i><span>Recaudado</span></div></th>
+                    <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center justify-end gap-2"><i class="fas fa-percentage"></i><span>Tasa Cobranza</span></div></th>
+                    <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center gap-2"><i class="fas fa-calendar-check"></i><span>Período de Pagos</span></div></th>
+                    <th class="px-8 py-5 text-center text-xs font-black uppercase tracking-wider text-white"><i class="fas fa-chevron-down"></i></th>
+                </tr>
+            `;
+            return;
+        }
+
+        tableHead.innerHTML = `
+            <tr>
+                <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center gap-2"><i class="fas fa-user"></i><span>Alumno</span></div></th>
+                <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center gap-2"><i class="fas fa-file-invoice-dollar"></i><span>Concepto</span></div></th>
+                <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center justify-end gap-2"><i class="fas fa-coins"></i><span>Monto</span></div></th>
+                <th class="px-8 py-5 text-right text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center justify-end gap-2"><i class="fas fa-hand-holding-dollar"></i><span>Recibido</span></div></th>
+                <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center gap-2"><i class="fas fa-credit-card"></i><span>Método</span></div></th>
+                <th class="px-8 py-5 text-left text-xs font-black uppercase tracking-wider text-white"><div class="flex items-center gap-2"><i class="fas fa-calendar-check"></i><span>Fecha</span></div></th>
+            </tr>
+        `;
+    };
 
     // Formatear fecha
     const formatDate = (dateString) => {
@@ -219,7 +243,7 @@ const tableBody = document.getElementById('payments-table-body');
         };
     };
 
-    // Cargar pagos por concepto desde API con paginación
+    // Cargar pagos (por concepto o por alumnos) con paginación
     async function loadPayments(forceRefresh = false) {
         if (isLoading) return;
         isLoading = true;
@@ -227,7 +251,7 @@ const tableBody = document.getElementById('payments-table-body');
         // Mostrar indicador de carga
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="px-8 py-12 text-center">
+                <td colspan="${getColumnCount()}" class="px-8 py-12 text-center">
                     <div class="flex flex-col items-center gap-3">
                         <i class="fas fa-spinner fa-spin text-4xl text-[#2D584C]"></i>
                         <p class="text-gray-600 font-bold">${forceRefresh ? 'Actualizando datos...' : 'Cargando pagos...'}</p>
@@ -244,31 +268,39 @@ const tableBody = document.getElementById('payments-table-body');
                 return;
             }
 
-            // Usar endpoint /api/v1/payments/by-concept
-            const response = await window.StudentAPI.getPaymentsByConcept(token, {
-                search: searchTerm,
-                page: currentPage,
-                perPage: ITEMS_PER_PAGE,
-                forceRefresh: forceRefresh
-            });
+            const response = viewMode === 'by-concept'
+                ? await window.StudentAPI.getPaymentsByConcept(token, {
+                    search: searchTerm,
+                    page: currentPage,
+                    perPage: ITEMS_PER_PAGE,
+                    forceRefresh: forceRefresh
+                })
+                : await window.StudentAPI.getAllPayments(token, {
+                    search: searchTerm,
+                    page: currentPage,
+                    perPage: ITEMS_PER_PAGE,
+                    forceRefresh: forceRefresh
+                });
 
             if (response.success && response.data?.payments) {
                 const paymentsData = response.data.payments;
-                
+
                 // Actualizar variables de paginación
                 currentPage = paymentsData.currentPage || 1;
                 lastPage = paymentsData.lastPage || 1;
                 totalRecords = paymentsData.total || 0;
 
-                console.log(`✅ Conceptos de pago cargados: ${paymentsData.items?.length || 0} de ${totalRecords} total`);
-                
+                console.log(`✅ Pagos cargados (${viewMode}): ${paymentsData.items?.length || 0} de ${totalRecords} total`);
+
                 renderPayments(paymentsData.items || []);
                 updatePaginationInfo();
             } else {
-                showError('No se pudieron cargar los pagos por concepto');
+                showError(viewMode === 'by-concept'
+                    ? 'No se pudieron cargar los pagos por concepto'
+                    : 'No se pudo cargar la lista de pagos por alumnos');
             }
         } catch (error) {
-            console.error('❌ Error al cargar pagos por concepto:', error);
+            console.error('❌ Error al cargar pagos:', error);
             showError(error.message || 'Error al cargar los pagos');
         } finally {
             isLoading = false;
@@ -279,12 +311,19 @@ const tableBody = document.getElementById('payments-table-body');
     const renderPayments = (payments) => {
         const term = searchTerm.toLowerCase().trim();
         
-        // Filtrar localmente por nombre de concepto
+        // Filtrar localmente
         let filtered = payments;
-        if (term) {
+        if (term && viewMode === 'by-concept') {
             filtered = payments.filter(p => {
                 const conceptName = String(p.concept_name || p.conceptName || '').toLowerCase();
                 return conceptName.includes(term);
+            });
+        } else if (term && viewMode === 'by-student') {
+            filtered = payments.filter(p => {
+                const fullName = String(p.fullName || '').toLowerCase();
+                const concept = String(p.concept || '').toLowerCase();
+                const method = String(p.method || '').toLowerCase();
+                return fullName.includes(term) || concept.includes(term) || method.includes(term);
             });
         }
 
@@ -307,11 +346,11 @@ const tableBody = document.getElementById('payments-table-body');
         if (!filtered || filtered.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="px-8 py-12 text-center">
+                    <td colspan="${getColumnCount()}" class="px-8 py-12 text-center">
                         <div class="flex flex-col items-center gap-3">
                             <i class="fas fa-search text-5xl text-gray-300"></i>
                             <p class="text-gray-500 font-bold">
-                                ${term ? 'No se encontraron resultados' : 'No se encontraron conceptos de pago'}
+                                ${term ? 'No se encontraron resultados' : (viewMode === 'by-concept' ? 'No se encontraron conceptos de pago' : 'No se encontraron pagos')}
                             </p>
                             <p class="text-gray-400 text-sm">
                                 ${term ? `No hay coincidencias para "${searchInput.value}"` : 'Intenta ajustar los filtros de búsqueda'}
@@ -321,6 +360,38 @@ const tableBody = document.getElementById('payments-table-body');
                     </td>
                 </tr>
             `;
+            return;
+        }
+
+        if (viewMode === 'by-student') {
+            tableBody.innerHTML = filtered.map((p) => {
+                const amount = parseFloat(p.amount || 0);
+                const amountReceived = parseFloat(p.amount_received || 0);
+
+                return `
+                    <tr class="hover:bg-gradient-to-r hover:from-[#2D584C]/5 hover:to-transparent transition-all duration-200">
+                        <td class="px-8 py-5">
+                            <span class="text-gray-900 font-extrabold text-sm block tracking-tight">${p.fullName || 'N/A'}</span>
+                            <span class="text-[10px] text-gray-500">ID: ${p.userId || 'N/A'}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="text-gray-800 font-bold text-sm">${p.concept || 'N/A'}</span>
+                        </td>
+                        <td class="px-8 py-5 text-right">
+                            <span class="text-gray-700 font-bold text-sm">$${amount.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </td>
+                        <td class="px-8 py-5 text-right">
+                            <span class="text-emerald-700 font-black text-sm">$${amountReceived.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="text-gray-700 text-xs font-semibold">${p.method || 'N/A'}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="text-gray-600 text-xs font-semibold">${formatDate(p.date)}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
             return;
         }
 
@@ -471,7 +542,7 @@ const tableBody = document.getElementById('payments-table-body');
     const showError = (message) => {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="px-8 py-12 text-center">
+                <td colspan="${getColumnCount()}" class="px-8 py-12 text-center">
                     <div class="flex flex-col items-center gap-3">
                         <i class="fas fa-exclamation-triangle text-5xl text-red-400"></i>
                         <p class="text-red-600 font-bold">${message}</p>
@@ -602,9 +673,28 @@ const tableBody = document.getElementById('payments-table-body');
         });
     };
 
+        modeByConceptBtn.onclick = () => {
+                if (viewMode === 'by-concept') return;
+                viewMode = 'by-concept';
+                currentPage = 1;
+                updateModeUI();
+                loadPayments();
+        };
+
+        modeByStudentBtn.onclick = () => {
+                if (viewMode === 'by-student') return;
+                viewMode = 'by-student';
+                currentPage = 1;
+                updateModeUI();
+                loadPayments();
+        };
+
     // Cargar pagos al iniciar (esperar a que StudentAPI esté disponible)
     ensureStudentAPI()
-      .then(() => loadPayments())
+            .then(() => {
+                updateModeUI();
+                return loadPayments();
+            })
       .catch(err => console.error('❌ Error al inicializar:', err));
 </script>
 </Layout>
