@@ -342,7 +342,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 <th class="px-2 py-1.5 text-left font-semibold text-slate-600 border-b border-blue-100">Sin rol</th>
                                 <th class="px-2 py-1.5 text-left font-semibold text-emerald-700 border-b border-blue-100">Con académico</th>
                                 <th class="px-2 py-1.5 text-left font-semibold text-amber-700 border-b border-blue-100">Sin académico</th>
-                                <th class="px-2 py-1.5 text-left font-semibold text-orange-700 border-b border-blue-100">Estudiantes/Solicitantes sin detalle académico</th>
+                                <th class="px-2 py-1.5 text-left font-semibold text-orange-700 border-b border-blue-100">Estudiantes sin detalle académico</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2392,7 +2392,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 let withoutAcademicDetailWithRole = 0;
                 let studentLikeWithoutAcademicDetail = 0;
 
-                const studentLikeRoles = new Set(['student', 'applicant']);
+                const studentLikeRoles = new Set(['student']);
 
                 this.users.forEach(user => {
                     const roleKeys = this.extractUserRoleKeys(user);
