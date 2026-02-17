@@ -11,7 +11,7 @@ export const API_ENDPOINTS = {
     refresh: `${API_BASE_URL}/v1/refresh-token`,
     forgotPassword: `${API_BASE_URL}/v1/forgot-password`,
     verifyEmail: (id, hash) => `${API_BASE_URL}/v1/verify-email/${id}/${hash}`,
-    resetPassword: `${API_BASE_URL}/reset-password`,
+    resetPassword: `${API_BASE_URL}/v1/reset-password`,
     verificationNotification: `${API_BASE_URL}/email/verification-notification`,
   },
 
