@@ -1478,6 +1478,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 roleEnrichmentInProgress: false,
                 roleEnrichmentBatchSize: 5,
                 roleFilterAutoBatchDone: false,
+                usersSummary: null,
                 newUser: { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
@@ -2231,6 +2232,87 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             },
 
             get stats() {
+                const backendSummary = this.usersSummary;
+                if (backendSummary) {
+                    const toNumber = (value, fallback = 0) => {
+                        const parsed = Number(value);
+                        return Number.isFinite(parsed) ? parsed : fallback;
+                    };
+
+                    const population = backendSummary.populationSummary || {};
+                    const roleSummary = backendSummary.usersByRoleSummary || {};
+                    const academicSummary = backendSummary.academicSummary || {};
+                    const alerts = backendSummary.systemAlerts || {};
+
+                    const total = toNumber(population.total_users, this.users.length);
+                    const active = toNumber(population.active_users, 0);
+                    const withoutRole = toNumber(
+                        alerts.users_without_role,
+                        toNumber(population.users_without_role, 0)
+                    );
+                    const withRole = Math.max(0, toNumber(population.users_with_role, total - withoutRole));
+
+                    const studentsWithoutDetail = toNumber(
+                        academicSummary.students_without_student_details,
+                        toNumber(alerts.students_without_student_details, 0)
+                    );
+
+                    const studentsTotal = toNumber(academicSummary.students_total, 0);
+                    const withAcademicDetail = toNumber(
+                        academicSummary.users_with_student_details,
+                        Math.max(0, studentsTotal - studentsWithoutDetail)
+                    );
+
+                    const withoutAcademicDetailWithRole = studentsWithoutDetail;
+                    const studentLikeWithoutAcademicDetail = studentsWithoutDetail;
+
+                    const roleCounts = {};
+                    Object.entries(roleSummary).forEach(([rawKey, rawValue]) => {
+                        const normalizedKey = this.normalizeRoleForFilter(rawKey) || String(rawKey || '').toLowerCase().trim();
+                        if (!normalizedKey) return;
+                        roleCounts[normalizedKey] = toNumber(rawValue, 0);
+                    });
+
+                    const preferredRoleOrder = ['admin', 'financial-staff', 'teacher', 'student', 'parent', 'applicant', 'supervisor', 'unverified'];
+                    const roleCountEntries = Object.entries(roleCounts)
+                        .map(([key, count]) => ({ key, count }))
+                        .sort((a, b) => {
+                            const indexA = preferredRoleOrder.indexOf(a.key);
+                            const indexB = preferredRoleOrder.indexOf(b.key);
+
+                            const rankA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+                            const rankB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+                            if (rankA !== rankB) return rankA - rankB;
+                            return b.count - a.count;
+                        });
+
+                    const statusCounts = {
+                        'activo': toNumber(population.active_users, 0),
+                        'baja-temporal': toNumber(population.temporal_inactive_users, 0),
+                        'eliminado': toNumber(population.deleted_users, 0),
+                        'inactivo': toNumber(population.inactive_users, 0)
+                    };
+
+                    const statusCountEntries = Object.entries(statusCounts)
+                        .filter(([, count]) => count > 0)
+                        .map(([key, count]) => ({ key, count }));
+
+                    return {
+                        total,
+                        active,
+                        withRole,
+                        withoutRole,
+                        withAcademicDetail,
+                        withoutAcademicDetailWithRole,
+                        studentLikeWithoutAcademicDetail,
+                        roleCounts,
+                        statusCounts,
+                        roleCountEntries,
+                        statusCountEntries
+                    };
+                }
+
                 const total = this.users.length;
                 const active = this.users.filter(u => u.status === 'activo').length;
 
@@ -2321,6 +2403,57 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     roleCountEntries,
                     statusCountEntries
                 };
+            },
+
+            extractUsersSummary(result) {
+                const candidates = [
+                    result?.data?.summary,
+                    result?.summary,
+                    result?.data?.data?.summary,
+                    result?.data,
+                    result
+                ];
+
+                return candidates.find(candidate => {
+                    if (!candidate || typeof candidate !== 'object') return false;
+
+                    return Boolean(
+                        candidate.populationSummary
+                        || candidate.usersByRoleSummary
+                        || candidate.academicSummary
+                        || candidate.systemAlerts
+                    );
+                }) || null;
+            },
+
+            async loadUsersSummary(token, isRetry = false) {
+                const summaryEndpoints = [
+                    '/v1/admin-actions/show-users-summary',
+                    '/v1/admin-actions/users-summary',
+                    '/v1/admin-actions/summary-users',
+                    '/v1/admin-actions/users/summary',
+                    '/v1/admin-actions/summary'
+                ];
+
+                for (const path of summaryEndpoints) {
+                    try {
+                        const endpoint = `${this.apiBaseUrl}${path}`;
+                        const response = await this.authenticatedFetch(endpoint, { method: 'GET' }, isRetry);
+                        if (!response.ok) continue;
+
+                        const result = await response.json();
+                        const summary = this.extractUsersSummary(result);
+                        if (summary) {
+                            this.usersSummary = summary;
+                            console.log(`✅ Resumen de usuarios cargado desde ${path}`);
+                            return true;
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ No se pudo cargar resumen desde ${path}:`, error);
+                    }
+                }
+
+                return false;
             },
 
             async init() {
@@ -2506,6 +2639,12 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     if (response.ok) {
                         const result = await response.json();
                         console.log('📦 Response data:', result);
+
+                        const responseSummary = this.extractUsersSummary(result);
+                        if (responseSummary) {
+                            this.usersSummary = responseSummary;
+                            console.log('✅ Resumen de usuarios detectado en respuesta de show-users');
+                        }
                         
                         // Backend devuelve {success: true, data: {users: {items: [...]}}, message: '...'}
                         if (result.success && result.data && result.data.users && result.data.users.items) {
@@ -2557,6 +2696,10 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         }
 
                         this.roleFilterAutoBatchDone = false;
+
+                        if (!this.usersSummary) {
+                            await this.loadUsersSummary(token, isRetry);
+                        }
 
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
                         console.log('📋 Estructura del primer usuario:');
