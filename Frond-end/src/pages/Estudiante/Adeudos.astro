@@ -472,10 +472,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
       <!-- Alerta de pagos vencidos -->
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
-        <div class="overdue-alert-banner" x-transition>
-          <div class="alert-icon" aria-hidden="true">&#9888;</div>
+        <div class="overdue-alert-banner overdue-alert-banner--compact" x-transition>
           <div class="alert-content">
-            <h3>Pagos vencidos</h3>
             <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Estos pagos no se pueden realizar en línea; comunícate con la escuela.'"></p>
           </div>
           <button class="alert-close" @click="showOverdueAlert = false" aria-label="Cerrar alerta">&times;</button>
@@ -1130,6 +1128,16 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
     box-shadow: 0 8px 18px rgba(239, 68, 68, 0.12);
   }
 
+  .overdue-alert-banner--compact {
+    gap: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    border-left-width: 3px;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    background: #fff4f4;
+    box-shadow: none;
+  }
+
   .alert-icon {
     font-size: 2rem;
     flex-shrink: 0;
@@ -1152,6 +1160,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
     font-size: 0.95rem;
   }
 
+  .overdue-alert-banner--compact .alert-content p {
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #7f1d1d;
+  }
+
   .alert-close {
     background: transparent;
     border: none;
@@ -1169,6 +1183,13 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
   .alert-close:hover {
     opacity: 0.7;
+  }
+
+  .overdue-alert-banner--compact .alert-close {
+    width: 24px;
+    height: 24px;
+    font-size: 1.1rem;
+    color: #b91c1c;
   }
 
   /* MODAL */
@@ -1391,6 +1412,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
     .overdue-alert-banner {
       flex-direction: column;
       text-align: center;
+    }
+
+    .overdue-alert-banner--compact {
+      flex-direction: row;
+      text-align: left;
+      align-items: flex-start;
     }
   }
 
