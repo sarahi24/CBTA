@@ -319,7 +319,24 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </table>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
+        <div class="mb-4 bg-white rounded-xl shadow-md p-2 flex items-center gap-2 w-full sm:w-fit">
+            <button
+                type="button"
+                @click="rolesViewMode = 'info'"
+                class="px-4 py-2 rounded-lg text-sm font-bold transition"
+                :class="rolesViewMode === 'info' ? 'bg-[#2D584C] text-white' : 'text-[#2D584C] hover:bg-[#2D584C]/10'">
+                Información
+            </button>
+            <button
+                type="button"
+                @click="rolesViewMode = 'table'"
+                class="px-4 py-2 rounded-lg text-sm font-bold transition"
+                :class="rolesViewMode === 'table' ? 'bg-[#2D584C] text-white' : 'text-[#2D584C] hover:bg-[#2D584C]/10'">
+                Tabla
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden" x-show="rolesViewMode === 'info'" x-transition>
             <div class="px-4 py-2.5 border-b border-blue-100 bg-institucional/5 flex items-center justify-between">
                 <h3 class="text-sm font-bold text-[#2E594D]">Resumen de usuarios</h3>
                 <div class="flex items-center gap-2">
@@ -414,7 +431,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden">
+        <div class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden" x-show="rolesViewMode === 'table'" x-transition>
             <div class="overflow-x-auto table-responsive">
                 <table class="w-full min-w-[980px]">
                     <thead class="bg-institucional border-b-4 border-[#234238]">
@@ -1478,6 +1495,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 roleEnrichmentInProgress: false,
                 roleEnrichmentBatchSize: 5,
                 roleFilterAutoBatchDone: false,
+                rolesViewMode: 'info',
                 usersSummary: null,
                 summaryDetailsExpanded: false,
                 newUser: { 
