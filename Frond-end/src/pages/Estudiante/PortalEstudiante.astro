@@ -161,27 +161,29 @@ const title = 'Panel de Estudiante';
             }
 
             const dashboardCalls = [
-              window.StudentAPI.getPendingPayments(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; }),
+              window.StudentAPI.getDashboardHistory(scopedStudentId, token, 1, 15, false, requestRole).catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getOverdueTotal(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getPaidTotal(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; }),
               window.StudentAPI.getPendingTotal(scopedStudentId, token, false, requestRole).catch(function(e) { return { error: e.message }; })
             ];
 
-            const [pendingPaymentsRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
+            const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
 
-            if (pendingPaymentsRes && !pendingPaymentsRes.error) {
-              const items = pendingPaymentsRes.data && pendingPaymentsRes.data.pending_payments ? pendingPaymentsRes.data.pending_payments : [];
+            if (historyRes && !historyRes.error) {
+              const items = historyRes.data && historyRes.data.payment_history && Array.isArray(historyRes.data.payment_history.items)
+                ? historyRes.data.payment_history.items
+                : [];
               this.history = items.map(function(payment) {
                 return {
                   id: payment.id,
-                  concepto: payment.concept_name || payment.concepto || 'Pago',
-                  monto: payment.amount || '0.00',
-                  fecha: payment.end_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
+                  concepto: payment.concept || payment.concept_name || payment.concepto || 'Pago',
+                  monto: payment.amount_received || payment.amount || '0.00',
+                  fecha: payment.date || payment.payment_date || payment.end_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
                   metodo: payment.method || 'Metodo desconocido',
-                  status: payment.status || 'pending'
+                  status: payment.status || 'paid'
                 };
               });
-              console.log('✅ Pagos pendientes cargados:', this.history.length);
+              console.log('✅ Historial de pagos cargado:', this.history.length);
             }
 
             if (overdueRes && !overdueRes.error) {
