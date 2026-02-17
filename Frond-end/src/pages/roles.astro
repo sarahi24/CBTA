@@ -319,28 +319,34 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </table>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 p-4 sm:p-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Conteo por rol</h3>
-                    <div x-show="stats.roleCountEntries.length" class="flex flex-wrap gap-2">
+        <div class="bg-white rounded-2xl shadow-sm border border-blue-200 mb-6 p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm sm:text-base font-bold text-[#2E594D]">Resumen de usuarios</h3>
+                <span class="text-xs text-slate-500">Vista general</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                <div class="bg-gradient-to-br from-[#2E594D]/5 to-white border border-[#2E594D]/20 rounded-xl p-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Conteo por rol</h4>
+                    <div x-show="stats.roleCountEntries.length" class="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
                         <template x-for="roleEntry in stats.roleCountEntries" :key="roleEntry.key">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#2E594D]/10 text-[#2E594D] border border-[#2E594D]/20">
-                                <span x-text="getRoleDisplayName(roleEntry.key)"></span>
-                                <span class="mx-1">•</span>
-                                <span x-text="roleEntry.count"></span>
-                            </span>
+                            <div class="flex items-center justify-between bg-white border border-[#2E594D]/20 rounded-lg px-2.5 py-2">
+                                <span class="text-xs font-semibold text-[#2E594D]" x-text="getRoleDisplayName(roleEntry.key)"></span>
+                                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-[#2E594D]/10 text-[#2E594D]" x-text="roleEntry.count"></span>
+                            </div>
                         </template>
                     </div>
                     <p x-show="!stats.roleCountEntries.length" class="text-sm text-slate-500">Sin roles asignados</p>
                 </div>
 
-                <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Conteo por estatus</h3>
-                    <div x-show="stats.statusCountEntries.length" class="space-y-1">
+                <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Conteo por estatus</h4>
+                    <div x-show="stats.statusCountEntries.length" class="grid grid-cols-1 gap-2">
                         <template x-for="statusEntry in stats.statusCountEntries" :key="statusEntry.key">
-                            <div class="flex items-center justify-between text-sm bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
-                                <span class="font-medium text-slate-700" x-text="statusLabel(statusEntry.key)"></span>
+                            <div class="flex items-center justify-between text-sm bg-white border border-slate-200 rounded-lg px-2.5 py-2">
+                                <span class="font-medium"
+                                      :class="statusEntry.key === 'activo' ? 'text-emerald-700' : statusEntry.key === 'baja-temporal' ? 'text-amber-700' : statusEntry.key === 'baja' ? 'text-orange-700' : statusEntry.key === 'eliminado' ? 'text-slate-700' : 'text-red-700'"
+                                      x-text="statusLabel(statusEntry.key)"></span>
                                 <span class="font-bold text-slate-800" x-text="statusEntry.count"></span>
                             </div>
                         </template>
@@ -348,22 +354,22 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     <p x-show="!stats.statusCountEntries.length" class="text-sm text-slate-500">Sin estatus disponibles</p>
                 </div>
 
-                <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Detalle académico</h3>
-                    <div class="space-y-1 text-sm">
-                        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5">
+                <div class="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-xl p-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Detalle académico</h4>
+                    <div class="grid grid-cols-1 gap-2 text-sm">
+                        <div class="flex items-center justify-between bg-white border border-emerald-200 rounded-lg px-2.5 py-2">
                             <span class="text-emerald-800">Con detalle académico</span>
                             <span class="font-bold text-emerald-700" x-text="stats.withAcademicDetail"></span>
                         </div>
-                        <div class="flex items-center justify-between bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+                        <div class="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-2.5 py-2">
                             <span class="text-amber-800">Sin detalle académico (con rol)</span>
                             <span class="font-bold text-amber-700" x-text="stats.withoutAcademicDetailWithRole"></span>
                         </div>
-                        <div class="flex items-center justify-between bg-orange-50 border border-orange-200 rounded px-2.5 py-1.5">
+                        <div class="flex items-center justify-between bg-white border border-orange-200 rounded-lg px-2.5 py-2">
                             <span class="text-orange-800">Est./Solic. sin detalle académico</span>
                             <span class="font-bold text-orange-700" x-text="stats.studentLikeWithoutAcademicDetail"></span>
                         </div>
-                        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
+                        <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-2.5 py-2">
                             <span class="text-slate-700">Sin rol asignado</span>
                             <span class="font-bold text-slate-800" x-text="stats.withoutRole"></span>
                         </div>
