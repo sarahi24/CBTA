@@ -245,7 +245,7 @@ const title = 'Panel de Estudiante';
           if (humanDate && typeof humanDate === 'string') {
             const normalized = humanDate.toLowerCase();
             if (normalized.includes('hace') || normalized.includes('ago')) {
-              return humanDate;
+              return this.translateRelativeDateToEs(humanDate);
             }
           }
 
@@ -264,6 +264,53 @@ const title = 'Panel de Estudiante';
             month: '2-digit',
             day: '2-digit'
           });
+        },
+
+        translateRelativeDateToEs(value) {
+          const text = String(value || '').trim();
+          if (!text) return text;
+          if (text.toLowerCase().includes('hace')) return text;
+
+          let normalized = text
+            .replace(/seconds?\s+ago/i, 'hace segundos')
+            .replace(/a\s+second\s+ago/i, 'hace 1 segundo')
+            .replace(/minutes?\s+ago/i, 'hace minutos')
+            .replace(/a\s+minute\s+ago/i, 'hace 1 minuto')
+            .replace(/hours?\s+ago/i, 'hace horas')
+            .replace(/an?\s+hour\s+ago/i, 'hace 1 hora')
+            .replace(/days?\s+ago/i, 'hace días')
+            .replace(/a\s+day\s+ago/i, 'hace 1 día')
+            .replace(/weeks?\s+ago/i, 'hace semanas')
+            .replace(/a\s+week\s+ago/i, 'hace 1 semana')
+            .replace(/months?\s+ago/i, 'hace meses')
+            .replace(/a\s+month\s+ago/i, 'hace 1 mes')
+            .replace(/years?\s+ago/i, 'hace años')
+            .replace(/a\s+year\s+ago/i, 'hace 1 año');
+
+          const numberUnitMatch = normalized.match(/^(\d+)\s+(second|seconds|minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)\s+ago$/i);
+          if (numberUnitMatch) {
+            const amount = numberUnitMatch[1];
+            const unit = numberUnitMatch[2].toLowerCase();
+            const map = {
+              second: 'segundo',
+              seconds: 'segundos',
+              minute: 'minuto',
+              minutes: 'minutos',
+              hour: 'hora',
+              hours: 'horas',
+              day: 'día',
+              days: 'días',
+              week: 'semana',
+              weeks: 'semanas',
+              month: 'mes',
+              months: 'meses',
+              year: 'año',
+              years: 'años'
+            };
+            return `hace ${amount} ${map[unit] || unit}`;
+          }
+
+          return normalized;
         },
 
         formatDashboardHistoryAmount(value) {
@@ -474,7 +521,7 @@ const title = 'Panel de Estudiante';
                 <template x-for="pago in getVisiblePayments()" :key="pago.id">
                   <tr>
                     <td data-label="Concepto" x-text="pago.concepto"></td>
-                    <td class="monto" data-label="Monto" x-text="pago.monto"></td>
+                    <td class="monto" data-label="Monto" x-text="'$' + pago.monto"></td>
                     <td class="fecha-celda" data-label="Fecha" x-text="pago.fecha || '—'"></td>
                   </tr>
                 </template>
