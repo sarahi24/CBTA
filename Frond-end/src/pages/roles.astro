@@ -1541,6 +1541,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (key === 'student' || key === 'estudiante') return 'student';
                 if (key === 'parent' || key === 'padre') return 'parent';
                 if (key === 'applicant' || key === 'solicitante') return 'applicant';
+                if (key === 'unverified' || key === 'nverified' || key === 'not_verified' || key === 'not verified' || key === 'sin_verificar' || key === 'sin verificar') return 'unverified';
                 return key;
             },
 
@@ -1557,6 +1558,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 if (key === 'teacher' || key === 'docente' || key === 'maestro') return 'teacher';
                 if (key === 'parent' || key === 'padre' || key === 'tutor') return 'parent';
                 if (key === 'applicant' || key === 'solicitante') return 'applicant';
+                if (key === 'unverified' || key === 'nverified' || key === 'not verified' || key === 'sin verificar') return 'unverified';
                 return key;
             },
 
@@ -1905,6 +1907,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'padre': 'Padre/Tutor',
                     'supervisor': 'Supervisor',
                     'unverified': 'Sin Verificar',
+                    'nverified': 'Sin Verificar',
+                    'not_verified': 'Sin Verificar',
+                    'not verified': 'Sin Verificar',
+                    'sin_verificar': 'Sin Verificar',
+                    'sin verificar': 'Sin Verificar',
                     'applicant': 'Solicitante',
                     'solicitante': 'Solicitante'
                 };
@@ -1976,6 +1983,11 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'padre': 'Padre/Tutor',
                     'supervisor': 'Supervisor',
                     'unverified': 'Sin Verificar',
+                    'nverified': 'Sin Verificar',
+                    'not_verified': 'Sin Verificar',
+                    'not verified': 'Sin Verificar',
+                    'sin_verificar': 'Sin Verificar',
+                    'sin verificar': 'Sin Verificar',
                     'applicant': 'Solicitante',
                     'solicitante': 'Solicitante'
                 };
@@ -1987,7 +1999,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     // Traducir todos los roles al español
                     // IMPORTANTE: Normalizar guiones a espacios
                     const translatedRoles = roles.map(r => {
-                        const normalized = r.toString().toLowerCase().replace('-', ' ').trim();
+                        const normalized = r.toString().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
                         const key = normalized;
                         return rolesTranslation[key] || r;
                     });
@@ -2142,12 +2154,17 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         const rolesTranslation = {
                             'admin': 'Administrador',
                             'student': 'Estudiante',
-                            'financial-staff': 'Personal Financiero',
-                            'financial staff': 'Personal Financiero',
+                            'financial-staff': 'Personal de pagos',
+                            'financial staff': 'Personal de pagos',
                             'parent': 'Padre/Tutor',
                             'teacher': 'Maestro',
                             'supervisor': 'Supervisor',
                             'unverified': 'Sin Verificar',
+                            'nverified': 'Sin Verificar',
+                            'not_verified': 'Sin Verificar',
+                            'not verified': 'Sin Verificar',
+                            'sin_verificar': 'Sin Verificar',
+                            'sin verificar': 'Sin Verificar',
                             'applicant': 'Solicitante'
                         };
 
