@@ -2046,6 +2046,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 return 'Inactivo';
             },
 
+            statusClass(status) {
+                const key = (status || '').toLowerCase();
+                if (key === 'activo' || key === 'active') return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                if (key === 'baja-temporal') return 'bg-amber-100 text-amber-800 border-amber-300';
+                if (key === 'eliminado' || key === 'deleted') return 'bg-slate-200 text-slate-700 border-slate-300';
+                return 'bg-red-100 text-red-800 border-red-300';
+            },
+
             roleClass(roleKey) {
                 const key = (roleKey || '').toLowerCase();
                 if (key === 'admin' || key === 'administrador') return 'bg-purple-100 text-purple-700';
