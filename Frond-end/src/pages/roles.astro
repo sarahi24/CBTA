@@ -1587,27 +1587,68 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     : (permissionValue?.displayName || permissionValue?.name || permissionValue?.slug || permissionValue?.permission || '');
 
                 const normalized = String(rawValue || '').toLowerCase().trim();
+                const normalizedSpaced = normalized
+                    .replace(/[._-]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                const normalizedCompact = normalizedSpaced.replace(/\s+/g, '');
 
                 const permissionLabels = {
                     'view.payments.history': 'Ver historial de pagos',
+                    'view payments history': 'Ver historial de pagos',
+                    'viewpaymentshistory': 'Ver historial de pagos',
                     'view.payments.summary': 'Ver resumen de pagos',
+                    'view payments summary': 'Ver resumen de pagos',
+                    'viewpaymentssummary': 'Ver resumen de pagos',
                     'view.pending.concepts': 'Ver pagos pendientes',
+                    'view pending concepts': 'Ver pagos pendientes',
+                    'viewpendingconcepts': 'Ver pagos pendientes',
                     'view.overdue.concepts': 'Ver pagos vencidos',
+                    'view overdue concepts': 'Ver pagos vencidos',
+                    'viewoverdueconcepts': 'Ver pagos vencidos',
                     'view.receipt': 'Ver recibos',
+                    'view receipt': 'Ver recibos',
+                    'viewreceipt': 'Ver recibos',
                     'view.users': 'Ver usuarios',
+                    'view users': 'Ver usuarios',
+                    'viewusers': 'Ver usuarios',
                     'create.users': 'Crear usuarios',
+                    'create users': 'Crear usuarios',
+                    'createusers': 'Crear usuarios',
                     'update.users': 'Editar usuarios',
+                    'update users': 'Editar usuarios',
+                    'updateusers': 'Editar usuarios',
                     'delete.users': 'Eliminar usuarios',
+                    'delete users': 'Eliminar usuarios',
+                    'deleteusers': 'Eliminar usuarios',
                     'manage.roles': 'Gestionar roles',
+                    'manage roles': 'Gestionar roles',
+                    'manageroles': 'Gestionar roles',
                     'manage.permissions': 'Gestionar permisos',
+                    'manage permissions': 'Gestionar permisos',
+                    'managepermissions': 'Gestionar permisos',
+                    'create_setup': 'Configurar sistema',
+                    'create.setup': 'Configurar sistema',
+                    'create-setup': 'Configurar sistema',
                     'create setup': 'Configurar sistema',
+                    'createsetup': 'Configurar sistema',
+                    'delete_card': 'Eliminar tarjeta',
+                    'delete.card': 'Eliminar tarjeta',
+                    'delete-card': 'Eliminar tarjeta',
                     'delete card': 'Eliminar tarjeta',
+                    'deletecard': 'Eliminar tarjeta',
+                    'create_payment': 'Registrar pago',
+                    'create.payment': 'Registrar pago',
+                    'create-payment': 'Registrar pago',
                     'create payment': 'Registrar pago'
+                    ,'createpayment': 'Registrar pago'
                 };
 
-                if (permissionLabels[normalized]) {
-                    return permissionLabels[normalized];
-                }
+                const resolvedLabel = permissionLabels[normalized]
+                    || permissionLabels[normalizedSpaced]
+                    || permissionLabels[normalizedCompact];
+
+                if (resolvedLabel) return resolvedLabel;
 
                 return String(rawValue || 'Permiso no identificado')
                     .replace(/[._-]+/g, ' ')
