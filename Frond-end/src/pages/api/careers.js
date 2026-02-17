@@ -1,7 +1,8 @@
 export async function GET({ request }) {
   const url = new URL(request.url);
   const forceRefresh = url.searchParams.get('forceRefresh') || 'false';
-  const upstreamUrl = new URL('https://nginx-production-728f.up.railway.app/api/v1/careers');
+  const apiBase = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
+  const upstreamUrl = new URL(`${apiBase}/v1/careers`);
   upstreamUrl.searchParams.set('forceRefresh', forceRefresh);
 
   const auth = request.headers.get('authorization') || '';

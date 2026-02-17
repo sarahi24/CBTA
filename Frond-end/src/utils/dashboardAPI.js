@@ -3,7 +3,7 @@
  * Funciones para interactuar con los endpoints del dashboard del personal financiero
  */
 
-const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+const API_BASE = `${(import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '')}/v1`;
 
 // Helper para hacer fetch con manejo automático de token expirado
 async function _fetchWithTokenRefresh(url, options = {}) {

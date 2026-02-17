@@ -6,7 +6,7 @@ const pageTitle = "Conceptos de Cobro";
 const PRIMARY_ACCENT_COLOR = 'bg-[#2E584C]'; 
 const PRIMARY_HOVER = 'hover:bg-[#274D43]'; 
 const PRIMARY_TEXT_COLOR = 'text-[#2E584C]'; 
-const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
+const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 ---
 
 <style>
@@ -181,7 +181,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
 <script type="module">
 const PRIMARY_TEXT_COLOR_HEX = '#2E584C';
-const API_BASE = 'https://nginx-production-728f.up.railway.app/api';
+const API_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m]));

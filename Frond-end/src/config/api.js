@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
+export const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 
 // API Endpoints organizados por categoría según la documentación oficial
 export const API_ENDPOINTS = {

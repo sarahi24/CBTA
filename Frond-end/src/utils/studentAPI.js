@@ -4,7 +4,7 @@
  * Endpoints: Dashboard, Adeudos, Historial, Tarjetas, Perfil
  */
 
-const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+const API_BASE = `${(import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '')}/v1`;
 
 function normalizeStudentPortalRole(role) {
   if (!role) return 'student';

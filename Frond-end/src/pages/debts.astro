@@ -6,6 +6,7 @@ const pageTitle = "Estado de Adeudos - CBTA 71";
 // Note: Data will be loaded client-side with authentication
 const debtsJSON = '[]';
 const studentsJSON = '[]';
+const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 
 const CAREER_MAP = {
   'TAG-E': 'Técnico Agropecuario',
@@ -93,12 +94,12 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 
-  <script is:inline define:vars={{ careerMapJSON, debtsJSON, studentsJSON }}>
+  <script is:inline define:vars={{ careerMapJSON, debtsJSON, studentsJSON, API_BASE_URL }}>
     window.__CAREER_MAP = JSON.parse(careerMapJSON);
     window.__DEBTS_DATA = JSON.parse(debtsJSON);
     window.__STUDENTS_DATA = JSON.parse(studentsJSON);
-    window.__API_DEBTS = 'https://nginx-production-728f.up.railway.app/api/debts';
-    window.__API_PAYMENTS = 'https://nginx-production-728f.up.railway.app/api/payments';
+    window.__API_DEBTS = `${API_BASE_URL}/debts`;
+    window.__API_PAYMENTS = `${API_BASE_URL}/payments`;
   </script>
 
   <!-- Load StudentAPI global -->

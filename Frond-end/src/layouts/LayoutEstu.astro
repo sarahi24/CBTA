@@ -6,6 +6,7 @@ const { title } = Astro.props;
 
 import '../styles/global.css';
 import '../styles/tailwind.css';
+const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 
 // COLORES PARA EL PORTAL ESTUDIANTE
 const PRIMARY_COLOR = '#2e594d';    // Sidebar: Verde Azulado Oscuro
@@ -166,7 +167,7 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
         </div>
     </main>
 
-    <script is:inline>
+    <script is:inline define:vars={{ API_BASE_URL }}>
         const sidebar = document.getElementById('sidebar-menu');
         const openButton = document.getElementById('open-sidebar-button');
         const closeButton = document.getElementById('close-sidebar-button');
@@ -267,7 +268,7 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 }
 
                 // Hacer fetch al API para actualizar
-                const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+                const API_BASE = `${API_BASE_URL}/v1`;
                 const response = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=1`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,

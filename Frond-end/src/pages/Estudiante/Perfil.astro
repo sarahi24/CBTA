@@ -1,5 +1,6 @@
 ---
 import LayoutEstu from '../../layouts/LayoutEstu.astro';
+const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 ---
 
 <LayoutEstu title="Mi Perfil">
@@ -465,7 +466,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
         </div>
     </div>
 
-    <script is:inline define:vars={{API_BASE_URL: 'https://nginx-production-728f.up.railway.app/api'}}>
+    <script is:inline define:vars={{ API_BASE_URL }}>
         document.addEventListener('alpine:init', () => {
             Alpine.data('perfilEstudianteData', () => ({
                 studentName: '',

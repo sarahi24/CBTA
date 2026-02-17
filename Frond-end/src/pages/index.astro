@@ -3,6 +3,7 @@ import '../styles/global.css';
 import '../styles/tailwind.css';
 
 const pageTitle = "Acceso al Sistema - SIGE";
+const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -15,13 +16,13 @@ const pageTitle = "Acceso al Sistema - SIGE";
     <link rel="apple-touch-icon" href="/Logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     
-    <script is:inline>
+    <script is:inline define:vars={{ API_BASE_URL }}>
         // AuthService inline para evitar problemas de importación dinámica
         window.AuthService = {
             TOKEN_KEY: 'access_token',
             REFRESH_TOKEN_KEY: 'refresh_token',
             USER_DATA_KEY: 'user_data',
-            API_BASE_URL: 'https://nginx-production-728f.up.railway.app/api',
+            API_BASE_URL,
             apiStatus: null,
             
             async testConnection() {
