@@ -179,9 +179,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
   </div>
 
-<script type="module">
+<script type="module" define:vars={{ API_BASE_URL }}>
 const PRIMARY_TEXT_COLOR_HEX = '#2E584C';
-const API_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
+const API_BASE = API_BASE_URL;
 
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m]));
