@@ -476,7 +476,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           <div class="alert-icon" aria-hidden="true">&#9888;</div>
           <div class="alert-content">
             <h3>Pagos vencidos</h3>
-            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Por favor realiza el pago cuanto antes.'"></p>
+            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Estos pagos no se pueden realizar en línea; comunícate con la escuela.'"></p>
           </div>
           <button class="alert-close" @click="showOverdueAlert = false" aria-label="Cerrar alerta">&times;</button>
         </div>
