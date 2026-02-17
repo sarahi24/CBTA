@@ -173,14 +173,15 @@ const title = 'Panel de Estudiante';
               const items = historyRes.data && historyRes.data.payment_history && Array.isArray(historyRes.data.payment_history.items)
                 ? historyRes.data.payment_history.items
                 : [];
-              this.history = items.map(function(payment) {
+              this.history = items.map((payment) => {
+                const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? '0.00';
                 return {
-                  id: payment.id,
-                  concepto: payment.concept || payment.concept_name || payment.concepto || 'Pago',
-                  monto: payment.amount_received || payment.amount || '0.00',
-                  fecha: payment.date || payment.payment_date || payment.end_date || payment.fecha || new Date().toLocaleDateString('es-MX'),
-                  metodo: payment.method || 'Metodo desconocido',
-                  status: payment.status || 'paid'
+                  id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
+                  concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
+                  monto: this.formatDashboardHistoryAmount(montoValue),
+                  fecha: this.formatDashboardHistoryDate(payment),
+                  metodo: payment?.method || payment?.payment_method || 'Metodo desconocido',
+                  status: this.normalizeHistoryStatus(payment?.status)
                 };
               });
               console.log('✅ Historial de pagos cargado:', this.history.length);
@@ -227,6 +228,48 @@ const title = 'Panel de Estudiante';
           return this.overdue && this.overdue.totalCount
             ? this.overdue.totalCount + ' ' + (this.overdue.totalCount === 1 ? 'Pago vencido' : 'Pagos vencidos')
             : 'Sin pagos vencidos';
+        },
+
+        normalizeHistoryStatus(statusValue) {
+          const value = String(statusValue || '').toLowerCase().trim();
+          if (!value) return 'paid';
+          if (value === 'paid' || value === 'completed' || value === 'success' || value === 'succeeded') return 'paid';
+          if (value === 'pending' || value === 'processing' || value === 'in_process') return 'pending';
+          if (value === 'failed' || value === 'error' || value === 'declined' || value === 'canceled' || value === 'cancelled') return 'failed';
+          if (value === 'refunded' || value === 'refund') return 'refunded';
+          return value;
+        },
+
+        formatDashboardHistoryDate(payment) {
+          const humanDate = payment?.date;
+          if (humanDate && typeof humanDate === 'string') {
+            const normalized = humanDate.toLowerCase();
+            if (normalized.includes('hace') || normalized.includes('ago')) {
+              return humanDate;
+            }
+          }
+
+          const isoDate = payment?.date_iso || payment?.payment_date || payment?.created_at || payment?.date;
+          if (!isoDate) {
+            return new Date().toLocaleDateString('es-MX');
+          }
+
+          const parsed = new Date(isoDate);
+          if (Number.isNaN(parsed.getTime())) {
+            return String(humanDate || isoDate);
+          }
+
+          return parsed.toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+        },
+
+        formatDashboardHistoryAmount(value) {
+          const parsed = Number(value);
+          if (!Number.isFinite(parsed)) return '0.00';
+          return parsed.toFixed(2);
         },
 
         progressOffset() {
