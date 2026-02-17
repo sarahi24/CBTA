@@ -518,7 +518,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <select x-model="newUser.role" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl input-institucional font-semibold">
                             <option value="">🚫 Sin rol</option>
                             <option value="admin">Administrador</option>
-                            <option value="financial-staff">Personal de Caja</option>
+                            <option value="financial-staff">Personal de pagos</option>
                         </select>
                     </div>
 
@@ -1564,7 +1564,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 const key = this.normalizeRoleForFilter(roleValue);
                 const labels = {
                     'admin': 'Administrador',
-                    'financial-staff': 'Caja',
+                    'financial-staff': 'Personal de pagos',
                     'teacher': 'Maestro',
                     'student': 'Estudiante',
                     'parent': 'Padre/Tutor',
@@ -1597,9 +1597,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'view.payments.history': 'Ver historial de pagos',
                     'view payments history': 'Ver historial de pagos',
                     'viewpaymentshistory': 'Ver historial de pagos',
-                    'view.payments.summary': 'Ver resumen de pagos',
-                    'view payments summary': 'Ver resumen de pagos',
-                    'viewpaymentssummary': 'Ver resumen de pagos',
+                    'view.payments.summary': 'Ver pagos',
+                    'view payments summary': 'Ver pagos',
+                    'viewpaymentssummary': 'Ver pagos',
                     'view.pending.concepts': 'Ver pagos pendientes',
                     'view pending concepts': 'Ver pagos pendientes',
                     'viewpendingconcepts': 'Ver pagos pendientes',
@@ -1624,9 +1624,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     'manage.roles': 'Gestionar roles',
                     'manage roles': 'Gestionar roles',
                     'manageroles': 'Gestionar roles',
-                    'manage.permissions': 'Gestionar permisos',
-                    'manage permissions': 'Gestionar permisos',
-                    'managepermissions': 'Gestionar permisos',
+                    'manage.permissions': 'Cambiar permisos',
+                    'manage permissions': 'Cambiar permisos',
+                    'managepermissions': 'Cambiar permisos',
                     'create_setup': 'Configurar sistema',
                     'create.setup': 'Configurar sistema',
                     'create-setup': 'Configurar sistema',
@@ -1653,7 +1653,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 const tokenTranslations = {
                     'attach': 'Asociar',
                     'import': 'Importar',
-                    'sync': 'Sincronizar',
+                    'sync': 'Actualizar',
                     'view': 'Ver',
                     'create': 'Crear',
                     'update': 'Actualizar',
@@ -1893,9 +1893,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 const rolesTranslation = {
                     'admin': 'Administrador',
                     'administrador': 'Administrador',
-                    'caja': 'Caja',
-                    'financial-staff': 'Caja',
-                    'financial staff': 'Caja',
+                    'caja': 'Personal de pagos',
+                    'financial-staff': 'Personal de pagos',
+                    'financial staff': 'Personal de pagos',
                     'maestro': 'Maestro',
                     'teacher': 'Maestro',
                     'docente': 'Maestro',
@@ -1964,9 +1964,9 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 const rolesTranslation = {
                     'admin': 'Administrador',
                     'administrador': 'Administrador',
-                    'caja': 'Caja',
-                    'financial-staff': 'Caja',
-                    'financial staff': 'Caja',
+                    'caja': 'Personal de pagos',
+                    'financial-staff': 'Personal de pagos',
+                    'financial staff': 'Personal de pagos',
                     'maestro': 'Maestro',
                     'teacher': 'Maestro',
                     'docente': 'Maestro',
