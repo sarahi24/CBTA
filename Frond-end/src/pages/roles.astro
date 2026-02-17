@@ -322,7 +322,15 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
             <div class="px-4 py-2.5 border-b border-blue-100 bg-institucional/5 flex items-center justify-between">
                 <h3 class="text-sm font-bold text-[#2E594D]">Resumen de usuarios</h3>
-                <span class="text-[11px] text-slate-500 font-medium">Cards pequeñas</span>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        class="text-[11px] px-2 py-1 rounded-md border border-blue-200 text-blue-700 bg-white hover:bg-blue-50 transition-colors"
+                        @click="summaryDetailsExpanded = !summaryDetailsExpanded"
+                        x-text="summaryDetailsExpanded ? 'Ocultar detalle' : 'Desplegar detalle'">
+                    </button>
+                    <span class="text-[11px] text-slate-500 font-medium">Cards pequeñas</span>
+                </div>
             </div>
 
             <div class="p-3 sm:p-3.5 space-y-2">
@@ -349,7 +357,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
                 </div>
 
-                <div>
+                <div x-show="summaryDetailsExpanded" x-transition>
                     <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Por rol</p>
                     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-1.5" x-show="stats.roleCountEntries.length">
                         <template x-for="roleEntry in stats.roleCountEntries" :key="`role-${roleEntry.key}`">
@@ -364,7 +372,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     </div>
                 </div>
 
-                <div>
+                <div x-show="summaryDetailsExpanded" x-transition>
                     <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Por estatus</p>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5" x-show="stats.statusCountEntries.length">
                         <template x-for="statusEntry in stats.statusCountEntries" :key="`status-${statusEntry.key}`">
@@ -1479,6 +1487,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                 roleEnrichmentBatchSize: 5,
                 roleFilterAutoBatchDone: false,
                 usersSummary: null,
+                summaryDetailsExpanded: false,
                 newUser: { 
                     id: null, name: '', last_name: '', email: '', phone_number: '',
                     birthdate: '', gender: 'hombre', curp: '', address: ['', '', ''],
