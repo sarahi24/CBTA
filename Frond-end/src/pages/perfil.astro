@@ -96,30 +96,15 @@ import Layout from '../layouts/Layout.astro';
                 <div class="mt-5 pt-5 border-t border-slate-200">
                     <h3 class="text-xl font-bold text-institucional mb-4">Datos Complementarios</h3>
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <div class="border-l-4 border-cyan-500 rounded-lg p-3.5 bg-gradient-to-r from-cyan-50 to-sky-50">
-                            <label class="text-sm font-semibold text-cyan-700">Teléfono</label>
-                            <p class="text-base mt-1 text-gray-800 font-medium break-all" x-text="formData.phone_number || 'No disponible'"></p>
-                        </div>
-
-                        <div class="border-l-4 border-rose-500 rounded-lg p-3.5 bg-gradient-to-r from-rose-50 to-pink-50">
-                            <label class="text-sm font-semibold text-rose-700">Fecha de Nacimiento</label>
-                            <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="formData.birthdate || 'No disponible'"></p>
-                        </div>
-
-                        <div class="border-l-4 border-violet-500 rounded-lg p-3.5 bg-gradient-to-r from-violet-50 to-fuchsia-50">
-                            <label class="text-sm font-semibold text-violet-700">Género</label>
-                            <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="formData.gender || 'No disponible'"></p>
-                        </div>
-
-                        <div class="border-l-4 border-red-500 rounded-lg p-3.5 bg-gradient-to-r from-red-50 to-rose-50">
-                            <label class="text-sm font-semibold text-red-700">Tipo de Sangre</label>
-                            <p class="text-base mt-1 text-gray-800 font-medium" x-text="formData.blood_type || 'No disponible'"></p>
-                        </div>
-
-                        <div class="border-l-4 border-amber-500 rounded-lg p-3.5 bg-gradient-to-r from-amber-50 to-yellow-50 sm:col-span-2 lg:col-span-2">
-                            <label class="text-sm font-semibold text-amber-700">Dirección</label>
-                            <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="formData.address || 'No disponible'"></p>
-                        </div>
+                        <template x-for="item in getVisibleExtraDetails()" :key="item.label">
+                            <div class="border-l-4 rounded-lg p-3.5 bg-gradient-to-r" :class="item.className">
+                                <label class="text-sm font-semibold" :class="item.labelClass" x-text="item.label"></label>
+                                <p class="text-base mt-1 text-gray-800 font-medium break-words" x-text="item.value"></p>
+                            </div>
+                        </template>
+                    </div>
+                    <div x-show="getVisibleExtraDetails().length === 0" class="text-center py-6 text-gray-500">
+                        No hay datos complementarios disponibles para este usuario.
                     </div>
                 </div>
             </div>
@@ -474,6 +459,51 @@ import Layout from '../layouts/Layout.astro';
                     address: ''
                 },
 
+                extraUserData: {
+                    phoneNumber: '',
+                    birthdate: '',
+                    gender: '',
+                    bloodType: '',
+                    address: '',
+                    employeeNumber: '',
+                    department: '',
+                    position: '',
+                    rfc: '',
+                    curp: '',
+                    nControl: '',
+                    semestre: '',
+                    grupo: '',
+                    workshop: '',
+                    career: '',
+                    status: ''
+                },
+
+                getVisibleExtraDetails() {
+                    const entries = [
+                        { label: 'Teléfono', value: this.extraUserData.phoneNumber, className: 'border-cyan-500 from-cyan-50 to-sky-50', labelClass: 'text-cyan-700' },
+                        { label: 'Puesto', value: this.extraUserData.position, className: 'border-indigo-500 from-indigo-50 to-blue-50', labelClass: 'text-indigo-700' },
+                        { label: 'Departamento', value: this.extraUserData.department, className: 'border-emerald-500 from-emerald-50 to-teal-50', labelClass: 'text-emerald-700' },
+                        { label: 'No. Empleado', value: this.extraUserData.employeeNumber, className: 'border-violet-500 from-violet-50 to-fuchsia-50', labelClass: 'text-violet-700' },
+                        { label: 'Estatus', value: this.extraUserData.status, className: 'border-gray-500 from-gray-50 to-slate-50', labelClass: 'text-gray-700' },
+                        { label: 'RFC', value: this.extraUserData.rfc, className: 'border-rose-500 from-rose-50 to-pink-50', labelClass: 'text-rose-700' },
+                        { label: 'Dirección', value: this.extraUserData.address, className: 'border-amber-500 from-amber-50 to-yellow-50 sm:col-span-2 lg:col-span-2', labelClass: 'text-amber-700' },
+                        { label: 'Fecha de Nacimiento', value: this.extraUserData.birthdate, className: 'border-pink-500 from-pink-50 to-rose-50', labelClass: 'text-pink-700' },
+                        { label: 'Género', value: this.extraUserData.gender, className: 'border-purple-500 from-purple-50 to-fuchsia-50', labelClass: 'text-purple-700' },
+                        { label: 'Tipo de Sangre', value: this.extraUserData.bloodType, className: 'border-red-500 from-red-50 to-rose-50', labelClass: 'text-red-700' },
+                        { label: 'CURP', value: this.extraUserData.curp, className: 'border-cyan-600 from-cyan-50 to-sky-50', labelClass: 'text-cyan-700' },
+                        { label: 'No. de Control', value: this.extraUserData.nControl, className: 'border-sky-500 from-sky-50 to-blue-50', labelClass: 'text-sky-700' },
+                        { label: 'Semestre', value: this.extraUserData.semestre, className: 'border-fuchsia-500 from-fuchsia-50 to-purple-50', labelClass: 'text-fuchsia-700' },
+                        { label: 'Grupo', value: this.extraUserData.grupo, className: 'border-lime-500 from-lime-50 to-green-50', labelClass: 'text-lime-700' },
+                        { label: 'Taller / Especialidad', value: this.extraUserData.workshop, className: 'border-cyan-600 from-cyan-50 to-sky-50', labelClass: 'text-cyan-700' },
+                        { label: 'Carrera', value: this.extraUserData.career, className: 'border-indigo-600 from-indigo-50 to-blue-50 sm:col-span-2 lg:col-span-2', labelClass: 'text-indigo-700' }
+                    ];
+
+                    return entries.filter((entry) => {
+                        const value = String(entry.value || '').trim();
+                        return value.length > 0;
+                    });
+                },
+
                 passwordData: {
                     currentPassword: '',
                     newPassword: '',
@@ -769,6 +799,17 @@ import Layout from '../layouts/Layout.astro';
                         gender: this.pickFromCandidates(candidates, ['gender', 'sexo', 'sex']),
                         bloodType: this.pickFromCandidates(candidates, ['blood_type', 'tipo_sangre', 'bloodType']),
                         addressText: this.normalizeAddress(candidates),
+                        employeeNumber: this.pickFromCandidates(candidates, ['employee_number', 'employeeNumber', 'numero_empleado', 'no_empleado', 'staff_id']),
+                        department: this.pickFromCandidates(candidates, ['department', 'departamento', 'area', 'area_name']),
+                        position: this.pickFromCandidates(candidates, ['position', 'puesto', 'job_title', 'cargo']),
+                        rfc: this.pickFromCandidates(candidates, ['rfc', 'tax_id', 'taxId']),
+                        curp: this.pickFromCandidates(candidates, ['curp', 'CURP']),
+                        nControl: this.pickFromCandidates(candidates, ['n_control', 'nControl', 'control_number', 'numero_control', 'matricula']),
+                        semestre: this.pickFromCandidates(candidates, ['semestre', 'semester', 'period', 'periodo']),
+                        grupo: this.pickFromCandidates(candidates, ['group', 'grupo', 'class_group', 'group_name']),
+                        workshop: this.pickFromCandidates(candidates, ['workshop', 'taller', 'specialty', 'especialidad']),
+                        career: this.pickFromCandidates(candidates, ['career_name', 'career.name', 'career', 'carrera', 'carrera_nombre']),
+                        status: this.pickFromCandidates(candidates, ['status', 'estado']),
                         lastLogin: this.firstNonEmpty(
                             this.pickFromCandidates(candidates, ['last_login_human', 'last_login', 'lastLogin', 'last_access', 'updated_at', 'created_at'])
                         )
@@ -846,6 +887,24 @@ import Layout from '../layouts/Layout.astro';
                     this.formData.gender = normalized.gender;
                     this.formData.blood_type = normalized.bloodType;
                     this.formData.address = normalized.addressText;
+
+                    this.extraUserData.phoneNumber = normalized.phoneNumber;
+                    this.extraUserData.birthdate = normalized.birthdate;
+                    this.extraUserData.gender = normalized.gender;
+                    this.extraUserData.bloodType = normalized.bloodType;
+                    this.extraUserData.address = normalized.addressText;
+                    this.extraUserData.employeeNumber = normalized.employeeNumber;
+                    this.extraUserData.department = normalized.department;
+                    this.extraUserData.position = normalized.position;
+                    this.extraUserData.rfc = normalized.rfc;
+
+                    this.extraUserData.curp = normalized.curp;
+                    this.extraUserData.nControl = normalized.nControl;
+                    this.extraUserData.semestre = normalized.semestre;
+                    this.extraUserData.grupo = normalized.grupo;
+                    this.extraUserData.workshop = normalized.workshop;
+                    this.extraUserData.career = normalized.career;
+                    this.extraUserData.status = normalized.status;
 
                     console.log('✅ User data population complete:', {
                         userName: this.userName,
