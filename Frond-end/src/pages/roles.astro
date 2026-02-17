@@ -2273,7 +2273,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
             get stats() {
                 const backendSummary = this.usersSummary;
-                if (backendSummary) {
+                const backendHasRoleBreakdown = Object.keys(backendSummary?.usersByRoleSummary || {}).length > 0;
+                if (backendSummary && backendHasRoleBreakdown) {
                     const toNumber = (value, fallback = 0) => {
                         const parsed = Number(value);
                         return Number.isFinite(parsed) ? parsed : fallback;
