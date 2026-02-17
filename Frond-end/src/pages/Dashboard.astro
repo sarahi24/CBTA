@@ -105,6 +105,55 @@ const pageTitle = "Dashboard - SIGE";
       const parsed = parseFloat(clean);
       return Number.isFinite(parsed) ? parsed : 0;
     };
+
+    const pickFirst = (source: any, keys: string[], fallback: any = null) => {
+      if (!source || !Array.isArray(keys)) return fallback;
+      for (const key of keys) {
+        const value = source?.[key];
+        if (value !== undefined && value !== null && value !== '') {
+          return value;
+        }
+      }
+      return fallback;
+    };
+
+    const normalizePendingData = (payload: any) => {
+      const root = payload?.data || payload || {};
+      const pendingRaw = pickFirst(root, ['total_pending', 'totalPending', 'pending_data', 'pendingData'], {});
+
+      return {
+        totalAmount: parseAmount(pickFirst(pendingRaw, ['totalAmount', 'total_amount', 'amount', 'monto'], 0)),
+        totalCount: Number(pickFirst(pendingRaw, ['totalCount', 'total_count', 'count', 'cantidad'], 0)) || 0
+      };
+    };
+
+    const normalizeStudentsData = (payload: any) => {
+      const root = payload?.data || payload || {};
+      const studentsRaw = pickFirst(root, ['total_students', 'totalStudents', 'students_data', 'studentsData'], {});
+
+      const studentCount = Number(pickFirst(studentsRaw, ['totalStudents', 'students', 'students_count', 'student_count', 'count_students'], 0)) || 0;
+      const applicantCount = Number(pickFirst(studentsRaw, ['totalApplicants', 'applicants', 'applicants_count', 'applicant_count', 'count_applicants'], 0)) || 0;
+
+      return {
+        studentCount,
+        applicantCount,
+        totalStudents: studentCount + applicantCount
+      };
+    };
+
+    const normalizePaymentsData = (payload: any) => {
+      const root = payload?.data || payload || {};
+      const paymentsRaw = pickFirst(root, ['payments_data', 'paymentsData', 'data', 'summary'], {});
+
+      return {
+        totalPayments: parseAmount(pickFirst(paymentsRaw, ['totalPayments', 'total_payments', 'payments_total', 'recaudado_total'], 0)),
+        totalBalancePending: parseAmount(pickFirst(paymentsRaw, ['totalBalancePending', 'total_balance_pending', 'pending_balance', 'balance_pending'], 0)),
+        totalBalanceAvailable: parseAmount(pickFirst(paymentsRaw, ['totalBalanceAvailable', 'total_balance_available', 'available_balance', 'balance_available'], 0)),
+        paymentsBySemester: pickFirst(paymentsRaw, ['paymentsBySemester', 'payments_by_semester', 'bySemester', 'by_semester'], {}),
+        pendingPercentage: parseAmount(pickFirst(paymentsRaw, ['pendingPercentage', 'pending_percentage'], 0)),
+        availablePercentage: parseAmount(pickFirst(paymentsRaw, ['availablePercentage', 'available_percentage'], 0))
+      };
+    };
     
     // Variable para almacenar el balance disponible
     let availableBalance = 0;
@@ -121,11 +170,11 @@ const pageTitle = "Dashboard - SIGE";
         const data = await DashboardAPI.getPendingPayments(token, true, false);
         console.log('📤 Datos completos de pending:', JSON.stringify(data, null, 2));
         
-        if (data.success && data.data?.total_pending) {
-          const pendingData = data.data.total_pending;
+        if (data?.success || data?.data) {
+          const pendingData = normalizePendingData(data);
           
           // Actualizar card de "Pagos Pendientes"
-          const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+          const formatMX = (n: unknown) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(String(n ?? 0)));
           
           const pendingEl = document.getElementById('count-pending');
           const pendingDesc = document.getElementById('desc-pending');
@@ -167,9 +216,9 @@ const pageTitle = "Dashboard - SIGE";
 
         const data = await DashboardAPI.getPaymentsMade(token, true, false);
         
-        if (data.success && data.data?.payments_data) {
-          const paymentsData = data.data.payments_data;
-          const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+        if (data?.success || data?.data) {
+          const paymentsData = normalizePaymentsData(data);
+          const formatMX = (n: unknown) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(String(n ?? 0)));
           const percentage = parseAmount(paymentsData.pendingPercentage || 0);
           
           const balanceEl = document.getElementById('count-balance');
@@ -202,13 +251,11 @@ const pageTitle = "Dashboard - SIGE";
         const data = await DashboardAPI.getStudentsCount(token, true, false);
         console.log('📤 Datos completos de students:', JSON.stringify(data, null, 2));
         
-        if (data.success && data.data?.total_students) {
-          // Los datos están en data.total_students como {totalStudents, totalApplicants}
-          const studentsData = data.data.total_students;
-          
-          const studentCount = studentsData.totalStudents || 0;
-          const applicantCount = studentsData.totalApplicants || 0;
-          const totalStudents = studentCount + applicantCount;
+        if (data?.success || data?.data) {
+          const studentsData = normalizeStudentsData(data);
+          const studentCount = studentsData.studentCount;
+          const applicantCount = studentsData.applicantCount;
+          const totalStudents = studentsData.totalStudents;
           
           const description = applicantCount > 0 
             ? `${studentCount} Estudiantes, ${applicantCount} Aspirantes`
@@ -254,11 +301,10 @@ const pageTitle = "Dashboard - SIGE";
         const data = await DashboardAPI.getPaymentsMade(token, true, false);
         console.log('📤 Datos completos de payments:', JSON.stringify(data, null, 2));
         
-        if (data.success && data.data?.payments_data) {
-          // Los datos están en data.payments_data
-          const paymentsData = data.data.payments_data;
+        if (data?.success || data?.data) {
+          const paymentsData = normalizePaymentsData(data);
           
-          const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+          const formatMX = (n: unknown) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(String(n ?? 0)));
           
           const recaudadoEl = document.getElementById('count-recaudado');
           const recaudadoDesc = document.getElementById('desc-recaudado');
@@ -287,13 +333,13 @@ const pageTitle = "Dashboard - SIGE";
           const updateEvent = new Event('paymentsDataLoaded');
           window.dispatchEvent(updateEvent);
           
-          if (typeof window.updateChartLine === 'function') {
+          if (typeof (window as any).updateChartLine === 'function') {
             console.log('🔄 Llamando updateChartLine desde loadPaymentsData');
-            window.updateChartLine();
+            (window as any).updateChartLine();
           }
-          if (typeof window.updateChartDonut === 'function') {
+          if (typeof (window as any).updateChartDonut === 'function') {
             console.log('🔄 Llamando updateChartDonut desde loadPaymentsData');
-            window.updateChartDonut();
+            (window as any).updateChartDonut();
           }
           
           console.log('✅ Datos de pagos cargados - Pagos:', paymentsData.totalPayments, 'Balance:', paymentsData.totalBalanceAvailable);
@@ -374,7 +420,7 @@ const pageTitle = "Dashboard - SIGE";
           }
 
           // Confirmar acción
-          const formatMX = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(n || 0));
+          const formatMX = (n: unknown) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(parseFloat(String(n ?? 0)));
           const confirmed = confirm(`¿Deseas crear un payout por ${formatMX(availableBalance)}?\n\nEsto transferirá todo el balance disponible a la cuenta bancaria registrada.`);
           
           if (!confirmed) return;
