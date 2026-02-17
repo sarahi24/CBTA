@@ -426,38 +426,6 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
         </div>
 
-        <div x-show="userDetailsPreview.show" x-cloak class="mt-4 bg-white border border-[#2E594D]/20 rounded-xl shadow-sm p-4 sm:p-5">
-            <div class="flex items-center justify-between gap-3 mb-3">
-                <div>
-                    <h3 class="text-base sm:text-lg font-bold text-[#2E594D]">Detalles del usuario seleccionado</h3>
-                    <p class="text-xs sm:text-sm text-slate-500" x-text="userDetailsPreview.email || 'Sin correo' "></p>
-                </div>
-                <button type="button" @click="userDetailsPreview.show = false" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Roles</div>
-                    <div x-show="userDetailsPreview.roles.length" class="flex flex-wrap gap-2">
-                        <template x-for="(roleItem, idx) in userDetailsPreview.roles" :key="idx">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#2E594D]/10 text-[#2E594D] border border-[#2E594D]/20" x-text="roleItem"></span>
-                        </template>
-                    </div>
-                    <p x-show="!userDetailsPreview.roles.length" class="text-sm text-slate-500">Sin roles</p>
-                </div>
-
-                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Permisos (<span x-text="userDetailsPreview.permissions.length"></span>)</div>
-                    <div x-show="userDetailsPreview.permissions.length" class="max-h-40 overflow-y-auto space-y-1">
-                        <template x-for="(permissionItem, idx) in userDetailsPreview.permissions" :key="idx">
-                            <div class="text-xs text-slate-700 font-mono bg-white border border-slate-200 rounded px-2 py-1" x-text="permissionItem"></div>
-                        </template>
-                    </div>
-                    <p x-show="!userDetailsPreview.permissions.length" class="text-sm text-slate-500">Sin permisos</p>
-                </div>
-            </div>
-        </div>
-
         <div x-show="isPanelOpen" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4">
             <div x-show="isPanelOpen" x-transition.opacity @click="closePanel()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
             <div x-show="isPanelOpen" 
@@ -1346,6 +1314,43 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                         <button @click="showErrorModal = false" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors shadow-lg">
                             Cerrar
                         </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template x-teleport="body">
+            <div x-show="userDetailsPreview.show" x-cloak class="fixed inset-0 z-[140] flex items-center justify-center p-4">
+                <div @click="userDetailsPreview.show = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden border border-slate-200">
+                    <div class="p-4 sm:p-5 border-b border-slate-200 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg sm:text-xl font-bold text-[#2E594D]">Detalles del usuario seleccionado</h3>
+                            <p class="text-xs sm:text-sm text-slate-500" x-text="userDetailsPreview.email || 'Sin correo' "></p>
+                        </div>
+                        <button type="button" @click="userDetailsPreview.show = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                    </div>
+
+                    <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto max-h-[65vh]">
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Roles</div>
+                            <div x-show="userDetailsPreview.roles.length" class="flex flex-wrap gap-2">
+                                <template x-for="(roleItem, idx) in userDetailsPreview.roles" :key="idx">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#2E594D]/10 text-[#2E594D] border border-[#2E594D]/20" x-text="roleItem"></span>
+                                </template>
+                            </div>
+                            <p x-show="!userDetailsPreview.roles.length" class="text-sm text-slate-500">Sin roles</p>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Permisos (<span x-text="userDetailsPreview.permissions.length"></span>)</div>
+                            <div x-show="userDetailsPreview.permissions.length" class="max-h-56 overflow-y-auto space-y-1 pr-1">
+                                <template x-for="(permissionItem, idx) in userDetailsPreview.permissions" :key="idx">
+                                    <div class="text-xs text-slate-700 font-mono bg-white border border-slate-200 rounded px-2 py-1" x-text="permissionItem"></div>
+                                </template>
+                            </div>
+                            <p x-show="!userDetailsPreview.permissions.length" class="text-sm text-slate-500">Sin permisos</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2923,7 +2928,7 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                 permissions: Array.isArray(userDetails?.permissions) ? userDetails.permissions : []
                             };
 
-                            this.showNotify(`👤 ${rolesText} | 🔒 ${permissionsCount} permisos`, 'success');
+                            this.showNotify('Detalles de usuario cargados', 'success');
                         }
                     } else {
                         const errorData = await response.json().catch(() => ({}));
