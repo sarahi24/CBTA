@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 
 // No cargar usuarios en SSR - se cargarán del lado del cliente con autenticación
-const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
+const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 ---
 
 <Layout title="Gestión de Personal | CBTA 71">
@@ -319,24 +319,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </table>
         </div>
 
-        <div class="mb-4 bg-white rounded-xl shadow-md p-2 flex items-center gap-2 w-full sm:w-fit">
-            <button
-                type="button"
-                @click="rolesViewMode = 'info'"
-                class="px-4 py-2 rounded-lg text-sm font-bold transition"
-                :class="rolesViewMode === 'info' ? 'bg-[#2D584C] text-white' : 'text-[#2D584C] hover:bg-[#2D584C]/10'">
-                Información
-            </button>
-            <button
-                type="button"
-                @click="rolesViewMode = 'table'"
-                class="px-4 py-2 rounded-lg text-sm font-bold transition"
-                :class="rolesViewMode === 'table' ? 'bg-[#2D584C] text-white' : 'text-[#2D584C] hover:bg-[#2D584C]/10'">
-                Tabla
-            </button>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden" x-show="rolesViewMode === 'info'" x-transition>
+        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
             <div class="px-4 py-2.5 border-b border-blue-100 bg-institucional/5 flex items-center justify-between">
                 <h3 class="text-sm font-bold text-[#2E594D]">Resumen de usuarios</h3>
                 <div class="flex items-center gap-2">
@@ -431,7 +414,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden" x-show="rolesViewMode === 'table'" x-transition>
+        <div class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden">
             <div class="overflow-x-auto table-responsive">
                 <table class="w-full min-w-[980px]">
                     <thead class="bg-institucional border-b-4 border-[#234238]">
@@ -498,6 +481,60 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                     <div class="flex justify-end items-center gap-2">
                                         <button @click="viewUserDetails(user)" class="p-2 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50" title="Ver detalles">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                                        </svg>
+                                        <span x-text="getVisibleRoleText(user)"></span>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-2 rounded-full text-xs font-bold border shadow-sm"
+                                          x-bind:class="user.status === 'activo' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : user.status === 'baja-temporal' ? 'bg-amber-100 text-amber-800 border-amber-300' : user.status === 'eliminado' ? 'bg-slate-200 text-slate-700 border-slate-300' : 'bg-red-100 text-red-800 border-red-300'"
+                                          x-text="statusLabel(user.status)"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button type="button" @click="viewUserDetails(user.id)" 
+                                                class="p-2.5 text-[#2E594D] bg-[#2E594D]/10 hover:bg-[#2E594D]/20 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-[#2E594D]/30"
+                                                title="Ver detalles">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="openStudentPanel(user.id)" 
+                                                class="p-2.5 text-[#2E594D] bg-[#2E594D]/10 hover:bg-[#2E594D]/20 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-[#2E594D]/30"
+                                                title="Asociar estudiante"
+                                                x-show="!user.n_control">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 14l9-5-9-5-9 5 9 5z"/>
+                                                <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
+                                            </svg>
+                                        </button>
+                                        <button @click="window.location.href = '/estudiante_lista'" 
+                                                class="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Ver en Lista de Estudiantes"
+                                                x-show="user.n_control">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="confirmDeleteUser(user)" 
+                                                class="p-2.5 text-red-600 bg-red-100 hover:bg-red-200 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-red-200"
+                                                title="Eliminar">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
                                         </button>
                                     </div>
                                 </td>
@@ -1495,7 +1532,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 roleEnrichmentInProgress: false,
                 roleEnrichmentBatchSize: 5,
                 roleFilterAutoBatchDone: false,
-                rolesViewMode: 'info',
                 usersSummary: null,
                 summaryDetailsExpanded: false,
                 newUser: { 
@@ -1883,25 +1919,12 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             normalizeRoleList(values) {
-                const inputValues = Array.isArray(values) ? values : [values];
+                if (!Array.isArray(values)) return [];
 
-                const normalized = inputValues
-                    .flatMap(value => {
-                        if (Array.isArray(value)) return value;
-                        if (typeof value === 'string') {
-                            return value
-                                .split(/[;,|]/)
-                                .map(part => part.trim())
-                                .filter(Boolean);
-                        }
-                        return [value];
-                    })
+                const normalized = values
                     .map(value => {
                         if (typeof value === 'string') return value;
-                        if (value && typeof value === 'object') {
-                            if (Array.isArray(value.roles)) return value.roles.join(',');
-                            return value.name || value.slug || value.role || value.value || value.label || '';
-                        }
+                        if (value && typeof value === 'object') return value.name || value.slug || value.role || value.value || '';
                         return String(value || '');
                     })
                     .map(value => String(value || '').trim())
@@ -1932,10 +1955,13 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 if (user?.roleKey) rawValues.push(user.roleKey);
                 if (user?.role) rawValues.push(user.role);
-                if (user?.role_name) rawValues.push(user.role_name);
 
-                if (typeof user?.roleLabel === 'string') {
-                    rawValues.push(user.roleLabel);
+                if (user?.roleLabel) {
+                    if (typeof user.roleLabel === 'function') {
+                        rawValues.push(user.roleLabel());
+                    } else {
+                        rawValues.push(user.roleLabel);
+                    }
                 }
 
                 const normalized = rawValues
@@ -2074,14 +2100,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 return 'Inactivo';
             },
 
-            statusClass(status) {
-                const key = (status || '').toLowerCase();
-                if (key === 'activo' || key === 'active') return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-                if (key === 'baja-temporal') return 'bg-amber-100 text-amber-800 border-amber-300';
-                if (key === 'eliminado' || key === 'deleted') return 'bg-slate-200 text-slate-700 border-slate-300';
-                return 'bg-red-100 text-red-800 border-red-300';
-            },
-
             roleClass(roleKey) {
                 const key = (roleKey || '').toLowerCase();
                 if (key === 'admin' || key === 'administrador') return 'bg-purple-100 text-purple-700';
@@ -2140,20 +2158,28 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 console.log('🔍 raw.role:', raw.role);
                 console.log('🔍 JSON.stringify(raw.roles):', JSON.stringify(raw.roles));
                 
-                // Extraer roles como array desde múltiples formatos del backend
-                let roles = Array.from(new Set([
-                    ...this.normalizeRoleList(raw.roles),
-                    ...this.normalizeRoleList(raw.role),
-                    ...this.normalizeRoleList(raw.role_name),
-                    ...this.normalizeRoleList(raw.roleName),
-                    ...this.normalizeRoleList(raw.user_role),
-                    ...this.normalizeRoleList(raw.userRole)
-                ]))
-                    .map(value => String(value || '').trim())
-                    .filter(value => value && value.toLowerCase() !== 'sin rol');
-
-                if (roles.length > 0) {
-                    console.log('✅ Roles normalizados:', roles);
+                // Extraer roles como array
+                let roles = [];
+                if (Array.isArray(raw.roles) && raw.roles.length > 0) {
+                    roles = raw.roles.map(r => {
+                        if (typeof r === 'string') return r;
+                        if (r && r.name) return r.name;
+                        return String(r);
+                    });
+                    console.log('✅ Roles encontrados en raw.roles (array):', roles);
+                } else if (raw.role && raw.role !== 'Sin rol') {
+                    if (Array.isArray(raw.role)) {
+                        roles = raw.role.map(r => {
+                            if (typeof r === 'object' && r.name) return r.name;
+                            return String(r);
+                        });
+                    } else {
+                        roles = [raw.role];
+                    }
+                    console.log('✅ Roles encontrados en raw.role:', roles);
+                } else if (raw.role_name && raw.role_name !== 'Sin rol') {
+                    roles = [raw.role_name];
+                    console.log('✅ Roles encontrados en raw.role_name:', roles);
                 }
                 
                 console.log('🔍 roles extraídos:', roles);
@@ -2196,7 +2222,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     });
                     
                     roleLabel = translatedRoles.join(', ');
-                    roleKey = this.normalizeRoleForFilter(roles[0]) || roles[0].toString().toLowerCase().replace(/[_-]+/g, ' ').trim();
+                    roleKey = roles[0].toString().toLowerCase().replace('-', ' ').trim();
                     console.log('✅ Rol traducido:', roleLabel, '| roleKey:', roleKey);
                 } else {
                     // Intentar con campos individuales si no hay array de roles
@@ -2258,9 +2284,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     status: status,
                     fullName: raw.fullName || `${name} ${last_name}`.trim(),
                     roles: roles, // Array de roles
-                    roles_count: Number.isFinite(Number(raw.roles_count)) ? Number(raw.roles_count) : roles.length,
                     role: roleLabel,
-                    roleLabel,
+                    roleLabel: () => this.getRoleLabel(this.roles || roles), // Función para recalcular dinámicamente
                     roleKey,
                     // Campos de estudiante (si existen)
                     n_control: raw.n_control || '',
@@ -2276,8 +2301,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
             get stats() {
                 const backendSummary = this.usersSummary;
-                const backendHasRoleBreakdown = Object.keys(backendSummary?.usersByRoleSummary || {}).length > 0;
-                if (backendSummary && backendHasRoleBreakdown) {
+                if (backendSummary) {
                     const toNumber = (value, fallback = 0) => {
                         const parsed = Number(value);
                         return Number.isFinite(parsed) ? parsed : fallback;
@@ -2372,12 +2396,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 this.users.forEach(user => {
                     const roleKeys = this.extractUserRoleKeys(user);
-                    const hasRoleByText = (() => {
-                        const roleText = String(user?.role || '').trim().toLowerCase();
-                        return roleText && roleText !== 'sin rol';
-                    })();
-                    const hasRoleByCount = Number(user?.roles_count || 0) > 0;
-                    const hasRole = roleKeys.length > 0 || hasRoleByText || hasRoleByCount;
+                    const hasRole = roleKeys.length > 0;
 
                     if (hasRole) {
                         withRole += 1;
@@ -2747,7 +2766,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         this.roleFilterAutoBatchDone = false;
 
                         if (!this.usersSummary) {
-                            console.info('ℹ️ Resumen remoto no disponible; usando resumen calculado localmente con this.users');
+                            await this.loadUsersSummary(token, isRetry);
                         }
 
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
