@@ -63,6 +63,18 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
         /* Alpine.js x-cloak */
         [x-cloak] { display: none !important; }
     </style>
+    <script is:inline>
+        (function () {
+            if (typeof window === 'undefined' || !window.console) return;
+            const noop = function () {};
+            window.console.log = noop;
+            window.console.info = noop;
+            window.console.warn = noop;
+            window.console.error = noop;
+            window.console.debug = noop;
+            window.console.trace = noop;
+        })();
+    </script>
     
     <!-- Alpine.js -->
 

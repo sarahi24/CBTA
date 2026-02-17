@@ -75,6 +75,18 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 			color: white;
 		}
 	</style>
+	<script is:inline>
+		(function () {
+			if (typeof window === 'undefined' || !window.console) return;
+			const noop = function () {};
+			window.console.log = noop;
+			window.console.info = noop;
+			window.console.warn = noop;
+			window.console.error = noop;
+			window.console.debug = noop;
+			window.console.trace = noop;
+		})();
+	</script>
 </head>
 
 
