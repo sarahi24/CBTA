@@ -216,6 +216,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
             async forgotPassword(email) {
                 try {
+                    const normalizedEmail = String(email || '').trim().toLowerCase();
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -225,7 +226,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
                         },
-                        body: JSON.stringify({ email }),
+                        body: JSON.stringify({ email: normalizedEmail }),
                         signal: controller.signal
                     });
 
@@ -533,15 +534,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
         async handleRecovery() {
             this.message = '';
             this.isLoading = true;
+            const normalizedEmail = String(this.email || '').trim().toLowerCase();
             
-            if (!this.email) {
+            if (!normalizedEmail) {
                 this.message = '⚠️ Ingresa un correo válido.';
                 this.isLoading = false;
                 return;
             }
 
+            this.email = normalizedEmail;
+
             try {
-                const response = await window.AuthService.forgotPassword(this.email);
+                const response = await window.AuthService.forgotPassword(normalizedEmail);
                 const backendMessage = String(response?.message || '').trim();
                 const emailSentFlag = response?.data?.email_sent ?? response?.data?.sent ?? response?.data?.queued;
                 console.log('Forgot-password response:', response);
@@ -550,21 +554,21 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     if (emailSentFlag === false) {
                         this.message = '⚠️ La solicitud fue recibida, pero el servidor reportó que no pudo enviar el correo.';
                     } else {
-                        this.message = backendMessage || '📩 Si el correo existe en el sistema, recibirás un enlace de recuperación. Revisa spam/promociones.';
+                        this.message = `📩 ${backendMessage || 'Si el correo existe en el sistema, recibirás un enlace de recuperación. Revisa spam/promociones.'}`;
                     }
                 } else {
                     this.message = '⚠️ ' + (backendMessage || 'No se pudo enviar el correo.');
                 }
             } catch (error) {
                 console.error('Recovery error:', error);
-                this.message = '❌ Error al enviar el correo de recuperación.';
+                this.message = '❌ ' + (error.message || 'Error al enviar el correo de recuperación.');
             } finally {
                 this.isLoading = false;
             }
         }
     };
     </script>
->
+
 
     <div class="absolute top-8 left-1/2 transform -translate-x-1/2 translate-y-3 z-30">
         <img src="/Logo.png" alt="Logotipo SIGE" class="w-32 h-auto select-none pointer-events-none">
@@ -606,7 +610,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             <div x-show="error" :class="error.includes('✅') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'" class="p-3 border rounded-xl text-xs font-medium shadow-inner" x-cloak>
                 <span x-text="error"></span>
             </div>
-            <div x-show="message" :class="message.includes('📩') || message.includes('✅') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'" class="p-3 border rounded-xl text-xs font-medium shadow-inner" x-cloak>
+            <div x-show="message" :class="message.includes('📩') || message.includes('✅') || message.includes('Si el correo existe') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'" class="p-3 border rounded-xl text-xs font-medium shadow-inner" x-cloak>
                 <span x-text="message"></span>
             </div>
 
