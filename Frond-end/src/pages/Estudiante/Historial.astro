@@ -254,6 +254,7 @@ const forceRefresh = forceRefreshParam === 'true';
               amount: String(amountValue),
               amountReceived: String(amountReceivedValue),
               balance: String(balanceValue),
+              balanceNumeric: Number(balanceValue) || 0,
               date: dateValue,
               status: normalizedStatus,
               reference: referenceValue,
@@ -464,12 +465,12 @@ const forceRefresh = forceRefreshParam === 'true';
                     </div>
                   </div>
                   
-                  <template x-if="Number(pago.balance || 0) > 0">
-                    <div class="amount-section balance">
-                      <div class="label">Monto pendiente</div>
+                  <template x-if="Number(pago.balanceNumeric || 0) !== 0">
+                    <div class="amount-section" :class="Number(pago.balanceNumeric || 0) > 0 ? 'balance' : 'credit'">
+                      <div class="label" x-text="Number(pago.balanceNumeric || 0) > 0 ? 'Monto pendiente' : 'Saldo a favor'"></div>
                       <div class="amount-display">
                         <span class="currency">$</span>
-                        <span class="amount" x-text="pago.balance"></span>
+                        <span class="amount" x-text="Math.abs(Number(pago.balanceNumeric || 0)).toFixed(2)"></span>
                       </div>
                     </div>
                   </template>
@@ -832,6 +833,16 @@ const forceRefresh = forceRefreshParam === 'true';
   .amount-section.balance {
     padding-top: 12px;
     border-top: 1px solid #f1f5f9;
+  }
+
+  .amount-section.credit {
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .amount-section.credit .currency,
+  .amount-section.credit .amount {
+    color: #10b981;
   }
 
   .amount-section .label {

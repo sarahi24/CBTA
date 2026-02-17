@@ -221,6 +221,8 @@ const paymentId = Astro.url.searchParams.get('id');
         const paymentIntentIdValue = this.pickFirstValue(payment, ['payment_intent_id', 'paymentIntentId'], null);
         const stripeSessionIdValue = this.pickFirstValue(payment, ['stripe_session_id', 'stripeSessionId'], null);
         const currencyValue = this.pickFirstValue(payment, ['currency', 'moneda'], 'MXN');
+        const hasPendingAmountValue = Boolean(this.pickFirstValue(payment, ['has_pending_amount', 'hasPendingAmount'], false));
+        const balanceNumericValue = Number(balanceValue) || 0;
 
         this.paymentDetail = {
           id: payment.id,
@@ -228,7 +230,8 @@ const paymentId = Astro.url.searchParams.get('id');
           amount: String(amountValue),
           amountReceived: String(amountReceivedValue),
           balance: String(balanceValue),
-          pendingAmount: String(balanceValue),
+          pendingAmount: String(balanceNumericValue),
+          hasPendingAmount: hasPendingAmountValue,
           reference: referenceValue,
           status: normalizedStatus || 'unknown',
           paymentMethod: methodData.methodLabel,
@@ -414,10 +417,10 @@ const paymentId = Astro.url.searchParams.get('id');
               <span class="info-value" x-text="'$' + paymentDetail.amountReceived"></span>
             </div>
 
-            <template x-if="Number(paymentDetail.pendingAmount || 0) > 0">
+            <template x-if="Number(paymentDetail.pendingAmount || 0) !== 0">
               <div class="info-item">
-                <span class="info-label">Monto pendiente</span>
-                <span class="info-value" x-text="'$' + paymentDetail.pendingAmount"></span>
+                <span class="info-label" x-text="(Number(paymentDetail.pendingAmount || 0) > 0 || paymentDetail.hasPendingAmount) ? 'Monto pendiente' : 'Saldo a favor'"></span>
+                <span class="info-value" x-text="'$' + Math.abs(Number(paymentDetail.pendingAmount || 0)).toFixed(2)"></span>
               </div>
             </template>
 
