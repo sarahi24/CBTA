@@ -76,6 +76,9 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
             window.console.trace = noop;
         })();
     </script>
+    <script is:inline define:vars={{ API_BASE_URL }}>
+        window.__API_BASE_URL__ = API_BASE_URL;
+    </script>
     
     <!-- Alpine.js -->
 

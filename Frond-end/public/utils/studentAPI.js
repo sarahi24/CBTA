@@ -4,7 +4,8 @@
  * Disponible como window.StudentAPI
  */
 
-const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+const API_BASE_URL = (window.__API_BASE_URL__ || 'https://nginx-production-b390.up.railway.app/api').replace(/\/$/, '');
+const API_BASE = `${API_BASE_URL}/v1`;
 
 function normalizeStudentPortalRole(role) {
   if (!role) return 'student';

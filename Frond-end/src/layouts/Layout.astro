@@ -7,6 +7,7 @@ const { title } = Astro.props;
 
 import '../styles/global.css';
 import '../styles/tailwind.css';
+const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '');
 
 
 // Colores: El Sidebar verde oscuro y el contenido en blanco/gris
@@ -86,6 +87,9 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 			window.console.debug = noop;
 			window.console.trace = noop;
 		})();
+	</script>
+	<script is:inline define:vars={{ API_BASE_URL }}>
+		window.__API_BASE_URL__ = API_BASE_URL;
 	</script>
 </head>
 
