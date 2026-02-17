@@ -91,6 +91,109 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 	<script is:inline define:vars={{ API_BASE_URL }}>
 		window.__API_BASE_URL__ = API_BASE_URL;
 	</script>
+	<script is:inline>
+		(function () {
+			if (typeof window === 'undefined') return;
+			if (window.__authFetchPatched__) return;
+
+			const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+			if (!apiBase) return;
+
+			const originalFetch = window.fetch.bind(window);
+
+			const getRequestUrl = (input) => {
+				if (typeof input === 'string') return input;
+				if (input && typeof input.url === 'string') return input.url;
+				return '';
+			};
+
+			const shouldHandle = (url) => url.startsWith(`${apiBase}/`);
+			const isRefreshUrl = (url) => /\/v1\/refresh-token(?:\?|$)/.test(url);
+
+			const buildHeaders = (headersInput) => {
+				if (headersInput instanceof Headers) return new Headers(headersInput);
+				return new Headers(headersInput || {});
+			};
+
+			const refreshAccessToken = async () => {
+				const refreshToken = localStorage.getItem('refresh_token');
+				if (!refreshToken) return null;
+
+				const response = await originalFetch(`${apiBase}/v1/refresh-token`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json'
+					},
+					body: JSON.stringify({ refresh_token: refreshToken })
+				});
+
+				if (!response.ok) return null;
+
+				const data = await response.json().catch(() => null);
+				const tokenBundle = data?.data?.user_tokens || data?.data || {};
+				const newAccessToken = tokenBundle.access_token || data?.access_token || '';
+				const newRefreshToken = tokenBundle.refresh_token || data?.refresh_token || '';
+
+				if (!newAccessToken) return null;
+
+				localStorage.setItem('access_token', newAccessToken);
+				if (newRefreshToken) {
+					localStorage.setItem('refresh_token', newRefreshToken);
+				}
+
+				return newAccessToken;
+			};
+
+			window.fetch = async (input, init = {}) => {
+				const requestUrl = getRequestUrl(input);
+				if (!shouldHandle(requestUrl)) {
+					return originalFetch(input, init);
+				}
+
+				const headersInput = init?.headers
+					|| ((typeof Request !== 'undefined' && input instanceof Request) ? input.headers : undefined);
+				const headers = buildHeaders(headersInput);
+
+				if (!headers.has('Authorization')) {
+					const token = localStorage.getItem('access_token');
+					if (token) headers.set('Authorization', `Bearer ${token}`);
+				}
+
+				if (!headers.has('Accept')) {
+					headers.set('Accept', 'application/json');
+				}
+
+				const firstResponse = await originalFetch(input, { ...init, headers });
+
+				const alreadyRetried = Boolean(init?.__retriedByAuthPatch);
+				if (
+					alreadyRetried
+					|| isRefreshUrl(requestUrl)
+					|| (firstResponse.status !== 401 && firstResponse.status !== 403)
+				) {
+					return firstResponse;
+				}
+
+				const newAccessToken = await refreshAccessToken();
+				if (!newAccessToken) return firstResponse;
+
+				const retryHeaders = buildHeaders(headersInput);
+				retryHeaders.set('Authorization', `Bearer ${newAccessToken}`);
+				if (!retryHeaders.has('Accept')) {
+					retryHeaders.set('Accept', 'application/json');
+				}
+
+				return originalFetch(input, {
+					...init,
+					headers: retryHeaders,
+					__retriedByAuthPatch: true
+				});
+			};
+
+			window.__authFetchPatched__ = true;
+		})();
+	</script>
 </head>
 
 
