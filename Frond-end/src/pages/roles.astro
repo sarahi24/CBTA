@@ -1883,12 +1883,25 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             normalizeRoleList(values) {
-                if (!Array.isArray(values)) return [];
+                const inputValues = Array.isArray(values) ? values : [values];
 
-                const normalized = values
+                const normalized = inputValues
+                    .flatMap(value => {
+                        if (Array.isArray(value)) return value;
+                        if (typeof value === 'string') {
+                            return value
+                                .split(/[;,|]/)
+                                .map(part => part.trim())
+                                .filter(Boolean);
+                        }
+                        return [value];
+                    })
                     .map(value => {
                         if (typeof value === 'string') return value;
-                        if (value && typeof value === 'object') return value.name || value.slug || value.role || value.value || '';
+                        if (value && typeof value === 'object') {
+                            if (Array.isArray(value.roles)) return value.roles.join(',');
+                            return value.name || value.slug || value.role || value.value || value.label || '';
+                        }
                         return String(value || '');
                     })
                     .map(value => String(value || '').trim())
@@ -1919,13 +1932,10 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 if (user?.roleKey) rawValues.push(user.roleKey);
                 if (user?.role) rawValues.push(user.role);
+                if (user?.role_name) rawValues.push(user.role_name);
 
-                if (user?.roleLabel) {
-                    if (typeof user.roleLabel === 'function') {
-                        rawValues.push(user.roleLabel());
-                    } else {
-                        rawValues.push(user.roleLabel);
-                    }
+                if (typeof user?.roleLabel === 'string') {
+                    rawValues.push(user.roleLabel);
                 }
 
                 const normalized = rawValues
@@ -2130,28 +2140,20 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 console.log('🔍 raw.role:', raw.role);
                 console.log('🔍 JSON.stringify(raw.roles):', JSON.stringify(raw.roles));
                 
-                // Extraer roles como array
-                let roles = [];
-                if (Array.isArray(raw.roles) && raw.roles.length > 0) {
-                    roles = raw.roles.map(r => {
-                        if (typeof r === 'string') return r;
-                        if (r && r.name) return r.name;
-                        return String(r);
-                    });
-                    console.log('✅ Roles encontrados en raw.roles (array):', roles);
-                } else if (raw.role && raw.role !== 'Sin rol') {
-                    if (Array.isArray(raw.role)) {
-                        roles = raw.role.map(r => {
-                            if (typeof r === 'object' && r.name) return r.name;
-                            return String(r);
-                        });
-                    } else {
-                        roles = [raw.role];
-                    }
-                    console.log('✅ Roles encontrados en raw.role:', roles);
-                } else if (raw.role_name && raw.role_name !== 'Sin rol') {
-                    roles = [raw.role_name];
-                    console.log('✅ Roles encontrados en raw.role_name:', roles);
+                // Extraer roles como array desde múltiples formatos del backend
+                let roles = Array.from(new Set([
+                    ...this.normalizeRoleList(raw.roles),
+                    ...this.normalizeRoleList(raw.role),
+                    ...this.normalizeRoleList(raw.role_name),
+                    ...this.normalizeRoleList(raw.roleName),
+                    ...this.normalizeRoleList(raw.user_role),
+                    ...this.normalizeRoleList(raw.userRole)
+                ]))
+                    .map(value => String(value || '').trim())
+                    .filter(value => value && value.toLowerCase() !== 'sin rol');
+
+                if (roles.length > 0) {
+                    console.log('✅ Roles normalizados:', roles);
                 }
                 
                 console.log('🔍 roles extraídos:', roles);
@@ -2194,7 +2196,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     });
                     
                     roleLabel = translatedRoles.join(', ');
-                    roleKey = roles[0].toString().toLowerCase().replace('-', ' ').trim();
+                    roleKey = this.normalizeRoleForFilter(roles[0]) || roles[0].toString().toLowerCase().replace(/[_-]+/g, ' ').trim();
                     console.log('✅ Rol traducido:', roleLabel, '| roleKey:', roleKey);
                 } else {
                     // Intentar con campos individuales si no hay array de roles
@@ -2256,8 +2258,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     status: status,
                     fullName: raw.fullName || `${name} ${last_name}`.trim(),
                     roles: roles, // Array de roles
+                    roles_count: Number.isFinite(Number(raw.roles_count)) ? Number(raw.roles_count) : roles.length,
                     role: roleLabel,
-                    roleLabel: () => this.getRoleLabel(this.roles || roles), // Función para recalcular dinámicamente
+                    roleLabel,
                     roleKey,
                     // Campos de estudiante (si existen)
                     n_control: raw.n_control || '',
@@ -2369,7 +2372,12 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 this.users.forEach(user => {
                     const roleKeys = this.extractUserRoleKeys(user);
-                    const hasRole = roleKeys.length > 0;
+                    const hasRoleByText = (() => {
+                        const roleText = String(user?.role || '').trim().toLowerCase();
+                        return roleText && roleText !== 'sin rol';
+                    })();
+                    const hasRoleByCount = Number(user?.roles_count || 0) > 0;
+                    const hasRole = roleKeys.length > 0 || hasRoleByText || hasRoleByCount;
 
                     if (hasRole) {
                         withRole += 1;
