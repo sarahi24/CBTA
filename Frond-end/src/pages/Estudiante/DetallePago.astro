@@ -15,6 +15,74 @@ const paymentId = Astro.url.searchParams.get('id');
     downloadingReceipt: false,
     portalRole: 'student',
 
+    pickFirstValue(source, keys, fallback = null) {
+      if (!source || !Array.isArray(keys)) return fallback;
+      for (const key of keys) {
+        const value = source?.[key];
+        if (value !== undefined && value !== null && value !== '') {
+          return value;
+        }
+      }
+      return fallback;
+    },
+
+    normalizeStatus(statusValue) {
+      const value = String(statusValue || '').toLowerCase().trim();
+      if (!value) return 'unknown';
+      if (value === 'completed' || value === 'paid' || value === 'success' || value === 'succeeded') return 'paid';
+      if (value === 'pending' || value === 'processing' || value === 'in_process') return 'pending';
+      if (value === 'failed' || value === 'error' || value === 'declined' || value === 'canceled' || value === 'cancelled') return 'failed';
+      if (value === 'refunded' || value === 'refund') return 'refunded';
+      return value;
+    },
+
+    normalizeMethodDetails(payment) {
+      const rawMethodDetails = payment?.payment_method_details ?? payment?.payment_method ?? payment?.method ?? null;
+      const normalizedMethods = [];
+
+      const toMethodLabel = (methodEntry) => {
+        if (!methodEntry) return null;
+        if (typeof methodEntry === 'string') {
+          const trimmed = methodEntry.trim();
+          return trimmed || null;
+        }
+
+        const brand = String(methodEntry.brand || methodEntry.card_brand || '').trim();
+        const last4 = String(methodEntry.last4 || methodEntry.card_last4 || '').trim();
+        const type = String(methodEntry.type || methodEntry.method || methodEntry.payment_type || '').trim();
+        const bank = String(methodEntry.bank || methodEntry.bank_name || '').trim();
+
+        if (brand && last4) return brand.toUpperCase() + ' •••• ' + last4;
+        if (bank && last4) return bank + ' •••• ' + last4;
+        if (type && last4) return type + ' •••• ' + last4;
+        if (brand) return brand.toUpperCase();
+        if (bank) return bank;
+        if (type) return type;
+
+        return null;
+      };
+
+      if (Array.isArray(rawMethodDetails)) {
+        rawMethodDetails.forEach((methodEntry) => {
+          const label = toMethodLabel(methodEntry);
+          if (label) normalizedMethods.push(label);
+        });
+      } else {
+        const singleLabel = toMethodLabel(rawMethodDetails);
+        if (singleLabel) normalizedMethods.push(singleLabel);
+      }
+
+      const fallbackType = this.pickFirstValue(payment, ['payment_method_type', 'method_type', 'payment_type'], '');
+      if (!normalizedMethods.length && fallbackType) {
+        normalizedMethods.push(String(fallbackType));
+      }
+
+      return {
+        allMethods: normalizedMethods,
+        methodLabel: normalizedMethods[0] || 'Metodo desconocido'
+      };
+    },
+
     detectPortalRole() {
       const userDataRaw = localStorage.getItem('user_data');
       let inferredRole = '';
@@ -135,22 +203,24 @@ const paymentId = Astro.url.searchParams.get('id');
           return;
         }
 
-        const methodDetails = payment.payment_method_details || payment.payment_method || {};
-        let methodLabel = 'Metodo desconocido';
-        if (methodDetails.brand && methodDetails.last4) {
-          methodLabel = methodDetails.brand.toUpperCase() + ' •••• ' + methodDetails.last4;
-        } else if (methodDetails.type) {
-          methodLabel = methodDetails.type;
-        }
-        const normalizedStatus = payment.status === 'completed' ? 'paid' : (payment.status || 'unknown');
+        const normalizedStatus = this.normalizeStatus(payment.status);
+        const methodData = this.normalizeMethodDetails(payment);
 
-        const amountValue = payment.amount ?? payment.total_amount ?? payment.total ?? payment.monto ?? '0';
-        const amountReceivedValue = payment.amount_received ?? payment.received_amount ?? payment.paid_amount ?? amountValue;
-        const balanceValue = payment.balance ?? payment.pending_amount ?? payment.amount_pending ?? payment.remaining_amount ?? payment.remaining_balance ?? '0';
-        const conceptValue = payment.concept_name ?? payment.concept ?? payment.concepto ?? payment.description ?? 'Pago';
-        const referenceValue = payment.reference ?? payment.payment_reference ?? payment.folio ?? payment.payment_intent_id ?? null;
-        const receiptUrlValue = payment.url ?? payment.receipt_url ?? payment.receiptUrl ?? payment.receipt?.url ?? null;
-        const createdAtValue = payment.created_at_human ?? payment.payment_date ?? payment.created_at ?? payment.date ?? null;
+        const amountValue = this.pickFirstValue(payment, ['amount', 'total_amount', 'total', 'monto'], '0');
+        const amountReceivedValue = this.pickFirstValue(payment, ['amount_received', 'received_amount', 'paid_amount', 'amount_paid', 'monto_recibido'], amountValue);
+        const balanceValue = this.pickFirstValue(payment, ['balance', 'pending_amount', 'amount_pending', 'remaining_amount', 'remaining_balance', 'balance_due', 'saldo'], '0');
+        const conceptValue = this.pickFirstValue(payment, ['concept_name', 'concept', 'concepto', 'description', 'payment_concept_name', 'paymentConceptName'], 'Pago');
+        const referenceValue = this.pickFirstValue(payment, ['reference', 'payment_reference', 'folio', 'payment_intent_id', 'transaction_id', 'stripe_charge_id', 'external_reference'], null);
+        const receiptUrlValue = this.pickFirstValue(payment, ['url', 'receipt_url', 'receiptUrl', 'voucher_url', 'invoice_url'], payment?.receipt?.url || null);
+        const createdAtValue = this.pickFirstValue(payment, ['created_at_human', 'payment_date', 'paid_at', 'created_at', 'date'], null);
+        const updatedAtValue = this.pickFirstValue(payment, ['updated_at_human', 'updated_at', 'payment_updated_at'], null);
+        const paymentConceptIdValue = this.pickFirstValue(payment, ['payment_concept_id', 'concept_id', 'paymentConceptId'], null);
+        const paymentMethodIdValue = this.pickFirstValue(payment, ['payment_method_id', 'method_id', 'paymentMethodId'], null);
+        const userIdValue = this.pickFirstValue(payment, ['user_id', 'userId', 'student_id', 'studentId'], null);
+        const stripePaymentMethodIdValue = this.pickFirstValue(payment, ['stripe_payment_method_id', 'stripePaymentMethodId'], null);
+        const paymentIntentIdValue = this.pickFirstValue(payment, ['payment_intent_id', 'paymentIntentId'], null);
+        const stripeSessionIdValue = this.pickFirstValue(payment, ['stripe_session_id', 'stripeSessionId'], null);
+        const currencyValue = this.pickFirstValue(payment, ['currency', 'moneda'], 'MXN');
 
         this.paymentDetail = {
           id: payment.id,
@@ -161,15 +231,18 @@ const paymentId = Astro.url.searchParams.get('id');
           pendingAmount: String(balanceValue),
           reference: referenceValue,
           status: normalizedStatus || 'unknown',
-          paymentMethod: methodLabel,
-          userId: payment.user_id,
+          paymentMethod: methodData.methodLabel,
+          userId: userIdValue,
           createdAt: createdAtValue,
-          updatedAt: payment.updated_at,
-          stripePaymentId: payment.stripe_payment_method_id,
-          paymentIntentId: payment.payment_intent_id,
+          updatedAt: updatedAtValue,
+          stripePaymentId: stripePaymentMethodIdValue,
+          paymentIntentId: paymentIntentIdValue,
           url: receiptUrlValue,
-          stripeSessionId: payment.stripe_session_id,
-          allMethods: methodDetails.type ? [methodLabel] : []
+          stripeSessionId: stripeSessionIdValue,
+          allMethods: methodData.allMethods,
+          paymentConceptId: paymentConceptIdValue,
+          paymentMethodId: paymentMethodIdValue,
+          currency: currencyValue
         };
       } catch (err) {
         console.error('❌ Error fetching payment detail:', err);
@@ -329,10 +402,12 @@ const paymentId = Astro.url.searchParams.get('id');
               <span class="info-value mono" x-text="paymentDetail.id"></span>
             </div>
 
-            <div class="info-item">
-              <span class="info-label">ID del usuario</span>
-              <span class="info-value mono" x-text="paymentDetail.userId"></span>
-            </div>
+            <template x-if="paymentDetail.userId">
+              <div class="info-item">
+                <span class="info-label">ID del usuario</span>
+                <span class="info-value mono" x-text="paymentDetail.userId"></span>
+              </div>
+            </template>
 
             <div class="info-item">
               <span class="info-label">Monto recibido</span>
@@ -360,6 +435,27 @@ const paymentId = Astro.url.searchParams.get('id');
               </div>
             </template>
 
+            <template x-if="paymentDetail.paymentConceptId">
+              <div class="info-item">
+                <span class="info-label">ID del concepto</span>
+                <span class="info-value mono" x-text="paymentDetail.paymentConceptId"></span>
+              </div>
+            </template>
+
+            <template x-if="paymentDetail.paymentMethodId">
+              <div class="info-item">
+                <span class="info-label">ID del método</span>
+                <span class="info-value mono" x-text="paymentDetail.paymentMethodId"></span>
+              </div>
+            </template>
+
+            <template x-if="paymentDetail.currency">
+              <div class="info-item">
+                <span class="info-label">Moneda</span>
+                <span class="info-value" x-text="paymentDetail.currency"></span>
+              </div>
+            </template>
+
             <template x-if="paymentDetail.stripePaymentId">
               <div class="info-item">
                 <span class="info-label">ID de método Stripe</span>
@@ -374,10 +470,12 @@ const paymentId = Astro.url.searchParams.get('id');
               </div>
             </template>
 
-            <div class="info-item">
-              <span class="info-label">Última actualización</span>
-              <span class="info-value" x-text="paymentDetail.updatedAt"></span>
-            </div>
+            <template x-if="paymentDetail.updatedAt">
+              <div class="info-item">
+                <span class="info-label">Última actualización</span>
+                <span class="info-value" x-text="paymentDetail.updatedAt"></span>
+              </div>
+            </template>
           </div>
         </div>
 
