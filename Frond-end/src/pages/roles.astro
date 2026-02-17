@@ -309,14 +309,67 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                                     </svg>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-[11px] sm:text-xs text-blue-600 font-medium uppercase tracking-wide">Administradores</p>
-                                    <p class="text-xl sm:text-2xl font-bold text-purple-600" x-text="stats.admins"></p>
+                                    <p class="text-[11px] sm:text-xs text-blue-600 font-medium uppercase tracking-wide">Con rol asignado</p>
+                                    <p class="text-xl sm:text-2xl font-bold text-purple-600" x-text="stats.withRole"></p>
                                 </div>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 p-4 sm:p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Conteo por rol</h3>
+                    <div x-show="stats.roleCountEntries.length" class="flex flex-wrap gap-2">
+                        <template x-for="roleEntry in stats.roleCountEntries" :key="roleEntry.key">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#2E594D]/10 text-[#2E594D] border border-[#2E594D]/20">
+                                <span x-text="getRoleDisplayName(roleEntry.key)"></span>
+                                <span class="mx-1">•</span>
+                                <span x-text="roleEntry.count"></span>
+                            </span>
+                        </template>
+                    </div>
+                    <p x-show="!stats.roleCountEntries.length" class="text-sm text-slate-500">Sin roles asignados</p>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Conteo por estatus</h3>
+                    <div x-show="stats.statusCountEntries.length" class="space-y-1">
+                        <template x-for="statusEntry in stats.statusCountEntries" :key="statusEntry.key">
+                            <div class="flex items-center justify-between text-sm bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
+                                <span class="font-medium text-slate-700" x-text="statusLabel(statusEntry.key)"></span>
+                                <span class="font-bold text-slate-800" x-text="statusEntry.count"></span>
+                            </div>
+                        </template>
+                    </div>
+                    <p x-show="!stats.statusCountEntries.length" class="text-sm text-slate-500">Sin estatus disponibles</p>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Detalle académico</h3>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5">
+                            <span class="text-emerald-800">Con detalle académico</span>
+                            <span class="font-bold text-emerald-700" x-text="stats.withAcademicDetail"></span>
+                        </div>
+                        <div class="flex items-center justify-between bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+                            <span class="text-amber-800">Sin detalle académico (con rol)</span>
+                            <span class="font-bold text-amber-700" x-text="stats.withoutAcademicDetailWithRole"></span>
+                        </div>
+                        <div class="flex items-center justify-between bg-orange-50 border border-orange-200 rounded px-2.5 py-1.5">
+                            <span class="text-orange-800">Est./Solic. sin detalle académico</span>
+                            <span class="font-bold text-orange-700" x-text="stats.studentLikeWithoutAcademicDetail"></span>
+                        </div>
+                        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
+                            <span class="text-slate-700">Sin rol asignado</span>
+                            <span class="font-bold text-slate-800" x-text="stats.withoutRole"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden">
@@ -1351,6 +1404,19 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             </div>
                             <p x-show="!userDetailsPreview.permissions.length" class="text-sm text-slate-500">Sin permisos</p>
                         </div>
+
+                        <div class="md:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Datos extra del usuario</div>
+                            <div x-show="userDetailsPreview.extraDetails.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <template x-for="(detail, idx) in userDetailsPreview.extraDetails" :key="idx">
+                                    <div class="bg-white border border-slate-200 rounded px-2.5 py-2">
+                                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500" x-text="detail.label"></p>
+                                        <p class="text-sm text-slate-700 break-words" x-text="detail.value"></p>
+                                    </div>
+                                </template>
+                            </div>
+                            <p x-show="!userDetailsPreview.extraDetails.length" class="text-sm text-slate-500">Sin datos extra disponibles</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1426,7 +1492,8 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     userId: null,
                     email: '',
                     roles: [],
-                    permissions: []
+                    permissions: [],
+                    extraDetails: []
                 },
                 
                 // Estados para gestión de estudiantes
@@ -1699,6 +1766,75 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                     .split(' ')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' ');
+            },
+
+            getFirstDetailValue(sources, keys) {
+                if (!Array.isArray(sources) || !Array.isArray(keys)) return '';
+
+                for (const source of sources) {
+                    if (!source || typeof source !== 'object') continue;
+
+                    for (const key of keys) {
+                        const value = source[key];
+                        if (value === null || value === undefined) continue;
+
+                        if (Array.isArray(value)) {
+                            const cleanArray = value.map(v => String(v || '').trim()).filter(Boolean);
+                            if (cleanArray.length) return cleanArray.join(', ');
+                            continue;
+                        }
+
+                        const text = String(value).trim();
+                        if (text) return text;
+                    }
+                }
+
+                return '';
+            },
+
+            buildUserExtraDetails(userDetails) {
+                const basicInfo = userDetails?.basicInfo || {};
+                const studentDetail = userDetails?.studentDetail || {};
+                const candidateSources = [
+                    userDetails,
+                    basicInfo,
+                    userDetails?.profile || {},
+                    userDetails?.extraData || userDetails?.extra_data || {},
+                    studentDetail
+                ];
+
+                const addressParts = [
+                    this.getFirstDetailValue(candidateSources, ['street', 'calle']),
+                    this.getFirstDetailValue(candidateSources, ['city', 'ciudad']),
+                    this.getFirstDetailValue(candidateSources, ['state', 'estado']),
+                    this.getFirstDetailValue(candidateSources, ['postal_code', 'postalCode', 'codigo_postal', 'cp'])
+                ].filter(Boolean);
+
+                const resolvedAddress = this.getFirstDetailValue(candidateSources, ['address', 'direccion', 'domicilio'])
+                    || (addressParts.length ? addressParts.join(', ') : '');
+
+                const detailEntries = [
+                    { label: 'Nombre', value: this.getFirstDetailValue(candidateSources, ['fullName', 'full_name', 'name']) },
+                    { label: 'Apellidos', value: this.getFirstDetailValue(candidateSources, ['last_name', 'lastName', 'apellido', 'apellidos']) },
+                    { label: 'Teléfono', value: this.getFirstDetailValue(candidateSources, ['phone_number', 'phoneNumber', 'telefono', 'celular']) },
+                    { label: 'CURP', value: this.getFirstDetailValue(candidateSources, ['curp', 'CURP']) },
+                    { label: 'RFC', value: this.getFirstDetailValue(candidateSources, ['rfc', 'tax_id', 'taxId']) },
+                    { label: 'Puesto', value: this.getFirstDetailValue(candidateSources, ['position', 'puesto', 'job_title', 'cargo']) },
+                    { label: 'Departamento', value: this.getFirstDetailValue(candidateSources, ['department', 'departamento', 'area']) },
+                    { label: 'No. Empleado', value: this.getFirstDetailValue(candidateSources, ['employee_number', 'employeeNumber', 'numero_empleado', 'no_empleado', 'staff_id']) },
+                    { label: 'Estatus', value: this.getFirstDetailValue(candidateSources, ['status', 'estado']) },
+                    { label: 'Fecha de Nacimiento', value: this.getFirstDetailValue(candidateSources, ['birthdate', 'fecha_nacimiento']) },
+                    { label: 'Género', value: this.getFirstDetailValue(candidateSources, ['gender', 'genero']) },
+                    { label: 'Tipo de Sangre', value: this.getFirstDetailValue(candidateSources, ['blood_type', 'tipo_sangre', 'bloodType']) },
+                    { label: 'Dirección', value: resolvedAddress },
+                    { label: 'No. Control', value: this.getFirstDetailValue(candidateSources, ['n_control', 'nControl']) },
+                    { label: 'Semestre', value: this.getFirstDetailValue(candidateSources, ['semestre', 'semester']) },
+                    { label: 'Grupo', value: this.getFirstDetailValue(candidateSources, ['group', 'grupo']) },
+                    { label: 'Taller', value: this.getFirstDetailValue(candidateSources, ['workshop', 'taller']) },
+                    { label: 'Carrera', value: this.getFirstDetailValue(candidateSources, ['career_name', 'careerName', 'career']) }
+                ];
+
+                return detailEntries.filter(entry => String(entry.value || '').trim().length > 0);
             },
 
             getVisibleRoleText(user) {
@@ -2085,8 +2221,94 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             get stats() {
                 const total = this.users.length;
                 const active = this.users.filter(u => u.status === 'activo').length;
-                const admins = this.users.filter(u => u.roleKey === 'admin' || u.roleLabel === 'Administrador').length;
-                return { total, active, admins };
+
+                const roleCounts = {};
+                const statusCounts = {};
+                let withRole = 0;
+                let withoutRole = 0;
+                let withAcademicDetail = 0;
+                let withoutAcademicDetailWithRole = 0;
+                let studentLikeWithoutAcademicDetail = 0;
+
+                const studentLikeRoles = new Set(['student', 'applicant']);
+
+                this.users.forEach(user => {
+                    const roleKeys = this.extractUserRoleKeys(user);
+                    const hasRole = roleKeys.length > 0;
+
+                    if (hasRole) {
+                        withRole += 1;
+                        roleKeys.forEach(roleKey => {
+                            roleCounts[roleKey] = (roleCounts[roleKey] || 0) + 1;
+                        });
+                    } else {
+                        withoutRole += 1;
+                    }
+
+                    const statusKey = String(user?.status || 'sin-estatus').toLowerCase().trim();
+                    statusCounts[statusKey] = (statusCounts[statusKey] || 0) + 1;
+
+                    const hasAcademicDetail = Boolean(
+                        String(user?.n_control || '').trim()
+                        || String(user?.career_id || '').trim()
+                        || String(user?.group || '').trim()
+                        || String(user?.workshop || '').trim()
+                        || Number(user?.semestre || 0) > 0
+                    );
+
+                    if (hasAcademicDetail) {
+                        withAcademicDetail += 1;
+                    } else if (hasRole) {
+                        withoutAcademicDetailWithRole += 1;
+
+                        const hasStudentLikeRole = roleKeys.some(roleKey => studentLikeRoles.has(roleKey));
+                        if (hasStudentLikeRole) {
+                            studentLikeWithoutAcademicDetail += 1;
+                        }
+                    }
+                });
+
+                const preferredRoleOrder = ['admin', 'financial-staff', 'teacher', 'student', 'parent', 'applicant', 'supervisor', 'unverified'];
+                const roleCountEntries = Object.entries(roleCounts)
+                    .map(([key, count]) => ({ key, count }))
+                    .sort((a, b) => {
+                        const indexA = preferredRoleOrder.indexOf(a.key);
+                        const indexB = preferredRoleOrder.indexOf(b.key);
+
+                        const rankA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+                        const rankB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+                        if (rankA !== rankB) return rankA - rankB;
+                        return b.count - a.count;
+                    });
+
+                const preferredStatusOrder = ['activo', 'baja-temporal', 'baja', 'eliminado', 'inactivo'];
+                const statusCountEntries = Object.entries(statusCounts)
+                    .map(([key, count]) => ({ key, count }))
+                    .sort((a, b) => {
+                        const indexA = preferredStatusOrder.indexOf(a.key);
+                        const indexB = preferredStatusOrder.indexOf(b.key);
+
+                        const rankA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+                        const rankB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+                        if (rankA !== rankB) return rankA - rankB;
+                        return b.count - a.count;
+                    });
+
+                return {
+                    total,
+                    active,
+                    withRole,
+                    withoutRole,
+                    withAcademicDetail,
+                    withoutAcademicDetailWithRole,
+                    studentLikeWithoutAcademicDetail,
+                    roleCounts,
+                    statusCounts,
+                    roleCountEntries,
+                    statusCountEntries
+                };
             },
 
             async init() {
@@ -3050,14 +3272,24 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
                             if (userDetails.studentDetail) {
                                 console.log('🎓 Detalles de Estudiante:', userDetails.studentDetail);
                             }
+
+                            const detailSources = [
+                                userDetails,
+                                userDetails?.basicInfo || {},
+                                userDetails?.profile || {},
+                                userDetails?.extraData || userDetails?.extra_data || {}
+                            ];
+
+                            const resolvedEmail = this.getFirstDetailValue(detailSources, ['email', 'correo']);
                             
                             // Mostrar notificación
                             this.userDetailsPreview = {
                                 show: true,
                                 userId: userDetails?.id || userId,
-                                email: userDetails?.email || '',
+                                email: resolvedEmail || userDetails?.email || '',
                                 roles: Array.isArray(userDetails?.roles) ? userDetails.roles : [],
-                                permissions: Array.isArray(userDetails?.permissions) ? userDetails.permissions : []
+                                permissions: Array.isArray(userDetails?.permissions) ? userDetails.permissions : [],
+                                extraDetails: this.buildUserExtraDetails(userDetails)
                             };
 
                             this.showNotify('Detalles de usuario cargados', 'success');
