@@ -320,76 +320,76 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
-            <div class="px-4 py-3 border-b border-blue-100 bg-slate-50 flex items-center justify-between">
+            <div class="px-4 py-2.5 border-b border-blue-100 bg-institucional/5 flex items-center justify-between">
                 <h3 class="text-sm font-bold text-[#2E594D]">Resumen de usuarios</h3>
-                <span class="text-xs text-slate-500">Tabla compacta</span>
+                <span class="text-[11px] text-slate-500 font-medium">Compacto</span>
             </div>
 
             <div class="overflow-x-auto table-responsive">
                 <table class="w-full min-w-[760px]">
-                    <thead class="bg-institucional/5 border-b border-blue-100">
+                    <thead class="bg-white border-b border-blue-100">
                         <tr>
-                            <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-[#2E594D]">Categoría</th>
-                            <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-[#2E594D]">Concepto</th>
-                            <th class="px-4 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider text-[#2E594D]">Cantidad</th>
+                            <th class="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Categoría</th>
+                            <th class="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Detalle</th>
+                            <th class="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Total</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-blue-100 text-sm">
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-slate-700">General</td>
-                            <td class="px-4 py-2 text-slate-700">Con rol asignado</td>
-                            <td class="px-4 py-2 text-right font-bold text-[#2E594D]" x-text="stats.withRole"></td>
+                    <tbody class="text-sm divide-y divide-blue-100">
+                        <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700">General</span></td>
+                            <td class="px-4 py-1.5 font-medium text-slate-700">Con rol asignado</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700" x-text="stats.withRole"></span></td>
                         </tr>
 
                         <template x-for="roleEntry in stats.roleCountEntries" :key="`role-${roleEntry.key}`">
-                            <tr>
-                                <td class="px-4 py-2 font-semibold text-slate-700">Rol</td>
-                                <td class="px-4 py-2 text-slate-700" x-text="getRoleDisplayName(roleEntry.key)"></td>
-                                <td class="px-4 py-2 text-right font-bold text-[#2E594D]" x-text="roleEntry.count"></td>
+                            <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                                <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#2E594D]/10 text-[#2E594D]">Rol</span></td>
+                                <td class="px-4 py-1.5 font-medium text-slate-700" x-text="getRoleDisplayName(roleEntry.key)"></td>
+                                <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#2E594D]/10 text-[#2E594D]" x-text="roleEntry.count"></span></td>
                             </tr>
                         </template>
 
-                        <tr x-show="!stats.roleCountEntries.length">
-                            <td class="px-4 py-2 font-semibold text-slate-700">Rol</td>
-                            <td class="px-4 py-2 text-slate-500">Sin roles asignados</td>
-                            <td class="px-4 py-2 text-right font-bold text-slate-500">0</td>
+                        <tr x-show="!stats.roleCountEntries.length" class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">Rol</span></td>
+                            <td class="px-4 py-1.5 text-slate-500">Sin roles asignados</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500">0</span></td>
                         </tr>
 
                         <template x-for="statusEntry in stats.statusCountEntries" :key="`status-${statusEntry.key}`">
-                            <tr>
-                                <td class="px-4 py-2 font-semibold text-slate-700">Estatus</td>
-                                <td class="px-4 py-2"
+                            <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                                <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-100 text-indigo-700">Estatus</span></td>
+                                <td class="px-4 py-1.5 font-medium"
                                     :class="statusEntry.key === 'activo' ? 'text-emerald-700' : statusEntry.key === 'baja-temporal' ? 'text-amber-700' : statusEntry.key === 'baja' ? 'text-orange-700' : statusEntry.key === 'eliminado' ? 'text-slate-700' : 'text-red-700'"
                                     x-text="statusLabel(statusEntry.key)"></td>
-                                <td class="px-4 py-2 text-right font-bold text-slate-800" x-text="statusEntry.count"></td>
+                                <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700" x-text="statusEntry.count"></span></td>
                             </tr>
                         </template>
 
-                        <tr x-show="!stats.statusCountEntries.length">
-                            <td class="px-4 py-2 font-semibold text-slate-700">Estatus</td>
-                            <td class="px-4 py-2 text-slate-500">Sin estatus disponibles</td>
-                            <td class="px-4 py-2 text-right font-bold text-slate-500">0</td>
+                        <tr x-show="!stats.statusCountEntries.length" class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">Estatus</span></td>
+                            <td class="px-4 py-1.5 text-slate-500">Sin estatus disponibles</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500">0</span></td>
                         </tr>
 
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-slate-700">Académico</td>
-                            <td class="px-4 py-2 text-emerald-700">Con detalle académico</td>
-                            <td class="px-4 py-2 text-right font-bold text-emerald-700" x-text="stats.withAcademicDetail"></td>
+                        <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">Académico</span></td>
+                            <td class="px-4 py-1.5 font-medium text-emerald-700">Con detalle académico</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700" x-text="stats.withAcademicDetail"></span></td>
                         </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-slate-700">Académico</td>
-                            <td class="px-4 py-2 text-amber-700">Sin detalle académico (con rol)</td>
-                            <td class="px-4 py-2 text-right font-bold text-amber-700" x-text="stats.withoutAcademicDetailWithRole"></td>
+                        <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">Académico</span></td>
+                            <td class="px-4 py-1.5 font-medium text-amber-700">Sin detalle académico (con rol)</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700" x-text="stats.withoutAcademicDetailWithRole"></span></td>
                         </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-slate-700">Académico</td>
-                            <td class="px-4 py-2 text-orange-700">Est./Solic. sin detalle académico</td>
-                            <td class="px-4 py-2 text-right font-bold text-orange-700" x-text="stats.studentLikeWithoutAcademicDetail"></td>
+                        <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-700">Académico</span></td>
+                            <td class="px-4 py-1.5 font-medium text-orange-700">Est./Solic. sin detalle académico</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700" x-text="stats.studentLikeWithoutAcademicDetail"></span></td>
                         </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-slate-700">General</td>
-                            <td class="px-4 py-2 text-slate-700">Sin rol asignado</td>
-                            <td class="px-4 py-2 text-right font-bold text-slate-800" x-text="stats.withoutRole"></td>
+                        <tr class="hover:bg-[#2E594D]/5 transition-colors">
+                            <td class="px-4 py-1.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">General</span></td>
+                            <td class="px-4 py-1.5 font-medium text-slate-700">Sin rol asignado</td>
+                            <td class="px-4 py-1.5 text-right"><span class="inline-flex min-w-7 justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700" x-text="stats.withoutRole"></span></td>
                         </tr>
                     </tbody>
                 </table>
