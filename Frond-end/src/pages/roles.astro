@@ -334,27 +334,27 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
             </div>
 
             <div class="p-3 sm:p-3.5 space-y-2">
-                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-1.5">
-                    <div class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5">
-                        <p class="text-[10px] uppercase tracking-wide font-semibold text-blue-700">Con rol</p>
-                        <p class="text-lg font-bold text-blue-700" x-text="stats.withRole"></p>
-                    </div>
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <p class="text-[10px] uppercase tracking-wide font-semibold text-slate-600">Sin rol</p>
-                        <p class="text-lg font-bold text-slate-700" x-text="stats.withoutRole"></p>
-                    </div>
-                    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5">
-                        <p class="text-[10px] uppercase tracking-wide font-semibold text-emerald-700">Con académico</p>
-                        <p class="text-lg font-bold text-emerald-700" x-text="stats.withAcademicDetail"></p>
-                    </div>
-                    <div class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5">
-                        <p class="text-[10px] uppercase tracking-wide font-semibold text-amber-700">Sin académico</p>
-                        <p class="text-lg font-bold text-amber-700" x-text="stats.withoutAcademicDetailWithRole"></p>
-                    </div>
-                    <div class="rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5">
-                        <p class="text-[10px] uppercase tracking-wide font-semibold text-orange-700">Est./Solic. sin</p>
-                        <p class="text-lg font-bold text-orange-700" x-text="stats.studentLikeWithoutAcademicDetail"></p>
-                    </div>
+                <div class="overflow-x-auto rounded-lg border border-blue-100">
+                    <table class="w-full min-w-[660px] border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-[10px] uppercase tracking-wide">
+                                <th class="px-2 py-1.5 text-left font-semibold text-blue-700 border-b border-blue-100">Con rol</th>
+                                <th class="px-2 py-1.5 text-left font-semibold text-slate-600 border-b border-blue-100">Sin rol</th>
+                                <th class="px-2 py-1.5 text-left font-semibold text-emerald-700 border-b border-blue-100">Con académico</th>
+                                <th class="px-2 py-1.5 text-left font-semibold text-amber-700 border-b border-blue-100">Sin académico</th>
+                                <th class="px-2 py-1.5 text-left font-semibold text-orange-700 border-b border-blue-100">Est./Solic. sin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="text-lg font-bold leading-none">
+                                <td class="px-2 py-1.5 text-blue-700 bg-blue-50 border-r border-blue-100" x-text="stats.withRole"></td>
+                                <td class="px-2 py-1.5 text-slate-700 bg-slate-50 border-r border-blue-100" x-text="stats.withoutRole"></td>
+                                <td class="px-2 py-1.5 text-emerald-700 bg-emerald-50 border-r border-blue-100" x-text="stats.withAcademicDetail"></td>
+                                <td class="px-2 py-1.5 text-amber-700 bg-amber-50 border-r border-blue-100" x-text="stats.withoutAcademicDetailWithRole"></td>
+                                <td class="px-2 py-1.5 text-orange-700 bg-orange-50" x-text="stats.studentLikeWithoutAcademicDetail"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div x-show="summaryDetailsExpanded" x-transition>
