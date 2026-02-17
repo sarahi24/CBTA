@@ -474,7 +474,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       <template x-if="showOverdueAlert && overdueAdeudos.length > 0 && activeTab === 'overdue'">
         <div class="overdue-alert-banner overdue-alert-banner--compact" x-transition>
           <div class="alert-content">
-            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Estos pagos no se pueden realizar en línea; comunícate con la escuela.'"></p>
+            <p x-text="'Tienes ' + overdueAdeudos.length + ' pago(s) vencido(s). Estos pagos no se pueden realizar; comunícate con la escuela.'"></p>
           </div>
           <button class="alert-close" @click="showOverdueAlert = false" aria-label="Cerrar alerta">&times;</button>
         </div>

@@ -82,11 +82,17 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                             <div class="border-l-4 border-teal-500 rounded-lg p-4 bg-gradient-to-r from-teal-50 to-cyan-50">
                                 <label class="text-sm font-semibold text-teal-700">Nivel de Verificación</label>
                                 <div class="mt-2 flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg x-show="emailVerificationStatus === 'verified'" class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 013.066-3.066zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                     </svg>
-                                    <span class="text-green-700 font-medium">Verificado</span>
+                                    <svg x-show="emailVerificationStatus !== 'verified'" class="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10A8 8 0 11-16 0 8 8 0 0116 0zm-8-4a1 1 0 00-.894.553l-3 6A1 1 0 007 14h6a1 1 0 00.894-1.447l-3-6A1 1 0 0010 6zm0 2.618L11.382 12H8.618L10 8.618z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span class="font-medium"
+                                          :class="emailVerificationStatus === 'verified' ? 'text-green-700' : 'text-amber-700'"
+                                          x-text="verificationStatusLabel"></span>
                                 </div>
+                                <p x-show="emailVerificationStatus === 'verified' && emailVerifiedAtText" class="text-xs text-teal-700 mt-2" x-text="'Verificado el: ' + emailVerifiedAtText"></p>
                             </div>
                         </div>
                     </div>
@@ -510,6 +516,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                 passwordErrorMessage: '',
                 isStudent: true,
                 isApplicant: false,
+                emailVerificationStatus: 'unknown',
+                emailVerifiedAtText: '',
 
                 async init() {
                     this.detectRole();
@@ -601,6 +609,112 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     return fallback;
                 },
 
+                normalizeVerificationStatus(value) {
+                    if (value === true || value === 1 || value === '1') return 'verified';
+                    if (value === false || value === 0 || value === '0') return 'unverified';
+                    if (value === null || value === undefined || value === '') return 'unverified';
+
+                    if (typeof value === 'string') {
+                        const normalized = value.toLowerCase().trim();
+                        if (!normalized || normalized === 'null') return 'unverified';
+                        if (normalized === 'verified' || normalized === 'true' || normalized === 'yes') return 'verified';
+                        if (normalized === 'unverified' || normalized === 'false' || normalized === 'no' || normalized === 'pending') return 'unverified';
+                        if (/\d{4}-\d{2}-\d{2}/.test(normalized)) return 'verified';
+                    }
+
+                    return 'unknown';
+                },
+
+                updateEmailVerificationStatus(...sources) {
+                    const candidates = [];
+
+                    sources.forEach((source) => {
+                        if (!source || typeof source !== 'object') return;
+
+                        candidates.push(
+                            source.email_verified_at,
+                            source.emailVerifiedAt,
+                            source.verified_at,
+                            source.verifiedAt,
+                            source.email_verified,
+                            source.emailVerified,
+                            source.is_email_verified,
+                            source.isEmailVerified,
+                            source.is_verified,
+                            source.isVerified
+                        );
+
+                        if (source.user && typeof source.user === 'object') {
+                            candidates.push(
+                                source.user.email_verified_at,
+                                source.user.emailVerifiedAt,
+                                source.user.email_verified,
+                                source.user.is_email_verified,
+                                source.user.is_verified
+                            );
+                        }
+
+                        if (source.data && typeof source.data === 'object') {
+                            candidates.push(
+                                source.data.email_verified_at,
+                                source.data.emailVerifiedAt,
+                                source.data.email_verified,
+                                source.data.is_email_verified,
+                                source.data.is_verified
+                            );
+
+                            if (source.data.user && typeof source.data.user === 'object') {
+                                candidates.push(
+                                    source.data.user.email_verified_at,
+                                    source.data.user.emailVerifiedAt,
+                                    source.data.user.email_verified,
+                                    source.data.user.is_email_verified,
+                                    source.data.user.is_verified
+                                );
+                            }
+                        }
+                    });
+
+                    let resolvedStatus = 'unknown';
+                    let verifiedAtRaw = '';
+
+                    for (const candidate of candidates) {
+                        if (candidate === undefined) continue;
+                        const status = this.normalizeVerificationStatus(candidate);
+                        if (status === 'verified') {
+                            resolvedStatus = 'verified';
+                            verifiedAtRaw = String(candidate || '').trim();
+                            break;
+                        }
+                        if (status === 'unverified' && resolvedStatus !== 'verified') {
+                            resolvedStatus = 'unverified';
+                        }
+                    }
+
+                    this.emailVerificationStatus = resolvedStatus;
+
+                    if (resolvedStatus === 'verified' && verifiedAtRaw && /\d{4}-\d{2}-\d{2}/.test(verifiedAtRaw)) {
+                        const parsedDate = new Date(verifiedAtRaw);
+                        this.emailVerifiedAtText = Number.isNaN(parsedDate.getTime())
+                            ? verifiedAtRaw
+                            : parsedDate.toLocaleString('es-MX', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                    } else {
+                        this.emailVerifiedAtText = '';
+                    }
+                },
+
+                get verificationStatusLabel() {
+                    if (this.emailVerificationStatus === 'verified') return 'Verificado';
+                    if (this.emailVerificationStatus === 'unverified') return 'Pendiente de verificación';
+                    return 'Sin información de verificación';
+                },
+
                 normalizeAddress(addressValue) {
                     if (Array.isArray(addressValue)) {
                         return addressValue.filter(Boolean).join(', ');
@@ -649,7 +763,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                                 console.log('Objeto user recibido:', student);
                                 
                                 localStorage.setItem('user_data', JSON.stringify(student));
-                                this.populateStudentData(student);
+                                this.populateStudentData(student, data);
                             } else {
                                 console.warn('Respuesta no válida, cargando desde localStorage');
                                 this.loadStudentDataFromStorage();
@@ -766,7 +880,7 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     console.log('  careerName:', this.careerName);
                 },
 
-                populateStudentData(student) {
+                populateStudentData(student, fullResponse = null) {
                     console.log('=== populateStudentData ejecutándose ===');
                     console.log('Objeto student completo:', student);
 
@@ -818,6 +932,8 @@ import LayoutEstu from '../../layouts/LayoutEstu.astro';
                     this.formData.blood_type = this.getFirstValue(student, ['blood_type', 'bloodType'], '');
                     
                     this.formData.address = this.normalizeAddress(this.getFirstValue(student, ['address', 'direccion'], ''));
+
+                    this.updateEmailVerificationStatus(student, fullResponse);
 
                     this.originalFormData = { ...this.formData };
                 },
