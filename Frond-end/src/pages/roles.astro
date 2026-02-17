@@ -1650,6 +1650,46 @@ const API_BASE_URL = 'https://nginx-production-728f.up.railway.app/api';
 
                 if (resolvedLabel) return resolvedLabel;
 
+                const tokenTranslations = {
+                    'attach': 'Asociar',
+                    'import': 'Importar',
+                    'sync': 'Sincronizar',
+                    'view': 'Ver',
+                    'create': 'Crear',
+                    'update': 'Actualizar',
+                    'delete': 'Eliminar',
+                    'activate': 'Activar',
+                    'disable': 'Desactivar',
+                    'manage': 'Gestionar',
+                    'setup': 'configuración',
+                    'student': 'estudiante',
+                    'students': 'estudiantes',
+                    'user': 'usuario',
+                    'users': 'usuarios',
+                    'permission': 'permiso',
+                    'permissions': 'permisos',
+                    'role': 'rol',
+                    'roles': 'roles',
+                    'card': 'tarjeta',
+                    'cards': 'tarjetas',
+                    'payment': 'pago',
+                    'payments': 'pagos'
+                };
+
+                const translatedByTokens = normalizedSpaced
+                    .split(' ')
+                    .filter(Boolean)
+                    .map((token, index) => {
+                        const translated = tokenTranslations[token] || token;
+                        return index === 0
+                            ? translated.charAt(0).toUpperCase() + translated.slice(1)
+                            : translated;
+                    })
+                    .join(' ')
+                    .trim();
+
+                if (translatedByTokens) return translatedByTokens;
+
                 return String(rawValue || 'Permiso no identificado')
                     .replace(/[._-]+/g, ' ')
                     .replace(/\s+/g, ' ')
