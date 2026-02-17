@@ -2720,7 +2720,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         this.roleFilterAutoBatchDone = false;
 
                         if (!this.usersSummary) {
-                            await this.loadUsersSummary(token, isRetry);
+                            console.info('ℹ️ Resumen remoto no disponible; usando resumen calculado localmente con this.users');
                         }
 
                         console.log(`✅ ${this.users.length} usuarios cargados correctamente`);
