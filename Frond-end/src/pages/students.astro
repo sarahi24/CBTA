@@ -235,19 +235,16 @@ function getStudentUniqueKey(student) {
         return `control:${control}`;
     }
 
-    const fullName = String(
-        pickFirst(student, ['fullName', 'full_name', 'student_name', 'name', 'nombre_completo']) ||
-        `${student?.name || ''} ${student?.lastName || student?.last_name || ''} ${student?.secondLastName || ''}`
-    ).replace(/\s+/g, ' ').trim().toLowerCase();
-
-    return `name:${fullName || Math.random().toString(36).slice(2)}`;
+    return null;
 }
 
 function mergeStudentSummaries(students) {
     const grouped = new Map();
+    let fallbackIndex = 0;
 
     for (const student of (Array.isArray(students) ? students : [])) {
-        const key = getStudentUniqueKey(student);
+        const detectedKey = getStudentUniqueKey(student);
+        const key = detectedKey || `row:${fallbackIndex++}`;
         const current = grouped.get(key);
 
         if (!current) {
