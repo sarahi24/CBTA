@@ -271,7 +271,24 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
+        <div class="mb-4 flex items-center gap-2">
+            <button
+                type="button"
+                @click="adminPanelView = 'info'"
+                class="px-4 py-2 text-sm font-semibold rounded-lg border transition-colors"
+                :class="adminPanelView === 'info' ? 'bg-[#2E594D] text-white border-[#2E594D]' : 'bg-white text-[#2E594D] border-[#2E594D]/30 hover:bg-[#2E594D]/5'">
+                Información
+            </button>
+            <button
+                type="button"
+                @click="adminPanelView = 'table'"
+                class="px-4 py-2 text-sm font-semibold rounded-lg border transition-colors"
+                :class="adminPanelView === 'table' ? 'bg-[#2E594D] text-white border-[#2E594D]' : 'bg-white text-[#2E594D] border-[#2E594D]/30 hover:bg-[#2E594D]/5'">
+                Tabla
+            </button>
+        </div>
+
+        <div x-show="adminPanelView === 'info'" x-cloak class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
             <table class="stats-table">
                 <tbody>
                     <tr class="divide-x divide-blue-200">
@@ -319,7 +336,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </table>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
+        <div x-show="adminPanelView === 'info'" x-cloak class="bg-white rounded-xl shadow-sm border border-blue-200 mb-6 overflow-hidden">
             <div class="px-4 py-2.5 border-b border-blue-100 bg-institucional/5 flex items-center justify-between">
                 <h3 class="text-sm font-bold text-[#2E594D]">Resumen de usuarios</h3>
                 <div class="flex items-center gap-2">
@@ -414,7 +431,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden">
+        <div x-show="adminPanelView === 'table'" x-cloak class="bg-gradient-to-br from-[#2E594D]/5 via-white to-[#2E594D]/10 rounded-2xl shadow-lg border border-[#2E594D]/20 overflow-hidden">
             <div class="overflow-x-auto table-responsive">
                 <table class="w-full min-w-[980px]">
                     <thead class="bg-institucional border-b-4 border-[#234238]">
@@ -1478,6 +1495,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 roleEnrichmentInProgress: false,
                 roleEnrichmentBatchSize: 5,
                 roleFilterAutoBatchDone: false,
+                adminPanelView: 'info',
                 usersSummary: null,
                 summaryDetailsExpanded: false,
                 newUser: { 
