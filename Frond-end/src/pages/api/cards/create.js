@@ -5,13 +5,10 @@ export const prerender = false;
 function parseRetryAfterMs(retryAfterHeader) {
   const parsed = Number(retryAfterHeader);
   if (Number.isFinite(parsed) && parsed > 0) {
+    if (parsed > 1000) return Math.max(1000, parsed);
     return Math.max(1000, parsed * 1000);
   }
   return 2000;
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function toJsonResponse(payload, status = 200) {
@@ -37,27 +34,17 @@ export async function POST({ request }) {
   const attempts = portalRole === 'applicant'
     ? [
         { role: 'student', permission: 'create.setup' },
-        { role: 'student', permission: '' },
-        { role: 'applicant', permission: 'create.setup' },
-        { role: 'applicant', permission: '' }
+        { role: 'student', permission: '' }
       ]
     : [
         { role: portalRole, permission: 'create.setup' },
-        { role: portalRole, permission: '' },
-        { role: 'student', permission: 'create.setup' },
-        { role: 'student', permission: '' }
+        { role: portalRole, permission: '' }
       ];
 
-  const uniqueAttempts = attempts.filter((attempt, index, arr) => {
-    return arr.findIndex((entry) => entry.role === attempt.role && entry.permission === attempt.permission) === index;
-  });
-
-  let sawRateLimit = false;
-  let retryAfterMs = 2000;
   let lastStatus = 500;
   let lastPayload = { success: false, message: 'No se pudo crear la sesión de vinculación de tarjeta', errors: {} };
 
-  for (const attempt of uniqueAttempts) {
+  for (const attempt of attempts) {
     const headers = {
       'Authorization': auth,
       'Accept': 'application/json',
@@ -97,17 +84,17 @@ export async function POST({ request }) {
       lastPayload = parsedBody || { success: false, message: `Error ${upstreamRes.status}: ${upstreamRes.statusText}`, errors: {} };
 
       if (upstreamRes.status === 429) {
-        sawRateLimit = true;
-        retryAfterMs = parseRetryAfterMs(upstreamRes.headers.get('Retry-After'));
-        await wait(retryAfterMs);
-        continue;
+        const retryAfterMs = parseRetryAfterMs(upstreamRes.headers.get('Retry-After'));
+        return toJsonResponse({
+          success: false,
+          rate_limited: true,
+          retry_after_ms: retryAfterMs,
+          message: 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos',
+          errors: {}
+        }, 200);
       }
 
       if (upstreamRes.status === 403 || upstreamRes.status === 404) {
-        continue;
-      }
-
-      if (upstreamRes.status >= 500 && upstreamRes.status <= 599) {
         continue;
       }
 
@@ -122,17 +109,8 @@ export async function POST({ request }) {
           : String(error?.message || error || 'Error al crear la sesión de tarjeta'),
         errors: {}
       };
+      break;
     }
-  }
-
-  if (sawRateLimit) {
-    return toJsonResponse({
-      success: false,
-      rate_limited: true,
-      retry_after_ms: retryAfterMs,
-      message: 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos',
-      errors: {}
-    }, 200);
   }
 
   const safeMessage = lastPayload?.message || (lastStatus === 403 ? 'No tienes permisos para vincular tarjeta' : 'No se pudo crear la sesión de tarjeta');
