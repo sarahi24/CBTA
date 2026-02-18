@@ -661,58 +661,70 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 { role: 'student', permission: '' }
               ].filter((attempt, index, arr) => arr.findIndex(item => item.role === attempt.role && item.permission === attempt.permission) === index);
 
+              const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
               for (const attempt of attempts) {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 35000);
-                try {
-                  const headers = {
-                    'Authorization': 'Bearer ' + this.token,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-User-Role': attempt.role
-                  };
+                for (let trial = 1; trial <= 2; trial++) {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 35000);
+                  try {
+                    const headers = {
+                      'Authorization': 'Bearer ' + this.token,
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                      'X-User-Role': attempt.role
+                    };
 
-                  if (attempt.permission) {
-                    headers['X-User-Permission'] = attempt.permission;
+                    if (attempt.permission) {
+                      headers['X-User-Permission'] = attempt.permission;
+                    }
+
+                    const response = await fetch(`${apiBase}/v1/cards`, {
+                      method: 'POST',
+                      signal: controller.signal,
+                      headers
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (response.status === 401) {
+                      this.handleAuthFailure();
+                      throw new Error('Sesión expirada');
+                    }
+
+                    if (response.ok && payload?.success !== false) {
+                      return payload;
+                    }
+
+                    if (response.status === 429) {
+                      const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+                      const retrySeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+
+                      if (trial < 2 && retryAfterMs <= 12000) {
+                        console.warn(`⚠️ [Tarjetas] 429 en creación de setup. Reintentando en ${retrySeconds}s...`);
+                        await wait(retryAfterMs);
+                        continue;
+                      }
+
+                      const cooldownMs = Math.max(30000, retryAfterMs * 3);
+                      localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
+                      throw new Error(payload?.message || `Has excedido el límite de solicitudes, intenta nuevamente en ${retrySeconds}s`);
+                    }
+
+                    if (response.status === 403 || response.status === 404) {
+                      break;
+                    }
+
+                    throw new Error(payload?.message || `Error ${response.status}: ${response.statusText}`);
+                  } catch (directError) {
+                    const isAbort = String(directError?.name || '').toLowerCase() === 'aborterror';
+                    if (isAbort) {
+                      break;
+                    }
+                    throw directError;
+                  } finally {
+                    clearTimeout(timeoutId);
                   }
-
-                  const response = await fetch(`${apiBase}/v1/cards`, {
-                    method: 'POST',
-                    signal: controller.signal,
-                    headers
-                  });
-
-                  const payload = await response.json().catch(() => ({}));
-
-                  if (response.status === 401) {
-                    this.handleAuthFailure();
-                    throw new Error('Sesión expirada');
-                  }
-
-                  if (response.ok && payload?.success !== false) {
-                    return payload;
-                  }
-
-                  if (response.status === 429) {
-                    const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
-                    const cooldownMs = Math.max(30000, retryAfterMs * 3);
-                    localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
-                    throw new Error(payload?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
-                  }
-
-                  if (response.status === 403 || response.status === 404) {
-                    continue;
-                  }
-
-                  throw new Error(payload?.message || `Error ${response.status}: ${response.statusText}`);
-                } catch (directError) {
-                  const isAbort = String(directError?.name || '').toLowerCase() === 'aborterror';
-                  if (isAbort) {
-                    continue;
-                  }
-                  throw directError;
-                } finally {
-                  clearTimeout(timeoutId);
                 }
               }
 
