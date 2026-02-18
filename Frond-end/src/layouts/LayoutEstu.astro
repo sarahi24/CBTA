@@ -343,7 +343,8 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 window.__notifBadgeState = {
                     inFlight: null,
                     lastFetchAt: 0,
-                    minIntervalMs: 15000
+                    minIntervalMs: 15000,
+                    rateLimitCooldownMs: 180000
                 };
             }
 
@@ -372,6 +373,16 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 }
 
                 const now = Date.now();
+                const persistedLastFetchAt = Number(localStorage.getItem('notif_badge_last_fetch_at') || '0');
+                if (Number.isFinite(persistedLastFetchAt) && persistedLastFetchAt > state.lastFetchAt) {
+                    state.lastFetchAt = persistedLastFetchAt;
+                }
+
+                const nextRetryAt = Number(localStorage.getItem('notif_badge_next_retry_at') || '0');
+                if (Number.isFinite(nextRetryAt) && now < nextRetryAt) {
+                    return;
+                }
+
                 if (state.inFlight) {
                     await state.inFlight;
                     return;
@@ -393,11 +404,13 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                         });
 
                         if (response.status === 429) {
+                            localStorage.setItem('notif_badge_next_retry_at', String(Date.now() + state.rateLimitCooldownMs));
                             return;
                         }
 
                         if (!response.ok) {
                             console.warn('Error fetching notifications:', response.status);
+                            localStorage.setItem('notif_badge_next_retry_at', String(Date.now() + 45000));
                             return;
                         }
 
@@ -413,8 +426,10 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                         }
 
                         localStorage.setItem('unread_notifications_count', unreadCount.toString());
+                        localStorage.removeItem('notif_badge_next_retry_at');
                     } finally {
                         state.lastFetchAt = Date.now();
+                        localStorage.setItem('notif_badge_last_fetch_at', String(state.lastFetchAt));
                         state.inFlight = null;
                     }
                 })();

@@ -221,7 +221,8 @@ const authenticatedUserRequestState = {
   inFlightKey: '',
   lastResult: null,
   lastKey: '',
-  lastFetchedAt: 0
+  lastFetchedAt: 0,
+  cooldownUntil: 0
 };
 
 window.StudentAPI = {
@@ -968,8 +969,50 @@ window.StudentAPI = {
 
   async getAuthenticatedUser(token) {
     try {
+      const userCacheStorageKey = 'studentapi_authenticated_user_cache_v1';
+      const userCooldownStorageKey = 'studentapi_authenticated_user_cooldown_until_v1';
       const cacheKey = String(token || '').slice(-24);
       const cacheTtlMs = 15000;
+
+      let persistedCache = null;
+      try {
+        const rawCached = localStorage.getItem(userCacheStorageKey);
+        if (rawCached) {
+          const parsed = JSON.parse(rawCached);
+          const isValidShape = parsed && typeof parsed === 'object' && parsed.cacheKey && parsed.data;
+          if (isValidShape && parsed.cacheKey === cacheKey) {
+            persistedCache = parsed;
+          }
+        }
+      } catch (_) {}
+
+      if (persistedCache?.data) {
+        const persistedAgeMs = Date.now() - Number(persistedCache.fetchedAt || 0);
+        if (persistedAgeMs >= 0 && persistedAgeMs < 30000) {
+          authenticatedUserRequestState.lastResult = persistedCache.data;
+          authenticatedUserRequestState.lastKey = cacheKey;
+          authenticatedUserRequestState.lastFetchedAt = Number(persistedCache.fetchedAt || Date.now());
+          return persistedCache.data;
+        }
+      }
+
+      const now = Date.now();
+      if (!authenticatedUserRequestState.cooldownUntil || authenticatedUserRequestState.cooldownUntil < now) {
+        const persistedCooldown = Number(localStorage.getItem(userCooldownStorageKey) || '0');
+        if (Number.isFinite(persistedCooldown) && persistedCooldown > authenticatedUserRequestState.cooldownUntil) {
+          authenticatedUserRequestState.cooldownUntil = persistedCooldown;
+        }
+      }
+
+      if (authenticatedUserRequestState.cooldownUntil > now) {
+        if (authenticatedUserRequestState.lastResult && authenticatedUserRequestState.lastKey === cacheKey) {
+          return authenticatedUserRequestState.lastResult;
+        }
+        if (persistedCache?.data) {
+          return persistedCache.data;
+        }
+        throw new Error('Sincronización de usuario en pausa temporal por límite de solicitudes');
+      }
 
       if (authenticatedUserRequestState.lastResult && authenticatedUserRequestState.lastKey === cacheKey) {
         const elapsed = Date.now() - authenticatedUserRequestState.lastFetchedAt;
@@ -1008,9 +1051,24 @@ window.StudentAPI = {
               continue;
             }
 
+            const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+            const cooldownMs = Math.max(120000, Math.min(retryAfterMs * 3, 300000));
+            authenticatedUserRequestState.cooldownUntil = Date.now() + cooldownMs;
+            try {
+              localStorage.setItem(userCooldownStorageKey, String(authenticatedUserRequestState.cooldownUntil));
+            } catch (_) {}
+
             if (authenticatedUserRequestState.lastResult) {
               console.warn('⚠️ getAuthenticatedUser 429. Usando último usuario en caché para evitar bloqueo.');
               return authenticatedUserRequestState.lastResult;
+            }
+
+            if (persistedCache?.data) {
+              const persistedAgeMs = Date.now() - Number(persistedCache.fetchedAt || 0);
+              if (persistedAgeMs >= 0 && persistedAgeMs < 1800000) {
+                console.warn('⚠️ getAuthenticatedUser 429. Usando cache persistente para evitar bloqueo.');
+                return persistedCache.data;
+              }
             }
 
             throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
@@ -1019,6 +1077,11 @@ window.StudentAPI = {
           if (!response.ok) {
             throw new Error(await parseErrorMessage(response, 'Error'));
           }
+
+          authenticatedUserRequestState.cooldownUntil = 0;
+          try {
+            localStorage.removeItem(userCooldownStorageKey);
+          } catch (_) {}
 
           return await response.json();
         }
@@ -1033,6 +1096,15 @@ window.StudentAPI = {
       authenticatedUserRequestState.lastResult = result;
       authenticatedUserRequestState.lastKey = cacheKey;
       authenticatedUserRequestState.lastFetchedAt = Date.now();
+
+      try {
+        localStorage.setItem(userCacheStorageKey, JSON.stringify({
+          cacheKey,
+          fetchedAt: authenticatedUserRequestState.lastFetchedAt,
+          data: result
+        }));
+      } catch (_) {}
+
       return result;
     } catch (err) {
       const errorMessage = String(err?.message || err || '').toLowerCase();
