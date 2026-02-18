@@ -6,6 +6,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 ---
 
 <StudentLayout title={title}>
+  <script src="/studentAPI.js?v=20260218r32" is:inline></script>
   <script is:inline>
     // Crear la definiciÃ³n del componente
     const tarjetasComponent = () => ({
@@ -92,18 +93,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             if (!this.token) return;
 
             try {
-              const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/users/user', {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${this.token}`,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                }
-              });
-
-              if (!response.ok) return;
-
-              const payload = await response.json();
+              if (!window.StudentAPI?.getAuthenticatedUser) return;
+              const payload = await window.StudentAPI.getAuthenticatedUser(this.token);
               const user = payload?.data?.user || payload?.user || payload?.data || {};
 
               const rawRoles = [];
@@ -223,9 +214,13 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               if (window.StudentAPI?.getPaymentMethods) {
                 data = await window.StudentAPI.getPaymentMethods(this.userId ? Number(this.userId) : null, this.token, forceRefresh, this.portalRole);
               } else {
+                const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+                if (!apiBase) {
+                  throw new Error('API base no configurada para cargar tarjetas');
+                }
                 const endpointCandidates = [
-                  'https://nginx-production-728f.up.railway.app/api/v1/cards',
-                  `https://nginx-production-728f.up.railway.app/api/v1/cards/${this.userId}`
+                  `${apiBase}/v1/cards`,
+                  `${apiBase}/v1/cards/${this.userId}`
                 ];
 
                 for (const rawEndpoint of endpointCandidates) {
@@ -283,7 +278,73 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 }
 
                 if (!data) {
-                  data = { success: true, data: { cards: [] } };
+                    const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+                    if (!apiBase) {
+                      data = { success: true, data: { cards: [] } };
+                    } else {
+                      const endpointCandidates = [
+                        `${apiBase}/v1/cards`,
+                        ...(this.userId ? [`${apiBase}/v1/cards/${this.userId}`] : [])
+                      ];
+
+                      for (const rawEndpoint of endpointCandidates) {
+                        const url = new URL(rawEndpoint);
+                        if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+
+                        const withPermission = await fetch(url.toString(), {
+                          method: 'GET',
+                          headers: {
+                            'Authorization': 'Bearer ' + this.token,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-User-Role': this.portalRole,
+                            'X-User-Permission': 'view.cards'
+                          }
+                        });
+
+                        if (withPermission.ok) {
+                          data = await withPermission.json();
+                          break;
+                        }
+
+                        if (withPermission.status === 429) {
+                          throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+                        }
+
+                        if (withPermission.status !== 403 && withPermission.status !== 404) {
+                          const errorData = await withPermission.json().catch(() => ({}));
+                          throw new Error(errorData.message || `Error ${withPermission.status}: ${withPermission.statusText}`);
+                        }
+
+                        const withoutPermission = await fetch(url.toString(), {
+                          method: 'GET',
+                          headers: {
+                            'Authorization': 'Bearer ' + this.token,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-User-Role': this.portalRole
+                          }
+                        });
+
+                        if (withoutPermission.ok) {
+                          data = await withoutPermission.json();
+                          break;
+                        }
+
+                        if (withoutPermission.status === 429) {
+                          throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
+                        }
+
+                        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
+                          const errorData = await withoutPermission.json().catch(() => ({}));
+                          throw new Error(errorData.message || `Error ${withoutPermission.status}: ${withoutPermission.statusText}`);
+                        }
+                      }
+
+                      if (!data) {
+                        data = { success: true, data: { cards: [] } };
+                      }
+                    }
                 }
               }
 
@@ -357,7 +418,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 headers['X-User-Permission'] = attempt.permission;
               }
 
-              const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards', {
+              const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+              if (!apiBase) {
+                throw new Error('API base no configurada para agregar tarjeta');
+              }
+              const response = await fetch(`${apiBase}/v1/cards`, {
                 method: 'POST',
                 headers
               });
@@ -417,7 +482,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           this.error = '';
 
           try {
-            const response = await fetch('https://nginx-production-728f.up.railway.app/api/v1/cards/' + paymentMethodId, {
+            const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+            if (!apiBase) {
+              throw new Error('API base no configurada para eliminar tarjeta');
+            }
+            const response = await fetch(`${apiBase}/v1/cards/` + paymentMethodId, {
               method: 'DELETE',
               headers: {
                 'Authorization': 'Bearer ' + this.token,
