@@ -4077,8 +4077,29 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 this.currentStudentUser = this.users.find(u => u.id === userId);
                 console.log('👤 Usuario seleccionado:', this.currentStudentUser);
 
+                const hasAcademicIndicators = Boolean(
+                    String(this.currentStudentUser?.n_control || '').trim()
+                    || String(this.currentStudentUser?.career_id || '').trim()
+                    || String(this.currentStudentUser?.group || '').trim()
+                    || String(this.currentStudentUser?.workshop || '').trim()
+                    || Number(this.currentStudentUser?.semestre || 0) > 0
+                );
+
                 // Asegurar que las carreras estén cargadas antes de mostrar el modal
                 await this.loadCareers();
+
+                if (!hasAcademicIndicators) {
+                    this.studentDetails = {
+                        user_id: userId,
+                        career_id: '',
+                        n_control: '',
+                        semestre: 1,
+                        group: '',
+                        workshop: ''
+                    };
+                    this.showStudentModal = true;
+                    return;
+                }
                 
                 try {
                     // SIEMPRE consultar el backend primero para obtener datos frescos
