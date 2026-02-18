@@ -33,6 +33,17 @@ const title = 'Panel de Estudiante';
           return role;
         },
 
+        pickFirstValue(source, keys, fallback = null) {
+          if (!source || !Array.isArray(keys)) return fallback;
+          for (const key of keys) {
+            const value = source?.[key];
+            if (value !== undefined && value !== null && value !== '') {
+              return value;
+            }
+          }
+          return fallback;
+        },
+
         detectPortalRoleFromStorage() {
           const roleValues = [];
           const rawUserCandidates = [
@@ -191,10 +202,36 @@ const title = 'Panel de Estudiante';
                 ? historyRes.data.payment_history.items
                 : [];
               this.history = items.map((payment) => {
-                const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? '0.00';
+                const montoValue = this.pickFirstValue(payment, [
+                  'amount_received',
+                  'received_amount',
+                  'paid_amount',
+                  'amount_paid',
+                  'amount',
+                  'total_amount',
+                  'total',
+                  'monto'
+                ], '0.00');
+
+                const conceptValue = this.pickFirstValue(payment, [
+                  'concept_name',
+                  'concept',
+                  'concepto',
+                  'description',
+                  'payment_concept_name',
+                  'paymentConceptName',
+                  'name',
+                  'title',
+                  'label'
+                ], null)
+                || payment?.payment_concept?.name
+                || payment?.concept_data?.name
+                || payment?.concept_detail?.name
+                || 'Pago';
+
                 return {
                   id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
-                  concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
+                  concepto: String(conceptValue),
                   monto: this.formatDashboardHistoryAmount(montoValue),
                   fecha: this.formatDashboardHistoryDate(payment),
                   metodo: payment?.method || payment?.payment_method || 'Metodo desconocido',
