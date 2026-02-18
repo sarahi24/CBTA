@@ -480,7 +480,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 semesters: Array.from({length: 12}, (_, i) => i + 1),
                 studentErrors: {},
                 autoRefreshEnabled: true,
-                autoRefreshIntervalMs: 45000,
+                autoRefreshIntervalMs: 180000,
                 autoRefreshTimerId: null,
                 _autoRefreshFocusHandler: null,
                 _autoRefreshVisibilityHandler: null,
