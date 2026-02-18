@@ -289,7 +289,16 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               }
 
               console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
-              await this.cargarTarjetas();
+                const shouldSkipInitialCardsLoad = this.portalRole === 'applicant' && this.hasPortalPermission('create.setup');
+
+                if (shouldSkipInitialCardsLoad) {
+                  this.tarjetas = [];
+                  this.hasCardsAccess = true;
+                  this.lastCardsFetchAt = 0;
+                  console.log('ℹ️ [Tarjetas] Se omite GET inicial de tarjetas para applicant con create.setup para evitar rate-limit previo al alta.');
+                } else {
+                  await this.cargarTarjetas();
+                }
 
               if (this.portalRole === 'applicant' && !this.canManageCards()) {
                 this.roleNotice = 'Tu perfil está en proceso. La vinculación de tarjetas se habilitará cuando seas estudiante activo.';
