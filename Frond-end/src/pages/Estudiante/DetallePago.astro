@@ -134,6 +134,17 @@ const paymentId = Astro.url.searchParams.get('id');
       return 'student';
     },
 
+    resolvePaymentIdFromUrl() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search || '');
+        const idFromUrl = urlParams.get('id');
+        if (!idFromUrl) return '';
+        return String(idFromUrl).trim();
+      } catch (_) {
+        return '';
+      }
+    },
+
     openUrlInNewTab(url) {
       if (!url) return false;
       const popup = window.open(url, '_blank', 'noopener,noreferrer');
@@ -152,16 +163,15 @@ const paymentId = Astro.url.searchParams.get('id');
       console.log('🔍 DetallePago init - paymentId recibido:', this.paymentId);
       console.log('🔍 URL completa:', window.location.href);
       console.log('🔍 Search params:', window.location.search);
-      
-      // Verificar si hay ID en la URL aunque Astro no lo haya capturado
-      if (!this.paymentId) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const idFromUrl = urlParams.get('id');
-        console.log('🔍 ID desde URLSearchParams:', idFromUrl);
-        if (idFromUrl) {
-          this.paymentId = idFromUrl;
-          console.log('✅ ID rescatado de URL:', this.paymentId);
-        }
+
+      const idFromUrl = this.resolvePaymentIdFromUrl();
+      console.log('🔍 ID desde URLSearchParams:', idFromUrl);
+      if (idFromUrl && String(idFromUrl) !== String(this.paymentId || '')) {
+        this.paymentId = idFromUrl;
+        console.log('✅ ID sincronizado desde URL:', this.paymentId);
+      } else if (!this.paymentId && idFromUrl) {
+        this.paymentId = idFromUrl;
+        console.log('✅ ID rescatado de URL:', this.paymentId);
       }
 
       this.portalRole = this.detectPortalRole();
@@ -172,6 +182,9 @@ const paymentId = Astro.url.searchParams.get('id');
     async loadDetail() {
       this.loading = true;
       this.errorMessage = '';
+
+      const runtimePaymentId = this.resolvePaymentIdFromUrl() || this.paymentId;
+      this.paymentId = runtimePaymentId || '';
 
       console.log('🔄 loadDetail iniciado con paymentId:', this.paymentId);
 
@@ -199,7 +212,7 @@ const paymentId = Astro.url.searchParams.get('id');
 
       try {
         console.log('📡 Llamando a API con paymentId:', this.paymentId);
-        const response = await window.StudentAPI.getPaymentById(this.paymentId, token, this.portalRole);
+        const response = await window.StudentAPI.getPaymentById(runtimePaymentId, token, this.portalRole);
         console.log('✅ Respuesta del API:', response);
         const payment = response?.data?.payment;
         console.log('💾 Datos del pago:', payment);
@@ -262,7 +275,9 @@ const paymentId = Astro.url.searchParams.get('id');
     },
 
     async downloadReceipt() {
-      const canonicalPaymentId = this.paymentDetail?.id ?? this.paymentId;
+      const runtimePaymentId = this.resolvePaymentIdFromUrl() || this.paymentId;
+      const detailPaymentId = this.paymentDetail?.id ?? null;
+      const canonicalPaymentId = runtimePaymentId || detailPaymentId;
 
       if (!canonicalPaymentId) {
         this.errorMessage = 'ID de pago no proporcionado';
@@ -293,7 +308,9 @@ const paymentId = Astro.url.searchParams.get('id');
       this.errorMessage = '';
       const pendingTab = window.open('', '_blank');
       let receiptResultUrl = null;
-      const fallbackReceiptUrl = this.paymentDetail?.url || null;
+      const fallbackReceiptUrl = String(detailPaymentId || '') === String(canonicalPaymentId)
+        ? (this.paymentDetail?.url || null)
+        : null;
       const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(canonicalPaymentId) + '?mode=open&_=' + Date.now();
 
       try {
