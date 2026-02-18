@@ -1649,34 +1649,57 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 return value;
             },
 
-            normalizeRoleForApi(roleValue) {
-                const key = String(roleValue || '').toLowerCase().trim();
+            normalizeRoleValue(roleValue) {
+                return String(roleValue || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[._-]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            },
+
+            toCanonicalRole(roleValue) {
+                const key = this.normalizeRoleValue(roleValue);
                 if (!key) return '';
 
-                if (key === 'admin' || key === 'administrador') return 'admin';
-                if (key === 'caja' || key === 'financial-staff' || key === 'financial staff') return 'financial-staff';
-                if (key === 'student' || key === 'estudiante') return 'student';
-                if (key === 'parent' || key === 'padre') return 'parent';
-                if (key === 'applicant' || key === 'solicitante') return 'applicant';
-                if (key === 'unverified' || key === 'nverified' || key === 'not_verified' || key === 'not verified' || key === 'sin_verificar' || key === 'sin verificar') return 'unverified';
+                if (key === 'sin rol' || key === 'none' || key === 'no role') return '';
+
+                if (key === 'admin' || key === 'administrador' || key === 'super admin' || key === 'superadmin') return 'admin';
+                if (
+                    key === 'caja' ||
+                    key === 'cajero' ||
+                    key === 'tesoreria' ||
+                    key === 'finanzas' ||
+                    key === 'personal de pagos' ||
+                    key === 'cobranza' ||
+                    key === 'financial staff' ||
+                    key === 'staff financiero'
+                ) return 'financial-staff';
+                if (key === 'student' || key === 'estudiante' || key === 'alumno' || key === 'alumna') return 'student';
+                if (key === 'teacher' || key === 'docente' || key === 'maestro' || key === 'profesor' || key === 'profesora') return 'teacher';
+                if (key === 'parent' || key === 'padre' || key === 'madre' || key === 'tutor' || key === 'tutora' || key === 'tutor legal') return 'parent';
+                if (key === 'applicant' || key === 'solicitante' || key === 'aspirante' || key === 'preinscrito' || key === 'pre inscrito') return 'applicant';
+                if (
+                    key === 'unverified' ||
+                    key === 'nverified' ||
+                    key === 'not verified' ||
+                    key === 'sin verificar' ||
+                    key === 'no verificado' ||
+                    key === 'pendiente verificacion' ||
+                    key === 'pendiente de verificacion'
+                ) return 'unverified';
+                if (key === 'supervisor' || key === 'coordinador' || key === 'coordinadora') return 'supervisor';
+
                 return key;
             },
 
+            normalizeRoleForApi(roleValue) {
+                return this.toCanonicalRole(roleValue);
+            },
+
             normalizeRoleForFilter(roleValue) {
-                let key = String(roleValue || '').toLowerCase().trim();
-                if (!key) return '';
-
-                key = key.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-                if (key === 'sin rol' || key === 'none' || key === 'no role') return '';
-
-                if (key === 'admin' || key === 'administrador') return 'admin';
-                if (key === 'caja' || key === 'financial staff' || key === 'financial-staff') return 'financial-staff';
-                if (key === 'student' || key === 'estudiante') return 'student';
-                if (key === 'teacher' || key === 'docente' || key === 'maestro') return 'teacher';
-                if (key === 'parent' || key === 'padre' || key === 'tutor') return 'parent';
-                if (key === 'applicant' || key === 'solicitante') return 'applicant';
-                if (key === 'unverified' || key === 'nverified' || key === 'not verified' || key === 'sin verificar') return 'unverified';
-                return key;
+                return this.toCanonicalRole(roleValue);
             },
 
             getRoleDisplayName(roleValue) {
@@ -2091,45 +2114,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             roleClass(roleKey) {
-                const key = (roleKey || '').toLowerCase();
-                if (key === 'admin' || key === 'administrador') return 'bg-purple-100 text-purple-700';
-                if (key === 'caja' || key === 'financial-staff' || key === 'financial staff') return 'bg-blue-100 text-blue-700';
-                if (key === 'maestro' || key === 'teacher' || key === 'docente') return 'bg-emerald-100 text-emerald-700';
+                const key = this.normalizeRoleForFilter(roleKey);
+                if (key === 'admin') return 'bg-purple-100 text-purple-700';
+                if (key === 'financial-staff') return 'bg-blue-100 text-blue-700';
+                if (key === 'teacher') return 'bg-emerald-100 text-emerald-700';
                 return 'bg-slate-100 text-slate-600';
             },
 
             getRoleLabel(rolesArray) {
-                const rolesTranslation = {
-                    'admin': 'Administrador',
-                    'administrador': 'Administrador',
-                    'caja': 'Personal de pagos',
-                    'financial-staff': 'Personal de pagos',
-                    'financial staff': 'Personal de pagos',
-                    'maestro': 'Maestro',
-                    'teacher': 'Maestro',
-                    'docente': 'Maestro',
-                    'student': 'Estudiante',
-                    'estudiante': 'Estudiante',
-                    'parent': 'Padre/Tutor',
-                    'padre': 'Padre/Tutor',
-                    'supervisor': 'Supervisor',
-                    'unverified': 'Sin Verificar',
-                    'nverified': 'Sin Verificar',
-                    'not_verified': 'Sin Verificar',
-                    'not verified': 'Sin Verificar',
-                    'sin_verificar': 'Sin Verificar',
-                    'sin verificar': 'Sin Verificar',
-                    'applicant': 'Solicitante',
-                    'solicitante': 'Solicitante'
-                };
-                
                 if (!rolesArray || rolesArray.length === 0) return 'Sin rol';
-                
-                const translatedRoles = rolesArray.map(r => {
-                    const key = r.toString().toLowerCase();
-                    return rolesTranslation[key] || r;
-                });
-                
+
+                const translatedRoles = rolesArray.map(role => this.getRoleDisplayName(role));
+
                 return translatedRoles.join(', ');
             },
 
@@ -2174,52 +2170,21 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 
                 console.log('🔍 roles extraídos:', roles);
                 
-                // Crear etiquetas para todos los roles del usuario
-                const rolesTranslation = {
-                    'admin': 'Administrador',
-                    'administrador': 'Administrador',
-                    'caja': 'Personal de pagos',
-                    'financial-staff': 'Personal de pagos',
-                    'financial staff': 'Personal de pagos',
-                    'maestro': 'Maestro',
-                    'teacher': 'Maestro',
-                    'docente': 'Maestro',
-                    'student': 'Estudiante',
-                    'estudiante': 'Estudiante',
-                    'parent': 'Padre/Tutor',
-                    'padre': 'Padre/Tutor',
-                    'supervisor': 'Supervisor',
-                    'unverified': 'Sin Verificar',
-                    'nverified': 'Sin Verificar',
-                    'not_verified': 'Sin Verificar',
-                    'not verified': 'Sin Verificar',
-                    'sin_verificar': 'Sin Verificar',
-                    'sin verificar': 'Sin Verificar',
-                    'applicant': 'Solicitante',
-                    'solicitante': 'Solicitante'
-                };
-                
                 let roleLabel = 'Sin rol';
                 let roleKey = '';
                 
                 if (roles.length > 0) {
-                    // Traducir todos los roles al español
-                    // IMPORTANTE: Normalizar guiones a espacios
-                    const translatedRoles = roles.map(r => {
-                        const normalized = r.toString().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-                        const key = normalized;
-                        return rolesTranslation[key] || r;
-                    });
-                    
+                    const translatedRoles = roles.map(role => this.getRoleDisplayName(role));
+
                     roleLabel = translatedRoles.join(', ');
-                    roleKey = roles[0].toString().toLowerCase().replace('-', ' ').trim();
+                    roleKey = this.normalizeRoleForFilter(roles[0]);
                     console.log('✅ Rol traducido:', roleLabel, '| roleKey:', roleKey);
                 } else {
                     // Intentar con campos individuales si no hay array de roles
                     const roleValue = raw.role || raw.role_name || '';
                     if (roleValue && roleValue !== 'Sin rol') {
-                        roleKey = roleValue.toString().toLowerCase().replace('-', ' ').trim();
-                        roleLabel = rolesTranslation[roleKey] || roleValue;
+                        roleKey = this.normalizeRoleForFilter(roleValue);
+                        roleLabel = this.getRoleDisplayName(roleValue);
                         console.log('✅ Rol desde raw.role:', roleLabel);
                     } else {
                         console.warn('⚠️ No hay roles encontrados para este usuario');
@@ -2575,28 +2540,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                     const result = await response.json();
                     if (response.ok && result.success) {
-                        const rolesTranslation = {
-                            'admin': 'Administrador',
-                            'student': 'Estudiante',
-                            'financial-staff': 'Personal de pagos',
-                            'financial staff': 'Personal de pagos',
-                            'parent': 'Padre/Tutor',
-                            'teacher': 'Maestro',
-                            'supervisor': 'Supervisor',
-                            'unverified': 'Sin Verificar',
-                            'nverified': 'Sin Verificar',
-                            'not_verified': 'Sin Verificar',
-                            'not verified': 'Sin Verificar',
-                            'sin_verificar': 'Sin Verificar',
-                            'sin verificar': 'Sin Verificar',
-                            'applicant': 'Solicitante'
-                        };
-
                         const roles = result.data?.roles || [];
                         this.availableRoles = roles.map(role => ({
                             id: role.id,
                             name: role.name,
-                            displayName: rolesTranslation[String(role.name || '').toLowerCase()] || role.name
+                            displayName: this.getRoleDisplayName(role.name)
                         }));
                         this.roleOptionsLoaded = true;
                     }
@@ -4082,7 +4030,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     || String(this.currentStudentUser?.career_id || '').trim()
                     || String(this.currentStudentUser?.group || '').trim()
                     || String(this.currentStudentUser?.workshop || '').trim()
-                    || Number(this.currentStudentUser?.semestre || 0) > 0
                 );
 
                 // Asegurar que las carreras estén cargadas antes de mostrar el modal

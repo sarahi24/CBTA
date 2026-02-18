@@ -268,14 +268,55 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 if (!userData) return null;
                 try {
                     const parsed = JSON.parse(userData);
-                    // roles es un array: ["admin"]
                     if (parsed.roles && Array.isArray(parsed.roles) && parsed.roles.length > 0) {
-                        return parsed.roles[0]; // Devolver primer rol
+                        const firstRole = parsed.roles[0];
+                        if (typeof firstRole === 'string') return firstRole;
+                        if (firstRole && typeof firstRole === 'object') {
+                            return firstRole.slug || firstRole.name || firstRole.role || null;
+                        }
                     }
                     return parsed.role || parsed.type || null;
                 } catch {
                     return null;
                 }
+            },
+
+            normalizeRole(roleValue) {
+                const key = String(roleValue || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[._-]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (!key || key === 'sin rol' || key === 'none' || key === 'no role') return '';
+                if (key === 'admin' || key === 'administrador' || key === 'super admin' || key === 'superadmin') return 'admin';
+                if (
+                    key === 'financial staff' ||
+                    key === 'caja' ||
+                    key === 'cajero' ||
+                    key === 'tesoreria' ||
+                    key === 'finanzas' ||
+                    key === 'personal de pagos' ||
+                    key === 'cobranza'
+                ) return 'financial-staff';
+                if (key === 'teacher' || key === 'maestro' || key === 'docente' || key === 'profesor' || key === 'profesora') return 'teacher';
+                if (key === 'student' || key === 'estudiante' || key === 'alumno' || key === 'alumna') return 'student';
+                if (key === 'parent' || key === 'padre' || key === 'madre' || key === 'tutor' || key === 'tutora' || key === 'tutor legal') return 'parent';
+                if (key === 'applicant' || key === 'solicitante' || key === 'aspirante' || key === 'preinscrito' || key === 'pre inscrito') return 'applicant';
+                if (
+                    key === 'unverified' ||
+                    key === 'nverified' ||
+                    key === 'not verified' ||
+                    key === 'sin verificar' ||
+                    key === 'no verificado' ||
+                    key === 'pendiente verificacion' ||
+                    key === 'pendiente de verificacion'
+                ) return 'unverified';
+                if (key === 'supervisor' || key === 'coordinador' || key === 'coordinadora') return 'supervisor';
+
+                return key;
             },
             
             logout() {
@@ -411,18 +452,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     const userRole = window.AuthService.getUserRole();
                     let redirectUrl = '/Dashboard'; // Default
                     
-                    // Normalizar el rol a minúsculas para comparación
-                    const roleLower = (userRole || '').toLowerCase().trim();
+                    const normalizedRole = window.AuthService.normalizeRole(userRole);
                     
-                    if (roleLower === 'student' || roleLower === 'estudiante' || roleLower === 'parent' || roleLower === 'padre' || roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'unverified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') {
+                    if (normalizedRole === 'student' || normalizedRole === 'parent' || normalizedRole === 'applicant' || normalizedRole === 'unverified') {
                         redirectUrl = '/Estudiante/PortalEstudiante';
-                    } else if (roleLower === 'admin' || roleLower === 'administrador') {
+                    } else if (normalizedRole === 'admin') {
                         redirectUrl = '/roles';
-                    } else if (roleLower === 'financial-staff' || roleLower === 'financial staff' || roleLower === 'caja') {
+                    } else if (normalizedRole === 'financial-staff' || normalizedRole === 'teacher' || normalizedRole === 'supervisor') {
                         redirectUrl = '/Dashboard';
                     }
                     
                     console.log('👤 Rol del usuario:', userRole);
+                    console.log('🧭 Rol normalizado:', normalizedRole);
                     console.log('🚀 Redirigiendo a:', redirectUrl);
                     setTimeout(() => window.location.href = redirectUrl, 800);
                 } else {
