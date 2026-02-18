@@ -79,9 +79,14 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
         });
 
+        const hasStudentRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'student' || roleValue === 'estudiante' || roleValue === 'alumno';
+        });
+
         if (hasParentRole) return 'parent';
         if (hasApplicantRole) return 'applicant';
-        return 'student';
+        if (hasStudentRole) return 'student';
+        return '';
       },
 
       async ensureStudentAPI() {
@@ -114,6 +119,13 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
       async syncPortalRoleFromApi(token) {
         if (!token || !window.StudentAPI?.getAuthenticatedUser) return;
+        if (this.portalRole === 'applicant') return;
+
+        const now = Date.now();
+        const nextAllowedSyncAt = Number(localStorage.getItem('adeudos_role_sync_next_at') || '0');
+        if (Number.isFinite(nextAllowedSyncAt) && now < nextAllowedSyncAt) {
+          return;
+        }
 
         try {
           const response = await window.StudentAPI.getAuthenticatedUser(token);
@@ -153,8 +165,14 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           this.portalRole = resolvedRole;
           localStorage.setItem('userRole', resolvedRole);
           localStorage.setItem('role', resolvedRole);
+          localStorage.setItem('adeudos_role_sync_next_at', String(now + (15 * 60 * 1000)));
           console.log('ðŸ” [Adeudos] Rol sincronizado desde API:', resolvedRole);
         } catch (error) {
+          const errorMessage = String(error?.message || error || '').toLowerCase();
+          const isRateLimited = errorMessage.includes('429') || errorMessage.includes('límite de solicitudes') || errorMessage.includes('limite de solicitudes') || errorMessage.includes('too many requests');
+          if (isRateLimited) {
+            localStorage.setItem('adeudos_role_sync_next_at', String(now + (5 * 60 * 1000)));
+          }
           console.warn('š ï¸ [Adeudos] No se pudo sincronizar rol desde API:', error?.message || error);
         }
       },
@@ -205,7 +223,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const apiReady = await this.ensureStudentAPI();
         console.log('ðŸ” [Adeudos] StudentAPI disponible:', apiReady);
 
-        if (token && apiReady) {
+        if (token && apiReady && !this.portalRole) {
           await this.syncPortalRoleFromApi(token);
         }
         
