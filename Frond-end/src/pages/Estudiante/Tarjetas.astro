@@ -170,6 +170,20 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             this.showResultModal = false;
           },
 
+          canManageCards() {
+            return this.portalRole !== 'applicant';
+          },
+
+          openAddCardModal() {
+            if (!this.canManageCards()) {
+              this.error = 'Tu perfil aún está en proceso. La vinculación de tarjetas estará disponible cuando se active como estudiante.';
+              this.showModal = false;
+              return;
+            }
+            this.error = '';
+            this.showModal = true;
+          },
+
           async init() {
             if (this.initCompleted || this.initInProgress) {
               return;
@@ -205,6 +219,10 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
               if (this.token && !this.portalRole) {
                 await this.syncPortalRoleFromApi();
+              }
+
+              if (this.portalRole === 'applicant') {
+                this.roleNotice = 'Tu perfil está en proceso. La vinculación de tarjetas se habilitará cuando seas estudiante activo.';
               }
               
               console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
@@ -429,6 +447,12 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
         async agregarNuevaTarjeta() {
 
+          if (!this.canManageCards()) {
+            this.error = 'Tu perfil aún está en proceso. La vinculación de tarjetas estará disponible cuando se active como estudiante.';
+            this.showModal = false;
+            return;
+          }
+
           this.error = '';
           this.isLoading = true;
           console.log('ðŸ”„ Iniciando proceso de vincular tarjeta con Stripe...');
@@ -628,7 +652,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       <section class="section-container">
         <div class="section-header">
           <h2 class="section-title">Mis Tarjetas</h2>
-          <button @click="showModal = true" class="add-inline-btn">
+          <button @click="openAddCardModal()" :disabled="portalRole === 'applicant'" class="add-inline-btn" :style="portalRole === 'applicant' ? 'opacity:0.6;cursor:not-allowed;' : ''">
             + Añadir Nueva
           </button>
         </div>
@@ -654,8 +678,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           </template>
 
           <template x-if="tarjetas.length === 0">
-            <div class="empty-state" @click="showModal = true" style="text-align:center;padding:3rem;background:white;border-radius:24px;cursor:pointer;border:2px dashed #e2e8f0;">
-              <p style="color: #64748b; font-weight: 600;">No tienes tarjetas registradas. Toca para añadir una.</p>
+            <div class="empty-state" @click="openAddCardModal()" :style="portalRole === 'applicant' ? 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:default;border:2px dashed #e2e8f0;' : 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:pointer;border:2px dashed #e2e8f0;'">
+              <p style="color: #64748b; font-weight: 600;" x-text="portalRole === 'applicant' ? 'Tu perfil está en proceso. Aquí verás tus tarjetas cuando se active tu cuenta de estudiante.' : 'No tienes tarjetas registradas. Toca para añadir una.'"></p>
             </div>
           </template>
         </div>
