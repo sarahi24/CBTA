@@ -289,13 +289,13 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               }
 
               console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
-                const shouldSkipInitialCardsLoad = this.portalRole === 'applicant' && this.hasPortalPermission('create.setup');
+                const shouldSkipInitialCardsLoad = this.portalRole === 'applicant';
 
                 if (shouldSkipInitialCardsLoad) {
                   this.tarjetas = [];
                   this.hasCardsAccess = true;
                   this.lastCardsFetchAt = 0;
-                  console.log('ℹ️ [Tarjetas] Se omite GET inicial de tarjetas para applicant con create.setup para evitar rate-limit previo al alta.');
+                  console.log('ℹ️ [Tarjetas] Se omite GET inicial de tarjetas para applicant para evitar rate-limit previo al alta.');
                 } else {
                   await this.cargarTarjetas();
                 }
