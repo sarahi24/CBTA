@@ -37,6 +37,7 @@ const paymentId = Astro.url.searchParams.get('id');
     },
 
     canDownloadReceipt() {
+      if (this.paymentDetail?.url) return true;
       const normalized = this.normalizeStatus(this.paymentDetail?.status);
       return normalized === 'paid' || normalized === 'refunded';
     },
@@ -263,6 +264,16 @@ const paymentId = Astro.url.searchParams.get('id');
     async downloadReceipt() {
       if (!this.paymentId) {
         this.errorMessage = 'ID de pago no proporcionado';
+        return;
+      }
+
+      const directReceiptUrl = this.paymentDetail?.url || null;
+      if (directReceiptUrl) {
+        this.errorMessage = '';
+        const opened = this.openUrlInNewTab(directReceiptUrl);
+        if (!opened) {
+          window.location.assign(directReceiptUrl);
+        }
         return;
       }
 
