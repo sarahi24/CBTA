@@ -719,12 +719,23 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               throw new Error('No fue posible crear la sesión de Stripe en este momento. Intenta nuevamente.');
             };
 
-            let proxyData = null;
+            let setupResponseData = null;
             try {
+              console.log('📡 [Tarjetas] Solicitando setup directo a /v1/cards ...');
+              setupResponseData = await createSetupDirectly();
+            } catch (directError) {
+              const lowerMessage = String(directError?.message || '').toLowerCase();
+              const isAbort = String(directError?.name || '').toLowerCase() === 'aborterror';
+              const isNetwork = lowerMessage.includes('failed to fetch') || lowerMessage.includes('networkerror') || lowerMessage.includes('cors');
+
+              if (!isAbort && !isNetwork) {
+                throw directError;
+              }
+
+              console.warn('⚠️ [Tarjetas] Llamada directa falló por red/CORS, intentando /api/cards/create ...');
+
               const controller = new AbortController();
               const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-              console.log('📡 [Tarjetas] Solicitando /api/cards/create ...');
               const proxyResponse = await fetch('/api/cards/create', {
                 method: 'POST',
                 signal: controller.signal,
@@ -738,32 +749,23 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               clearTimeout(timeoutId);
 
               console.log('📡 [Tarjetas] Status /api/cards/create:', proxyResponse.status);
-              proxyData = await proxyResponse.json().catch(() => ({}));
+              setupResponseData = await proxyResponse.json().catch(() => ({}));
 
               if (!proxyResponse.ok) {
-                throw new Error(proxyData?.message || `Error ${proxyResponse.status}: ${proxyResponse.statusText}`);
+                throw new Error(setupResponseData?.message || `Error ${proxyResponse.status}: ${proxyResponse.statusText}`);
               }
-            } catch (proxyError) {
-              const isAbort = String(proxyError?.name || '').toLowerCase() === 'aborterror';
-              const isNetwork = String(proxyError?.message || '').toLowerCase().includes('failed to fetch');
-              if (!isAbort && !isNetwork) {
-                throw proxyError;
-              }
-
-              console.warn('⚠️ [Tarjetas] Proxy /api/cards/create no respondió a tiempo, intentando llamada directa...');
-              proxyData = await createSetupDirectly();
             }
 
-            if (proxyData?.success) {
-              data = proxyData;
+            if (setupResponseData?.success) {
+              data = setupResponseData;
               localStorage.removeItem('cards_create_next_retry_at');
-            } else if (proxyData?.rate_limited) {
-              const retryAfterMs = parseRetryAfterMs(proxyData?.retry_after_ms);
+            } else if (setupResponseData?.rate_limited) {
+              const retryAfterMs = parseRetryAfterMs(setupResponseData?.retry_after_ms);
               const cooldownMs = Math.max(30000, retryAfterMs * 3);
               localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
-              throw new Error(proxyData?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+              throw new Error(setupResponseData?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
             } else {
-              throw new Error(proxyData?.message || 'No tienes permisos para acceder a este recurso');
+              throw new Error(setupResponseData?.message || 'No tienes permisos para acceder a este recurso');
             }
 
             console.log('ðŸ“¦ Respuesta del backend:', data);
