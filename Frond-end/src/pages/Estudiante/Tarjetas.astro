@@ -22,6 +22,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           token: null,
           userId: null,
           hasCardsAccess: false,
+          lastCardsFetchAt: 0,
           showResultModal: false,
           resultType: '',
 
@@ -471,6 +472,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               console.log(`âœ… ${cardsArray.length} tarjeta(s) cargada(s) del servidor`);
 
               this.hasCardsAccess = Boolean(data?.success !== false);
+              this.lastCardsFetchAt = Date.now();
               
               this.tarjetas = cardsArray.map(card => ({
                 id: card.id,
@@ -530,11 +532,19 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           console.log('ðŸ”„ Iniciando proceso de vincular tarjeta con Stripe...');
 
           try {
+            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
             const now = Date.now();
             const nextRetryAt = Number(localStorage.getItem('cards_create_next_retry_at') || '0');
             if (Number.isFinite(nextRetryAt) && now < nextRetryAt) {
               const waitSeconds = Math.max(1, Math.ceil((nextRetryAt - now) / 1000));
               throw new Error(`Demasiadas solicitudes. Intenta nuevamente en ${waitSeconds}s.`);
+            }
+
+            const minGapAfterCardsFetchMs = 2500;
+            const elapsedSinceCardsFetch = now - Number(this.lastCardsFetchAt || 0);
+            if (elapsedSinceCardsFetch >= 0 && elapsedSinceCardsFetch < minGapAfterCardsFetchMs) {
+              await wait(minGapAfterCardsFetchMs - elapsedSinceCardsFetch);
             }
 
             const headerAttempts = this.portalRole === 'applicant'
@@ -566,8 +576,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               }
               return 2000;
             };
-
-            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
             for (const attempt of uniqueHeaderAttempts) {
               const headers = {

@@ -101,13 +101,25 @@ const forceRefresh = forceRefreshParam === 'true';
           return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
         });
 
+        const hasStudentRole = roleCandidates.some(function(roleValue) {
+          return roleValue === 'student' || roleValue === 'estudiante' || roleValue === 'alumno';
+        });
+
         if (hasParentRole) return 'parent';
         if (hasApplicantRole) return 'applicant';
-        return 'student';
+        if (hasStudentRole) return 'student';
+        return '';
       },
 
       async syncPortalRoleFromApi(token) {
         if (!token || !window.StudentAPI?.getAuthenticatedUser) return;
+        if (this.roleForPortal === 'applicant') return;
+
+        const now = Date.now();
+        const nextAllowedSyncAt = Number(localStorage.getItem('historial_role_sync_next_at') || '0');
+        if (Number.isFinite(nextAllowedSyncAt) && now < nextAllowedSyncAt) {
+          return;
+        }
 
         try {
           const response = await window.StudentAPI.getAuthenticatedUser(token);
@@ -147,8 +159,14 @@ const forceRefresh = forceRefreshParam === 'true';
           this.roleForPortal = resolvedRole;
           localStorage.setItem('userRole', resolvedRole);
           localStorage.setItem('role', resolvedRole);
+          localStorage.setItem('historial_role_sync_next_at', String(now + (15 * 60 * 1000)));
           console.log('🔍 [Historial] Rol sincronizado desde API:', resolvedRole);
         } catch (error) {
+          const errorMessage = String(error?.message || error || '').toLowerCase();
+          const isRateLimited = errorMessage.includes('429') || errorMessage.includes('límite de solicitudes') || errorMessage.includes('limite de solicitudes') || errorMessage.includes('too many requests');
+          if (isRateLimited) {
+            localStorage.setItem('historial_role_sync_next_at', String(now + (5 * 60 * 1000)));
+          }
           console.warn('⚠️ [Historial] No se pudo sincronizar rol desde API:', error?.message || error);
         }
       },
@@ -177,7 +195,7 @@ const forceRefresh = forceRefreshParam === 'true';
         this.roleNotice = '';
 
         const token = localStorage.getItem('access_token');
-        if (token && window.StudentAPI) {
+        if (token && window.StudentAPI && !this.roleForPortal) {
           await this.syncPortalRoleFromApi(token);
         }
 
