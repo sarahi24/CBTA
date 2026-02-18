@@ -29,11 +29,16 @@ const paymentId = Astro.url.searchParams.get('id');
     normalizeStatus(statusValue) {
       const value = String(statusValue || '').toLowerCase().trim();
       if (!value) return 'unknown';
-      if (value === 'completed' || value === 'paid' || value === 'success' || value === 'succeeded') return 'paid';
-      if (value === 'pending' || value === 'processing' || value === 'in_process') return 'pending';
+      if (value === 'completed' || value === 'completado' || value === 'paid' || value === 'pagado' || value === 'success' || value === 'succeeded') return 'paid';
+      if (value === 'pending' || value === 'pendiente' || value === 'processing' || value === 'in_process' || value === 'no pagado' || value === 'unpaid') return 'pending';
       if (value === 'failed' || value === 'error' || value === 'declined' || value === 'canceled' || value === 'cancelled') return 'failed';
-      if (value === 'refunded' || value === 'refund') return 'refunded';
+      if (value === 'refunded' || value === 'refund' || value === 'reembolsado') return 'refunded';
       return value;
+    },
+
+    canDownloadReceipt() {
+      const normalized = this.normalizeStatus(this.paymentDetail?.status);
+      return normalized === 'paid' || normalized === 'refunded';
     },
 
     normalizeMethodDetails(payment) {
@@ -261,6 +266,11 @@ const paymentId = Astro.url.searchParams.get('id');
         return;
       }
 
+      if (!this.canDownloadReceipt()) {
+        this.errorMessage = 'El recibo solo está disponible para pagos completados o reembolsados.';
+        return;
+      }
+
       if (!window.StudentAPI) {
         this.errorMessage = 'StudentAPI no esta disponible.';
         return;
@@ -298,6 +308,17 @@ const paymentId = Astro.url.searchParams.get('id');
           return;
         }
       } catch (error) {
+        const message = String(error?.message || error || '').toLowerCase();
+        const isNonTerminal = message.includes('estado terminal') || message.includes('terminal') || message.includes('no pagado') || message.includes('unprocessable');
+        if (isNonTerminal) {
+          this.errorMessage = 'El recibo aún no está disponible para este pago.';
+          if (pendingTab && !pendingTab.closed) {
+            pendingTab.close();
+          }
+          this.downloadingReceipt = false;
+          return;
+        }
+
         this.errorMessage = error?.message || 'No se pudo generar el recibo nuevo para este pago';
       }
 
@@ -500,9 +521,9 @@ const paymentId = Astro.url.searchParams.get('id');
         <!-- ACTION BUTTONS -->
         <div class="action-section">
           <template x-if="paymentDetail.id">
-            <button type="button" @click="downloadReceipt()" :disabled="downloadingReceipt" class="btn btn-primary">
+            <button type="button" @click="downloadReceipt()" :disabled="downloadingReceipt || !canDownloadReceipt()" class="btn btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span x-text="downloadingReceipt ? 'Descargando...' : 'Descargar recibo'"></span>
+              <span x-text="downloadingReceipt ? 'Descargando...' : (canDownloadReceipt() ? 'Descargar recibo' : 'Recibo no disponible')"></span>
             </button>
           </template>
           
