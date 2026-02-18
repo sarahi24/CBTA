@@ -21,6 +21,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           initCompleted: false,
           token: null,
           userId: null,
+          hasCardsAccess: false,
           showResultModal: false,
           resultType: '',
 
@@ -235,6 +236,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
           canManageCards() {
             if (this.hasPortalPermission('create.setup')) return true;
+            if (this.hasCardsAccess) return true;
             return this.portalRole !== 'applicant';
           },
 
@@ -285,12 +287,15 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 await this.syncPortalRoleFromApi();
               }
 
-              if (this.portalRole === 'applicant' && !this.canManageCards()) {
-                this.roleNotice = 'Tu perfil está en proceso. La vinculación de tarjetas se habilitará cuando seas estudiante activo.';
-              }
-              
               console.log('âœ… [Tarjetas] Initialized:', { usuario: this.alumno, userId: this.userId });
               await this.cargarTarjetas();
+
+              if (this.portalRole === 'applicant' && !this.canManageCards()) {
+                this.roleNotice = 'Tu perfil está en proceso. La vinculación de tarjetas se habilitará cuando seas estudiante activo.';
+              } else {
+                this.roleNotice = '';
+              }
+
               this.initCompleted = true;
             } catch (error) {
               this.logError('init', error, {
@@ -464,6 +469,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                                  data.data?.cards ? data.data.cards : [];
               
               console.log(`âœ… ${cardsArray.length} tarjeta(s) cargada(s) del servidor`);
+
+              this.hasCardsAccess = Boolean(data?.success !== false);
               
               this.tarjetas = cardsArray.map(card => ({
                 id: card.id,
@@ -476,6 +483,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
               localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
             } catch (err) {
+              this.hasCardsAccess = false;
               this.logError('cargarTarjetas', err, {
                 hasToken: !!this.token,
                 userId: this.userId,
