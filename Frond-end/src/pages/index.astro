@@ -505,6 +505,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     phone_number: this.phoneNumber,
                     birthdate: this.birthdate,
                     curp: this.curp,
+                    status: 'active',
                 };
                 
                 const response = await window.AuthService.register(userData);
