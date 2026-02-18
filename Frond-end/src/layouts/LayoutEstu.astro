@@ -339,6 +339,16 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
             const badge = document.getElementById('notif-badge');
             if (!badge) return;
 
+            if (!window.__notifBadgeState) {
+                window.__notifBadgeState = {
+                    inFlight: null,
+                    lastFetchAt: 0,
+                    minIntervalMs: 15000
+                };
+            }
+
+            const state = window.__notifBadgeState;
+
             try {
                 // Intentar leer desde localStorage primero
                 const cachedCount = localStorage.getItem('unread_notifications_count');
@@ -353,7 +363,7 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 // Si hay cache, mostrarlo inmediatamente
                 if (cachedCount !== null) {
                     const count = parseInt(cachedCount);
-                    if (count > 0) {
+                    if (Number.isFinite(count) && count > 0) {
                         badge.textContent = count > 99 ? '99+' : count;
                         badge.classList.remove('hidden');
                     } else {
@@ -361,35 +371,58 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                     }
                 }
 
-                // Hacer fetch al API para actualizar
-                const API_BASE = `${API_BASE_URL}/v1`;
-                const response = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=1`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    console.error('Error fetching notifications:', response.status);
+                const now = Date.now();
+                if (state.inFlight) {
+                    await state.inFlight;
                     return;
                 }
 
-                const data = await response.json();
-                const unreadCount = data.data?.count || 0;
-
-                // Actualizar UI y cache
-                if (unreadCount > 0) {
-                    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
+                if (now - state.lastFetchAt < state.minIntervalMs) {
+                    return;
                 }
 
-                localStorage.setItem('unread_notifications_count', unreadCount.toString());
+                // Hacer fetch al API para actualizar
+                const API_BASE = `${API_BASE_URL}/v1`;
+                state.inFlight = (async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=1`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.status === 429) {
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            console.warn('Error fetching notifications:', response.status);
+                            return;
+                        }
+
+                        const data = await response.json();
+                        const unreadCount = data.data?.count || 0;
+
+                        // Actualizar UI y cache
+                        if (unreadCount > 0) {
+                            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+
+                        localStorage.setItem('unread_notifications_count', unreadCount.toString());
+                    } finally {
+                        state.lastFetchAt = Date.now();
+                        state.inFlight = null;
+                    }
+                })();
+
+                await state.inFlight;
 
             } catch (error) {
-                console.error('Error updating notification badge:', error);
+                console.warn('Error updating notification badge:', error);
                 // Mantener el cache si hay error
             }
         }

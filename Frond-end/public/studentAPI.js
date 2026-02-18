@@ -1035,7 +1035,13 @@ window.StudentAPI = {
       authenticatedUserRequestState.lastFetchedAt = Date.now();
       return result;
     } catch (err) {
-      console.error('❌ StudentAPI.getAuthenticatedUser:', err);
+      const errorMessage = String(err?.message || err || '').toLowerCase();
+      const isRateLimited = errorMessage.includes('429') || errorMessage.includes('límite de solicitudes') || errorMessage.includes('limite de solicitudes') || errorMessage.includes('too many requests');
+      if (isRateLimited) {
+        console.warn('⚠️ StudentAPI.getAuthenticatedUser rate-limited:', err?.message || err);
+      } else {
+        console.error('❌ StudentAPI.getAuthenticatedUser:', err);
+      }
       throw err;
     } finally {
       authenticatedUserRequestState.inFlightPromise = null;
