@@ -177,17 +177,28 @@ const title = 'Panel de Estudiante';
             const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
 
             if (historyRes && !historyRes.error) {
-              const items = historyRes.data && historyRes.data.payment_history && Array.isArray(historyRes.data.payment_history.items)
-                ? historyRes.data.payment_history.items
-                : [];
+              let items = this.extractHistoryItems(historyRes);
+
+              if (!items.length && window.StudentAPI?.getPaymentHistory) {
+                try {
+                  const fallbackHistory = await window.StudentAPI.getPaymentHistory(scopedStudentId, token, false, requestRole, 15, 1);
+                  items = this.extractHistoryItems(fallbackHistory);
+                  if (items.length) {
+                    console.log('✅ [PortalEstudiante] Historial recuperado con fallback getPaymentHistory:', items.length);
+                  }
+                } catch (fallbackError) {
+                  console.warn('⚠️ [PortalEstudiante] Fallback de historial falló:', fallbackError?.message || fallbackError);
+                }
+              }
+
               this.history = items.map((payment) => {
-                const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? '0.00';
+                const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? payment?.total_amount ?? '0.00';
                 return {
                   id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
                   concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
                   monto: this.formatDashboardHistoryAmount(montoValue),
                   fecha: this.formatDashboardHistoryDate(payment),
-                  metodo: payment?.method || payment?.payment_method || 'Metodo desconocido',
+                  metodo: payment?.method || payment?.payment_method || payment?.payment_method_details?.[0] || 'Metodo desconocido',
                   status: this.normalizeHistoryStatus(payment?.status)
                 };
               });
@@ -223,6 +234,20 @@ const title = 'Panel de Estudiante';
         formatMoney(value) {
           const parsed = parseFloat(value || '0');
           return '$' + parsed.toFixed(2) + ' MXN';
+        },
+
+        extractHistoryItems(historyResponse) {
+          if (!historyResponse || historyResponse.error) return [];
+
+          const data = historyResponse?.data || {};
+          const paymentHistory = data?.payment_history || historyResponse?.payment_history || data?.history || historyResponse?.history || {};
+
+          if (Array.isArray(paymentHistory?.items)) return paymentHistory.items;
+          if (Array.isArray(paymentHistory?.data)) return paymentHistory.data;
+          if (Array.isArray(data?.items)) return data.items;
+          if (Array.isArray(data)) return data;
+
+          return [];
         },
 
         pendingSubtitle() {
