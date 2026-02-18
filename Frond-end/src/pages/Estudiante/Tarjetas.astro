@@ -648,8 +648,13 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               return 2000;
             };
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+            console.log('📡 [Tarjetas] Solicitando /api/cards/create ...');
             const proxyResponse = await fetch('/api/cards/create', {
               method: 'POST',
+              signal: controller.signal,
               headers: {
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
@@ -657,8 +662,15 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               },
               body: JSON.stringify({ portalRole: this.portalRole })
             });
+            clearTimeout(timeoutId);
+
+            console.log('📡 [Tarjetas] Status /api/cards/create:', proxyResponse.status);
 
             const proxyData = await proxyResponse.json().catch(() => ({}));
+
+            if (!proxyResponse.ok) {
+              throw new Error(proxyData?.message || `Error ${proxyResponse.status}: ${proxyResponse.statusText}`);
+            }
 
             if (proxyData?.success) {
               data = proxyData;
@@ -681,6 +693,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               console.log('âœ… Redirigiendo a Stripe:', checkoutUrl);
               console.log('â±ï¸ Hora de redirecciÃ³n:', new Date().toLocaleTimeString());
               // AquÃ­ el usuario completa el pago en Stripe
+              this.showModal = false;
               window.location.href = checkoutUrl;
             } else {
               console.error('âŒ Estructura de respuesta:', JSON.stringify(data, null, 2));
@@ -688,6 +701,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             }
           } catch (err) {
             const message = err?.message || String(err || 'Error desconocido');
+            if (String(err?.name || '').toLowerCase() === 'aborterror') {
+              this.error = 'La solicitud tardó demasiado. Intenta nuevamente.';
+              this.isLoading = false;
+              return;
+            }
             if (this.isRateLimitedMessage(message)) {
               console.warn('⚠️ [Tarjetas] Rate-limited al crear setup de tarjeta:', message);
             } else {

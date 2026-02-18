@@ -70,10 +70,15 @@ export async function POST({ request }) {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const upstreamRes = await fetch(`${API_BASE}/cards`, {
         method: 'POST',
-        headers
+        headers,
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       const textBody = await upstreamRes.text();
       const parsedBody = (() => {
@@ -108,10 +113,13 @@ export async function POST({ request }) {
 
       break;
     } catch (error) {
+      const isTimeout = String(error?.name || '').toLowerCase() === 'aborterror';
       lastStatus = 500;
       lastPayload = {
         success: false,
-        message: String(error?.message || error || 'Error al crear la sesión de tarjeta'),
+        message: isTimeout
+          ? 'El servidor tardó demasiado en responder al vincular tarjeta'
+          : String(error?.message || error || 'Error al crear la sesión de tarjeta'),
         errors: {}
       };
     }
