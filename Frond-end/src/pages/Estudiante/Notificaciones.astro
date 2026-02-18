@@ -70,7 +70,8 @@ const pageTitle = "Notificaciones";
 
   <script>
     // @ts-nocheck
-    const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
+    const API_BASE_URL = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+    const API_BASE = `${API_BASE_URL}/v1`;
     let allNotifications = [];
     let currentFilter = 'all';
     let currentPage = 1;
