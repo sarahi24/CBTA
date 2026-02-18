@@ -4,7 +4,7 @@ import StudentLayout from '../../layouts/LayoutEstu.astro';
 const paymentId = Astro.url.searchParams.get('id');
 ---
 
-<script src="/studentAPI.js?v=20260215r19" is:inline></script>
+<script src="/studentAPI.js?v=20260217r31" is:inline></script>
 
 <StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper" x-data={`{
@@ -30,10 +30,17 @@ const paymentId = Astro.url.searchParams.get('id');
       const value = String(statusValue || '').toLowerCase().trim();
       if (!value) return 'unknown';
       if (value === 'completed' || value === 'paid' || value === 'success' || value === 'succeeded') return 'paid';
+      if (value === 'pending_payment' || value === 'awaiting_payment' || value === 'waiting_payment' || value === 'requires_payment_method') return 'pending';
       if (value === 'pending' || value === 'processing' || value === 'in_process') return 'pending';
+      if (value === 'unpaid' || value === 'not_paid' || value === 'no_pagado' || value === 'no pagado') return 'pending';
       if (value === 'failed' || value === 'error' || value === 'declined' || value === 'canceled' || value === 'cancelled') return 'failed';
       if (value === 'refunded' || value === 'refund') return 'refunded';
       return value;
+    },
+
+    canDownloadReceipt() {
+      const status = String(this.paymentDetail?.status || '').toLowerCase().trim();
+      return status === 'paid' || status === 'refunded';
     },
 
     normalizeMethodDetails(payment) {
@@ -258,6 +265,11 @@ const paymentId = Astro.url.searchParams.get('id');
     async downloadReceipt() {
       if (!this.paymentId) {
         this.errorMessage = 'ID de pago no proporcionado';
+        return;
+      }
+
+      if (!this.canDownloadReceipt()) {
+        this.errorMessage = 'El recibo se habilita cuando el pago está completado.';
         return;
       }
 
@@ -503,9 +515,9 @@ const paymentId = Astro.url.searchParams.get('id');
         <!-- ACTION BUTTONS -->
         <div class="action-section">
           <template x-if="paymentDetail.id">
-            <button type="button" @click="downloadReceipt()" :disabled="downloadingReceipt" class="btn btn-primary">
+            <button type="button" @click="downloadReceipt()" :disabled="downloadingReceipt || !canDownloadReceipt()" :title="canDownloadReceipt() ? 'Descargar recibo' : 'Disponible solo para pagos completados'" class="btn btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span x-text="downloadingReceipt ? 'Descargando...' : 'Descargar recibo'"></span>
+              <span x-text="downloadingReceipt ? 'Descargando...' : (canDownloadReceipt() ? 'Descargar recibo' : 'Recibo no disponible')"></span>
             </button>
           </template>
           
