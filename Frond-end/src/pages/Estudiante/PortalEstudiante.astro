@@ -44,6 +44,78 @@ const title = 'Panel de Estudiante';
           return fallback;
         },
 
+        extractDashboardHistoryItems(historyResponse) {
+          if (!historyResponse || typeof historyResponse !== 'object') return [];
+
+          const data = historyResponse?.data || {};
+          const candidates = [
+            data?.payment_history?.items,
+            data?.payment_history?.data,
+            data?.payment_history,
+            data?.history?.items,
+            data?.history?.data,
+            data?.history,
+            data?.items,
+            historyResponse?.payment_history?.items,
+            historyResponse?.payment_history?.data,
+            historyResponse?.payment_history,
+            historyResponse?.history?.items,
+            historyResponse?.history?.data,
+            historyResponse?.history,
+            historyResponse?.items,
+            data,
+            historyResponse
+          ];
+
+          for (const candidate of candidates) {
+            if (Array.isArray(candidate)) return candidate;
+          }
+
+          return [];
+        },
+
+        resolveHistoryConcept(payment) {
+          const directConcept = this.pickFirstValue(payment, [
+            'concept_name',
+            'concept',
+            'concepto',
+            'description',
+            'payment_concept_name',
+            'paymentConceptName',
+            'name',
+            'title',
+            'label'
+          ], null);
+
+          const nestedConcept =
+            payment?.payment_concept?.name ||
+            payment?.payment_concept?.concept_name ||
+            payment?.concept_data?.name ||
+            payment?.concept_detail?.name ||
+            payment?.concept?.name ||
+            payment?.concept?.title ||
+            payment?.conceptName ||
+            null;
+
+          const conceptValue = directConcept ?? nestedConcept ?? 'Pago';
+          return String(conceptValue);
+        },
+
+        resolveHistoryAmount(payment) {
+          return this.pickFirstValue(payment, [
+            'amount_received',
+            'received_amount',
+            'paid_amount',
+            'amount_paid',
+            'amount',
+            'total_amount',
+            'total',
+            'monto',
+            'importe',
+            'value'
+          ], '0.00');
+        },
+
         detectPortalRoleFromStorage() {
           const roleValues = [];
           const rawUserCandidates = [
@@ -198,36 +270,10 @@ const title = 'Panel de Estudiante';
             const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
 
             if (historyRes && !historyRes.error) {
-              const items = historyRes.data && historyRes.data.payment_history && Array.isArray(historyRes.data.payment_history.items)
-                ? historyRes.data.payment_history.items
-                : [];
+              const items = this.extractDashboardHistoryItems(historyRes);
               this.history = items.map((payment) => {
-                const montoValue = this.pickFirstValue(payment, [
-                  'amount_received',
-                  'received_amount',
-                  'paid_amount',
-                  'amount_paid',
-                  'amount',
-                  'total_amount',
-                  'total',
-                  'monto'
-                ], '0.00');
-
-                const conceptValue = this.pickFirstValue(payment, [
-                  'concept_name',
-                  'concept',
-                  'concepto',
-                  'description',
-                  'payment_concept_name',
-                  'paymentConceptName',
-                  'name',
-                  'title',
-                  'label'
-                ], null)
-                || payment?.payment_concept?.name
-                || payment?.concept_data?.name
-                || payment?.concept_detail?.name
-                || 'Pago';
+                const montoValue = this.resolveHistoryAmount(payment);
+                const conceptValue = this.resolveHistoryConcept(payment);
 
                 return {
                   id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
@@ -368,7 +414,20 @@ const title = 'Panel de Estudiante';
         },
 
         formatDashboardHistoryAmount(value) {
-          const parsed = Number(value);
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            return value.toFixed(2);
+          }
+
+          const raw = String(value ?? '').trim();
+          if (!raw) return '0.00';
+
+          const sanitized = raw
+            .replace(/\s+/g, '')
+            .replace(/[^\d,.-]/g, '')
+            .replace(/,(?=\d{3}(\D|$))/g, '')
+            .replace(',', '.');
+
+          const parsed = Number(sanitized);
           if (!Number.isFinite(parsed)) return '0.00';
           return parsed.toFixed(2);
         },
