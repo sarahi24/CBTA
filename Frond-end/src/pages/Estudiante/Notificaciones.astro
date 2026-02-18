@@ -70,7 +70,7 @@ const pageTitle = "Notificaciones";
 
   <script>
     // @ts-nocheck
-    const API_BASE = `${(import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new Error('Falta PUBLIC_API_BASE_URL'); })()).replace(/\/$/, '')}/v1`;
+    const API_BASE = 'https://nginx-production-728f.up.railway.app/api/v1';
     let allNotifications = [];
     let currentFilter = 'all';
     let currentPage = 1;
@@ -80,6 +80,11 @@ const pageTitle = "Notificaciones";
       lastPage: 1,
       total: 0,
       hasNext: false
+    };
+    const notificationsRequestState = {
+      inFlight: null,
+      nextRetryAt: 0,
+      pollIntervalMs: 60000
     };
 
     // Obtener token
@@ -138,7 +143,8 @@ const pageTitle = "Notificaciones";
     }
 
     // Fetch notificaciones desde la API
-    async function fetchNotifications() {
+    async function fetchNotifications(options = {}) {
+      const force = Boolean(options?.force);
       const token = getToken();
       if (!token) {
         console.error('No hay token de autenticación');
@@ -146,30 +152,51 @@ const pageTitle = "Notificaciones";
         return;
       }
 
-      try {
-        // Obtener notificaciones paginadas
-        const readResponse = await fetch(`${API_BASE}/notifications?page=${currentPage}&per_page=${perPage}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+      const now = Date.now();
+      const persistedNextRetryAt = Number(localStorage.getItem('notifications_page_next_retry_at') || '0');
+      if (Number.isFinite(persistedNextRetryAt) && persistedNextRetryAt > notificationsRequestState.nextRetryAt) {
+        notificationsRequestState.nextRetryAt = persistedNextRetryAt;
+      }
+
+      if (!force && notificationsRequestState.nextRetryAt > now) {
+        return;
+      }
+
+      if (notificationsRequestState.inFlight) {
+        await notificationsRequestState.inFlight;
+        return;
+      }
+
+      notificationsRequestState.inFlight = (async () => {
+        try {
+          const readResponse = await fetch(`${API_BASE}/notifications?page=${currentPage}&per_page=${perPage}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (readResponse.status === 429) {
+            const retryAt = Date.now() + 120000;
+            notificationsRequestState.nextRetryAt = retryAt;
+            localStorage.setItem('notifications_page_next_retry_at', String(retryAt));
+            return;
           }
-        });
 
-        if (readResponse.ok) {
+          if (!readResponse.ok) {
+            console.error('❌ Error al obtener notificaciones:', readResponse.status);
+            const retryAt = Date.now() + 45000;
+            notificationsRequestState.nextRetryAt = retryAt;
+            localStorage.setItem('notifications_page_next_retry_at', String(retryAt));
+            showNoNotifications();
+            return;
+          }
+
           const readData = await readResponse.json();
-
           console.log('✅ Notificaciones leídas:', readData);
 
           const notificationsNode = readData.data?.notifications || {};
-          const readNotifications = extractNotificationsFromResponse(readData);
-          const dedupMap = new Map();
-          for (const notif of readNotifications) {
-            const key = notif?.id ?? `${notif?.type || 'unknown'}-${notif?.created_at || ''}-${JSON.stringify(notif?.data || {})}`;
-            if (!dedupMap.has(key)) {
-              dedupMap.set(key, notif);
-            }
-          }
-          const notificationsList = Array.from(dedupMap.values())
+          const notificationsList = extractNotificationsFromResponse(readData)
             .sort((a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime());
 
           const unreadCount =
@@ -199,19 +226,24 @@ const pageTitle = "Notificaciones";
             return normalizeNotification(n, inferredRead);
           });
 
-          // Actualizar conteo en badge
           updateBadgeCount(unreadCount);
-
           renderNotifications(currentFilter);
           renderPagination();
-        } else {
-          console.error('❌ Error al obtener notificaciones');
+
+          notificationsRequestState.nextRetryAt = 0;
+          localStorage.removeItem('notifications_page_next_retry_at');
+        } catch (error) {
+          console.error('❌ Error:', error);
+          const retryAt = Date.now() + 45000;
+          notificationsRequestState.nextRetryAt = retryAt;
+          localStorage.setItem('notifications_page_next_retry_at', String(retryAt));
           showNoNotifications();
+        } finally {
+          notificationsRequestState.inFlight = null;
         }
-      } catch (error) {
-        console.error('❌ Error:', error);
-        showNoNotifications();
-      }
+      })();
+
+      await notificationsRequestState.inFlight;
     }
 
     function renderPagination() {
@@ -508,7 +540,7 @@ const pageTitle = "Notificaciones";
           }
 
           // Refrescar página para mantener consistencia con paginación
-          await fetchNotifications();
+          await fetchNotifications({ force: true });
         } else if (response.status === 404) {
           console.error('❌ Notificación no encontrada');
         } else {
@@ -547,7 +579,7 @@ const pageTitle = "Notificaciones";
           renderNotifications(currentFilter);
 
           // Refrescar página para mantener consistencia con paginación
-          await fetchNotifications();
+          await fetchNotifications({ force: true });
         } else {
           console.error('❌ Error al marcar todas como leídas');
         }
@@ -584,7 +616,7 @@ const pageTitle = "Notificaciones";
           renderNotifications(currentFilter);
           
           // Recargar para actualizar conteo
-          await fetchNotifications();
+          await fetchNotifications({ force: true });
         } else if (response.status === 404) {
           console.error('❌ Notificación no encontrada');
         } else {
@@ -772,7 +804,10 @@ const pageTitle = "Notificaciones";
     fetchNotifications();
 
     // Recargar cada 30 segundos
-    setInterval(fetchNotifications, 30000);
+    setInterval(() => {
+      if (document.hidden) return;
+      fetchNotifications();
+    }, notificationsRequestState.pollIntervalMs);
   </script>
 
   <style>
