@@ -262,18 +262,10 @@ const paymentId = Astro.url.searchParams.get('id');
     },
 
     async downloadReceipt() {
-      if (!this.paymentId) {
-        this.errorMessage = 'ID de pago no proporcionado';
-        return;
-      }
+      const canonicalPaymentId = this.paymentDetail?.id ?? this.paymentId;
 
-      const directReceiptUrl = this.paymentDetail?.url || null;
-      if (directReceiptUrl) {
-        this.errorMessage = '';
-        const opened = this.openUrlInNewTab(directReceiptUrl);
-        if (!opened) {
-          window.location.assign(directReceiptUrl);
-        }
+      if (!canonicalPaymentId) {
+        this.errorMessage = 'ID de pago no proporcionado';
         return;
       }
 
@@ -301,10 +293,11 @@ const paymentId = Astro.url.searchParams.get('id');
       this.errorMessage = '';
       const pendingTab = window.open('', '_blank');
       let receiptResultUrl = null;
-      const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(this.paymentId) + '?mode=open&_=' + Date.now();
+      const fallbackReceiptUrl = this.paymentDetail?.url || null;
+      const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(canonicalPaymentId) + '?mode=open&_=' + Date.now();
 
       try {
-        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole);
+        const result = await window.StudentAPI.downloadPaymentReceipt(canonicalPaymentId, token, this.portalRole);
         receiptResultUrl = result?.url || result?.data?.url || null;
         if (receiptResultUrl) {
           if (pendingTab && !pendingTab.closed) {
@@ -325,6 +318,19 @@ const paymentId = Astro.url.searchParams.get('id');
           this.errorMessage = 'El recibo aún no está disponible para este pago.';
           if (pendingTab && !pendingTab.closed) {
             pendingTab.close();
+          }
+          this.downloadingReceipt = false;
+          return;
+        }
+
+        if (fallbackReceiptUrl) {
+          if (pendingTab && !pendingTab.closed) {
+            pendingTab.location.href = fallbackReceiptUrl;
+          } else {
+            const opened = this.openUrlInNewTab(fallbackReceiptUrl);
+            if (!opened) {
+              window.location.assign(fallbackReceiptUrl);
+            }
           }
           this.downloadingReceipt = false;
           return;
