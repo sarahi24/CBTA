@@ -194,6 +194,20 @@ function pickReceiptUrl(payload) {
   return search(payload);
 }
 
+function extractPaymentHistoryItems(payload) {
+  if (!payload || typeof payload !== 'object') return [];
+
+  const data = payload?.data || {};
+  const paymentHistory = data?.payment_history || payload?.payment_history || data?.history || payload?.history || {};
+
+  if (Array.isArray(paymentHistory?.items)) return paymentHistory.items;
+  if (Array.isArray(paymentHistory?.data)) return paymentHistory.data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data)) return data;
+
+  return [];
+}
+
 window.StudentAPI = {
   async getPaymentHistory(studentId, token, forceRefresh = false, role = 'student', perPage = 15, page = 1) {
     try {
@@ -210,6 +224,7 @@ window.StudentAPI = {
 
       for (let endpointIndex = 0; endpointIndex < endpointCandidates.length; endpointIndex++) {
         const endpoint = endpointCandidates[endpointIndex];
+        const isLastEndpoint = endpointIndex === endpointCandidates.length - 1;
         const url = new URL(endpoint);
         if (perPage) url.searchParams.append('perPage', String(perPage));
         if (page) url.searchParams.append('page', String(page));
@@ -243,7 +258,14 @@ window.StudentAPI = {
           }
 
           if (response.ok) {
-            return await response.json();
+            const payload = await response.json();
+            const items = extractPaymentHistoryItems(payload);
+            if (items.length || isLastEndpoint) {
+              return payload;
+            }
+
+            console.warn('⚠️ getPaymentHistory devolvió vacío en ruta con ID. Probando ruta general...');
+            break;
           }
 
           if ((response.status === 403 || response.status === 404) && endpointIndex < endpointCandidates.length - 1) {
@@ -566,7 +588,9 @@ window.StudentAPI = {
         'view.own.paid.concepts.summary'
       ];
 
+      endpointLoop:
       for (const rawEndpoint of endpointCandidates) {
+        const isLastEndpoint = rawEndpoint === endpointCandidates[endpointCandidates.length - 1];
         const url = new URL(rawEndpoint);
         url.searchParams.append('page', String(page));
         url.searchParams.append('perPage', String(perPage));
@@ -603,7 +627,14 @@ window.StudentAPI = {
               };
             }
 
-            if (withPermission.ok) return await withPermission.json();
+            if (withPermission.ok) {
+              const payload = await withPermission.json();
+              const items = extractPaymentHistoryItems(payload);
+              if (items.length || isLastEndpoint) return payload;
+
+              console.warn('⚠️ getDashboardHistory devolvió vacío en ruta con ID. Probando ruta general...');
+              continue endpointLoop;
+            }
             if (!isSkippableFallbackStatus(withPermission.status)) {
               throw new Error(await parseErrorMessage(withPermission, `Error ${withPermission.status}: ${withPermission.statusText}`));
             }
@@ -638,7 +669,14 @@ window.StudentAPI = {
             };
           }
 
-          if (withoutPermission.ok) return await withoutPermission.json();
+          if (withoutPermission.ok) {
+            const payload = await withoutPermission.json();
+            const items = extractPaymentHistoryItems(payload);
+            if (items.length || isLastEndpoint) return payload;
+
+            console.warn('⚠️ getDashboardHistory (sin permiso) devolvió vacío en ruta con ID. Probando ruta general...');
+            continue endpointLoop;
+          }
           if (!isSkippableFallbackStatus(withoutPermission.status)) {
             throw new Error(await parseErrorMessage(withoutPermission, `Error ${withoutPermission.status}: ${withoutPermission.statusText}`));
           }
