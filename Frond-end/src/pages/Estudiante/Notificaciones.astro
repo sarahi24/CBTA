@@ -63,8 +63,8 @@ const pageTitle = "Notificaciones";
       <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
       </svg>
-      <h3 class="text-2xl font-bold text-gray-400 mb-2">No tienes notificaciones</h3>
-      <p class="text-gray-500">¡Estás al día con todo!</p>
+      <h3 id="no-notifications-title" class="text-2xl font-bold text-gray-400 mb-2">No tienes notificaciones</h3>
+      <p id="no-notifications-message" class="text-gray-500">¡Estás al día con todo!</p>
     </div>
   </div>
 
@@ -87,6 +87,64 @@ const pageTitle = "Notificaciones";
       nextRetryAt: 0,
       pollIntervalMs: 60000
     };
+
+    function normalizePortalRole(roleValue) {
+      const role = String(roleValue || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[._-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!role) return '';
+      if (role === 'parent' || role === 'padre' || role === 'madre' || role === 'tutor' || role === 'tutora') return 'parent';
+      if (role === 'applicant' || role === 'aspirante' || role === 'solicitante') return 'applicant';
+      if (role === 'student' || role === 'estudiante' || role === 'alumno') return 'student';
+      return role;
+    }
+
+    function detectPortalRoleFromStorage() {
+      const roleValues = [];
+      const rawUserCandidates = [
+        localStorage.getItem('user_data'),
+        localStorage.getItem('userData')
+      ].filter(Boolean);
+
+      rawUserCandidates.forEach((rawValue) => {
+        try {
+          const parsed = JSON.parse(rawValue);
+          const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+          const roles = [];
+          if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+          if (userData?.role) roles.push(userData.role);
+          if (userData?.role_name) roles.push(userData.role_name);
+          if (userData?.type) roles.push(userData.type);
+
+          roles.forEach((entry) => {
+            if (!entry) return;
+            if (typeof entry === 'string') {
+              roleValues.push(entry);
+              return;
+            }
+            roleValues.push(entry?.name || entry?.slug || entry?.role || entry?.role_name || '');
+          });
+        } catch (_) {}
+      });
+
+      const roleCandidates = [
+        localStorage.getItem('userRole'),
+        localStorage.getItem('role'),
+        ...roleValues
+      ]
+        .filter(Boolean)
+        .map((value) => normalizePortalRole(value))
+        .filter(Boolean);
+
+      if (roleCandidates.includes('parent')) return 'parent';
+      if (roleCandidates.includes('applicant')) return 'applicant';
+      if (roleCandidates.includes('student')) return 'student';
+      return '';
+    }
 
     // Obtener token
     function getToken() {
@@ -150,6 +208,12 @@ const pageTitle = "Notificaciones";
       if (!token) {
         console.error('No hay token de autenticación');
         showNoNotifications();
+        return;
+      }
+
+      const portalRole = detectPortalRoleFromStorage();
+      if (portalRole === 'applicant') {
+        showNoNotifications('Notificaciones no disponibles', 'Tu cuenta aspirante está en proceso. Se habilitarán cuando se active tu perfil de estudiante.');
         return;
       }
 
@@ -777,11 +841,15 @@ const pageTitle = "Notificaciones";
       });
     }
 
-    function showNoNotifications() {
+    function showNoNotifications(titleText = 'No tienes notificaciones', messageText = '¡Estás al día con todo!') {
       const container = document.getElementById('notifications-container');
       const noNotifications = document.getElementById('no-notifications');
       const pagination = document.getElementById('notifications-pagination');
+      const title = document.getElementById('no-notifications-title');
+      const message = document.getElementById('no-notifications-message');
       container.innerHTML = '';
+      if (title) title.textContent = titleText;
+      if (message) message.textContent = messageText;
       noNotifications.classList.remove('hidden');
       if (pagination) pagination.innerHTML = '';
     }

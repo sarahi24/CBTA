@@ -538,59 +538,66 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 detectRole() {
                     try {
-                        const userData = localStorage.getItem('user_data');
-                        if (userData) {
-                            const user = JSON.parse(userData);
+                        const roleValues = [];
+                        const rawUserCandidates = [
+                            localStorage.getItem('user_data'),
+                            localStorage.getItem('userData')
+                        ].filter(Boolean);
 
-                            const roles = [];
+                        rawUserCandidates.forEach((rawValue) => {
+                            try {
+                                const parsed = JSON.parse(rawValue);
+                                const user = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+                                const roles = [];
 
-                            if (user.roles) {
-                                const rawRoles = Array.isArray(user.roles) ? user.roles : [user.roles];
-                                rawRoles.forEach(r => {
-                                    if (typeof r === 'string') {
-                                        roles.push(r);
-                                    } else if (r?.name) {
-                                        roles.push(r.name);
+                                if (Array.isArray(user?.roles)) roles.push(...user.roles);
+                                if (user?.role) roles.push(user.role);
+                                if (user?.role_name) roles.push(user.role_name);
+                                if (user?.type) roles.push(user.type);
+
+                                roles.forEach((entry) => {
+                                    if (!entry) return;
+                                    if (typeof entry === 'string') {
+                                        roleValues.push(entry);
+                                        return;
                                     }
+                                    roleValues.push(entry?.name || entry?.slug || entry?.role || entry?.role_name || '');
                                 });
-                            }
+                            } catch (_) {}
+                        });
 
-                            if (user.role) {
-                                roles.push(String(user.role));
-                            }
+                        const roleNames = [
+                            localStorage.getItem('userRole'),
+                            localStorage.getItem('role'),
+                            ...roleValues
+                        ]
+                            .filter(Boolean)
+                            .map(role => String(role).toLowerCase().trim())
+                            .filter(Boolean);
 
-                            if (user.role_name) {
-                                roles.push(String(user.role_name));
-                            }
+                        this.rol = roleNames[0] || '';
 
-                            const roleNames = roles
-                                .map(role => role.toLowerCase().trim())
-                                .filter(Boolean);
+                        const hasApplicantRole = roleNames.some(role =>
+                            role.includes('applicant') ||
+                            role.includes('aspirante') ||
+                            role.includes('solicitante')
+                        );
 
-                            this.rol = roleNames[0] || '';
+                        const hasStudentRole = roleNames.some(role =>
+                            role === 'student' ||
+                            role.includes('estudiante') ||
+                            role.includes('alumno')
+                        );
 
-                            const hasApplicantRole = roleNames.some(role =>
-                                role.includes('applicant') ||
-                                role.includes('aspirante') ||
-                                role.includes('solicitante')
-                            );
+                        const hasAdminRole = roleNames.some(role =>
+                            role.includes('admin') ||
+                            role.includes('administrador') ||
+                            role.includes('financiero') ||
+                            role.includes('financial-staff')
+                        );
 
-                            const hasStudentRole = roleNames.some(role =>
-                                role === 'student' ||
-                                role.includes('estudiante') ||
-                                role.includes('alumno')
-                            );
-
-                            const hasAdminRole = roleNames.some(role =>
-                                role.includes('admin') ||
-                                role.includes('administrador') ||
-                                role.includes('financiero') ||
-                                role.includes('financial-staff')
-                            );
-
-                            this.isApplicant = hasApplicantRole;
-                            this.isStudent = hasStudentRole && !hasAdminRole && !hasApplicantRole;
-                        }
+                        this.isApplicant = hasApplicantRole;
+                        this.isStudent = hasStudentRole && !hasAdminRole && !hasApplicantRole;
                     } catch (e) {
                         console.error('Error detecting role:', e);
                         this.rol = '';
@@ -740,6 +747,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 async loadStudentData() {
                     const token = localStorage.getItem('access_token');
+
+                    if (this.isApplicant) {
+                        this.loadStudentDataFromStorage();
+                        return;
+                    }
                     
                     if (!token) {
                         this.loadStudentDataFromStorage();
@@ -747,37 +759,56 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     }
 
                     try {
-                        const response = await fetch(API_BASE_URL + '/v1/users/user', {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': 'Bearer ' + token,
-                                'Accept': 'application/json'
-                            }
-                        });
-
-                        if (response.ok) {
-                            const data = await response.json();
+                        if (window.StudentAPI?.getAuthenticatedUser) {
+                            const data = await window.StudentAPI.getAuthenticatedUser(token);
                             console.log('Respuesta completa de /v1/users/user:', data);
 
                             const student = data?.data?.user || data?.user || data?.data;
-                            if ((data.success || student) && student) {
+                            if ((data?.success || student) && student) {
                                 console.log('Objeto user recibido:', student);
-                                
                                 localStorage.setItem('user_data', JSON.stringify(student));
                                 this.populateStudentData(student, data);
-                            } else {
-                                console.warn('Respuesta no válida, cargando desde localStorage');
-                                this.loadStudentDataFromStorage();
+                                return;
                             }
-                        } else if (response.status === 401 || response.status === 403) {
-                            console.warn('No autorizado, cargando desde localStorage');
+
+                            console.warn('Respuesta no válida, cargando desde localStorage');
                             this.loadStudentDataFromStorage();
                         } else {
-                            console.warn('Error en respuesta:', response.status);
-                            this.loadStudentDataFromStorage();
+                            const response = await fetch(API_BASE_URL + '/v1/users/user', {
+                                method: 'GET',
+                                headers: {
+                                    'Authorization': 'Bearer ' + token,
+                                    'Accept': 'application/json'
+                                }
+                            });
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                console.log('Respuesta completa de /v1/users/user:', data);
+
+                                const student = data?.data?.user || data?.user || data?.data;
+                                if ((data.success || student) && student) {
+                                    console.log('Objeto user recibido:', student);
+                                    
+                                    localStorage.setItem('user_data', JSON.stringify(student));
+                                    this.populateStudentData(student, data);
+                                } else {
+                                    console.warn('Respuesta no válida, cargando desde localStorage');
+                                    this.loadStudentDataFromStorage();
+                                }
+                            } else if (response.status === 401 || response.status === 403 || response.status === 429) {
+                                this.loadStudentDataFromStorage();
+                            } else {
+                                console.warn('Error en respuesta:', response.status);
+                                this.loadStudentDataFromStorage();
+                            }
                         }
                     } catch (err) {
-                        console.error('Error fetching student data:', err);
+                        const errorText = String(err?.message || err || '').toLowerCase();
+                        const isRateLimited = errorText.includes('429') || errorText.includes('límite de solicitudes') || errorText.includes('limite de solicitudes') || errorText.includes('too many requests');
+                        if (!isRateLimited) {
+                            console.error('Error fetching student data:', err);
+                        }
                         this.loadStudentDataFromStorage();
                     }
                 },
