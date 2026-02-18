@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260217r25" is:inline></script>
+  <script src="/studentAPI.js?v=20260215r19" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -25,27 +25,12 @@ const title = 'Panel de Estudiante';
         initInProgress: false,
 
         normalizePortalRole(roleValue) {
-          const role = String(roleValue || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[._-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+          const role = String(roleValue || '').toLowerCase().trim();
           if (!role) return '';
-          if (role === 'parent' || role === 'padre' || role === 'madre' || role === 'tutor' || role === 'tutora' || role === 'tutor legal') return 'parent';
+          if (role === 'parent' || role === 'padre') return 'parent';
           if (role === 'applicant' || role === 'aspirante' || role === 'solicitante') return 'applicant';
-          if (role === 'student' || role === 'estudiante' || role === 'alumno' || role === 'alumna') return 'student';
+          if (role === 'student' || role === 'estudiante' || role === 'alumno') return 'student';
           return role;
-        },
-
-        extractRoleValue(entry) {
-          if (!entry) return '';
-          if (typeof entry === 'string') return entry;
-          if (typeof entry === 'object') {
-            return entry?.name || entry?.slug || entry?.role || entry?.role_name || entry?.value || entry?.type || '';
-          }
-          return String(entry || '');
         },
 
         detectPortalRoleFromStorage() {
@@ -68,7 +53,11 @@ const title = 'Panel de Estudiante';
 
               roles.forEach((entry) => {
                 if (!entry) return;
-                roleValues.push(this.extractRoleValue(entry));
+                if (typeof entry === 'string') {
+                  roleValues.push(entry);
+                  return;
+                }
+                roleValues.push(entry?.name || entry?.slug || entry?.role || '');
               });
             } catch (error) {
               console.warn('⚠️ [PortalEstudiante] No se pudo parsear user_data/userData:', error?.message || error);
@@ -104,7 +93,11 @@ const title = 'Panel de Estudiante';
             if (user?.type) rawRoles.push(user.type);
 
             const normalizedRoles = rawRoles
-              .map((entry) => this.extractRoleValue(entry))
+              .map((entry) => {
+                if (!entry) return '';
+                if (typeof entry === 'string') return entry;
+                return entry?.name || entry?.slug || entry?.role || '';
+              })
               .map((value) => this.normalizePortalRole(value))
               .filter(Boolean);
 
@@ -176,41 +169,23 @@ const title = 'Panel de Estudiante';
 
             const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
 
-            let items = [];
             if (historyRes && !historyRes.error) {
-              items = this.extractHistoryItems(historyRes);
-            } else if (historyRes?.error) {
-              console.warn('⚠️ [PortalEstudiante] getDashboardHistory devolvió error:', historyRes.error);
+              const items = historyRes.data && historyRes.data.payment_history && Array.isArray(historyRes.data.payment_history.items)
+                ? historyRes.data.payment_history.items
+                : [];
+              this.history = items.map((payment) => {
+                const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? '0.00';
+                return {
+                  id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
+                  concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
+                  monto: this.formatDashboardHistoryAmount(montoValue),
+                  fecha: this.formatDashboardHistoryDate(payment),
+                  metodo: payment?.method || payment?.payment_method || 'Metodo desconocido',
+                  status: this.normalizeHistoryStatus(payment?.status)
+                };
+              });
+              console.log('✅ Historial de pagos cargado:', this.history.length);
             }
-
-            if (!items.length && window.StudentAPI?.getPaymentHistory) {
-              try {
-                const fallbackHistory = await window.StudentAPI.getPaymentHistory(scopedStudentId, token, false, requestRole, 15, 1);
-                items = this.extractHistoryItems(fallbackHistory);
-                if (items.length) {
-                  console.log('✅ [PortalEstudiante] Historial recuperado con fallback getPaymentHistory:', items.length);
-                }
-              } catch (fallbackError) {
-                console.warn('⚠️ [PortalEstudiante] Fallback de historial falló:', fallbackError?.message || fallbackError);
-              }
-            }
-
-            this.history = items.map((payment) => {
-              const montoValue = this.resolveHistoryAmount(payment);
-              const fechaValue = this.resolveHistoryDateSource(payment);
-              const metodoValue = this.resolveHistoryMethod(payment);
-              const statusValue = this.resolveHistoryStatus(payment);
-              return {
-                id: payment?.id ?? payment?.payment_id ?? payment?.transaction_id ?? payment?.reference ?? Math.random().toString(36).slice(2),
-                concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || payment?.title || 'Pago',
-                monto: this.formatDashboardHistoryAmount(montoValue),
-                fecha: this.formatDashboardHistoryDate(fechaValue),
-                metodo: metodoValue,
-                status: statusValue,
-                statusLabel: this.getHistoryStatusLabel(statusValue)
-              };
-            });
-            console.log('✅ Historial de pagos cargado:', this.history.length);
 
             if (overdueRes && !overdueRes.error) {
               this.overdue = overdueRes.data && overdueRes.data.total_overdue ? overdueRes.data.total_overdue : { totalAmount: '0.00', totalCount: 0 };
@@ -243,79 +218,6 @@ const title = 'Panel de Estudiante';
           return '$' + parsed.toFixed(2) + ' MXN';
         },
 
-        extractHistoryItems(historyResponse) {
-          if (!historyResponse || historyResponse.error) return [];
-
-          const data = historyResponse?.data || {};
-          const paymentHistory = data?.payment_history || historyResponse?.payment_history || data?.history || historyResponse?.history || {};
-
-          if (Array.isArray(paymentHistory?.items)) return paymentHistory.items;
-          if (Array.isArray(paymentHistory?.data)) return paymentHistory.data;
-          if (Array.isArray(paymentHistory?.payments)) return paymentHistory.payments;
-          if (Array.isArray(paymentHistory?.records)) return paymentHistory.records;
-          if (Array.isArray(data?.payments)) return data.payments;
-          if (Array.isArray(data?.records)) return data.records;
-          if (Array.isArray(data?.transactions)) return data.transactions;
-          if (Array.isArray(historyResponse?.payments)) return historyResponse.payments;
-          if (Array.isArray(historyResponse?.records)) return historyResponse.records;
-          if (Array.isArray(historyResponse?.transactions)) return historyResponse.transactions;
-          if (Array.isArray(data?.items)) return data.items;
-          if (Array.isArray(data)) return data;
-
-          return [];
-        },
-
-        resolveHistoryAmount(payment) {
-          if (!payment || typeof payment !== 'object') return '0.00';
-          return payment?.amount
-            ?? payment?.total_amount
-            ?? payment?.total
-            ?? payment?.monto
-            ?? payment?.amount_due
-            ?? payment?.original_amount
-            ?? payment?.amount_received
-            ?? payment?.paid_amount
-            ?? payment?.received_amount
-            ?? '0.00';
-        },
-
-        resolveHistoryDateSource(payment) {
-          if (!payment || typeof payment !== 'object') return {};
-          return {
-            date: payment?.date ?? payment?.created_at_human ?? payment?.relative_date,
-            date_iso: payment?.date_iso ?? payment?.payment_date ?? payment?.created_at ?? payment?.updated_at
-          };
-        },
-
-        resolveHistoryMethod(payment) {
-          if (!payment || typeof payment !== 'object') return 'Metodo desconocido';
-
-          const methodDetails = payment?.payment_method_details;
-          if (Array.isArray(methodDetails) && methodDetails.length > 0) {
-            const first = methodDetails[0];
-            if (typeof first === 'string' && first.trim()) return first.trim();
-            if (first && typeof first === 'object') {
-              const brand = String(first?.brand || first?.card_brand || '').trim();
-              const last4 = String(first?.last4 || first?.card_last4 || '').trim();
-              const type = String(first?.type || first?.method || '').trim();
-              const bank = String(first?.bank || first?.bank_name || '').trim();
-              if (brand && last4) return `${brand.toUpperCase()} •••• ${last4}`;
-              if (bank && last4) return `${bank} •••• ${last4}`;
-              if (type && last4) return `${type} •••• ${last4}`;
-              if (brand) return brand.toUpperCase();
-              if (bank) return bank;
-              if (type) return type;
-            }
-          }
-
-          return payment?.payment_method
-            || payment?.method
-            || payment?.payment_method_type
-            || payment?.method_type
-            || payment?.channel
-            || 'Metodo desconocido';
-        },
-
         pendingSubtitle() {
           return this.pending && this.pending.totalCount
             ? this.pending.totalCount + ' ' + (this.pending.totalCount === 1 ? 'Adeudo' : 'Adeudos')
@@ -328,58 +230,14 @@ const title = 'Panel de Estudiante';
             : 'Sin pagos vencidos';
         },
 
-        resolveHistoryStatus(payment) {
-          if (!payment || typeof payment !== 'object') {
-            return 'unknown';
-          }
-
-          const rawStatus = payment?.status
-            || payment?.payment_status
-            || payment?.estado
-            || payment?.transaction_status
-            || payment?.payment_intent_status
-            || payment?.intent_status
-            || payment?.charge_status
-            || payment?.stripe_status
-            || payment?.order_status
-            || payment?.cash_status
-            || payment?.oxxo_status
-            || '';
-
-          const normalized = this.normalizeHistoryStatus(rawStatus);
-          if (normalized && normalized !== 'unknown') {
-            return normalized;
-          }
-
-          const methodValue = String(payment?.payment_method || payment?.method || payment?.payment_method_type || '').toLowerCase();
-          const isCashReference = methodValue.includes('oxxo') || methodValue.includes('cash') || methodValue.includes('efectivo');
-          if (isCashReference) {
-            return 'pending';
-          }
-
-          return 'unknown';
-        },
-
         normalizeHistoryStatus(statusValue) {
           const value = String(statusValue || '').toLowerCase().trim();
-          if (!value) return 'unknown';
+          if (!value) return 'paid';
           if (value === 'paid' || value === 'completed' || value === 'success' || value === 'succeeded') return 'paid';
-          if (value === 'pending_payment' || value === 'awaiting_payment' || value === 'waiting_payment' || value === 'requires_payment_method') return 'pending';
           if (value === 'pending' || value === 'processing' || value === 'in_process') return 'pending';
-          if (value === 'unpaid' || value === 'not_paid' || value === 'no_pagado') return 'pending';
           if (value === 'failed' || value === 'error' || value === 'declined' || value === 'canceled' || value === 'cancelled') return 'failed';
           if (value === 'refunded' || value === 'refund') return 'refunded';
-          if (value === 'unknown' || value === 'none' || value === 'n/a' || value === '-') return 'unknown';
           return value;
-        },
-
-        getHistoryStatusLabel(statusValue) {
-          const value = String(statusValue || '').toLowerCase().trim();
-          if (value === 'paid') return 'Pagado';
-          if (value === 'pending') return 'Pendiente';
-          if (value === 'failed') return 'Fallido';
-          if (value === 'refunded') return 'Reembolsado';
-          return 'En revisión';
         },
 
         formatDashboardHistoryDate(payment) {
@@ -655,7 +513,6 @@ const title = 'Panel de Estudiante';
                 <th>Concepto</th>
                 <th>Monto</th>
                 <th>Fecha</th>
-                <th>Estado</th>
               </tr>
             </thead>
 
@@ -666,13 +523,12 @@ const title = 'Panel de Estudiante';
                     <td data-label="Concepto" x-text="pago.concepto"></td>
                     <td class="monto" data-label="Monto" x-text="'$' + pago.monto"></td>
                     <td class="fecha-celda" data-label="Fecha" x-text="pago.fecha || '—'"></td>
-                    <td data-label="Estado" x-text="pago.statusLabel || 'En revisión'"></td>
                   </tr>
                 </template>
               </template>
               <template x-if="!history || history.length === 0">
                 <tr>
-                  <td colspan="4" class="empty-row" x-text="emptyPaymentsMessage"></td>
+                  <td colspan="3" class="empty-row" x-text="emptyPaymentsMessage"></td>
                 </tr>
               </template>
             </tbody>
@@ -1635,27 +1491,12 @@ const title = 'Panel de Estudiante';
 
 <script>
   function normalizePortalRoleForDashboard(roleValue: unknown): string {
-    const role = String(roleValue || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[._-]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const role = String(roleValue || '').toLowerCase().trim();
     if (!role) return '';
-    if (role === 'parent' || role === 'padre' || role === 'madre' || role === 'tutor' || role === 'tutora' || role === 'tutor legal') return 'parent';
-    if (role === 'student' || role === 'estudiante' || role === 'alumno' || role === 'alumna') return 'student';
+    if (role === 'parent' || role === 'padre') return 'parent';
+    if (role === 'student' || role === 'estudiante' || role === 'alumno') return 'student';
     if (role === 'applicant' || role === 'aspirante' || role === 'solicitante') return 'applicant';
     return role;
-  }
-
-  function extractPortalRoleValueForDashboard(entry: any): string {
-    if (!entry) return '';
-    if (typeof entry === 'string') return entry;
-    if (typeof entry === 'object') {
-      return entry?.name || entry?.slug || entry?.role || entry?.role_name || entry?.value || entry?.type || '';
-    }
-    return String(entry || '');
   }
 
   function detectPortalRoleFromStorageForDashboard() {
@@ -1678,7 +1519,11 @@ const title = 'Panel de Estudiante';
 
         roles.forEach((entry) => {
           if (!entry) return;
-          roleValues.push(extractPortalRoleValueForDashboard(entry));
+          if (typeof entry === 'string') {
+            roleValues.push(entry);
+            return;
+          }
+          roleValues.push(entry?.name || entry?.slug || entry?.role || '');
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1715,7 +1560,11 @@ const title = 'Panel de Estudiante';
       if (user?.type) rawRoles.push(user.type);
 
       const normalizedRoles = rawRoles
-        .map((entry) => extractPortalRoleValueForDashboard(entry))
+        .map((entry) => {
+          if (!entry) return '';
+          if (typeof entry === 'string') return entry;
+          return entry?.name || entry?.slug || entry?.role || '';
+        })
         .map((value) => normalizePortalRoleForDashboard(value))
         .filter(Boolean);
 
