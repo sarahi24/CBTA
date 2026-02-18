@@ -151,6 +151,10 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
     const paginationInfo = document.getElementById('pagination-info');
     const paginationButtons = document.getElementById('pagination-buttons');
     const refreshBtn = document.getElementById('refresh-debts-btn');
+    const AUTO_REFRESH_INTERVAL_MS = 45000;
+    let autoRefreshTimer = null;
+    let autoRefreshFocusHandler = null;
+    let autoRefreshVisibilityHandler = null;
 
     // Cargar pagos pendientes desde la API
     async function loadPendingPayments(forceRefresh = false) {
@@ -325,7 +329,37 @@ const careerMapJSON = JSON.stringify(CAREER_MAP);
       refreshBtn.addEventListener('click', () => loadPendingPayments(true));
     }
 
+    const triggerAutoRefresh = () => {
+      if (isLoading || document.hidden) return;
+      loadPendingPayments(true).catch((err) => console.warn('⚠️ Auto-refresh debts:', err?.message || err));
+    };
+
+    const setupAutoRefresh = () => {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
+
+      if (!autoRefreshFocusHandler) {
+        autoRefreshFocusHandler = () => triggerAutoRefresh();
+        window.addEventListener('focus', autoRefreshFocusHandler);
+      }
+
+      if (!autoRefreshVisibilityHandler) {
+        autoRefreshVisibilityHandler = () => {
+          if (!document.hidden) triggerAutoRefresh();
+        };
+        document.addEventListener('visibilitychange', autoRefreshVisibilityHandler);
+      }
+    };
+
     // Cargar datos inicialmente
+    setupAutoRefresh();
     loadPendingPayments();
+
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+    }, { once: true });
   </script>
 </Layout>

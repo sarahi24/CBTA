@@ -97,6 +97,10 @@ const pageTitle = 'Mis Métodos de Pago - SIGE';
     const deleteModal = document.getElementById('delete-modal');
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const AUTO_REFRESH_INTERVAL_MS = 45000;
+    let autoRefreshTimer = null;
+    let autoRefreshFocusHandler = null;
+    let autoRefreshVisibilityHandler = null;
 
     let currentDeleteId = null;
 
@@ -272,8 +276,38 @@ const pageTitle = 'Mis Métodos de Pago - SIGE';
       window.history.replaceState({}, '', '/cards');
     }
 
+    const triggerAutoRefresh = () => {
+      if (document.hidden) return;
+      loadCards(true).catch((err) => console.warn('⚠️ Auto-refresh cards:', err?.message || err));
+    };
+
+    const setupAutoRefresh = () => {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
+
+      if (!autoRefreshFocusHandler) {
+        autoRefreshFocusHandler = () => triggerAutoRefresh();
+        window.addEventListener('focus', autoRefreshFocusHandler);
+      }
+
+      if (!autoRefreshVisibilityHandler) {
+        autoRefreshVisibilityHandler = () => {
+          if (!document.hidden) triggerAutoRefresh();
+        };
+        document.addEventListener('visibilitychange', autoRefreshVisibilityHandler);
+      }
+    };
+
     // Initial load
+    setupAutoRefresh();
     loadCards();
+
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+    }, { once: true });
   </script>
 
   <style>

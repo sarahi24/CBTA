@@ -1609,11 +1609,16 @@ const title = 'Panel de Estudiante';
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshCacheBtn') as HTMLButtonElement | null;
     let originalHTML = '';
+    let isRefreshingDashboard = false;
 
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        try {
-          // Disable button and show loading state
+    const refreshDashboard = async (options: { silent?: boolean; reloadAfterSuccess?: boolean } = {}) => {
+      const { silent = false, reloadAfterSuccess = true } = options;
+      if (isRefreshingDashboard) return;
+
+      isRefreshingDashboard = true;
+
+      try {
+        if (refreshBtn) {
           refreshBtn.disabled = true;
           originalHTML = refreshBtn.innerHTML;
 
@@ -1624,58 +1629,86 @@ const title = 'Panel de Estudiante';
             </svg>
             <span class="btn-text">Actualizando...</span>
           `;
+        }
 
-          const token = localStorage.getItem('access_token');
-          const userId = localStorage.getItem('userId');
-          const studentAPI = (window as any).StudentAPI;
+        const token = localStorage.getItem('access_token');
+        const userId = localStorage.getItem('userId');
+        const studentAPI = (window as any).StudentAPI;
 
-          if (!token) {
+        if (!token) {
+          if (!silent) {
             showToast('error', 'No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
-            return;
           }
+          return;
+        }
 
-          if (!studentAPI) {
+        if (!studentAPI) {
+          if (!silent) {
             showToast('error', 'API no disponible. Por favor, recarga la página.');
-            return;
           }
+          return;
+        }
 
-          let roleForPortal = detectPortalRoleFromStorageForDashboard();
-          const roleFromApi = await syncPortalRoleFromApiForDashboard(token, studentAPI);
-          if (roleFromApi) {
-            roleForPortal = roleFromApi;
-          }
-          const requestRole = roleForPortal === 'applicant' ? 'student' : roleForPortal;
+        let roleForPortal = detectPortalRoleFromStorageForDashboard();
+        const roleFromApi = await syncPortalRoleFromApiForDashboard(token, studentAPI);
+        if (roleFromApi) {
+          roleForPortal = roleFromApi;
+        }
+        const requestRole = roleForPortal === 'applicant' ? 'student' : roleForPortal;
 
-          const parsedUserId = userId ? parseInt(userId, 10) : null;
-          const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
+        const parsedUserId = userId ? parseInt(userId, 10) : null;
+        const scopedStudentId = Number.isInteger(parsedUserId) ? parsedUserId : null;
 
-          const response = await studentAPI.refreshDashboardCache(scopedStudentId, token, requestRole);
+        const response = await studentAPI.refreshDashboardCache(scopedStudentId, token, requestRole);
           
-          if (response.success) {
+        if (response.success) {
+          if (!silent) {
             showToast('success', response.message || 'Caché actualizado correctamente');
+          }
             
-            // Reload page after 1.5 seconds to show updated data
+          if (reloadAfterSuccess) {
             setTimeout(() => {
               window.location.reload();
-            }, 1500);
-          } else {
+            }, silent ? 250 : 1500);
+          }
+        } else {
+          if (!silent) {
             showToast('error', response.message || 'Error al actualizar el caché');
           }
-        } catch (error) {
-          console.error('Error al actualizar caché:', error);
+        }
+      } catch (error) {
+        console.error('Error al actualizar caché:', error);
+        if (!silent) {
           const errorMessage = error instanceof Error ? error.message : 'Error al actualizar el caché del dashboard';
           showToast('error', errorMessage);
-        } finally {
-          // Restore button (only if page is not reloading)
-          setTimeout(() => {
-            if (refreshBtn) {
-              refreshBtn.disabled = false;
-              refreshBtn.innerHTML = originalHTML;
-            }
-          }, 100);
         }
+      } finally {
+        isRefreshingDashboard = false;
+        setTimeout(() => {
+          if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = originalHTML;
+          }
+        }, 100);
+      }
+    };
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        await refreshDashboard({ silent: false, reloadAfterSuccess: true });
       });
     }
+
+    window.addEventListener('focus', () => {
+      if (document.hidden) return;
+      void refreshDashboard({ silent: true, reloadAfterSuccess: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        void refreshDashboard({ silent: true, reloadAfterSuccess: true });
+      }
+    });
   });
 
   function showToast(type: 'success' | 'error', message: string) {

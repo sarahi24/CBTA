@@ -133,6 +133,10 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
     const totalReceivedEl = document.getElementById('total-received');
     const countSucceededEl = document.getElementById('count-succeeded');
     const countPendingEl = document.getElementById('count-pending');
+      const AUTO_REFRESH_INTERVAL_MS = 45000;
+      let autoRefreshTimer = null;
+      let autoRefreshFocusHandler = null;
+      let autoRefreshVisibilityHandler = null;
 
     const fmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
@@ -316,11 +320,43 @@ const stripePaymentsJSON = JSON.stringify(stripePayments);
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => loadStripePayments(true));
     }
+
+      const triggerAutoRefresh = () => {
+        if (isLoading || document.hidden) return;
+        loadStripePayments(true).catch((err) => console.warn('⚠️ Auto-refresh stripe:', err?.message || err));
+      };
+
+      const setupAutoRefresh = () => {
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        autoRefreshTimer = setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
+
+        if (!autoRefreshFocusHandler) {
+          autoRefreshFocusHandler = () => triggerAutoRefresh();
+          window.addEventListener('focus', autoRefreshFocusHandler);
+        }
+
+        if (!autoRefreshVisibilityHandler) {
+          autoRefreshVisibilityHandler = () => {
+            if (!document.hidden) triggerAutoRefresh();
+          };
+          document.addEventListener('visibilitychange', autoRefreshVisibilityHandler);
+        }
+      };
     
     // Load data initially (esperar a que StudentAPI esté disponible)
     ensureStudentAPI()
-      .then(() => loadStripePayments())
+        .then(() => {
+          setupAutoRefresh();
+          return loadStripePayments();
+        })
       .catch(err => console.error('❌ Error al inicializar:', err));
+
+      window.addEventListener('beforeunload', () => {
+        if (autoRefreshTimer) {
+          clearInterval(autoRefreshTimer);
+          autoRefreshTimer = null;
+        }
+      }, { once: true });
   </script>
 
   <style>

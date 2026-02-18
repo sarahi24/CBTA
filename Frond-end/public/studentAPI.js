@@ -129,6 +129,11 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function appendCacheBust(urlObj, enabled = false) {
+  if (!enabled || !urlObj || !urlObj.searchParams) return;
+  urlObj.searchParams.set('_', String(Date.now()));
+}
+
 function buildAuthHeaders(token, role, permission = '') {
   const headers = {
     'Authorization': `Bearer ${token}`,
@@ -788,6 +793,7 @@ window.StudentAPI = {
       for (const rawEndpoint of endpointCandidates) {
         const url = new URL(rawEndpoint);
         if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+        appendCacheBust(url, forceRefresh);
 
         console.log(`🔍 [StudentAPI] getPendingPayments probando: ${url.toString()}`);
 
@@ -795,6 +801,7 @@ window.StudentAPI = {
 
           const withPermission = await fetch(url.toString(), {
             method: 'GET',
+            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole, 'view.pending.concepts')
           });
 
@@ -815,6 +822,7 @@ window.StudentAPI = {
 
           const withoutPermission = await fetch(url.toString(), {
             method: 'GET',
+            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole)
           });
 
@@ -857,6 +865,7 @@ window.StudentAPI = {
       for (const rawEndpoint of endpointCandidates) {
         const url = new URL(rawEndpoint);
         if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+        appendCacheBust(url, forceRefresh);
 
         console.log('📡 Fetching overdue payments from:', url.toString());
 
@@ -864,6 +873,7 @@ window.StudentAPI = {
 
           const withPermission = await fetch(url.toString(), {
             method: 'GET',
+            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole, 'view.overdue.concepts')
           });
 
@@ -880,6 +890,7 @@ window.StudentAPI = {
 
           const withoutPermission = await fetch(url.toString(), {
             method: 'GET',
+            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole)
           });
 
@@ -953,6 +964,7 @@ window.StudentAPI = {
         for (const endpoint of endpointCandidates) {
           const url = new URL(endpoint);
           if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+          appendCacheBust(url, forceRefresh);
 
           const headerModes = [
             { permission: 'view.cards' },
@@ -963,6 +975,7 @@ window.StudentAPI = {
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
               const response = await fetch(url.toString(), {
                 method: 'GET',
+                cache: 'no-store',
                 headers: buildAuthHeaders(token, effectiveRole, mode.permission)
               });
 
@@ -1221,9 +1234,11 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1248,9 +1263,11 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1273,9 +1290,11 @@ window.StudentAPI = {
       if (search) url.searchParams.append('search', search);
       if (year) url.searchParams.append('year', year);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+      appendCacheBust(url, forceRefresh);
       
       const response = await fetch(url.toString(), {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1321,9 +1340,11 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1348,9 +1369,11 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
+      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

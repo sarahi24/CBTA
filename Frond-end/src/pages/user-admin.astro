@@ -479,11 +479,53 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 careers: [],
                 semesters: Array.from({length: 12}, (_, i) => i + 1),
                 studentErrors: {},
+                autoRefreshEnabled: true,
+                autoRefreshIntervalMs: 45000,
+                autoRefreshTimerId: null,
+                _autoRefreshFocusHandler: null,
+                _autoRefreshVisibilityHandler: null,
 
                 init() {
                     this.formData = this.getEmptyFormData();
                     this.loadCareers();
                     this.loadUsers();
+                    this.setupAutoRefresh();
+                },
+
+                setupAutoRefresh() {
+                    if (!this.autoRefreshEnabled) return;
+
+                    if (this.autoRefreshTimerId) {
+                        clearInterval(this.autoRefreshTimerId);
+                        this.autoRefreshTimerId = null;
+                    }
+
+                    const runSilentRefresh = () => {
+                        if (document.hidden) return;
+                        if (this.isLoading || this.showModal || this.showImportModal) return;
+                        this.loadUsers(true);
+                    };
+
+                    this.autoRefreshTimerId = setInterval(runSilentRefresh, this.autoRefreshIntervalMs);
+
+                    if (!this._autoRefreshFocusHandler) {
+                        this._autoRefreshFocusHandler = () => runSilentRefresh();
+                        window.addEventListener('focus', this._autoRefreshFocusHandler);
+                    }
+
+                    if (!this._autoRefreshVisibilityHandler) {
+                        this._autoRefreshVisibilityHandler = () => {
+                            if (!document.hidden) runSilentRefresh();
+                        };
+                        document.addEventListener('visibilitychange', this._autoRefreshVisibilityHandler);
+                    }
+
+                    window.addEventListener('beforeunload', () => {
+                        if (this.autoRefreshTimerId) {
+                            clearInterval(this.autoRefreshTimerId);
+                            this.autoRefreshTimerId = null;
+                        }
+                    }, { once: true });
                 },
 
                 getEmptyFormData() {

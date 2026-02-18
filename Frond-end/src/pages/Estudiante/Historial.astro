@@ -52,6 +52,11 @@ const forceRefresh = forceRefreshParam === 'true';
       initCompleted: false,
       showResultModal: false,
       resultType: '${resultParam || ''}',
+      autoRefreshEnabled: true,
+      autoRefreshIntervalMs: 45000,
+      autoRefreshTimerId: null,
+      autoRefreshFocusHandler: null,
+      autoRefreshVisibilityHandler: null,
 
       detectPortalRole() {
         const userDataCandidates = [
@@ -213,13 +218,60 @@ const forceRefresh = forceRefreshParam === 'true';
 
         this.initCompleted = true;
         this.initInProgress = false;
+        this.setupAutoRefresh();
       },
 
       closeResultModal() {
         this.showResultModal = false;
       },
 
-      async loadHistory() {
+      setupAutoRefresh() {
+        if (!this.autoRefreshEnabled) return;
+
+        const runAutoRefresh = async () => {
+          if (document.hidden) return;
+          if (this.loading || this.initInProgress || this.downloadingReceiptId) return;
+          try {
+            await this.loadHistory(true);
+          } catch (error) {
+            console.warn('⚠️ [Historial] Auto-refresh omitido por error:', error?.message || error);
+          }
+        };
+
+        if (this.autoRefreshTimerId) {
+          clearInterval(this.autoRefreshTimerId);
+          this.autoRefreshTimerId = null;
+        }
+
+        this.autoRefreshTimerId = setInterval(() => {
+          void runAutoRefresh();
+        }, this.autoRefreshIntervalMs);
+
+        if (!this.autoRefreshFocusHandler) {
+          this.autoRefreshFocusHandler = () => {
+            void runAutoRefresh();
+          };
+          window.addEventListener('focus', this.autoRefreshFocusHandler);
+        }
+
+        if (!this.autoRefreshVisibilityHandler) {
+          this.autoRefreshVisibilityHandler = () => {
+            if (!document.hidden) {
+              void runAutoRefresh();
+            }
+          };
+          document.addEventListener('visibilitychange', this.autoRefreshVisibilityHandler);
+        }
+
+        window.addEventListener('beforeunload', () => {
+          if (this.autoRefreshTimerId) {
+            clearInterval(this.autoRefreshTimerId);
+            this.autoRefreshTimerId = null;
+          }
+        }, { once: true });
+      },
+
+      async loadHistory(forceRefreshRequest = ${forceRefresh}) {
         this.loading = true;
         this.errorMessage = '';
         this.roleNotice = '';
@@ -247,7 +299,7 @@ const forceRefresh = forceRefreshParam === 'true';
           const historyRes = await window.StudentAPI.getPaymentHistory(
             userId ? parseInt(userId, 10) : null,
             token,
-            ${forceRefresh},
+            forceRefreshRequest,
             this.roleForPortal,
             this.perPage,
             this.currentPage

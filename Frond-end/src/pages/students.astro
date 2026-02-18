@@ -707,6 +707,33 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+const AUTO_REFRESH_INTERVAL_MS = 45000;
+let autoRefreshTimer = null;
+let autoRefreshFocusHandler = null;
+let autoRefreshVisibilityHandler = null;
+
+function triggerAutoRefresh() {
+    if (isLoading || document.hidden) return;
+    loadStudents(true).catch((err) => console.warn('⚠️ Auto-refresh students:', err?.message || err));
+}
+
+function setupAutoRefresh() {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
+
+    if (!autoRefreshFocusHandler) {
+        autoRefreshFocusHandler = () => triggerAutoRefresh();
+        window.addEventListener('focus', autoRefreshFocusHandler);
+    }
+
+    if (!autoRefreshVisibilityHandler) {
+        autoRefreshVisibilityHandler = () => {
+            if (!document.hidden) triggerAutoRefresh();
+        };
+        document.addEventListener('visibilitychange', autoRefreshVisibilityHandler);
+    }
+}
+
 // Cargar carreras desde API
 async function loadCareers() {
     try {
@@ -770,8 +797,18 @@ async function loadCareers() {
 // Cargar estudiantes al iniciar (esperar a que StudentAPI esté disponible)
 ensureStudentAPI()
   .then(() => loadCareers())
-  .then(() => loadStudents())
+    .then(() => {
+        setupAutoRefresh();
+        return loadStudents();
+    })
   .catch(err => console.error('❌ Error al inicializar:', err));
+
+window.addEventListener('beforeunload', () => {
+        if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+        }
+}, { once: true });
 </script>
 
 </Layout>

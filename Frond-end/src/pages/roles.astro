@@ -1531,6 +1531,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     }
                 },
                 notification: { show: false, message: '', type: 'success' },
+                autoRefreshEnabled: true,
+                autoRefreshIntervalMs: 45000,
+                autoRefreshTimerId: null,
+                _onWindowFocus: null,
+                _onVisibilityChange: null,
                 
                 // Modal de error global
                 showErrorModal: false,
@@ -2609,6 +2614,58 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 return false;
             },
 
+            async refreshUsersSilently(reason = 'auto') {
+                if (!this.autoRefreshEnabled) return;
+                if (this.isLoadingUsers || this.isSaving || this.isImporting || this.roleEnrichmentInProgress) return;
+
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                try {
+                    console.log(`🔄 Auto-refresh usuarios (${reason})`);
+                    await this.loadUsers(token, false, { silent: true });
+                } catch (error) {
+                    console.warn('⚠️ Auto-refresh omitido por error:', error?.message || error);
+                }
+            },
+
+            setupAutoRefresh() {
+                if (!this.autoRefreshEnabled) return;
+
+                if (this.autoRefreshTimerId) {
+                    clearInterval(this.autoRefreshTimerId);
+                    this.autoRefreshTimerId = null;
+                }
+
+                this.autoRefreshTimerId = setInterval(() => {
+                    if (document.hidden) return;
+                    void this.refreshUsersSilently('interval');
+                }, this.autoRefreshIntervalMs);
+
+                if (!this._onWindowFocus) {
+                    this._onWindowFocus = () => {
+                        void this.refreshUsersSilently('focus');
+                    };
+                    window.addEventListener('focus', this._onWindowFocus);
+                }
+
+                if (!this._onVisibilityChange) {
+                    this._onVisibilityChange = () => {
+                        if (!document.hidden) {
+                            void this.refreshUsersSilently('visible');
+                        }
+                    };
+                    document.addEventListener('visibilitychange', this._onVisibilityChange);
+                }
+
+                window.addEventListener('beforeunload', () => {
+                    if (this.autoRefreshTimerId) {
+                        clearInterval(this.autoRefreshTimerId);
+                        this.autoRefreshTimerId = null;
+                    }
+                }, { once: true });
+            },
+
             async init() {
                 // Verificar autenticación
                 console.log('========================================');
@@ -2650,6 +2707,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 
                 // Cargar usuarios desde la API
                 await this.loadUsers(token);
+
+                // Configurar auto-actualización silenciosa
+                this.setupAutoRefresh();
 
                 // Cargar roles para filtro (aunque no se abra el modal)
                 await this.loadAvailableRolesForFilter();
@@ -2728,7 +2788,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 }
             },
 
-            async loadUsers(token, isRetry = false) {
+            async loadUsers(token, isRetry = false, options = {}) {
+                const { silent = false } = options;
                 try {
                     // Si no hay token, obtenerlo del localStorage
                     if (!token) {
@@ -2739,7 +2800,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     if (!token) {
                         console.error('❌ No hay token de autenticación disponible');
                         this.apiError = 'No hay token de autenticación';
-                        this.showNotify('No hay token de autenticación. Por favor, inicia sesión nuevamente.', 'error');
+                        if (!silent) {
+                            this.showNotify('No hay token de autenticación. Por favor, inicia sesión nuevamente.', 'error');
+                        }
                         return;
                     }
                     
@@ -2872,7 +2935,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         if (response.status === 500) {
                             this.apiError = `Error del servidor (500)`;
                             const errorMsg = errorData.message || errorData.error || 'Error interno del servidor';
-                            this.showNotify(`❌ Error 500: ${errorMsg}`, 'error');
+                            if (!silent) {
+                                this.showNotify(`❌ Error 500: ${errorMsg}`, 'error');
+                            }
                             
                             console.error('');
                             console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
@@ -2911,7 +2976,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             console.error('');
                         } else {
                             this.apiError = `Error ${response.status}`;
-                            this.showNotify(`Error al cargar usuarios: ${errorData.message || response.statusText}`, 'error');
+                            if (!silent) {
+                                this.showNotify(`Error al cargar usuarios: ${errorData.message || response.statusText}`, 'error');
+                            }
                         }
                     }
                 } catch (error) {
@@ -2919,10 +2986,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     
                     if (error.name === 'AbortError') {
                         this.apiError = 'Tiempo de espera agotado';
-                        this.showNotify('La solicitud tardó demasiado tiempo', 'error');
+                        if (!silent) {
+                            this.showNotify('La solicitud tardó demasiado tiempo', 'error');
+                        }
                     } else {
                         this.apiError = error.message;
-                        this.showNotify(`Error de conexión: ${error.message}`, 'error');
+                        if (!silent) {
+                            this.showNotify(`Error de conexión: ${error.message}`, 'error');
+                        }
                     }
                 } finally {
                     this.isLoadingUsers = false;

@@ -14,6 +14,11 @@ const paymentId = Astro.url.searchParams.get('id');
     errorMessage: '',
     downloadingReceipt: false,
     portalRole: 'student',
+    autoRefreshEnabled: true,
+    autoRefreshIntervalMs: 45000,
+    autoRefreshTimerId: null,
+    autoRefreshFocusHandler: null,
+    autoRefreshVisibilityHandler: null,
 
     pickFirstValue(source, keys, fallback = null) {
       if (!source || !Array.isArray(keys)) return fallback;
@@ -177,6 +182,53 @@ const paymentId = Astro.url.searchParams.get('id');
       this.portalRole = this.detectPortalRole();
       
       await this.loadDetail();
+      this.setupAutoRefresh();
+    },
+
+    setupAutoRefresh() {
+      if (!this.autoRefreshEnabled) return;
+
+      const runAutoRefresh = async () => {
+        if (document.hidden) return;
+        if (this.loading || this.downloadingReceipt) return;
+        try {
+          await this.loadDetail();
+        } catch (error) {
+          console.warn('⚠️ [DetallePago] Auto-refresh omitido por error:', error?.message || error);
+        }
+      };
+
+      if (this.autoRefreshTimerId) {
+        clearInterval(this.autoRefreshTimerId);
+        this.autoRefreshTimerId = null;
+      }
+
+      this.autoRefreshTimerId = setInterval(() => {
+        void runAutoRefresh();
+      }, this.autoRefreshIntervalMs);
+
+      if (!this.autoRefreshFocusHandler) {
+        this.autoRefreshFocusHandler = () => {
+          void runAutoRefresh();
+        };
+        window.addEventListener('focus', this.autoRefreshFocusHandler);
+      }
+
+      if (!this.autoRefreshVisibilityHandler) {
+        this.autoRefreshVisibilityHandler = () => {
+          if (!document.hidden) {
+            void runAutoRefresh();
+          }
+        };
+        document.addEventListener('visibilitychange', this.autoRefreshVisibilityHandler);
+      }
+
+      window.addEventListener('beforeunload', () => {
+        if (this.autoRefreshTimerId) {
+          clearInterval(this.autoRefreshTimerId);
+          this.autoRefreshTimerId = null;
+        }
+      }, { once: true });
     },
 
     async loadDetail() {

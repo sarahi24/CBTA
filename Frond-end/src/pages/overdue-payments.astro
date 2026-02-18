@@ -122,6 +122,10 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
     const totalOverdueEl = document.getElementById('total-overdue');
     const countOverdueEl = document.getElementById('count-overdue');
     const avgDaysEl = document.getElementById('avg-days-overdue');
+    const AUTO_REFRESH_INTERVAL_MS = 45000;
+    let autoRefreshTimer = null;
+    let autoRefreshFocusHandler = null;
+    let autoRefreshVisibilityHandler = null;
 
     const fmt = n => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
     
@@ -288,11 +292,43 @@ const overduePaymentsJSON = JSON.stringify(overduePayments);
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => loadOverduePayments(true));
     }
+
+    const triggerAutoRefresh = () => {
+      if (isLoading || document.hidden) return;
+      loadOverduePayments(true).catch((err) => console.warn('⚠️ Auto-refresh overdue:', err?.message || err));
+    };
+
+    const setupAutoRefresh = () => {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
+
+      if (!autoRefreshFocusHandler) {
+        autoRefreshFocusHandler = () => triggerAutoRefresh();
+        window.addEventListener('focus', autoRefreshFocusHandler);
+      }
+
+      if (!autoRefreshVisibilityHandler) {
+        autoRefreshVisibilityHandler = () => {
+          if (!document.hidden) triggerAutoRefresh();
+        };
+        document.addEventListener('visibilitychange', autoRefreshVisibilityHandler);
+      }
+    };
     
     // Load data initially (esperar a que StudentAPI esté disponible)
     ensureStudentAPI()
-      .then(() => loadOverduePayments())
+      .then(() => {
+        setupAutoRefresh();
+        return loadOverduePayments();
+      })
       .catch(err => console.error('❌ Error al inicializar:', err));
+
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+    }, { once: true });
   </script>
 
   <style>

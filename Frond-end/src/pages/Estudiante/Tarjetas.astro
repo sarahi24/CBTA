@@ -25,6 +25,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           lastCardsFetchAt: 0,
           showResultModal: false,
           resultType: '',
+          autoRefreshEnabled: true,
+          autoRefreshIntervalMs: 45000,
+          autoRefreshTimerId: null,
+          autoRefreshFocusHandler: null,
+          autoRefreshVisibilityHandler: null,
 
           logError(context, error, extra = {}) {
             const message = error?.message || String(error || 'Error desconocido');
@@ -235,6 +240,52 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             this.showResultModal = false;
           },
 
+          setupAutoRefresh() {
+            if (!this.autoRefreshEnabled) return;
+
+            const runAutoRefresh = async () => {
+              if (document.hidden) return;
+              if (this.isLoading || this.initInProgress || this.showModal) return;
+              try {
+                await this.cargarTarjetas(true);
+              } catch (error) {
+                console.warn('⚠️ [Tarjetas] Auto-refresh omitido por error:', error?.message || error);
+              }
+            };
+
+            if (this.autoRefreshTimerId) {
+              clearInterval(this.autoRefreshTimerId);
+              this.autoRefreshTimerId = null;
+            }
+
+            this.autoRefreshTimerId = setInterval(() => {
+              void runAutoRefresh();
+            }, this.autoRefreshIntervalMs);
+
+            if (!this.autoRefreshFocusHandler) {
+              this.autoRefreshFocusHandler = () => {
+                void runAutoRefresh();
+              };
+              window.addEventListener('focus', this.autoRefreshFocusHandler);
+            }
+
+            if (!this.autoRefreshVisibilityHandler) {
+              this.autoRefreshVisibilityHandler = () => {
+                if (!document.hidden) {
+                  void runAutoRefresh();
+                }
+              };
+              document.addEventListener('visibilitychange', this.autoRefreshVisibilityHandler);
+            }
+
+            window.addEventListener('beforeunload', () => {
+              if (this.autoRefreshTimerId) {
+                clearInterval(this.autoRefreshTimerId);
+                this.autoRefreshTimerId = null;
+              }
+            }, { once: true });
+          },
+
           canManageCards() {
             if (this.hasPortalPermission('create.setup')) return true;
             if (this.hasCardsAccess) return true;
@@ -305,6 +356,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               } else {
                 this.roleNotice = '';
               }
+
+              this.setupAutoRefresh();
 
               this.initCompleted = true;
             } catch (error) {

@@ -30,6 +30,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       roleNotice: '',
       showResultModal: false,
       resultType: '${resultParam || ''}',
+      autoRefreshEnabled: true,
+      autoRefreshIntervalMs: 45000,
+      autoRefreshTimerId: null,
+      autoRefreshFocusHandler: null,
+      autoRefreshVisibilityHandler: null,
 
       detectPortalRole() {
         const userDataCandidates = [
@@ -232,6 +237,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             this.loadPendingPayments(),
             this.loadOverduePayments()
           ]);
+
+          this.setupAutoRefresh();
         }
 
         if (token && apiReady) {
@@ -274,7 +281,56 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         }
       },
 
-      async loadPendingPayments() {
+      setupAutoRefresh() {
+        if (!this.autoRefreshEnabled) return;
+
+        const runAutoRefresh = async () => {
+          if (document.hidden) return;
+          if (this.loading || this.loadingTab || this.showModal) return;
+          try {
+            await Promise.all([
+              this.loadPendingPayments(true),
+              this.loadOverduePayments(true)
+            ]);
+          } catch (error) {
+            console.warn('⚠️ [Adeudos] Auto-refresh omitido por error:', error?.message || error);
+          }
+        };
+
+        if (this.autoRefreshTimerId) {
+          clearInterval(this.autoRefreshTimerId);
+          this.autoRefreshTimerId = null;
+        }
+
+        this.autoRefreshTimerId = setInterval(() => {
+          void runAutoRefresh();
+        }, this.autoRefreshIntervalMs);
+
+        if (!this.autoRefreshFocusHandler) {
+          this.autoRefreshFocusHandler = () => {
+            void runAutoRefresh();
+          };
+          window.addEventListener('focus', this.autoRefreshFocusHandler);
+        }
+
+        if (!this.autoRefreshVisibilityHandler) {
+          this.autoRefreshVisibilityHandler = () => {
+            if (!document.hidden) {
+              void runAutoRefresh();
+            }
+          };
+          document.addEventListener('visibilitychange', this.autoRefreshVisibilityHandler);
+        }
+
+        window.addEventListener('beforeunload', () => {
+          if (this.autoRefreshTimerId) {
+            clearInterval(this.autoRefreshTimerId);
+            this.autoRefreshTimerId = null;
+          }
+        }, { once: true });
+      },
+
+      async loadPendingPayments(forceRefresh = false) {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
@@ -284,7 +340,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           console.log('ðŸ” UserId:', this.userId);
           
           // Pasar el userId para que se construya el endpoint correcto
-          const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, false, this.portalRole);
+          const paymentsData = await window.StudentAPI.getPendingPayments(this.userId, token, forceRefresh, this.portalRole);
           
           console.log('ðŸ“Š [Adeudos] Response structure:', { success: paymentsData?.success, dataType: typeof paymentsData?.data, isArray: Array.isArray(paymentsData?.data) });
 
@@ -302,7 +358,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         }
       },
 
-      async loadOverduePayments() {
+      async loadOverduePayments(forceRefresh = false) {
         const token = localStorage.getItem('access_token');
         if (!token) {
           console.warn('š ï¸ No token available for overdue payments');
@@ -323,7 +379,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           console.log('… window.StudentAPI disponible');
           
           // Pasar el userId para que se construya el endpoint correcto
-          const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, false, this.portalRole);
+          const overdueData = await window.StudentAPI.getOverduePayments(this.userId, token, forceRefresh, this.portalRole);
           
           console.log('ðŸ“Š [Adeudos] Respuesta completa del servidor:', overdueData);
           console.log('ðŸ“Š [Adeudos] Overdue Response structure:', { success: overdueData?.success, dataType: typeof overdueData?.data, isArray: Array.isArray(overdueData?.data) });

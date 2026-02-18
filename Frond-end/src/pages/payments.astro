@@ -162,6 +162,10 @@ const tableHead = document.getElementById('payments-table-head');
 const tableBody = document.getElementById('payments-table-body');
     const searchInput = document.getElementById('search-input');
     const refreshBtn = document.getElementById('refresh-btn');
+    const AUTO_REFRESH_INTERVAL_MS = 45000;
+    let autoRefreshTimer = null;
+    let autoRefreshFocusHandler = null;
+    let autoRefreshVisibilityHandler = null;
     const modeByConceptBtn = document.getElementById('mode-by-concept');
     const modeByStudentBtn = document.getElementById('mode-by-student');
 
@@ -673,6 +677,28 @@ const tableBody = document.getElementById('payments-table-body');
         });
     };
 
+    const triggerAutoRefresh = () => {
+        if (isLoading || document.hidden) return;
+        loadPayments(true).catch((err) => console.warn('⚠️ Auto-refresh payments:', err?.message || err));
+    };
+
+    const setupAutoRefresh = () => {
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        autoRefreshTimer = setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
+
+        if (!autoRefreshFocusHandler) {
+            autoRefreshFocusHandler = () => triggerAutoRefresh();
+            window.addEventListener('focus', autoRefreshFocusHandler);
+        }
+
+        if (!autoRefreshVisibilityHandler) {
+            autoRefreshVisibilityHandler = () => {
+                if (!document.hidden) triggerAutoRefresh();
+            };
+            document.addEventListener('visibilitychange', autoRefreshVisibilityHandler);
+        }
+    };
+
         modeByConceptBtn.onclick = () => {
                 if (viewMode === 'by-concept') return;
                 viewMode = 'by-concept';
@@ -693,8 +719,16 @@ const tableBody = document.getElementById('payments-table-body');
     ensureStudentAPI()
             .then(() => {
                 updateModeUI();
+                setupAutoRefresh();
                 return loadPayments();
             })
       .catch(err => console.error('❌ Error al inicializar:', err));
+
+    window.addEventListener('beforeunload', () => {
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+        }
+    }, { once: true });
 </script>
 </Layout>
