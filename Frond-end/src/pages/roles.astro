@@ -496,7 +496,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end items-center gap-2">
-                                        <button @click="viewUserDetails(user)" class="p-2 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50" title="Ver detalles">
+                                        <button @click="viewUserDetails(user.id)" class="p-2 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50" title="Ver detalles">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                         </button>
                                     </div>
@@ -3439,16 +3439,22 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             async viewUserDetails(userId) {
+                const resolvedUserId = (userId && typeof userId === 'object') ? userId.id : userId;
                 const token = localStorage.getItem('access_token');
                 if (!token) {
                     this.showNotify('No hay token de autenticación', 'error');
                     return;
                 }
 
+                if (!resolvedUserId) {
+                    this.showNotify('No se pudo identificar el usuario', 'error');
+                    return;
+                }
+
                 try {
-                    console.log(`🔍 Obteniendo detalles completos del usuario ID: ${userId}`);
+                    console.log(`🔍 Obteniendo detalles completos del usuario ID: ${resolvedUserId}`);
                     const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/show-users/${userId}`,
+                        `${this.apiBaseUrl}/v1/admin-actions/show-users/${resolvedUserId}`,
                         { method: 'GET' }
                     );
 
@@ -3479,7 +3485,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             // Mostrar notificación
                             this.userDetailsPreview = {
                                 show: true,
-                                userId: userDetails?.id || userId,
+                                userId: userDetails?.id || resolvedUserId,
                                 email: resolvedEmail || userDetails?.email || '',
                                 roles: Array.isArray(userDetails?.roles) ? userDetails.roles : [],
                                 permissions: Array.isArray(userDetails?.permissions) ? userDetails.permissions : [],

@@ -170,16 +170,22 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             
             async register(userData) {
                 try {
+                    const formPayload = new URLSearchParams();
+                    Object.entries(userData || {}).forEach(([key, value]) => {
+                        if (value === undefined || value === null) return;
+                        formPayload.append(key, String(value));
+                    });
+
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000);
                     
                     const response = await fetch(`${this.API_BASE_URL}/v1/register`, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
                             'Accept': 'application/json',
                         },
-                        body: JSON.stringify(userData),
+                        body: formPayload.toString(),
                         signal: controller.signal
                     });
                     
@@ -505,7 +511,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     phone_number: this.phoneNumber,
                     birthdate: this.birthdate,
                     curp: this.curp,
-                    status: 'active',
+                    status: 'activo',
                 };
                 
                 const response = await window.AuthService.register(userData);
