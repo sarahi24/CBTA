@@ -51,12 +51,30 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             
             async login(email, password) {
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
-                    
                     const requestBody = {
                         "email": email,
                         "password": password
+                    };
+
+                    const LOGIN_TIMEOUT_MS = 30000;
+
+                    const doLoginRequest = async () => {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS);
+
+                        try {
+                            return await fetch(`${this.API_BASE_URL}/v1/login`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                },
+                                body: JSON.stringify(requestBody),
+                                signal: controller.signal
+                            });
+                        } finally {
+                            clearTimeout(timeoutId);
+                        }
                     };
                     
                     console.log('📤 REQUEST BODY:', JSON.stringify(requestBody, null, 2));
@@ -66,17 +84,16 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         'Accept': 'application/json',
                     });
                     
-                    const response = await fetch(`${this.API_BASE_URL}/v1/login`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify(requestBody),
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
+                    let response;
+                    try {
+                        response = await doLoginRequest();
+                    } catch (firstError) {
+                        const isTimeout = firstError?.name === 'AbortError' || firstError?.name === 'TimeoutError';
+                        if (!isTimeout) throw firstError;
+
+                        console.warn(`⚠️ Login timeout al primer intento (${LOGIN_TIMEOUT_MS}ms). Reintentando una vez...`);
+                        response = await doLoginRequest();
+                    }
                     
                     console.log('📊 Response Status:', response.status);
                     console.log('📊 Response OK:', response.ok);
@@ -156,8 +173,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     console.log('📧 Email intentado:', email);
                     
                     // Mejorar mensajes de error
-                    if (error.name === 'AbortError') {
-                        throw new Error('⏱️ La solicitud tardó demasiado (>15s). Verifica tu conexión o intenta más tarde.');
+                    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+                        throw new Error('⏱️ La solicitud tardó demasiado (>30s). Verifica tu conexión o intenta más tarde.');
                     }
                     if (error instanceof TypeError && error.message.includes('fetch')) {
                         // Verificar si es error de CORS
