@@ -556,92 +556,39 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               await wait(minGapAfterCardsFetchMs - elapsedSinceCardsFetch);
             }
 
-            const headerAttempts = this.portalRole === 'applicant'
-              ? [
-                  { role: 'student', permission: 'create.setup' },
-                  { role: 'student', permission: '' },
-                  { role: 'applicant', permission: 'create.setup' },
-                  { role: 'applicant', permission: '' }
-                ]
-              : [
-                  { role: this.portalRole, permission: 'create.setup' },
-                  { role: this.portalRole, permission: '' },
-                  { role: 'student', permission: 'create.setup' },
-                  { role: 'student', permission: '' }
-                ];
-
-            const uniqueHeaderAttempts = headerAttempts.filter((attempt, index, arr) => {
-              return arr.findIndex((entry) => entry.role === attempt.role && entry.permission === attempt.permission) === index;
-            });
-
             let data = null;
-            let lastErrorMessage = '';
-            let sawRateLimit = false;
 
             const parseRetryAfterMs = (retryAfterHeader) => {
               const parsed = Number(retryAfterHeader);
               if (Number.isFinite(parsed) && parsed > 0) {
+                if (parsed > 1000) return Math.max(1000, parsed);
                 return Math.max(1000, parsed * 1000);
               }
               return 2000;
             };
 
-            for (const attempt of uniqueHeaderAttempts) {
-              const headers = {
+            const proxyResponse = await fetch('/api/cards/create', {
+              method: 'POST',
+              headers: {
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-User-Role': attempt.role
-              };
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({ portalRole: this.portalRole })
+            });
 
-              if (attempt.permission) {
-                headers['X-User-Permission'] = attempt.permission;
-              }
+            const proxyData = await proxyResponse.json().catch(() => ({}));
 
-              const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
-              if (!apiBase) {
-                throw new Error('API base no configurada para agregar tarjeta');
-              }
-              const response = await fetch(`${apiBase}/v1/cards`, {
-                method: 'POST',
-                headers
-              });
-
-              if (response.ok) {
-                data = await response.json();
-                localStorage.removeItem('cards_create_next_retry_at');
-                break;
-              }
-
-              const errorData = await response.json().catch(() => ({}));
-              lastErrorMessage = errorData.message || `Error ${response.status}: ${response.statusText}`;
-
-              if (response.status === 429) {
-                sawRateLimit = true;
-                const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
-                const cooldownMs = Math.max(30000, retryAfterMs * 3);
-                localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
-                break;
-              }
-
-              if (response.status === 403 || response.status === 404) {
-                continue;
-              }
-
-              if (response.status >= 500 && response.status <= 599) {
-                continue;
-              }
-
-              if (response.status !== 403 && response.status !== 404) {
-                throw new Error(lastErrorMessage || 'Error al obtener URL de Stripe');
-              }
-            }
-
-            if (!data) {
-              if (sawRateLimit) {
-                throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
-              }
-              throw new Error(lastErrorMessage || 'No tienes permisos para acceder a este recurso');
+            if (proxyData?.success) {
+              data = proxyData;
+              localStorage.removeItem('cards_create_next_retry_at');
+            } else if (proxyData?.rate_limited) {
+              const retryAfterMs = parseRetryAfterMs(proxyData?.retry_after_ms);
+              const cooldownMs = Math.max(30000, retryAfterMs * 3);
+              localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
+              throw new Error(proxyData?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+            } else {
+              throw new Error(proxyData?.message || 'No tienes permisos para acceder a este recurso');
             }
 
             console.log('ðŸ“¦ Respuesta del backend:', data);
