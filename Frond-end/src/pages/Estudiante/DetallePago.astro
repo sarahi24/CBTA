@@ -4,7 +4,7 @@ import StudentLayout from '../../layouts/LayoutEstu.astro';
 const paymentId = Astro.url.searchParams.get('id');
 ---
 
-<script src="/studentAPI.js?v=20260217r25" is:inline></script>
+<script src="/studentAPI.js?v=20260215r19" is:inline></script>
 
 <StudentLayout title={`Detalle de Pago ${paymentId ? '#' + paymentId : ''}`}>
   <div class="page-wrapper" x-data={`{
@@ -279,20 +279,11 @@ const paymentId = Astro.url.searchParams.get('id');
       this.downloadingReceipt = true;
       this.errorMessage = '';
       const pendingTab = window.open('', '_blank');
-      const existingReceiptUrl = this.paymentDetail?.url || null;
       let receiptResultUrl = null;
       const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(this.paymentId) + '?mode=open&_=' + Date.now();
 
       try {
-        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole, {
-          fallbackUrl: existingReceiptUrl,
-          alternativeIds: [
-            this.paymentDetail?.paymentIntentId,
-            this.paymentDetail?.reference,
-            this.paymentDetail?.stripePaymentId
-          ],
-          preferAlternativeFirst: true
-        });
+        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole);
         receiptResultUrl = result?.url || result?.data?.url || null;
         if (receiptResultUrl) {
           if (pendingTab && !pendingTab.closed) {
