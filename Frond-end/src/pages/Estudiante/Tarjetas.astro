@@ -380,13 +380,23 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           },
 
           getCardLogo(brand) {
-            const brandLower = (brand || '').toLowerCase();
+            const brandLower = String(brand || '').toLowerCase().trim();
             if (brandLower === 'visa') {
-              return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
-            } else if (brandLower === 'mastercard') {
-              return 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
+              return this.buildCardLogoDataUri('VISA', '#1a1f71', '#ffffff');
             }
-            return 'https://via.placeholder.com/50?text=Card';
+            if (brandLower === 'mastercard') {
+              return this.buildCardLogoDataUri('MC', '#eb001b', '#ffffff');
+            }
+            if (brandLower === 'amex' || brandLower === 'american express') {
+              return this.buildCardLogoDataUri('AMEX', '#2e77bb', '#ffffff');
+            }
+            return this.buildCardLogoDataUri(String(brand || 'CARD').toUpperCase(), '#0f172a', '#ffffff');
+          },
+
+          buildCardLogoDataUri(label, bgColor = '#0f172a', textColor = '#ffffff') {
+            const safeLabel = String(label || 'CARD').replace(/[^A-Z0-9 ]/gi, '').trim().slice(0, 10) || 'CARD';
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="72" viewBox="0 0 120 72"><rect x="2" y="2" width="116" height="68" rx="12" fill="${bgColor}"/><text x="60" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="24" fill="${textColor}">${safeLabel}</text></svg>`;
+            return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
           },
 
         async agregarNuevaTarjeta() {
@@ -600,7 +610,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             <div class="modern-card">
               <div class="card-left">
                 <div class="bank-logo-container">
-                   <img :src="tarjeta.logo" alt="logo" class="bank-logo">
+                   <img :src="tarjeta.logo" alt="logo" class="bank-logo" @error="($event.target.src = buildCardLogoDataUri('CARD', '#0f172a', '#ffffff'))">
                 </div>
                 <div class="details">
                   <h3 x-text="'•••• ' + tarjeta.masked_card.slice(-4)"></h3>
