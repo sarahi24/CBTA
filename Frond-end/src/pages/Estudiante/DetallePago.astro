@@ -283,7 +283,6 @@ const paymentId = Astro.url.searchParams.get('id');
 
       try {
         const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole, {
-          fallbackUrl: this.paymentDetail?.url || null,
           alternativeIds: [
             this.paymentDetail?.paymentIntentId,
             this.paymentDetail?.reference,
