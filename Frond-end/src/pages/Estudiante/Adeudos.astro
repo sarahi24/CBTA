@@ -8,7 +8,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
 <StudentLayout title={title}>
   <!-- Load StudentAPI globally before Alpine initializes -->
-  <script src="/studentAPI.js?v=20260216r31" is:inline></script>
+  <script src="/studentAPI.js?v=20260217r23" is:inline></script>
   
   <div 
     class="page-wrapper"
@@ -90,7 +90,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
         const existing = document.querySelector('script[data-student-api]');
         if (!existing) {
           const script = document.createElement('script');
-          script.src = '/studentAPI.js?v=20260216r31';
+          script.src = '/studentAPI.js?v=20260217r23';
           script.async = true;
           script.dataset.studentApi = 'true';
           document.head.appendChild(script);

@@ -208,6 +208,22 @@ function extractPaymentHistoryItems(payload) {
   return [];
 }
 
+const paymentMethodsRequestState = {
+  inFlightPromise: null,
+  inFlightKey: '',
+  lastResult: null,
+  lastKey: '',
+  lastFetchedAt: 0
+};
+
+const authenticatedUserRequestState = {
+  inFlightPromise: null,
+  inFlightKey: '',
+  lastResult: null,
+  lastKey: '',
+  lastFetchedAt: 0
+};
+
 window.StudentAPI = {
   async getPaymentHistory(studentId, token, forceRefresh = false, role = 'student', perPage = 15, page = 1) {
     try {
@@ -859,61 +875,171 @@ window.StudentAPI = {
   async getPaymentMethods(studentId, token, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
+      const cacheKey = `${studentId || 'none'}:${effectiveRole}`;
+      const cacheTtlMs = 15000;
 
-      const endpointCandidates = [
-        `${API_BASE}/cards`,
-        ...(studentId ? [`${API_BASE}/cards/${studentId}`] : [])
-      ];
-
-      for (const endpoint of endpointCandidates) {
-        const url = new URL(endpoint);
-        if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
-
-        const withPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, effectiveRole, 'view.cards')
-        });
-
-        if (withPermission.status === 401) handleAuthError(401);
-        if (withPermission.ok) return await withPermission.json();
-        if (withPermission.status !== 403 && withPermission.status !== 404) {
-          throw new Error(await parseErrorMessage(withPermission, 'Error'));
-        }
-
-        const withoutPermission = await fetch(url.toString(), {
-          method: 'GET',
-          headers: buildAuthHeaders(token, effectiveRole)
-        });
-
-        if (withoutPermission.status === 401) handleAuthError(401);
-        if (withoutPermission.ok) return await withoutPermission.json();
-        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
-          throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+      if (!forceRefresh && paymentMethodsRequestState.lastResult && paymentMethodsRequestState.lastKey === cacheKey) {
+        const elapsed = Date.now() - paymentMethodsRequestState.lastFetchedAt;
+        if (elapsed >= 0 && elapsed < cacheTtlMs) {
+          return paymentMethodsRequestState.lastResult;
         }
       }
 
-      return { success: true, data: { cards: [] } };
+      if (!forceRefresh && paymentMethodsRequestState.inFlightPromise && paymentMethodsRequestState.inFlightKey === cacheKey) {
+        return await paymentMethodsRequestState.inFlightPromise;
+      }
+
+      const loadPaymentMethods = async () => {
+        let rateLimitedCount = 0;
+
+        const endpointCandidates = [
+          `${API_BASE}/cards`,
+          ...(studentId ? [`${API_BASE}/cards/${studentId}`] : [])
+        ];
+
+        const maxAttempts = 2;
+
+        for (const endpoint of endpointCandidates) {
+          const url = new URL(endpoint);
+          if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
+
+          const headerModes = [
+            { permission: 'view.cards' },
+            { permission: '' }
+          ];
+
+          for (const mode of headerModes) {
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: buildAuthHeaders(token, effectiveRole, mode.permission)
+              });
+
+              if (response.status === 401) handleAuthError(401);
+
+              if (response.ok) {
+                return await response.json();
+              }
+
+              if (isRateLimitedStatus(response.status)) {
+                rateLimitedCount += 1;
+                if (attempt < maxAttempts) {
+                  const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+                  console.warn(`⚠️ getPaymentMethods 429. Reintentando en ${retryAfterMs}ms (intento ${attempt + 1}/${maxAttempts})`);
+                  await wait(retryAfterMs);
+                  continue;
+                }
+                break;
+              }
+
+              if (!isSkippableFallbackStatus(response.status)) {
+                throw new Error(await parseErrorMessage(response, 'Error'));
+              }
+
+              break;
+            }
+          }
+        }
+
+        if (rateLimitedCount > 0) {
+          console.warn('⚠️ getPaymentMethods 429. Se devuelve lista vacía para evitar sobrecargar la API.');
+          return { success: true, data: { cards: [] }, message: 'Rate limited' };
+        }
+
+        return { success: true, data: { cards: [] } };
+      };
+
+      paymentMethodsRequestState.inFlightKey = cacheKey;
+      paymentMethodsRequestState.inFlightPromise = loadPaymentMethods();
+
+      const result = await paymentMethodsRequestState.inFlightPromise;
+      paymentMethodsRequestState.lastResult = result;
+      paymentMethodsRequestState.lastKey = cacheKey;
+      paymentMethodsRequestState.lastFetchedAt = Date.now();
+      return result;
     } catch (err) {
       console.error('❌ StudentAPI.getPaymentMethods:', err);
       throw err;
+    } finally {
+      paymentMethodsRequestState.inFlightPromise = null;
+      paymentMethodsRequestState.inFlightKey = '';
     }
   },
 
   async getAuthenticatedUser(token) {
     try {
-      const response = await fetch(`${API_BASE}/users/user`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+      const cacheKey = String(token || '').slice(-24);
+      const cacheTtlMs = 15000;
+
+      if (authenticatedUserRequestState.lastResult && authenticatedUserRequestState.lastKey === cacheKey) {
+        const elapsed = Date.now() - authenticatedUserRequestState.lastFetchedAt;
+        if (elapsed >= 0 && elapsed < cacheTtlMs) {
+          return authenticatedUserRequestState.lastResult;
         }
-      });
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+      }
+
+      if (authenticatedUserRequestState.inFlightPromise && authenticatedUserRequestState.inFlightKey === cacheKey) {
+        return await authenticatedUserRequestState.inFlightPromise;
+      }
+
+      const loadAuthenticatedUser = async () => {
+        const maxAttempts = 2;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const response = await fetch(`${API_BASE}/users/user`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+
+          if (response.status === 401) {
+            handleAuthError(401);
+            throw new Error('No autenticado - sesión expirada');
+          }
+
+          if (isRateLimitedStatus(response.status)) {
+            if (attempt < maxAttempts) {
+              const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+              console.warn(`⚠️ getAuthenticatedUser 429. Reintentando en ${retryAfterMs}ms (intento ${attempt + 1}/${maxAttempts})`);
+              await wait(retryAfterMs);
+              continue;
+            }
+
+            if (authenticatedUserRequestState.lastResult) {
+              console.warn('⚠️ getAuthenticatedUser 429. Usando último usuario en caché para evitar bloqueo.');
+              return authenticatedUserRequestState.lastResult;
+            }
+
+            throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+          }
+
+          if (!response.ok) {
+            throw new Error(await parseErrorMessage(response, 'Error'));
+          }
+
+          return await response.json();
+        }
+
+        throw new Error('No se pudo obtener el usuario autenticado');
+      };
+
+      authenticatedUserRequestState.inFlightKey = cacheKey;
+      authenticatedUserRequestState.inFlightPromise = loadAuthenticatedUser();
+
+      const result = await authenticatedUserRequestState.inFlightPromise;
+      authenticatedUserRequestState.lastResult = result;
+      authenticatedUserRequestState.lastKey = cacheKey;
+      authenticatedUserRequestState.lastFetchedAt = Date.now();
+      return result;
     } catch (err) {
       console.error('❌ StudentAPI.getAuthenticatedUser:', err);
       throw err;
+    } finally {
+      authenticatedUserRequestState.inFlightPromise = null;
+      authenticatedUserRequestState.inFlightKey = '';
     }
   },
 
