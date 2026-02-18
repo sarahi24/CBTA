@@ -71,7 +71,7 @@ export async function POST({ request }) {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const upstreamRes = await fetch(`${API_BASE}/cards`, {
         method: 'POST',

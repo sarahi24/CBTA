@@ -648,28 +648,110 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               return 2000;
             };
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            const createSetupDirectly = async () => {
+              const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+              if (!apiBase) {
+                throw new Error('API base no configurada para vincular tarjeta');
+              }
 
-            console.log('📡 [Tarjetas] Solicitando /api/cards/create ...');
-            const proxyResponse = await fetch('/api/cards/create', {
-              method: 'POST',
-              signal: controller.signal,
-              headers: {
-                'Authorization': 'Bearer ' + this.token,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              body: JSON.stringify({ portalRole: this.portalRole })
-            });
-            clearTimeout(timeoutId);
+              const attempts = [
+                { role: this.portalRole || 'student', permission: 'create.setup' },
+                { role: this.portalRole || 'student', permission: '' },
+                { role: 'student', permission: 'create.setup' },
+                { role: 'student', permission: '' }
+              ].filter((attempt, index, arr) => arr.findIndex(item => item.role === attempt.role && item.permission === attempt.permission) === index);
 
-            console.log('📡 [Tarjetas] Status /api/cards/create:', proxyResponse.status);
+              for (const attempt of attempts) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 35000);
+                try {
+                  const headers = {
+                    'Authorization': 'Bearer ' + this.token,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-User-Role': attempt.role
+                  };
 
-            const proxyData = await proxyResponse.json().catch(() => ({}));
+                  if (attempt.permission) {
+                    headers['X-User-Permission'] = attempt.permission;
+                  }
 
-            if (!proxyResponse.ok) {
-              throw new Error(proxyData?.message || `Error ${proxyResponse.status}: ${proxyResponse.statusText}`);
+                  const response = await fetch(`${apiBase}/v1/cards`, {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers
+                  });
+
+                  const payload = await response.json().catch(() => ({}));
+
+                  if (response.status === 401) {
+                    this.handleAuthFailure();
+                    throw new Error('Sesión expirada');
+                  }
+
+                  if (response.ok && payload?.success !== false) {
+                    return payload;
+                  }
+
+                  if (response.status === 429) {
+                    const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+                    const cooldownMs = Math.max(30000, retryAfterMs * 3);
+                    localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
+                    throw new Error(payload?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+                  }
+
+                  if (response.status === 403 || response.status === 404) {
+                    continue;
+                  }
+
+                  throw new Error(payload?.message || `Error ${response.status}: ${response.statusText}`);
+                } catch (directError) {
+                  const isAbort = String(directError?.name || '').toLowerCase() === 'aborterror';
+                  if (isAbort) {
+                    continue;
+                  }
+                  throw directError;
+                } finally {
+                  clearTimeout(timeoutId);
+                }
+              }
+
+              throw new Error('No fue posible crear la sesión de Stripe en este momento. Intenta nuevamente.');
+            };
+
+            let proxyData = null;
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+              console.log('📡 [Tarjetas] Solicitando /api/cards/create ...');
+              const proxyResponse = await fetch('/api/cards/create', {
+                method: 'POST',
+                signal: controller.signal,
+                headers: {
+                  'Authorization': 'Bearer ' + this.token,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify({ portalRole: this.portalRole })
+              });
+              clearTimeout(timeoutId);
+
+              console.log('📡 [Tarjetas] Status /api/cards/create:', proxyResponse.status);
+              proxyData = await proxyResponse.json().catch(() => ({}));
+
+              if (!proxyResponse.ok) {
+                throw new Error(proxyData?.message || `Error ${proxyResponse.status}: ${proxyResponse.statusText}`);
+              }
+            } catch (proxyError) {
+              const isAbort = String(proxyError?.name || '').toLowerCase() === 'aborterror';
+              const isNetwork = String(proxyError?.message || '').toLowerCase().includes('failed to fetch');
+              if (!isAbort && !isNetwork) {
+                throw proxyError;
+              }
+
+              console.warn('⚠️ [Tarjetas] Proxy /api/cards/create no respondió a tiempo, intentando llamada directa...');
+              proxyData = await createSetupDirectly();
             }
 
             if (proxyData?.success) {
