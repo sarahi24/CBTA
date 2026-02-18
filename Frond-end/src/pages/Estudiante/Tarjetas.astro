@@ -102,6 +102,69 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               normalized.includes('too many requests');
           },
 
+          hasPortalPermission(permissionName) {
+            const expected = String(permissionName || '').toLowerCase().trim();
+            if (!expected) return false;
+
+            const permissionValues = [];
+            const rawUserCandidates = [
+              localStorage.getItem('user_data'),
+              localStorage.getItem('userData')
+            ].filter(Boolean);
+
+            rawUserCandidates.forEach((rawValue) => {
+              try {
+                const parsed = JSON.parse(rawValue);
+                const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+
+                const collectPermissions = (source) => {
+                  if (!source || typeof source !== 'object') return;
+                  if (Array.isArray(source.permissions)) permissionValues.push(...source.permissions);
+                  if (Array.isArray(source.permisos)) permissionValues.push(...source.permisos);
+                };
+
+                collectPermissions(userData);
+                collectPermissions(userData?.role);
+
+                if (Array.isArray(userData?.roles)) {
+                  userData.roles.forEach((roleEntry) => {
+                    if (roleEntry && typeof roleEntry === 'object') {
+                      collectPermissions(roleEntry);
+                    }
+                  });
+                }
+              } catch (_) {}
+            });
+
+            const rawPermissionCandidates = [
+              localStorage.getItem('permissions'),
+              localStorage.getItem('user_permissions'),
+              localStorage.getItem('permisos')
+            ].filter(Boolean);
+
+            rawPermissionCandidates.forEach((rawValue) => {
+              try {
+                const parsed = JSON.parse(rawValue);
+                if (Array.isArray(parsed)) {
+                  permissionValues.push(...parsed);
+                }
+              } catch (_) {
+                permissionValues.push(rawValue);
+              }
+            });
+
+            const normalizedPermissions = permissionValues
+              .map((entry) => {
+                if (!entry) return '';
+                if (typeof entry === 'string') return entry;
+                return entry?.name || entry?.slug || entry?.permission || entry?.code || '';
+              })
+              .map((value) => String(value).toLowerCase().trim())
+              .filter(Boolean);
+
+            return normalizedPermissions.includes(expected);
+          },
+
           async syncPortalRoleFromApi() {
             if (!this.token) return;
             if (this.portalRole === 'applicant') return;
@@ -171,6 +234,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           },
 
           canManageCards() {
+            if (this.hasPortalPermission('create.setup')) return true;
             return this.portalRole !== 'applicant';
           },
 
@@ -221,7 +285,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 await this.syncPortalRoleFromApi();
               }
 
-              if (this.portalRole === 'applicant') {
+              if (this.portalRole === 'applicant' && !this.canManageCards()) {
                 this.roleNotice = 'Tu perfil está en proceso. La vinculación de tarjetas se habilitará cuando seas estudiante activo.';
               }
               
@@ -652,7 +716,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
       <section class="section-container">
         <div class="section-header">
           <h2 class="section-title">Mis Tarjetas</h2>
-          <button @click="openAddCardModal()" :disabled="portalRole === 'applicant'" class="add-inline-btn" :style="portalRole === 'applicant' ? 'opacity:0.6;cursor:not-allowed;' : ''">
+          <button @click="openAddCardModal()" :disabled="!canManageCards()" class="add-inline-btn" :style="!canManageCards() ? 'opacity:0.6;cursor:not-allowed;' : ''">
             + Añadir Nueva
           </button>
         </div>
@@ -678,8 +742,8 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           </template>
 
           <template x-if="tarjetas.length === 0">
-            <div class="empty-state" @click="openAddCardModal()" :style="portalRole === 'applicant' ? 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:default;border:2px dashed #e2e8f0;' : 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:pointer;border:2px dashed #e2e8f0;'">
-              <p style="color: #64748b; font-weight: 600;" x-text="portalRole === 'applicant' ? 'Tu perfil está en proceso. Aquí verás tus tarjetas cuando se active tu cuenta de estudiante.' : 'No tienes tarjetas registradas. Toca para añadir una.'"></p>
+            <div class="empty-state" @click="openAddCardModal()" :style="!canManageCards() ? 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:default;border:2px dashed #e2e8f0;' : 'text-align:center;padding:3rem;background:white;border-radius:24px;cursor:pointer;border:2px dashed #e2e8f0;'">
+              <p style="color: #64748b; font-weight: 600;" x-text="!canManageCards() ? 'Tu perfil está en proceso. Aquí verás tus tarjetas cuando se active tu cuenta de estudiante.' : 'No tienes tarjetas registradas. Toca para añadir una.'"></p>
             </div>
           </template>
         </div>

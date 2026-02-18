@@ -339,6 +339,65 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
             const badge = document.getElementById('notif-badge');
             if (!badge) return;
 
+            const normalizePortalRoleForBadge = (roleValue) => {
+                const role = String(roleValue || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[._-]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (!role) return '';
+                if (role === 'parent' || role === 'padre' || role === 'madre' || role === 'tutor' || role === 'tutora') return 'parent';
+                if (role === 'applicant' || role === 'aspirante' || role === 'solicitante') return 'applicant';
+                if (role === 'student' || role === 'estudiante' || role === 'alumno') return 'student';
+                return role;
+            };
+
+            const detectPortalRoleFromStorageForBadge = () => {
+                const roleValues = [];
+                const rawUserCandidates = [
+                    localStorage.getItem('user_data'),
+                    localStorage.getItem('userData')
+                ].filter(Boolean);
+
+                rawUserCandidates.forEach((rawValue) => {
+                    try {
+                        const parsed = JSON.parse(rawValue);
+                        const userData = parsed?.data?.user || parsed?.user || parsed?.data || parsed || {};
+                        const roles = [];
+
+                        if (Array.isArray(userData?.roles)) roles.push(...userData.roles);
+                        if (userData?.role) roles.push(userData.role);
+                        if (userData?.role_name) roles.push(userData.role_name);
+                        if (userData?.type) roles.push(userData.type);
+
+                        roles.forEach((entry) => {
+                            if (!entry) return;
+                            if (typeof entry === 'string') {
+                                roleValues.push(entry);
+                                return;
+                            }
+                            roleValues.push(entry?.name || entry?.slug || entry?.role || entry?.role_name || '');
+                        });
+                    } catch (_) {}
+                });
+
+                const roleCandidates = [
+                    localStorage.getItem('userRole'),
+                    localStorage.getItem('role'),
+                    ...roleValues
+                ]
+                    .filter(Boolean)
+                    .map((value) => normalizePortalRoleForBadge(value))
+                    .filter(Boolean);
+
+                if (roleCandidates.includes('parent')) return 'parent';
+                if (roleCandidates.includes('applicant')) return 'applicant';
+                if (roleCandidates.includes('student')) return 'student';
+                return '';
+            };
+
             if (!window.__notifBadgeState) {
                 window.__notifBadgeState = {
                     inFlight: null,
@@ -359,6 +418,13 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 const token = localStorage.getItem('access_token');
                 if (!token) {
                     badge.classList.add('hidden');
+                    return;
+                }
+
+                const portalRole = detectPortalRoleFromStorageForBadge();
+                if (portalRole === 'applicant') {
+                    badge.classList.add('hidden');
+                    localStorage.setItem('unread_notifications_count', '0');
                     return;
                 }
 
