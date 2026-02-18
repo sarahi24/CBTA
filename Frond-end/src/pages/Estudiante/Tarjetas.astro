@@ -530,6 +530,13 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           console.log('ðŸ”„ Iniciando proceso de vincular tarjeta con Stripe...');
 
           try {
+            const now = Date.now();
+            const nextRetryAt = Number(localStorage.getItem('cards_create_next_retry_at') || '0');
+            if (Number.isFinite(nextRetryAt) && now < nextRetryAt) {
+              const waitSeconds = Math.max(1, Math.ceil((nextRetryAt - now) / 1000));
+              throw new Error(`Demasiadas solicitudes. Intenta nuevamente en ${waitSeconds}s.`);
+            }
+
             const headerAttempts = [
               { role: this.portalRole, permission: 'create.setup' },
               { role: this.portalRole, permission: '' },
@@ -537,10 +544,25 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               { role: 'student', permission: '' }
             ];
 
+            const uniqueHeaderAttempts = headerAttempts.filter((attempt, index, arr) => {
+              return arr.findIndex((entry) => entry.role === attempt.role && entry.permission === attempt.permission) === index;
+            });
+
             let data = null;
             let lastErrorMessage = '';
+            let sawRateLimit = false;
 
-            for (const attempt of headerAttempts) {
+            const parseRetryAfterMs = (retryAfterHeader) => {
+              const parsed = Number(retryAfterHeader);
+              if (Number.isFinite(parsed) && parsed > 0) {
+                return Math.max(1000, parsed * 1000);
+              }
+              return 2000;
+            };
+
+            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            for (const attempt of uniqueHeaderAttempts) {
               const headers = {
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json',
@@ -563,6 +585,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
               if (response.ok) {
                 data = await response.json();
+                localStorage.removeItem('cards_create_next_retry_at');
                 break;
               }
 
@@ -570,7 +593,19 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               lastErrorMessage = errorData.message || `Error ${response.status}: ${response.statusText}`;
 
               if (response.status === 429) {
-                throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+                sawRateLimit = true;
+                const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+                localStorage.setItem('cards_create_next_retry_at', String(Date.now() + Math.max(8000, retryAfterMs * 2)));
+                await wait(retryAfterMs);
+                continue;
+              }
+
+              if (response.status === 403 || response.status === 404) {
+                continue;
+              }
+
+              if (response.status >= 500 && response.status <= 599) {
+                continue;
               }
 
               if (response.status !== 403 && response.status !== 404) {
@@ -579,6 +614,9 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             }
 
             if (!data) {
+              if (sawRateLimit) {
+                throw new Error('Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+              }
               throw new Error(lastErrorMessage || 'No tienes permisos para acceder a este recurso');
             }
 
@@ -597,12 +635,17 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               throw new Error('No se recibió URL de Stripe del backend');
             }
           } catch (err) {
-            this.logError('agregarNuevaTarjeta', err, {
-              hasToken: !!this.token,
-              userId: this.userId,
-              portalRole: this.portalRole
-            });
-            console.error('âŒ Error:', err);
+            const message = err?.message || String(err || 'Error desconocido');
+            if (this.isRateLimitedMessage(message)) {
+              console.warn('⚠️ [Tarjetas] Rate-limited al crear setup de tarjeta:', message);
+            } else {
+              this.logError('agregarNuevaTarjeta', err, {
+                hasToken: !!this.token,
+                userId: this.userId,
+                portalRole: this.portalRole
+              });
+              console.error('âŒ Error:', err);
+            }
             this.error = err.message || 'Error al redirigir a Stripe';
             this.isLoading = false;
           }
