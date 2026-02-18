@@ -84,13 +84,33 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               return roleValue === 'applicant' || roleValue === 'aspirante' || roleValue === 'solicitante';
             });
 
+            const hasStudentRole = roleCandidates.some(function(roleValue) {
+              return roleValue === 'student' || roleValue === 'estudiante' || roleValue === 'alumno';
+            });
+
             if (hasParentRole) return 'parent';
             if (hasApplicantRole) return 'applicant';
-            return 'student';
+            if (hasStudentRole) return 'student';
+            return '';
+          },
+
+          isRateLimitedMessage(message) {
+            const normalized = String(message || '').toLowerCase();
+            return normalized.includes('429') ||
+              normalized.includes('límite de solicitudes') ||
+              normalized.includes('limite de solicitudes') ||
+              normalized.includes('too many requests');
           },
 
           async syncPortalRoleFromApi() {
             if (!this.token) return;
+            if (this.portalRole === 'applicant') return;
+
+            const now = Date.now();
+            const nextAllowedSyncAt = Number(localStorage.getItem('tarjetas_role_sync_next_at') || '0');
+            if (Number.isFinite(nextAllowedSyncAt) && now < nextAllowedSyncAt) {
+              return;
+            }
 
             try {
               if (!window.StudentAPI?.getAuthenticatedUser) return;
@@ -131,10 +151,18 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               this.portalRole = resolvedRole;
               localStorage.setItem('userRole', resolvedRole);
               localStorage.setItem('role', resolvedRole);
+              localStorage.setItem('tarjetas_role_sync_next_at', String(Date.now() + (15 * 60 * 1000)));
               console.log('🔍 [Tarjetas] Rol sincronizado desde API:', resolvedRole);
             } catch (error) {
+              const message = error?.message || String(error || 'Error desconocido');
+              if (this.isRateLimitedMessage(message)) {
+                localStorage.setItem('tarjetas_role_sync_next_at', String(Date.now() + (5 * 60 * 1000)));
+                console.warn('⚠️ [Tarjetas] Sync de rol pausado temporalmente por rate-limit');
+                return;
+              }
+
               this.logError('syncPortalRoleFromApi', error, { hasToken: !!this.token });
-              console.warn('⚠️ [Tarjetas] No se pudo sincronizar rol desde API:', error?.message || error);
+              console.warn('⚠️ [Tarjetas] No se pudo sincronizar rol desde API:', message);
             }
           },
 
@@ -175,7 +203,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 
               this.roleNotice = '';
 
-              if (this.token) {
+              if (this.token && !this.portalRole) {
                 await this.syncPortalRoleFromApi();
               }
               
