@@ -1671,6 +1671,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     key === 'cajero' ||
                     key === 'tesoreria' ||
                     key === 'finanzas' ||
+                    key === 'personal de pago' ||
                     key === 'personal de pagos' ||
                     key === 'cobranza' ||
                     key === 'financial staff' ||
@@ -2149,22 +2150,30 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 if (Array.isArray(raw.roles) && raw.roles.length > 0) {
                     roles = raw.roles.map(r => {
                         if (typeof r === 'string') return r;
-                        if (r && r.name) return r.name;
+                        if (r && typeof r === 'object') return r.name || r.slug || r.role || r.value || '';
                         return String(r);
-                    });
+                    }).map(r => String(r || '').trim()).filter(Boolean);
                     console.log('✅ Roles encontrados en raw.roles (array):', roles);
                 } else if (raw.role && raw.role !== 'Sin rol') {
                     if (Array.isArray(raw.role)) {
                         roles = raw.role.map(r => {
-                            if (typeof r === 'object' && r.name) return r.name;
+                            if (r && typeof r === 'object') return r.name || r.slug || r.role || r.value || '';
                             return String(r);
-                        });
+                        }).map(r => String(r || '').trim()).filter(Boolean);
+                    } else if (typeof raw.role === 'object') {
+                        const roleFromObject = raw.role.name || raw.role.slug || raw.role.role || raw.role.value || '';
+                        roles = roleFromObject ? [String(roleFromObject).trim()] : [];
                     } else {
-                        roles = [raw.role];
+                        roles = [String(raw.role).trim()];
                     }
                     console.log('✅ Roles encontrados en raw.role:', roles);
                 } else if (raw.role_name && raw.role_name !== 'Sin rol') {
-                    roles = [raw.role_name];
+                    if (typeof raw.role_name === 'object') {
+                        const roleName = raw.role_name.name || raw.role_name.slug || raw.role_name.role || raw.role_name.value || '';
+                        roles = roleName ? [String(roleName).trim()] : [];
+                    } else {
+                        roles = [String(raw.role_name).trim()];
+                    }
                     console.log('✅ Roles encontrados en raw.role_name:', roles);
                 }
                 
@@ -2182,9 +2191,12 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 } else {
                     // Intentar con campos individuales si no hay array de roles
                     const roleValue = raw.role || raw.role_name || '';
+                    const roleValueNormalized = typeof roleValue === 'object'
+                        ? (roleValue.name || roleValue.slug || roleValue.role || roleValue.value || '')
+                        : roleValue;
                     if (roleValue && roleValue !== 'Sin rol') {
-                        roleKey = this.normalizeRoleForFilter(roleValue);
-                        roleLabel = this.getRoleDisplayName(roleValue);
+                        roleKey = this.normalizeRoleForFilter(roleValueNormalized);
+                        roleLabel = this.getRoleDisplayName(roleValueNormalized);
                         console.log('✅ Rol desde raw.role:', roleLabel);
                     } else {
                         console.warn('⚠️ No hay roles encontrados para este usuario');
