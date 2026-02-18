@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r19" is:inline></script>
+  <script src="/studentAPI.js?v=20260217r20" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -176,34 +176,37 @@ const title = 'Panel de Estudiante';
 
             const [historyRes, overdueRes, paidRes, pendingRes] = await Promise.all(dashboardCalls);
 
+            let items = [];
             if (historyRes && !historyRes.error) {
-              let items = this.extractHistoryItems(historyRes);
-
-              if (!items.length && window.StudentAPI?.getPaymentHistory) {
-                try {
-                  const fallbackHistory = await window.StudentAPI.getPaymentHistory(scopedStudentId, token, false, requestRole, 15, 1);
-                  items = this.extractHistoryItems(fallbackHistory);
-                  if (items.length) {
-                    console.log('✅ [PortalEstudiante] Historial recuperado con fallback getPaymentHistory:', items.length);
-                  }
-                } catch (fallbackError) {
-                  console.warn('⚠️ [PortalEstudiante] Fallback de historial falló:', fallbackError?.message || fallbackError);
-                }
-              }
-
-              this.history = items.map((payment) => {
-                const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? payment?.total_amount ?? '0.00';
-                return {
-                  id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
-                  concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
-                  monto: this.formatDashboardHistoryAmount(montoValue),
-                  fecha: this.formatDashboardHistoryDate(payment),
-                  metodo: payment?.method || payment?.payment_method || payment?.payment_method_details?.[0] || 'Metodo desconocido',
-                  status: this.normalizeHistoryStatus(payment?.status)
-                };
-              });
-              console.log('✅ Historial de pagos cargado:', this.history.length);
+              items = this.extractHistoryItems(historyRes);
+            } else if (historyRes?.error) {
+              console.warn('⚠️ [PortalEstudiante] getDashboardHistory devolvió error:', historyRes.error);
             }
+
+            if (!items.length && window.StudentAPI?.getPaymentHistory) {
+              try {
+                const fallbackHistory = await window.StudentAPI.getPaymentHistory(scopedStudentId, token, false, requestRole, 15, 1);
+                items = this.extractHistoryItems(fallbackHistory);
+                if (items.length) {
+                  console.log('✅ [PortalEstudiante] Historial recuperado con fallback getPaymentHistory:', items.length);
+                }
+              } catch (fallbackError) {
+                console.warn('⚠️ [PortalEstudiante] Fallback de historial falló:', fallbackError?.message || fallbackError);
+              }
+            }
+
+            this.history = items.map((payment) => {
+              const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? payment?.total_amount ?? '0.00';
+              return {
+                id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
+                concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
+                monto: this.formatDashboardHistoryAmount(montoValue),
+                fecha: this.formatDashboardHistoryDate(payment),
+                metodo: payment?.method || payment?.payment_method || payment?.payment_method_details?.[0] || 'Metodo desconocido',
+                status: this.normalizeHistoryStatus(payment?.status)
+              };
+            });
+            console.log('✅ Historial de pagos cargado:', this.history.length);
 
             if (overdueRes && !overdueRes.error) {
               this.overdue = overdueRes.data && overdueRes.data.total_overdue ? overdueRes.data.total_overdue : { totalAmount: '0.00', totalCount: 0 };
