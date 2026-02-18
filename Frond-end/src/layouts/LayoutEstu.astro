@@ -343,7 +343,8 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 window.__notifBadgeState = {
                     inFlight: null,
                     lastFetchAt: 0,
-                    minIntervalMs: 15000,
+                    minIntervalMs: 60000,
+                    staleAfterMs: 300000,
                     rateLimitCooldownMs: 180000
                 };
             }
@@ -376,6 +377,14 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 const persistedLastFetchAt = Number(localStorage.getItem('notif_badge_last_fetch_at') || '0');
                 if (Number.isFinite(persistedLastFetchAt) && persistedLastFetchAt > state.lastFetchAt) {
                     state.lastFetchAt = persistedLastFetchAt;
+                }
+
+                const persistedLastSuccessAt = Number(localStorage.getItem('notif_badge_last_success_at') || '0');
+                const hasCachedCount = cachedCount !== null;
+                const isNotificationsPage = window.location.pathname.includes('/Estudiante/Notificaciones');
+                const shouldUseCacheOnly = hasCachedCount && !isNotificationsPage && persistedLastSuccessAt > 0 && (now - persistedLastSuccessAt) < state.staleAfterMs;
+                if (shouldUseCacheOnly) {
+                    return;
                 }
 
                 const nextRetryAt = Number(localStorage.getItem('notif_badge_next_retry_at') || '0');
@@ -426,6 +435,7 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                         }
 
                         localStorage.setItem('unread_notifications_count', unreadCount.toString());
+                        localStorage.setItem('notif_badge_last_success_at', String(Date.now()));
                         localStorage.removeItem('notif_badge_next_retry_at');
                     } finally {
                         state.lastFetchAt = Date.now();

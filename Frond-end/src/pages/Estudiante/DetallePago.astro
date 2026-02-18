@@ -284,7 +284,14 @@ const paymentId = Astro.url.searchParams.get('id');
       const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(this.paymentId) + '?mode=open&_=' + Date.now();
 
       try {
-        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole, existingReceiptUrl);
+        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole, {
+          fallbackUrl: existingReceiptUrl,
+          alternativeIds: [
+            this.paymentDetail?.paymentIntentId,
+            this.paymentDetail?.reference,
+            this.paymentDetail?.stripePaymentId
+          ]
+        });
         receiptResultUrl = result?.url || result?.data?.url || null;
         if (receiptResultUrl) {
           if (pendingTab && !pendingTab.closed) {

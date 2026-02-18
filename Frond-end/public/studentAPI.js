@@ -345,57 +345,94 @@ window.StudentAPI = {
     }
   },
 
-  async downloadPaymentReceipt(paymentId, token, role = 'student', knownReceiptUrl = null) {
+  async downloadPaymentReceipt(paymentId, token, role = 'student', receiptOptions = null) {
     try {
-      const localReceiptUrl = pickReceiptUrl(knownReceiptUrl);
+      const options = (receiptOptions && typeof receiptOptions === 'object' && !Array.isArray(receiptOptions))
+        ? receiptOptions
+        : { fallbackUrl: receiptOptions };
+      const localReceiptUrl = pickReceiptUrl(options?.fallbackUrl);
+      const rawAlternativeIds = Array.isArray(options?.alternativeIds) ? options.alternativeIds : [];
+      const alternativeIds = rawAlternativeIds
+        .map((value) => String(value || '').trim())
+        .filter((value) => value && value !== String(paymentId));
+
+      const effectiveRole = resolveStudentPortalRole(role);
+      const apiRole = resolveApiAccessRole(effectiveRole);
+
+      const fetchReceiptByCandidate = async (candidateId) => {
+        const endpoint = `/api/receipts/${encodeURIComponent(candidateId)}?_=${Date.now()}`;
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'X-User-Role': apiRole,
+            'X-User-Permission': 'view.receipt'
+          }
+        });
+
+        if (response.status === 401) {
+          handleAuthError(401);
+          throw new Error('No autenticado - sesión expirada');
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const error = new Error(errorData.message || 'Error al obtener el recibo');
+          error.status = response.status;
+          throw error;
+        }
+
+        const payload = await response.json().catch(() => ({}));
+        const data = payload?.data || {};
+        const receiptUrl = pickReceiptUrl(payload);
+
+        if (!receiptUrl) {
+          throw new Error(payload?.message || 'No se recibió URL del recibo');
+        }
+
+        return {
+          url: receiptUrl,
+          expiresIn: data.expires_in ?? null,
+          contentType: data.content_type || null,
+          message: payload?.message || ''
+        };
+      };
+
+      try {
+        return await fetchReceiptByCandidate(paymentId);
+      } catch (firstError) {
+        const status = Number(firstError?.status || 0);
+        const shouldRetryWithAlternatives = status === 422 || status === 404;
+        if (shouldRetryWithAlternatives) {
+          for (const alternativeId of alternativeIds) {
+            try {
+              return await fetchReceiptByCandidate(alternativeId);
+            } catch (altError) {
+              const altStatus = Number(altError?.status || 0);
+              if (altStatus !== 422 && altStatus !== 404) {
+                throw altError;
+              }
+            }
+          }
+        }
+        throw firstError;
+      }
+    } catch (err) {
+      const localReceiptUrl = pickReceiptUrl(
+        (receiptOptions && typeof receiptOptions === 'object' && !Array.isArray(receiptOptions))
+          ? receiptOptions?.fallbackUrl
+          : receiptOptions
+      );
       if (localReceiptUrl) {
         return {
           url: localReceiptUrl,
           expiresIn: null,
           contentType: null,
-          message: 'Recibo obtenido de datos locales'
+          message: 'Recibo obtenido de URL local de respaldo'
         };
       }
-
-      const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const endpoint = `/api/receipts/${paymentId}?_=${Date.now()}`;
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'X-User-Role': apiRole,
-          'X-User-Permission': 'view.receipt'
-        }
-      });
-
-      if (response.status === 401) {
-        handleAuthError(401);
-        throw new Error('No autenticado - sesión expirada');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al obtener el recibo');
-      }
-
-      const payload = await response.json().catch(() => ({}));
-      const data = payload?.data || {};
-      const receiptUrl = pickReceiptUrl(payload);
-
-      if (!receiptUrl) {
-        throw new Error(payload?.message || 'No se recibió URL del recibo');
-      }
-
-      return {
-        url: receiptUrl,
-        expiresIn: data.expires_in ?? null,
-        contentType: data.content_type || null,
-        message: payload?.message || ''
-      };
-    } catch (err) {
       console.warn('⚠️ StudentAPI.downloadPaymentReceipt fallback:', err?.message || err);
       throw err;
     }
