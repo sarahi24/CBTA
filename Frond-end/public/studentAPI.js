@@ -94,17 +94,13 @@ function getApiRoleCandidates(effectiveRole) {
 
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
-    if (window.__studentApiSessionExpiredHandled__) {
-      return true;
-    }
-    window.__studentApiSessionExpiredHandled__ = true;
     const currentToken = localStorage.getItem('access_token');
     console.warn('⚠️ 401 Unauthorized - Token:', currentToken ? 'present' : 'missing');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_id');
-    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-      window.location.href = '/';
+    const choice = confirm('❌ Error de autenticación (401)\n\n¿Deseas ir al login para re-autenticarte?');
+    if (choice) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_id');
+      window.location.href = '/login';
     }
     return true;
   }
@@ -131,11 +127,6 @@ function parseRetryAfterMs(retryAfterHeader) {
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function appendCacheBust(urlObj, enabled = false) {
-  if (!enabled || !urlObj || !urlObj.searchParams) return;
-  urlObj.searchParams.set('_', String(Date.now()));
 }
 
 function buildAuthHeaders(token, role, permission = '') {
@@ -797,7 +788,6 @@ window.StudentAPI = {
       for (const rawEndpoint of endpointCandidates) {
         const url = new URL(rawEndpoint);
         if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
-        appendCacheBust(url, forceRefresh);
 
         console.log(`🔍 [StudentAPI] getPendingPayments probando: ${url.toString()}`);
 
@@ -805,7 +795,6 @@ window.StudentAPI = {
 
           const withPermission = await fetch(url.toString(), {
             method: 'GET',
-            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole, 'view.pending.concepts')
           });
 
@@ -826,7 +815,6 @@ window.StudentAPI = {
 
           const withoutPermission = await fetch(url.toString(), {
             method: 'GET',
-            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole)
           });
 
@@ -869,7 +857,6 @@ window.StudentAPI = {
       for (const rawEndpoint of endpointCandidates) {
         const url = new URL(rawEndpoint);
         if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
-        appendCacheBust(url, forceRefresh);
 
         console.log('📡 Fetching overdue payments from:', url.toString());
 
@@ -877,7 +864,6 @@ window.StudentAPI = {
 
           const withPermission = await fetch(url.toString(), {
             method: 'GET',
-            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole, 'view.overdue.concepts')
           });
 
@@ -894,7 +880,6 @@ window.StudentAPI = {
 
           const withoutPermission = await fetch(url.toString(), {
             method: 'GET',
-            cache: 'no-store',
             headers: buildAuthHeaders(token, apiRole)
           });
 
@@ -968,7 +953,6 @@ window.StudentAPI = {
         for (const endpoint of endpointCandidates) {
           const url = new URL(endpoint);
           if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
-          appendCacheBust(url, forceRefresh);
 
           const headerModes = [
             { permission: 'view.cards' },
@@ -979,7 +963,6 @@ window.StudentAPI = {
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
               const response = await fetch(url.toString(), {
                 method: 'GET',
-                cache: 'no-store',
                 headers: buildAuthHeaders(token, effectiveRole, mode.permission)
               });
 
@@ -1238,11 +1221,9 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
-      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
-        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1267,11 +1248,9 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
-      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
-        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1294,11 +1273,9 @@ window.StudentAPI = {
       if (search) url.searchParams.append('search', search);
       if (year) url.searchParams.append('year', year);
       if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-      appendCacheBust(url, forceRefresh);
       
       const response = await fetch(url.toString(), {
         method: 'GET',
-        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1344,11 +1321,9 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
-      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
-        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1373,11 +1348,9 @@ window.StudentAPI = {
       params.searchParams.append('page', page);
       params.searchParams.append('perPage', perPage);
       if (forceRefresh) params.searchParams.append('forceRefresh', 'true');
-      appendCacheBust(params, forceRefresh);
       
       const response = await fetch(params.toString(), {
         method: 'GET',
-        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

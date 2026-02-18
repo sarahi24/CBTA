@@ -25,11 +25,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
           lastCardsFetchAt: 0,
           showResultModal: false,
           resultType: '',
-          autoRefreshEnabled: true,
-          autoRefreshIntervalMs: 180000,
-          autoRefreshTimerId: null,
-          autoRefreshFocusHandler: null,
-          autoRefreshVisibilityHandler: null,
 
           logError(context, error, extra = {}) {
             const message = error?.message || String(error || 'Error desconocido');
@@ -107,29 +102,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               normalized.includes('límite de solicitudes') ||
               normalized.includes('limite de solicitudes') ||
               normalized.includes('too many requests');
-          },
-
-          isAuthErrorMessage(message) {
-            const normalized = String(message || '').toLowerCase();
-            return normalized.includes('401')
-              || normalized.includes('unauthorized')
-              || normalized.includes('no autenticado')
-              || normalized.includes('sesión expirada')
-              || normalized.includes('sesion expirada');
-          },
-
-          handleAuthFailure() {
-            this.autoRefreshEnabled = false;
-            if (this.autoRefreshTimerId) {
-              clearInterval(this.autoRefreshTimerId);
-              this.autoRefreshTimerId = null;
-            }
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            this.error = 'Tu sesión expiró. Redirigiendo al login...';
-            setTimeout(() => {
-              window.location.href = '/';
-            }, 800);
           },
 
           hasPortalPermission(permissionName) {
@@ -263,52 +235,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             this.showResultModal = false;
           },
 
-          setupAutoRefresh() {
-            if (!this.autoRefreshEnabled) return;
-
-            const runAutoRefresh = async () => {
-              if (document.hidden) return;
-              if (this.isLoading || this.initInProgress || this.showModal) return;
-              try {
-                await this.cargarTarjetas(true);
-              } catch (error) {
-                console.warn('⚠️ [Tarjetas] Auto-refresh omitido por error:', error?.message || error);
-              }
-            };
-
-            if (this.autoRefreshTimerId) {
-              clearInterval(this.autoRefreshTimerId);
-              this.autoRefreshTimerId = null;
-            }
-
-            this.autoRefreshTimerId = setInterval(() => {
-              void runAutoRefresh();
-            }, this.autoRefreshIntervalMs);
-
-            if (!this.autoRefreshFocusHandler) {
-              this.autoRefreshFocusHandler = () => {
-                void runAutoRefresh();
-              };
-              window.addEventListener('focus', this.autoRefreshFocusHandler);
-            }
-
-            if (!this.autoRefreshVisibilityHandler) {
-              this.autoRefreshVisibilityHandler = () => {
-                if (!document.hidden) {
-                  void runAutoRefresh();
-                }
-              };
-              document.addEventListener('visibilitychange', this.autoRefreshVisibilityHandler);
-            }
-
-            window.addEventListener('beforeunload', () => {
-              if (this.autoRefreshTimerId) {
-                clearInterval(this.autoRefreshTimerId);
-                this.autoRefreshTimerId = null;
-              }
-            }, { once: true });
-          },
-
           canManageCards() {
             if (this.hasPortalPermission('create.setup')) return true;
             if (this.hasCardsAccess) return true;
@@ -379,8 +305,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               } else {
                 this.roleNotice = '';
               }
-
-              this.setupAutoRefresh();
 
               this.initCompleted = true;
             } catch (error) {
@@ -571,11 +495,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
             } catch (err) {
               this.hasCardsAccess = false;
-              const message = err?.message || String(err || 'Error desconocido');
-              if (this.isAuthErrorMessage(message)) {
-                this.handleAuthFailure();
-                return;
-              }
               this.logError('cargarTarjetas', err, {
                 hasToken: !!this.token,
                 userId: this.userId,
@@ -583,7 +502,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 forceRefresh
               });
               console.error('âŒ Error al cargar tarjetas:', err);
-              this.error = message || 'Error al cargar tarjetas';
+              this.error = err.message || 'Error al cargar tarjetas';
             } finally {
               this.isLoading = false;
             }
@@ -648,136 +567,28 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               return 2000;
             };
 
-            const createSetupDirectly = async () => {
-              const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
-              if (!apiBase) {
-                throw new Error('API base no configurada para vincular tarjeta');
-              }
+            const proxyResponse = await fetch('/api/cards/create', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ' + this.token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({ portalRole: this.portalRole })
+            });
 
-              const attempts = [
-                { role: this.portalRole || 'student', permission: 'create.setup' },
-                { role: this.portalRole || 'student', permission: '' },
-                { role: 'student', permission: 'create.setup' },
-                { role: 'student', permission: '' }
-              ].filter((attempt, index, arr) => arr.findIndex(item => item.role === attempt.role && item.permission === attempt.permission) === index);
+            const proxyData = await proxyResponse.json().catch(() => ({}));
 
-              const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-              for (const attempt of attempts) {
-                for (let trial = 1; trial <= 2; trial++) {
-                  const controller = new AbortController();
-                  const timeoutId = setTimeout(() => controller.abort(), 35000);
-                  try {
-                    const headers = {
-                      'Authorization': 'Bearer ' + this.token,
-                      'Content-Type': 'application/json',
-                      'Accept': 'application/json',
-                      'X-User-Role': attempt.role
-                    };
-
-                    if (attempt.permission) {
-                      headers['X-User-Permission'] = attempt.permission;
-                    }
-
-                    const response = await fetch(`${apiBase}/v1/cards`, {
-                      method: 'POST',
-                      signal: controller.signal,
-                      headers
-                    });
-
-                    const payload = await response.json().catch(() => ({}));
-
-                    if (response.status === 401) {
-                      this.handleAuthFailure();
-                      throw new Error('Sesión expirada');
-                    }
-
-                    if (response.ok && payload?.success !== false) {
-                      return payload;
-                    }
-
-                    if (response.status === 429) {
-                      const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
-                      const retrySeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
-
-                      if (trial < 2 && retryAfterMs <= 12000) {
-                        console.warn(`⚠️ [Tarjetas] 429 en creación de setup. Reintentando en ${retrySeconds}s...`);
-                        await wait(retryAfterMs);
-                        continue;
-                      }
-
-                      const cooldownMs = Math.max(30000, retryAfterMs * 3);
-                      localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
-                      throw new Error(payload?.message || `Has excedido el límite de solicitudes, intenta nuevamente en ${retrySeconds}s`);
-                    }
-
-                    if (response.status === 403 || response.status === 404) {
-                      break;
-                    }
-
-                    throw new Error(payload?.message || `Error ${response.status}: ${response.statusText}`);
-                  } catch (directError) {
-                    const isAbort = String(directError?.name || '').toLowerCase() === 'aborterror';
-                    if (isAbort) {
-                      break;
-                    }
-                    throw directError;
-                  } finally {
-                    clearTimeout(timeoutId);
-                  }
-                }
-              }
-
-              throw new Error('No fue posible crear la sesión de Stripe en este momento. Intenta nuevamente.');
-            };
-
-            let setupResponseData = null;
-            try {
-              console.log('📡 [Tarjetas] Solicitando setup directo a /v1/cards ...');
-              setupResponseData = await createSetupDirectly();
-            } catch (directError) {
-              const lowerMessage = String(directError?.message || '').toLowerCase();
-              const isAbort = String(directError?.name || '').toLowerCase() === 'aborterror';
-              const isNetwork = lowerMessage.includes('failed to fetch') || lowerMessage.includes('networkerror') || lowerMessage.includes('cors');
-
-              if (!isAbort && !isNetwork) {
-                throw directError;
-              }
-
-              console.warn('⚠️ [Tarjetas] Llamada directa falló por red/CORS, intentando /api/cards/create ...');
-
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 30000);
-              const proxyResponse = await fetch('/api/cards/create', {
-                method: 'POST',
-                signal: controller.signal,
-                headers: {
-                  'Authorization': 'Bearer ' + this.token,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
-                body: JSON.stringify({ portalRole: this.portalRole })
-              });
-              clearTimeout(timeoutId);
-
-              console.log('📡 [Tarjetas] Status /api/cards/create:', proxyResponse.status);
-              setupResponseData = await proxyResponse.json().catch(() => ({}));
-
-              if (!proxyResponse.ok) {
-                throw new Error(setupResponseData?.message || `Error ${proxyResponse.status}: ${proxyResponse.statusText}`);
-              }
-            }
-
-            if (setupResponseData?.success) {
-              data = setupResponseData;
+            if (proxyData?.success) {
+              data = proxyData;
               localStorage.removeItem('cards_create_next_retry_at');
-            } else if (setupResponseData?.rate_limited) {
-              const retryAfterMs = parseRetryAfterMs(setupResponseData?.retry_after_ms);
+            } else if (proxyData?.rate_limited) {
+              const retryAfterMs = parseRetryAfterMs(proxyData?.retry_after_ms);
               const cooldownMs = Math.max(30000, retryAfterMs * 3);
               localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
-              throw new Error(setupResponseData?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
+              throw new Error(proxyData?.message || 'Has excedido el límite de solicitudes, intenta nuevamente en unos segundos');
             } else {
-              throw new Error(setupResponseData?.message || 'No tienes permisos para acceder a este recurso');
+              throw new Error(proxyData?.message || 'No tienes permisos para acceder a este recurso');
             }
 
             console.log('ðŸ“¦ Respuesta del backend:', data);
@@ -789,7 +600,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               console.log('âœ… Redirigiendo a Stripe:', checkoutUrl);
               console.log('â±ï¸ Hora de redirecciÃ³n:', new Date().toLocaleTimeString());
               // AquÃ­ el usuario completa el pago en Stripe
-              this.showModal = false;
               window.location.href = checkoutUrl;
             } else {
               console.error('âŒ Estructura de respuesta:', JSON.stringify(data, null, 2));
@@ -797,11 +607,6 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
             }
           } catch (err) {
             const message = err?.message || String(err || 'Error desconocido');
-            if (String(err?.name || '').toLowerCase() === 'aborterror') {
-              this.error = 'La solicitud tardó demasiado. Intenta nuevamente.';
-              this.isLoading = false;
-              return;
-            }
             if (this.isRateLimitedMessage(message)) {
               console.warn('⚠️ [Tarjetas] Rate-limited al crear setup de tarjeta:', message);
             } else {
