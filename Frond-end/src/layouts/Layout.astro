@@ -97,6 +97,16 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 
 			const shouldHandle = (url) => url.startsWith(`${apiBase}/`);
 			const isRefreshUrl = (url) => /\/v1\/refresh-token(?:\?|$)/.test(url);
+			const handleExpiredSession = () => {
+				if (window.__sessionExpiredHandled__) return;
+				window.__sessionExpiredHandled__ = true;
+				localStorage.removeItem('access_token');
+				localStorage.removeItem('refresh_token');
+
+				if (window.location.pathname !== '/') {
+					window.location.href = '/';
+				}
+			};
 
 			const buildHeaders = (headersInput) => {
 				if (headersInput instanceof Headers) return new Headers(headersInput);
@@ -164,7 +174,12 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 				}
 
 				const newAccessToken = await refreshAccessToken();
-				if (!newAccessToken) return firstResponse;
+				if (!newAccessToken) {
+					if (firstResponse.status === 401) {
+						handleExpiredSession();
+					}
+					return firstResponse;
+				}
 
 				const retryHeaders = buildHeaders(headersInput);
 				retryHeaders.set('Authorization', `Bearer ${newAccessToken}`);

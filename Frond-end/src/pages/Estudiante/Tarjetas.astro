@@ -109,6 +109,29 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               normalized.includes('too many requests');
           },
 
+          isAuthErrorMessage(message) {
+            const normalized = String(message || '').toLowerCase();
+            return normalized.includes('401')
+              || normalized.includes('unauthorized')
+              || normalized.includes('no autenticado')
+              || normalized.includes('sesión expirada')
+              || normalized.includes('sesion expirada');
+          },
+
+          handleAuthFailure() {
+            this.autoRefreshEnabled = false;
+            if (this.autoRefreshTimerId) {
+              clearInterval(this.autoRefreshTimerId);
+              this.autoRefreshTimerId = null;
+            }
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            this.error = 'Tu sesión expiró. Redirigiendo al login...';
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 800);
+          },
+
           hasPortalPermission(permissionName) {
             const expected = String(permissionName || '').toLowerCase().trim();
             if (!expected) return false;
@@ -548,6 +571,11 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               localStorage.setItem('mis_tarjetas', JSON.stringify(this.tarjetas));
             } catch (err) {
               this.hasCardsAccess = false;
+              const message = err?.message || String(err || 'Error desconocido');
+              if (this.isAuthErrorMessage(message)) {
+                this.handleAuthFailure();
+                return;
+              }
               this.logError('cargarTarjetas', err, {
                 hasToken: !!this.token,
                 userId: this.userId,
@@ -555,7 +583,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 forceRefresh
               });
               console.error('âŒ Error al cargar tarjetas:', err);
-              this.error = err.message || 'Error al cargar tarjetas';
+              this.error = message || 'Error al cargar tarjetas';
             } finally {
               this.isLoading = false;
             }

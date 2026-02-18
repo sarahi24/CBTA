@@ -81,30 +81,21 @@ function getApiRoleCandidates(effectiveRole) {
  */
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
+    if (window.__studentApiSessionExpiredHandled__) {
+      return true;
+    }
+    window.__studentApiSessionExpiredHandled__ = true;
     const currentToken = localStorage.getItem('access_token');
     
     // Log para debugging
     console.warn('⚠️ 401 Unauthorized');
     console.warn('Token en localStorage:', currentToken ? 'SÍ (presente)' : 'NO (no encontrado)');
-    
-    // Mostrar opciones al usuario
-    const choice = confirm(
-      '❌ Error de autenticación (401 - No autorizado)\n\n' +
-      'Tu token puede estar:\n' +
-      '• Expirado\n' +
-      '• Inválido\n' +
-      '• Revocado por el servidor\n\n' +
-      '¿Deseas ir al login para re-autenticarte?\n\n' +
-      'Sí = Ir a login\n' +
-      'No = Reintentar (cierra esta ventana y actualiza la página)'
-    );
-    
-    if (choice) {
-      // Limpiar token
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user_id');
-      // Redirigir a login
-      window.location.href = '/login';
+
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_id');
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+      window.location.href = '/';
     }
     return true;
   }

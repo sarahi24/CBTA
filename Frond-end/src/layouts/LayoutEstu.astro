@@ -85,6 +85,16 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
 
             const shouldHandle = (url) => url.startsWith(`${apiBase}/`);
             const isRefreshUrl = (url) => /\/v1\/refresh-token(?:\?|$)/.test(url);
+            const handleExpiredSession = () => {
+                if (window.__studentSessionExpiredHandled__) return;
+                window.__studentSessionExpiredHandled__ = true;
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+
+                if (window.location.pathname !== '/') {
+                    window.location.href = '/';
+                }
+            };
 
             const buildHeaders = (headersInput) => {
                 if (headersInput instanceof Headers) return new Headers(headersInput);
@@ -152,7 +162,12 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                 }
 
                 const newAccessToken = await refreshAccessToken();
-                if (!newAccessToken) return firstResponse;
+                if (!newAccessToken) {
+                    if (firstResponse.status === 401) {
+                        handleExpiredSession();
+                    }
+                    return firstResponse;
+                }
 
                 const retryHeaders = buildHeaders(headersInput);
                 retryHeaders.set('Authorization', `Bearer ${newAccessToken}`);
@@ -479,6 +494,12 @@ const TEXT_COLOR_DARK = '#374151';  // Texto principal
                         });
 
                         if (response.status === 429) {
+                            localStorage.setItem('notif_badge_next_retry_at', String(Date.now() + state.rateLimitCooldownMs));
+                            return;
+                        }
+
+                        if (response.status === 401) {
+                            badge.classList.add('hidden');
                             localStorage.setItem('notif_badge_next_retry_at', String(Date.now() + state.rateLimitCooldownMs));
                             return;
                         }

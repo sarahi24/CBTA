@@ -94,13 +94,17 @@ function getApiRoleCandidates(effectiveRole) {
 
 function handleAuthError(statusCode) {
   if (statusCode === 401) {
+    if (window.__studentApiSessionExpiredHandled__) {
+      return true;
+    }
+    window.__studentApiSessionExpiredHandled__ = true;
     const currentToken = localStorage.getItem('access_token');
     console.warn('⚠️ 401 Unauthorized - Token:', currentToken ? 'present' : 'missing');
-    const choice = confirm('❌ Error de autenticación (401)\n\n¿Deseas ir al login para re-autenticarte?');
-    if (choice) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user_id');
-      window.location.href = '/login';
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_id');
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+      window.location.href = '/';
     }
     return true;
   }
