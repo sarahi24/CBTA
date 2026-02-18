@@ -231,7 +231,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         </template>
                     </select>
 
-                    <button @click="enrichUsersWithDetailRoles({ maxRequests: roleEnrichmentBatchSize })"
+                        <button @click="enrichUsersWithDetailRoles({ maxRequests: roleEnrichmentBatchSize, force: true })"
                             type="button"
                             class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition-colors"
                             :disabled="roleEnrichmentInProgress"
@@ -2000,6 +2000,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 if (this.roleEnrichmentInProgress) return;
 
                 const maxRequests = Math.max(0, Number(options.maxRequests ?? this.roleEnrichmentBatchSize ?? 5));
+                const force = Boolean(options.force);
                 if (!maxRequests) return;
 
                 let roleCache = {};
@@ -2023,13 +2024,26 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     };
                 });
 
-                const usersToEnrich = this.users.filter(user => {
+                const usersNeedingRoles = this.users.filter(user => {
                     const hasRoles = Array.isArray(user?.roles) && user.roles.length > 0;
                     const hasRoleText = user?.role && String(user.role).trim() && String(user.role).toLowerCase() !== 'sin rol';
                     return !hasRoles && !hasRoleText;
-                }).slice(0, maxRequests);
+                });
 
-                if (!usersToEnrich.length) return;
+                let usersToEnrich = usersNeedingRoles;
+                if (force) {
+                    const prioritized = this.filterRole
+                        ? this.users.filter(user => !this.extractUserRoleKeys(user).includes(this.filterRole))
+                        : this.users;
+                    usersToEnrich = prioritized;
+                }
+
+                usersToEnrich = usersToEnrich.slice(0, maxRequests);
+
+                if (!usersToEnrich.length) {
+                    this.showNotify('No hay usuarios pendientes por enriquecer', 'info');
+                    return;
+                }
 
                 console.log(`🔄 Enriqueciendo roles para ${usersToEnrich.length} usuario(s)...`);
 
@@ -2059,7 +2073,10 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         localStorage.setItem('roles_user_detail_cache', JSON.stringify(roleCache));
                     } catch (_) {}
 
-                    if (!rolesByUserId.size) return;
+                    if (!rolesByUserId.size) {
+                        this.showNotify('No se detectaron cambios de roles en este lote', 'info');
+                        return;
+                    }
 
                     this.users = this.users.map(user => {
                         const roles = rolesByUserId.get(user.id);
@@ -2075,6 +2092,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     });
 
                     console.log(`✅ Roles enriquecidos para ${rolesByUserId.size} usuario(s)`);
+                    this.showNotify(`Roles actualizados para ${rolesByUserId.size} usuario(s)`, 'success');
                 } finally {
                     this.roleEnrichmentInProgress = false;
                 }
