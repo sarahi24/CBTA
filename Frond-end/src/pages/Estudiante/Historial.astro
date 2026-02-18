@@ -338,23 +338,16 @@ const forceRefresh = forceRefreshParam === 'true';
         }
 
         try {
-          const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;
-          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, this.roleForPortal, {
-            fallbackUrl,
-            alternativeIds: [
-              localPayment?.reference,
-              localPayment?.paymentIntentId,
-              localPayment?.transactionId
-            ],
-            preferAlternativeFirst: true
-          });
+          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, this.roleForPortal);
           if (result?.url) {
             this.openUrlInNewTab(result.url);
             return;
           }
         } catch (err) {
-          const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;
-          if (!fallbackUrl) fallbackUrl = localPayment?.url || null;
+          if (!fallbackUrl) {
+            const localPayment = Array.isArray(this.pagos) ? this.pagos.find(p => String(p.id) === String(paymentId)) : null;
+            fallbackUrl = localPayment?.url || null;
+          }
 
           if (!fallbackUrl) {
             try {
