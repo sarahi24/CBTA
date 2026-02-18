@@ -279,11 +279,12 @@ const paymentId = Astro.url.searchParams.get('id');
       this.downloadingReceipt = true;
       this.errorMessage = '';
       const pendingTab = window.open('', '_blank');
+      const existingReceiptUrl = this.paymentDetail?.url || null;
       let receiptResultUrl = null;
       const proxyOpenUrl = '/api/receipts/' + encodeURIComponent(this.paymentId) + '?mode=open&_=' + Date.now();
 
       try {
-        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole);
+        const result = await window.StudentAPI.downloadPaymentReceipt(this.paymentId, token, this.portalRole, existingReceiptUrl);
         receiptResultUrl = result?.url || result?.data?.url || null;
         if (receiptResultUrl) {
           if (pendingTab && !pendingTab.closed) {

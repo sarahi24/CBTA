@@ -338,7 +338,7 @@ const forceRefresh = forceRefreshParam === 'true';
         }
 
         try {
-          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, this.roleForPortal);
+          const result = await window.StudentAPI.downloadPaymentReceipt(paymentId, token, this.roleForPortal, fallbackUrl);
           if (result?.url) {
             this.openUrlInNewTab(result.url);
             return;

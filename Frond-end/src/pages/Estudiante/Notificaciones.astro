@@ -155,28 +155,15 @@ const pageTitle = "Notificaciones";
           }
         });
 
-        // Obtener solo conteo de no leídas (sin cargar lista completa)
-        const unreadResponse = await fetch(`${API_BASE}/notifications/unread?page=1&per_page=1`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (readResponse.ok && unreadResponse.ok) {
+        if (readResponse.ok) {
           const readData = await readResponse.json();
-          const unreadData = await unreadResponse.json();
 
           console.log('✅ Notificaciones leídas:', readData);
-          console.log('✅ Notificaciones no leídas:', unreadData);
 
           const notificationsNode = readData.data?.notifications || {};
           const readNotifications = extractNotificationsFromResponse(readData);
-          const unreadNotifications = extractNotificationsFromResponse(unreadData);
-
-          const mergedNotifications = [...unreadNotifications, ...readNotifications];
           const dedupMap = new Map();
-          for (const notif of mergedNotifications) {
+          for (const notif of readNotifications) {
             const key = notif?.id ?? `${notif?.type || 'unknown'}-${notif?.created_at || ''}-${JSON.stringify(notif?.data || {})}`;
             if (!dedupMap.has(key)) {
               dedupMap.set(key, notif);
@@ -186,9 +173,9 @@ const pageTitle = "Notificaciones";
             .sort((a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime());
 
           const unreadCount =
-            unreadData.data?.count ??
-            unreadData.data?.unread_count ??
             readData.data?.unread_count ??
+            notificationsNode?.unread_count ??
+            notificationsNode?.meta?.unread_count ??
             notificationsList.filter(n => !(n?.read || n?.is_read || n?.read_at || n?.readAt)).length;
 
           const meta = notificationsNode?.meta || notificationsNode?.pagination || {};

@@ -345,8 +345,18 @@ window.StudentAPI = {
     }
   },
 
-  async downloadPaymentReceipt(paymentId, token, role = 'student') {
+  async downloadPaymentReceipt(paymentId, token, role = 'student', knownReceiptUrl = null) {
     try {
+      const localReceiptUrl = pickReceiptUrl(knownReceiptUrl);
+      if (localReceiptUrl) {
+        return {
+          url: localReceiptUrl,
+          expiresIn: null,
+          contentType: null,
+          message: 'Recibo obtenido de datos locales'
+        };
+      }
+
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
       const endpoint = `/api/receipts/${paymentId}?_=${Date.now()}`;
