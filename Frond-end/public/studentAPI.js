@@ -9,14 +9,29 @@ const API_BASE = `${API_BASE_URL}/v1`;
 
 function normalizeStudentPortalRole(role) {
   if (!role) return 'student';
-  const roleLower = String(role).toLowerCase().trim();
+  const roleLower = String(role)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  if (roleLower === 'student' || roleLower === 'estudiante') return 'student';
-  if (roleLower === 'parent' || roleLower === 'padre') return 'parent';
+  if (roleLower === 'student' || roleLower === 'estudiante' || roleLower === 'alumno' || roleLower === 'alumna') return 'student';
+  if (roleLower === 'parent' || roleLower === 'padre' || roleLower === 'madre' || roleLower === 'tutor' || roleLower === 'tutora' || roleLower === 'tutor legal') return 'parent';
   if (roleLower === 'applicant' || roleLower === 'solicitante' || roleLower === 'aspirante') return 'applicant';
-  if (roleLower === 'unverified' || roleLower === 'nverified' || roleLower === 'not_verified' || roleLower === 'sin_verificar' || roleLower === 'sin verificar') return 'unverified';
+  if (roleLower === 'unverified' || roleLower === 'nverified' || roleLower === 'not verified' || roleLower === 'sin verificar' || roleLower === 'no verificado') return 'unverified';
 
   return roleLower;
+}
+
+function extractRoleValue(rawRole) {
+  if (!rawRole) return '';
+  if (typeof rawRole === 'string') return rawRole;
+  if (typeof rawRole === 'object') {
+    return rawRole?.name || rawRole?.slug || rawRole?.role || rawRole?.role_name || rawRole?.value || rawRole?.type || '';
+  }
+  return String(rawRole || '');
 }
 
 function shouldUseStudentId(effectiveRole, studentId) {
@@ -42,7 +57,7 @@ function getRoleFromStorage() {
     if (parsedUser?.type) roles.push(parsedUser.type);
 
     const firstValidRole = roles
-      .map((item) => (typeof item === 'string' ? item : item?.name))
+      .map((item) => extractRoleValue(item))
       .find(Boolean);
 
     return firstValidRole ? normalizeStudentPortalRole(firstValidRole) : null;
@@ -538,25 +553,114 @@ window.StudentAPI = {
   async getDashboardHistory(studentId, token, page = 1, perPage = 15, forceRefresh = false, role = 'student') {
     try {
       const effectiveRole = resolveStudentPortalRole(role);
-      const apiRole = resolveApiAccessRole(effectiveRole);
-      const endpoint = shouldUseStudentId(effectiveRole, studentId) ? `${API_BASE}/dashboard/history/${studentId}` : `${API_BASE}/dashboard/history`;
-      const url = new URL(endpoint);
-      url.searchParams.append('page', String(page));
-      url.searchParams.append('perPage', String(perPage));
-      if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': apiRole,
-          'X-User-Permission': 'view.payments.summary'
+      const apiRoles = getApiRoleCandidates(effectiveRole);
+      const useIdRoute = shouldUseStudentId(effectiveRole, studentId);
+      const endpointCandidates = [
+        ...(useIdRoute ? [`${API_BASE}/dashboard/history/${studentId}`] : []),
+        `${API_BASE}/dashboard/history`
+      ];
+
+      const permissionCandidates = [
+        'view.payments.history',
+        'view.payments.summary',
+        'view.own.paid.concepts.summary'
+      ];
+
+      for (const rawEndpoint of endpointCandidates) {
+        const url = new URL(rawEndpoint);
+        url.searchParams.append('page', String(page));
+        url.searchParams.append('perPage', String(perPage));
+        if (forceRefresh) url.searchParams.append('forceRefresh', 'true');
+
+        for (const apiRole of apiRoles) {
+          for (const permission of permissionCandidates) {
+            const withPermission = await fetch(url.toString(), {
+              method: 'GET',
+              headers: buildAuthHeaders(token, apiRole, permission)
+            });
+
+            if (withPermission.status === 401) {
+              handleAuthError(401);
+              throw new Error('No autenticado - sesión expirada');
+            }
+
+            if (isRateLimitedStatus(withPermission.status)) {
+              console.warn('⚠️ getDashboardHistory 429. Se devuelve historial vacío para evitar sobrecargar la API.');
+              return {
+                success: true,
+                data: {
+                  payment_history: {
+                    items: [],
+                    currentPage: Number(page) || 1,
+                    lastPage: 1,
+                    perPage: Number(perPage) || 15,
+                    total: 0,
+                    hasMorePages: false,
+                    nextPage: null,
+                    previousPage: null
+                  }
+                }
+              };
+            }
+
+            if (withPermission.ok) return await withPermission.json();
+            if (!isSkippableFallbackStatus(withPermission.status)) {
+              throw new Error(await parseErrorMessage(withPermission, `Error ${withPermission.status}: ${withPermission.statusText}`));
+            }
+          }
+
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, apiRole)
+          });
+
+          if (withoutPermission.status === 401) {
+            handleAuthError(401);
+            throw new Error('No autenticado - sesión expirada');
+          }
+
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            console.warn('⚠️ getDashboardHistory 429. Se devuelve historial vacío para evitar sobrecargar la API.');
+            return {
+              success: true,
+              data: {
+                payment_history: {
+                  items: [],
+                  currentPage: Number(page) || 1,
+                  lastPage: 1,
+                  perPage: Number(perPage) || 15,
+                  total: 0,
+                  hasMorePages: false,
+                  nextPage: null,
+                  previousPage: null
+                }
+              }
+            };
+          }
+
+          if (withoutPermission.ok) return await withoutPermission.json();
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, `Error ${withoutPermission.status}: ${withoutPermission.statusText}`));
+          }
         }
-      });
-      if (!response.ok) throw new Error((await response.json()).message || 'Error');
-      return await response.json();
+      }
+
+      console.warn(`⚠️ getDashboardHistory 403/404 para rol ${effectiveRole}. Se devuelve historial vacío.`);
+      return {
+        success: true,
+        data: {
+          payment_history: {
+            items: [],
+            currentPage: Number(page) || 1,
+            lastPage: 1,
+            perPage: Number(perPage) || 15,
+            total: 0,
+            hasMorePages: false,
+            nextPage: null,
+            previousPage: null
+          }
+        }
+      };
     } catch (err) {
       console.error('❌ StudentAPI.getDashboardHistory:', err);
       throw err;
