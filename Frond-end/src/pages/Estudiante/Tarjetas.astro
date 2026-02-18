@@ -537,12 +537,19 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               throw new Error(`Demasiadas solicitudes. Intenta nuevamente en ${waitSeconds}s.`);
             }
 
-            const headerAttempts = [
-              { role: this.portalRole, permission: 'create.setup' },
-              { role: this.portalRole, permission: '' },
-              { role: 'student', permission: 'create.setup' },
-              { role: 'student', permission: '' }
-            ];
+            const headerAttempts = this.portalRole === 'applicant'
+              ? [
+                  { role: 'student', permission: 'create.setup' },
+                  { role: 'student', permission: '' },
+                  { role: 'applicant', permission: 'create.setup' },
+                  { role: 'applicant', permission: '' }
+                ]
+              : [
+                  { role: this.portalRole, permission: 'create.setup' },
+                  { role: this.portalRole, permission: '' },
+                  { role: 'student', permission: 'create.setup' },
+                  { role: 'student', permission: '' }
+                ];
 
             const uniqueHeaderAttempts = headerAttempts.filter((attempt, index, arr) => {
               return arr.findIndex((entry) => entry.role === attempt.role && entry.permission === attempt.permission) === index;
@@ -595,9 +602,9 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
               if (response.status === 429) {
                 sawRateLimit = true;
                 const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
-                localStorage.setItem('cards_create_next_retry_at', String(Date.now() + Math.max(8000, retryAfterMs * 2)));
-                await wait(retryAfterMs);
-                continue;
+                const cooldownMs = Math.max(30000, retryAfterMs * 3);
+                localStorage.setItem('cards_create_next_retry_at', String(Date.now() + cooldownMs));
+                break;
               }
 
               if (response.status === 403 || response.status === 404) {
