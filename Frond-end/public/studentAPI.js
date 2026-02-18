@@ -355,6 +355,7 @@ window.StudentAPI = {
       const alternativeIds = rawAlternativeIds
         .map((value) => String(value || '').trim())
         .filter((value) => value && value !== String(paymentId));
+      const preferAlternativeFirst = Boolean(options?.preferAlternativeFirst);
 
       const effectiveRole = resolveStudentPortalRole(role);
       const apiRole = resolveApiAccessRole(effectiveRole);
@@ -400,25 +401,27 @@ window.StudentAPI = {
         };
       };
 
-      try {
-        return await fetchReceiptByCandidate(paymentId);
-      } catch (firstError) {
-        const status = Number(firstError?.status || 0);
-        const shouldRetryWithAlternatives = status === 422 || status === 404;
-        if (shouldRetryWithAlternatives) {
-          for (const alternativeId of alternativeIds) {
-            try {
-              return await fetchReceiptByCandidate(alternativeId);
-            } catch (altError) {
-              const altStatus = Number(altError?.status || 0);
-              if (altStatus !== 422 && altStatus !== 404) {
-                throw altError;
-              }
-            }
+      const candidates = preferAlternativeFirst
+        ? [...alternativeIds, String(paymentId)]
+        : [String(paymentId), ...alternativeIds];
+      const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
+
+      let lastRetryableError = null;
+      for (const candidateId of uniqueCandidates) {
+        try {
+          return await fetchReceiptByCandidate(candidateId);
+        } catch (candidateError) {
+          const status = Number(candidateError?.status || 0);
+          const isRetryable = status === 422 || status === 404;
+          if (!isRetryable) {
+            throw candidateError;
           }
+          lastRetryableError = candidateError;
         }
-        throw firstError;
       }
+
+      if (lastRetryableError) throw lastRetryableError;
+      throw new Error('No se pudo obtener el recibo');
     } catch (err) {
       const localReceiptUrl = pickReceiptUrl(
         (receiptOptions && typeof receiptOptions === 'object' && !Array.isArray(receiptOptions))

@@ -290,7 +290,8 @@ const paymentId = Astro.url.searchParams.get('id');
             this.paymentDetail?.paymentIntentId,
             this.paymentDetail?.reference,
             this.paymentDetail?.stripePaymentId
-          ]
+          ],
+          preferAlternativeFirst: true
         });
         receiptResultUrl = result?.url || result?.data?.url || null;
         if (receiptResultUrl) {

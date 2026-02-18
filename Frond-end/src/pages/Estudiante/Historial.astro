@@ -345,7 +345,8 @@ const forceRefresh = forceRefreshParam === 'true';
               localPayment?.reference,
               localPayment?.paymentIntentId,
               localPayment?.transactionId
-            ]
+            ],
+            preferAlternativeFirst: true
           });
           if (result?.url) {
             this.openUrlInNewTab(result.url);
