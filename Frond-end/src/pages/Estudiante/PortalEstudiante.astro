@@ -196,14 +196,18 @@ const title = 'Panel de Estudiante';
             }
 
             this.history = items.map((payment) => {
-              const montoValue = payment?.amount_received ?? payment?.amount ?? payment?.total ?? payment?.monto ?? payment?.total_amount ?? '0.00';
+              const montoValue = this.resolveHistoryAmount(payment);
+              const fechaValue = this.resolveHistoryDateSource(payment);
+              const metodoValue = this.resolveHistoryMethod(payment);
+              const statusValue = this.resolveHistoryStatus(payment);
               return {
-                id: payment?.id ?? payment?.payment_id ?? Math.random().toString(36).slice(2),
-                concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || 'Pago',
+                id: payment?.id ?? payment?.payment_id ?? payment?.transaction_id ?? payment?.reference ?? Math.random().toString(36).slice(2),
+                concepto: payment?.concept || payment?.concept_name || payment?.concepto || payment?.description || payment?.title || 'Pago',
                 monto: this.formatDashboardHistoryAmount(montoValue),
-                fecha: this.formatDashboardHistoryDate(payment),
-                metodo: payment?.method || payment?.payment_method || payment?.payment_method_details?.[0] || 'Metodo desconocido',
-                status: this.normalizeHistoryStatus(payment?.status)
+                fecha: this.formatDashboardHistoryDate(fechaValue),
+                metodo: metodoValue,
+                status: statusValue,
+                statusLabel: this.getHistoryStatusLabel(statusValue)
               };
             });
             console.log('✅ Historial de pagos cargado:', this.history.length);
@@ -247,10 +251,69 @@ const title = 'Panel de Estudiante';
 
           if (Array.isArray(paymentHistory?.items)) return paymentHistory.items;
           if (Array.isArray(paymentHistory?.data)) return paymentHistory.data;
+          if (Array.isArray(paymentHistory?.payments)) return paymentHistory.payments;
+          if (Array.isArray(paymentHistory?.records)) return paymentHistory.records;
+          if (Array.isArray(data?.payments)) return data.payments;
+          if (Array.isArray(data?.records)) return data.records;
+          if (Array.isArray(data?.transactions)) return data.transactions;
+          if (Array.isArray(historyResponse?.payments)) return historyResponse.payments;
+          if (Array.isArray(historyResponse?.records)) return historyResponse.records;
+          if (Array.isArray(historyResponse?.transactions)) return historyResponse.transactions;
           if (Array.isArray(data?.items)) return data.items;
           if (Array.isArray(data)) return data;
 
           return [];
+        },
+
+        resolveHistoryAmount(payment) {
+          if (!payment || typeof payment !== 'object') return '0.00';
+          return payment?.amount
+            ?? payment?.total_amount
+            ?? payment?.total
+            ?? payment?.monto
+            ?? payment?.amount_due
+            ?? payment?.original_amount
+            ?? payment?.amount_received
+            ?? payment?.paid_amount
+            ?? payment?.received_amount
+            ?? '0.00';
+        },
+
+        resolveHistoryDateSource(payment) {
+          if (!payment || typeof payment !== 'object') return {};
+          return {
+            date: payment?.date ?? payment?.created_at_human ?? payment?.relative_date,
+            date_iso: payment?.date_iso ?? payment?.payment_date ?? payment?.created_at ?? payment?.updated_at
+          };
+        },
+
+        resolveHistoryMethod(payment) {
+          if (!payment || typeof payment !== 'object') return 'Metodo desconocido';
+
+          const methodDetails = payment?.payment_method_details;
+          if (Array.isArray(methodDetails) && methodDetails.length > 0) {
+            const first = methodDetails[0];
+            if (typeof first === 'string' && first.trim()) return first.trim();
+            if (first && typeof first === 'object') {
+              const brand = String(first?.brand || first?.card_brand || '').trim();
+              const last4 = String(first?.last4 || first?.card_last4 || '').trim();
+              const type = String(first?.type || first?.method || '').trim();
+              const bank = String(first?.bank || first?.bank_name || '').trim();
+              if (brand && last4) return `${brand.toUpperCase()} •••• ${last4}`;
+              if (bank && last4) return `${bank} •••• ${last4}`;
+              if (type && last4) return `${type} •••• ${last4}`;
+              if (brand) return brand.toUpperCase();
+              if (bank) return bank;
+              if (type) return type;
+            }
+          }
+
+          return payment?.payment_method
+            || payment?.method
+            || payment?.payment_method_type
+            || payment?.method_type
+            || payment?.channel
+            || 'Metodo desconocido';
         },
 
         pendingSubtitle() {
@@ -265,14 +328,58 @@ const title = 'Panel de Estudiante';
             : 'Sin pagos vencidos';
         },
 
+        resolveHistoryStatus(payment) {
+          if (!payment || typeof payment !== 'object') {
+            return 'unknown';
+          }
+
+          const rawStatus = payment?.status
+            || payment?.payment_status
+            || payment?.estado
+            || payment?.transaction_status
+            || payment?.payment_intent_status
+            || payment?.intent_status
+            || payment?.charge_status
+            || payment?.stripe_status
+            || payment?.order_status
+            || payment?.cash_status
+            || payment?.oxxo_status
+            || '';
+
+          const normalized = this.normalizeHistoryStatus(rawStatus);
+          if (normalized && normalized !== 'unknown') {
+            return normalized;
+          }
+
+          const methodValue = String(payment?.payment_method || payment?.method || payment?.payment_method_type || '').toLowerCase();
+          const isCashReference = methodValue.includes('oxxo') || methodValue.includes('cash') || methodValue.includes('efectivo');
+          if (isCashReference) {
+            return 'pending';
+          }
+
+          return 'unknown';
+        },
+
         normalizeHistoryStatus(statusValue) {
           const value = String(statusValue || '').toLowerCase().trim();
-          if (!value) return 'paid';
+          if (!value) return 'unknown';
           if (value === 'paid' || value === 'completed' || value === 'success' || value === 'succeeded') return 'paid';
+          if (value === 'pending_payment' || value === 'awaiting_payment' || value === 'waiting_payment' || value === 'requires_payment_method') return 'pending';
           if (value === 'pending' || value === 'processing' || value === 'in_process') return 'pending';
+          if (value === 'unpaid' || value === 'not_paid' || value === 'no_pagado') return 'pending';
           if (value === 'failed' || value === 'error' || value === 'declined' || value === 'canceled' || value === 'cancelled') return 'failed';
           if (value === 'refunded' || value === 'refund') return 'refunded';
+          if (value === 'unknown' || value === 'none' || value === 'n/a' || value === '-') return 'unknown';
           return value;
+        },
+
+        getHistoryStatusLabel(statusValue) {
+          const value = String(statusValue || '').toLowerCase().trim();
+          if (value === 'paid') return 'Pagado';
+          if (value === 'pending') return 'Pendiente';
+          if (value === 'failed') return 'Fallido';
+          if (value === 'refunded') return 'Reembolsado';
+          return 'En revisión';
         },
 
         formatDashboardHistoryDate(payment) {
@@ -548,6 +655,7 @@ const title = 'Panel de Estudiante';
                 <th>Concepto</th>
                 <th>Monto</th>
                 <th>Fecha</th>
+                <th>Estado</th>
               </tr>
             </thead>
 
@@ -558,12 +666,13 @@ const title = 'Panel de Estudiante';
                     <td data-label="Concepto" x-text="pago.concepto"></td>
                     <td class="monto" data-label="Monto" x-text="'$' + pago.monto"></td>
                     <td class="fecha-celda" data-label="Fecha" x-text="pago.fecha || '—'"></td>
+                    <td data-label="Estado" x-text="pago.statusLabel || 'En revisión'"></td>
                   </tr>
                 </template>
               </template>
               <template x-if="!history || history.length === 0">
                 <tr>
-                  <td colspan="3" class="empty-row" x-text="emptyPaymentsMessage"></td>
+                  <td colspan="4" class="empty-row" x-text="emptyPaymentsMessage"></td>
                 </tr>
               </template>
             </tbody>
