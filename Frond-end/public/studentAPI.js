@@ -96,12 +96,12 @@ function handleAuthError(statusCode) {
   if (statusCode === 401) {
     const currentToken = localStorage.getItem('access_token');
     console.warn('⚠️ 401 Unauthorized - Token:', currentToken ? 'present' : 'missing');
-    const choice = confirm('❌ Error de autenticación (401)\n\n¿Deseas ir al login para re-autenticarte?');
-    if (choice) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user_id');
-      window.location.href = '/login';
-    }
+    if (window.__studentApiAuthRedirectInProgress) return true;
+    window.__studentApiAuthRedirectInProgress = true;
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('userId');
+    window.location.href = '/login';
     return true;
   }
   return false;
@@ -941,60 +941,68 @@ window.StudentAPI = {
       }
 
       const loadPaymentMethods = async () => {
-        let rateLimitedCount = 0;
-
         const endpointCandidates = [
-          `${API_BASE}/cards`,
-          ...(studentId ? [`${API_BASE}/cards/${studentId}`] : [])
+          ...(studentId ? [`${API_BASE}/cards/${studentId}`] : []),
+          `${API_BASE}/cards`
         ];
-
-        const maxAttempts = 2;
 
         for (const endpoint of endpointCandidates) {
           const url = new URL(endpoint);
           if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
 
-          const headerModes = [
-            { permission: 'view.cards' },
-            { permission: '' }
-          ];
+          const withPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, effectiveRole, 'view.cards')
+          });
 
-          for (const mode of headerModes) {
-            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-              const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers: buildAuthHeaders(token, effectiveRole, mode.permission)
-              });
-
-              if (response.status === 401) handleAuthError(401);
-
-              if (response.ok) {
-                return await response.json();
-              }
-
-              if (isRateLimitedStatus(response.status)) {
-                rateLimitedCount += 1;
-                if (attempt < maxAttempts) {
-                  const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
-                  console.warn(`⚠️ getPaymentMethods 429. Reintentando en ${retryAfterMs}ms (intento ${attempt + 1}/${maxAttempts})`);
-                  await wait(retryAfterMs);
-                  continue;
-                }
-                break;
-              }
-
-              if (!isSkippableFallbackStatus(response.status)) {
-                throw new Error(await parseErrorMessage(response, 'Error'));
-              }
-
-              break;
-            }
+          if (withPermission.status === 401) {
+            handleAuthError(401);
+            throw new Error('No autenticado - sesión expirada');
           }
-        }
 
-        if (rateLimitedCount > 0) {
-          console.warn('⚠️ getPaymentMethods 429. Se devuelve lista vacía para evitar sobrecargar la API.');
-          return { success: true, data: { cards: [] }, message: 'Rate limited' };
+          if (withPermission.ok) {
+            return await withPermission.json();
+          }
+
+          if (isRateLimitedStatus(withPermission.status)) {
+            if (paymentMethodsRequestState.lastResult && paymentMethodsRequestState.lastKey === cacheKey) {
+              console.warn('⚠️ getPaymentMethods 429. Usando cache reciente para evitar bloqueo.');
+              return paymentMethodsRequestState.lastResult;
+            }
+            console.warn('⚠️ getPaymentMethods 429. Se devuelve lista vacía para evitar sobrecargar la API.');
+            return { success: true, data: { cards: [] }, message: 'Rate limited' };
+          }
+
+          if (!isSkippableFallbackStatus(withPermission.status)) {
+            throw new Error(await parseErrorMessage(withPermission, 'Error'));
+          }
+
+          const withoutPermission = await fetch(url.toString(), {
+            method: 'GET',
+            headers: buildAuthHeaders(token, effectiveRole)
+          });
+
+          if (withoutPermission.status === 401) {
+            handleAuthError(401);
+            throw new Error('No autenticado - sesión expirada');
+          }
+
+          if (withoutPermission.ok) {
+            return await withoutPermission.json();
+          }
+
+          if (isRateLimitedStatus(withoutPermission.status)) {
+            if (paymentMethodsRequestState.lastResult && paymentMethodsRequestState.lastKey === cacheKey) {
+              console.warn('⚠️ getPaymentMethods 429 (sin permiso). Usando cache reciente para evitar bloqueo.');
+              return paymentMethodsRequestState.lastResult;
+            }
+            console.warn('⚠️ getPaymentMethods 429 (sin permiso). Se devuelve lista vacía para evitar sobrecargar la API.');
+            return { success: true, data: { cards: [] }, message: 'Rate limited' };
+          }
+
+          if (!isSkippableFallbackStatus(withoutPermission.status)) {
+            throw new Error(await parseErrorMessage(withoutPermission, 'Error'));
+          }
         }
 
         return { success: true, data: { cards: [] } };

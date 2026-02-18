@@ -6,7 +6,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260218r32" is:inline></script>
+  <script src="/studentAPI.js?v=20260218r33" is:inline></script>
   <script is:inline>
     // Crear la definiciÃ³n del componente
     const tarjetasComponent = () => ({
@@ -403,73 +403,7 @@ const resultParam = typeof Astro !== 'undefined' && Astro.url ? Astro.url.search
                 }
 
                 if (!data) {
-                    const apiBase = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
-                    if (!apiBase) {
-                      data = { success: true, data: { cards: [] } };
-                    } else {
-                      const endpointCandidates = [
-                        `${apiBase}/v1/cards`,
-                        ...(this.userId ? [`${apiBase}/v1/cards/${this.userId}`] : [])
-                      ];
-
-                      for (const rawEndpoint of endpointCandidates) {
-                        const url = new URL(rawEndpoint);
-                        if (forceRefresh) url.searchParams.set('forceRefresh', 'true');
-
-                        const withPermission = await fetch(url.toString(), {
-                          method: 'GET',
-                          headers: {
-                            'Authorization': 'Bearer ' + this.token,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-User-Role': this.portalRole,
-                            'X-User-Permission': 'view.cards'
-                          }
-                        });
-
-                        if (withPermission.ok) {
-                          data = await withPermission.json();
-                          break;
-                        }
-
-                        if (withPermission.status === 429) {
-                          throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
-                        }
-
-                        if (withPermission.status !== 403 && withPermission.status !== 404) {
-                          const errorData = await withPermission.json().catch(() => ({}));
-                          throw new Error(errorData.message || `Error ${withPermission.status}: ${withPermission.statusText}`);
-                        }
-
-                        const withoutPermission = await fetch(url.toString(), {
-                          method: 'GET',
-                          headers: {
-                            'Authorization': 'Bearer ' + this.token,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-User-Role': this.portalRole
-                          }
-                        });
-
-                        if (withoutPermission.ok) {
-                          data = await withoutPermission.json();
-                          break;
-                        }
-
-                        if (withoutPermission.status === 429) {
-                          throw new Error('Demasiadas solicitudes. Por favor espera 30 segundos e intenta nuevamente.');
-                        }
-
-                        if (withoutPermission.status !== 403 && withoutPermission.status !== 404) {
-                          const errorData = await withoutPermission.json().catch(() => ({}));
-                          throw new Error(errorData.message || `Error ${withoutPermission.status}: ${withoutPermission.statusText}`);
-                        }
-                      }
-
-                      if (!data) {
-                        data = { success: true, data: { cards: [] } };
-                      }
-                    }
+                  data = { success: true, data: { cards: [] } };
                 }
               }
 
