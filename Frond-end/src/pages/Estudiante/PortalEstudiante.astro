@@ -5,7 +5,7 @@ const title = 'Panel de Estudiante';
 ---
 
 <StudentLayout title={title}>
-  <script src="/studentAPI.js?v=20260215r19" is:inline></script>
+  <script src="/studentAPI.js?v=20260218r32" is:inline></script>
   <script is:inline>
     function studentDashboard() {
       return {
@@ -76,11 +76,17 @@ const title = 'Panel de Estudiante';
           if (roleCandidates.includes('parent')) return 'parent';
           if (roleCandidates.includes('applicant')) return 'applicant';
           if (roleCandidates.includes('student')) return 'student';
-          return 'student';
+          return '';
         },
 
         async syncPortalRoleFromApi(token) {
           if (!token || !window.StudentAPI?.getAuthenticatedUser) return '';
+
+          const now = Date.now();
+          const nextAllowedSyncAt = Number(localStorage.getItem('portal_role_sync_next_at') || '0');
+          if (Number.isFinite(nextAllowedSyncAt) && now < nextAllowedSyncAt) {
+            return '';
+          }
 
           try {
             const response = await window.StudentAPI.getAuthenticatedUser(token);
@@ -112,11 +118,17 @@ const title = 'Panel de Estudiante';
             if (resolvedRole) {
               localStorage.setItem('userRole', resolvedRole);
               localStorage.setItem('role', resolvedRole);
+              localStorage.setItem('portal_role_sync_next_at', String(now + (15 * 60 * 1000)));
               console.log('🔍 [PortalEstudiante] Rol sincronizado desde API:', resolvedRole);
             }
 
             return resolvedRole;
           } catch (error) {
+            const errorMessage = String(error?.message || error || '').toLowerCase();
+            const isRateLimited = errorMessage.includes('429') || errorMessage.includes('límite de solicitudes') || errorMessage.includes('limite de solicitudes') || errorMessage.includes('too many requests');
+            if (isRateLimited) {
+              localStorage.setItem('portal_role_sync_next_at', String(now + (5 * 60 * 1000)));
+            }
             console.warn('⚠️ [PortalEstudiante] No se pudo sincronizar rol desde API:', error?.message || error);
             return '';
           }
@@ -145,9 +157,14 @@ const title = 'Panel de Estudiante';
           try {
             const parsedUserId = parseInt(userId, 10);
             let roleForPortal = this.detectPortalRoleFromStorage();
-            const roleFromApi = await this.syncPortalRoleFromApi(token);
-            if (roleFromApi) {
-              roleForPortal = roleFromApi;
+            if (!roleForPortal) {
+              const roleFromApi = await this.syncPortalRoleFromApi(token);
+              if (roleFromApi) {
+                roleForPortal = roleFromApi;
+              }
+            }
+            if (!roleForPortal) {
+              roleForPortal = 'student';
             }
 
             this.portalRole = roleForPortal;
