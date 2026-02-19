@@ -460,6 +460,17 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     address: ''
                 },
 
+                originalFormData: {
+                    name: '',
+                    last_name: '',
+                    email: '',
+                    phone_number: '',
+                    birthdate: '',
+                    gender: '',
+                    blood_type: '',
+                    address: ''
+                },
+
                 extraUserData: {
                     phoneNumber: '',
                     birthdate: '',
@@ -746,7 +757,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 normalizeBirthdate(value) {
                     const birthdateRaw = this.firstNonEmpty(value);
                     if (!birthdateRaw) return '';
-                    return birthdateRaw.includes('T') ? birthdateRaw.split('T')[0] : birthdateRaw;
+
+                    if (birthdateRaw.includes('T')) {
+                        return birthdateRaw.split('T')[0];
+                    }
+
+                    const ddmmyyyyMatch = birthdateRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (ddmmyyyyMatch) {
+                        const [, day, month, year] = ddmmyyyyMatch;
+                        return `${year}-${month}-${day}`;
+                    }
+
+                    return birthdateRaw;
                 },
 
                 normalizeUserPayload(user) {
@@ -888,6 +910,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     this.formData.gender = normalized.gender;
                     this.formData.blood_type = normalized.bloodType;
                     this.formData.address = normalized.addressText;
+                    this.originalFormData = { ...this.formData };
 
                     this.extraUserData.phoneNumber = normalized.phoneNumber;
                     this.extraUserData.birthdate = normalized.birthdate;
@@ -940,6 +963,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 blood_type: normalized.bloodType,
                                 address: normalized.addressText
                             };
+                            this.originalFormData = { ...this.formData };
                             console.log('📝 Form data loaded for editing:', this.formData);
                         } catch (e) {
                             console.error('❌ Error loading form data:', e);
@@ -975,49 +999,85 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         return trimmed;
                     };
 
-                    const requestData = {};
-                    const nameValue = this.formData.name?.trim();
-                    const lastNameValue = this.formData.last_name?.trim();
-                    const emailValue = this.formData.email?.trim();
-                    const phoneValue = normalizePhoneNumber(this.formData.phone_number);
-                    const birthdateValue = this.formData.birthdate?.trim();
-                    const genderValue = this.formData.gender?.trim();
-                    const bloodTypeValue = this.formData.blood_type?.trim();
+                    const normalizeText = (value) => String(value ?? '').trim();
 
-                    if (nameValue) requestData.name = nameValue;
-                    if (lastNameValue) requestData.last_name = lastNameValue;
-                    if (emailValue) requestData.email = emailValue;
-                    if (phoneValue) {
-                        const phoneValid = /^\+\d{10,15}$/.test(phoneValue);
+                    const current = {
+                        name: normalizeText(this.formData.name),
+                        last_name: normalizeText(this.formData.last_name),
+                        email: normalizeText(this.formData.email),
+                        phone_number: normalizePhoneNumber(this.formData.phone_number),
+                        birthdate: normalizeText(this.formData.birthdate),
+                        gender: normalizeText(this.formData.gender),
+                        blood_type: normalizeText(this.formData.blood_type),
+                        address: normalizeText(this.formData.address)
+                    };
+
+                    const original = {
+                        name: normalizeText(this.originalFormData.name),
+                        last_name: normalizeText(this.originalFormData.last_name),
+                        email: normalizeText(this.originalFormData.email),
+                        phone_number: normalizePhoneNumber(this.originalFormData.phone_number),
+                        birthdate: normalizeText(this.originalFormData.birthdate),
+                        gender: normalizeText(this.originalFormData.gender),
+                        blood_type: normalizeText(this.originalFormData.blood_type),
+                        address: normalizeText(this.originalFormData.address)
+                    };
+
+                    const requestData = {};
+
+                    if (current.name && current.name !== original.name) requestData.name = current.name;
+                    if (current.last_name && current.last_name !== original.last_name) requestData.last_name = current.last_name;
+                    if (current.email && current.email !== original.email) requestData.email = current.email;
+                    if (current.phone_number && current.phone_number !== original.phone_number) {
+                        const phoneValid = /^\+\d{10,15}$/.test(current.phone_number);
                         if (!phoneValid) {
                             this.errorMessage = 'El telefono debe incluir codigo de pais. Ejemplo: +5215512345678.';
                             this.isUpdating = false;
                             return;
                         }
-                        requestData.phone_number = phoneValue;
+                        requestData.phone_number = current.phone_number;
                     }
-                    if (birthdateValue) requestData.birthdate = birthdateValue;
-                    if (genderValue) requestData.gender = genderValue;
-                    if (bloodTypeValue) requestData.blood_type = bloodTypeValue;
+                    if (current.birthdate && current.birthdate !== original.birthdate) requestData.birthdate = current.birthdate;
+                    if (current.gender && current.gender !== original.gender) requestData.gender = current.gender;
+                    if (current.blood_type && current.blood_type !== original.blood_type) requestData.blood_type = current.blood_type;
 
-                    const addressValue = this.formData.address;
-                    let addressText = '';
-                    if (typeof addressValue === 'string') {
-                        addressText = addressValue.trim();
-                    } else if (addressValue && typeof addressValue === 'object') {
-                        addressText = [
-                            addressValue.street,
-                            addressValue.city,
-                            addressValue.state,
-                            addressValue.zip
-                        ].filter(Boolean).join(', ');
-                    }
-                    if (addressText) {
-                        requestData.address = [addressText];
+                    if (current.address && current.address !== original.address) {
+                        requestData.address = [current.address];
                     }
 
-                    if (Object.keys(requestData).length === 0) {
-                        this.errorMessage = 'Por favor completa al menos un campo para actualizar.';
+                    const requiredName = current.name || original.name;
+                    const requiredLastName = current.last_name || original.last_name;
+                    const requiredPhone = current.phone_number || original.phone_number;
+
+                    if (!requiredName || !requiredLastName || !requiredPhone) {
+                        this.errorMessage = 'Nombre, apellido y telefono son obligatorios.';
+                        this.isUpdating = false;
+                        return;
+                    }
+
+                    const requiredPhoneValid = /^\+\d{10,15}$/.test(requiredPhone);
+                    if (!requiredPhoneValid) {
+                        this.errorMessage = 'El telefono debe incluir codigo de pais. Ejemplo: +5215512345678.';
+                        this.isUpdating = false;
+                        return;
+                    }
+
+                    requestData.name = requiredName;
+                    requestData.last_name = requiredLastName;
+                    requestData.phone_number = requiredPhone;
+
+                    const hasChanges =
+                        current.name !== original.name ||
+                        current.last_name !== original.last_name ||
+                        current.email !== original.email ||
+                        current.phone_number !== original.phone_number ||
+                        current.birthdate !== original.birthdate ||
+                        current.gender !== original.gender ||
+                        current.blood_type !== original.blood_type ||
+                        current.address !== original.address;
+
+                    if (!hasChanges) {
+                        this.errorMessage = 'No hay cambios para guardar.';
                         this.isUpdating = false;
                         return;
                     }
@@ -1061,6 +1121,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                                 localStorage.setItem('user_data', JSON.stringify(mergedUser));
                                 this.populateUserData(mergedUser);
+                                this.originalFormData = { ...this.formData };
                                 console.log('✅ Perfil actualizado exitosamente');
                             }
                             
