@@ -80,6 +80,17 @@ const TEXT_COLOR_DARK = '#374151'; // Color principal del texto en el contenido
 		window.__API_BASE_URL__ = API_BASE_URL;
 	</script>
 	<script is:inline>
+		if (!window.__consoleMutedGlobal__) {
+			const silent = () => {};
+			['log', 'info', 'warn', 'error', 'debug', 'trace'].forEach((method) => {
+				if (typeof console?.[method] === 'function') {
+					console[method] = silent;
+				}
+			});
+			window.__consoleMutedGlobal__ = true;
+		}
+	</script>
+	<script is:inline>
 		(function () {
 			if (typeof window === 'undefined') return;
 			if (window.__authFetchPatched__) return;

@@ -1468,11 +1468,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
     import { AdminAPI } from '../utils/adminAPI.js';
     window.AdminAPI = AdminAPI;
     window.__adminAPILoaded = true;
-    console.log('✅ AdminAPI cargada:', window.AdminAPI);
 </script>
 
 <script is:inline>
-    
     // Prevenir múltiples inicializaciones de Alpine
     (function() {
         if (window.__rolesDataRegistered__) return;
