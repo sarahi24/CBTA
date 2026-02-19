@@ -58,7 +58,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             
                             <div class="border-l-4 border-indigo-500 rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50">
                                 <label class="text-sm font-semibold text-indigo-700">Matrícula</label>
-                                <p class="text-lg mt-1 font-mono text-gray-700 font-semibold" x-text="studentId || 'No disponible'"></p>
+                                <p class="text-lg mt-1 font-mono text-gray-700 font-semibold" x-text="n_control || studentId || nControl || 'No disponible'"></p>
                             </div>
 
                             <div class="border-l-4 border-cyan-500 rounded-lg p-4 bg-gradient-to-r from-cyan-50 to-sky-50">
@@ -504,6 +504,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 studentName: '',
                 studentEmail: '',
                 studentId: '',
+                n_control: '',
                 lastLogin: '',
                 nControl: '',
                 semestre: '',
@@ -559,9 +560,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     await this.loadStudentData();
                     this.detectRole();
 
-                    if (this.isStudent) {
-                        await this.loadStudentDetails();
-                    } else {
+                    await this.loadStudentDetails();
+
+                    if (!this.isStudent) {
+                        this.n_control = this.n_control || this.studentId || this.nControl || 'No disponible';
+                        this.studentId = this.studentId || this.n_control || this.nControl || 'No disponible';
                         this.nControl = this.nControl || 'No disponible';
                         this.semestre = this.semestre || 'No disponible';
                         this.group = this.group || 'No disponible';
@@ -1080,7 +1083,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         details?.career_data
                     ].filter(Boolean);
 
-                    const nControlValue = this.getFirstValueFromSources(detailSources, ['no_control', 'noControl', 'nControl', 'n_control', 'control', 'student_control', 'num_control', 'numControl']);
+                    const nControlValue = this.getFirstValueFromSources(detailSources, ['matricula', 'matrícula', 'numero_control', 'numeroControl', 'no_control', 'noControl', 'nControl', 'n_control', 'control', 'student_control', 'num_control', 'numControl']);
                     const semestreValue = this.getFirstValueFromSources(detailSources, ['semestre', 'semester', 'semester_number', 'semesterNumber']);
                     const groupValue = this.getFirstValueFromSources(detailSources, ['group', 'grupo']);
                     const workshopValue = this.getFirstValueFromSources(detailSources, ['workshop', 'taller']);
@@ -1088,6 +1091,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     const careerObjectName = details?.career?.name || details?.career?.career_name || details?.careerData?.name || details?.career_data?.name;
 
                     this.nControl = nControlValue || this.nControl || 'No disponible';
+                    this.n_control = nControlValue || this.n_control || this.nControl || 'No disponible';
                     this.studentId = nControlValue || this.studentId || 'No disponible';
                     this.semestre = semestreValue ? 'Semestre ' + semestreValue : (this.semestre || 'No disponible');
                     this.group = groupValue || this.group || 'No disponible';
@@ -1133,13 +1137,15 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                     this.studentName = fullName || composedNameWithSecondLastName || composedName || this.getFirstValueFromSources(sources, ['username', 'user_name'], 'Sin nombre');
                     this.studentEmail = this.getFirstValueFromSources(sources, ['email', 'mail', 'correo'], 'No disponible');
-                    const controlValueForId = this.getFirstValueFromSources(sources, ['no_control', 'noControl', 'n_control', 'nControl', 'control', 'num_control', 'numControl'], '');
+                    const controlValueForId = this.getFirstValueFromSources(sources, ['matricula', 'matrícula', 'numero_control', 'numeroControl', 'no_control', 'noControl', 'n_control', 'nControl', 'control', 'num_control', 'numControl'], '');
+                    this.n_control = controlValueForId || this.n_control || '';
                     this.studentId = controlValueForId || this.studentId || 'No disponible';
                     this.curp = this.getFirstValueFromSources(sources, ['curp', 'CURP'], this.curp || '');
                     this.accountStatus = this.normalizeAccountStatus(this.getFirstValueFromSources(sources, ['status', 'estado', 'account_status', 'accountStatus'], this.accountStatus));
 
-                    const detailsControl = this.getFirstValueFromSources(sources, ['no_control', 'noControl', 'n_control', 'nControl', 'control', 'num_control', 'numControl']);
+                    const detailsControl = this.getFirstValueFromSources(sources, ['matricula', 'matrícula', 'numero_control', 'numeroControl', 'no_control', 'noControl', 'n_control', 'nControl', 'control', 'num_control', 'numControl']);
                     if (detailsControl) {
+                        this.n_control = detailsControl;
                         this.nControl = detailsControl;
                         this.studentId = detailsControl;
                     }
