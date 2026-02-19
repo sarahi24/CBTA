@@ -60,6 +60,36 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 <label class="text-sm font-semibold text-indigo-700">Matrícula</label>
                                 <p class="text-lg mt-1 font-mono text-gray-700 font-semibold" x-text="studentId || 'No disponible'"></p>
                             </div>
+
+                            <div class="border-l-4 border-cyan-500 rounded-lg p-4 bg-gradient-to-r from-cyan-50 to-sky-50">
+                                <label class="text-sm font-semibold text-cyan-700">CURP</label>
+                                <p class="text-lg mt-1 font-mono text-gray-700 font-semibold" x-text="curp || 'No disponible'"></p>
+                            </div>
+
+                            <div class="border-l-4 border-emerald-500 rounded-lg p-4 bg-gradient-to-r from-emerald-50 to-teal-50">
+                                <label class="text-sm font-semibold text-emerald-700">Teléfono</label>
+                                <p class="text-lg mt-1 text-gray-800 font-medium" x-text="formData.phone_number || 'No disponible'"></p>
+                            </div>
+
+                            <div class="border-l-4 border-pink-500 rounded-lg p-4 bg-gradient-to-r from-pink-50 to-rose-50">
+                                <label class="text-sm font-semibold text-pink-700">Fecha de Nacimiento</label>
+                                <p class="text-lg mt-1 text-gray-800 font-medium" x-text="formData.birthdate || 'No disponible'"></p>
+                            </div>
+
+                            <div class="border-l-4 border-violet-500 rounded-lg p-4 bg-gradient-to-r from-violet-50 to-purple-50">
+                                <label class="text-sm font-semibold text-violet-700">Género</label>
+                                <p class="text-lg mt-1 text-gray-800 font-medium" x-text="formData.gender || 'No disponible'"></p>
+                            </div>
+
+                            <div class="border-l-4 border-red-500 rounded-lg p-4 bg-gradient-to-r from-red-50 to-orange-50">
+                                <label class="text-sm font-semibold text-red-700">Tipo de Sangre</label>
+                                <p class="text-lg mt-1 text-gray-800 font-medium" x-text="formData.blood_type || 'No disponible'"></p>
+                            </div>
+
+                            <div class="border-l-4 border-amber-500 rounded-lg p-4 bg-gradient-to-r from-amber-50 to-yellow-50">
+                                <label class="text-sm font-semibold text-amber-700">Dirección</label>
+                                <p class="text-base mt-1 text-gray-800 font-medium" x-text="formData.address || 'No disponible'"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -71,7 +101,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             <div class="border-l-4 border-green-500 rounded-lg p-4 bg-gradient-to-r from-green-50 to-emerald-50">
                                 <label class="text-sm font-semibold text-green-700">Estado de Estudio</label>
                                 <div class="mt-1">
-                                    <span class="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full text-sm font-semibold shadow-md">Activo</span>
+                                    <span class="px-3 py-1 text-white rounded-full text-sm font-semibold shadow-md"
+                                          :class="accountStatusClass"
+                                          x-text="accountStatusLabel"></span>
                                 </div>
                             </div>
                             
@@ -479,6 +511,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 workshop: '',
                 careerName: '',
                 rol: '',
+                curp: '',
+                accountStatus: 'unknown',
                 showEditModal: false,
                 showPasswordModal: false,
                 isUpdating: false,
@@ -742,6 +776,32 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     return 'Sin información de verificación';
                 },
 
+                normalizeAccountStatus(value) {
+                    const normalized = String(value || '').toLowerCase().trim();
+                    if (!normalized) return 'unknown';
+                    if (normalized === 'activo' || normalized === 'active') return 'active';
+                    if (normalized === 'baja-temporal' || normalized === 'baja temporal' || normalized === 'temporary_disabled') return 'temporary';
+                    if (normalized === 'baja' || normalized === 'inactive' || normalized === 'disabled') return 'inactive';
+                    if (normalized === 'eliminado' || normalized === 'deleted') return 'deleted';
+                    return 'unknown';
+                },
+
+                get accountStatusLabel() {
+                    if (this.accountStatus === 'active') return 'Activo';
+                    if (this.accountStatus === 'temporary') return 'Baja temporal';
+                    if (this.accountStatus === 'inactive') return 'Baja';
+                    if (this.accountStatus === 'deleted') return 'Eliminado';
+                    return 'Sin información';
+                },
+
+                get accountStatusClass() {
+                    if (this.accountStatus === 'active') return 'bg-gradient-to-r from-green-500 to-emerald-600';
+                    if (this.accountStatus === 'temporary') return 'bg-gradient-to-r from-amber-500 to-orange-600';
+                    if (this.accountStatus === 'inactive') return 'bg-gradient-to-r from-red-500 to-rose-600';
+                    if (this.accountStatus === 'deleted') return 'bg-gradient-to-r from-slate-500 to-gray-700';
+                    return 'bg-gradient-to-r from-gray-500 to-slate-600';
+                },
+
                 normalizeAddress(addressValue) {
                     if (Array.isArray(addressValue)) {
                         return addressValue.filter(Boolean).join(', ');
@@ -978,6 +1038,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     this.studentName = fullName || composedNameWithSecondLastName || composedName || this.getFirstValueFromSources(sources, ['username', 'user_name'], 'Sin nombre');
                     this.studentEmail = this.getFirstValueFromSources(sources, ['email', 'mail', 'correo'], 'No disponible');
                     this.studentId = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl', 'id'], 'No disponible');
+                    this.curp = this.getFirstValueFromSources(sources, ['curp', 'CURP'], this.curp || '');
+                    this.accountStatus = this.normalizeAccountStatus(this.getFirstValueFromSources(sources, ['status', 'estado', 'account_status', 'accountStatus'], this.accountStatus));
 
                     const detailsControl = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl']);
                     if (detailsControl) {
