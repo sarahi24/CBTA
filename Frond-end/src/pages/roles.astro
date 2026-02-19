@@ -231,7 +231,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         </template>
                     </select>
 
-                        <button @click="enrichUsersWithDetailRoles({ maxRequests: roleEnrichmentBatchSize, force: true })"
+                        <button @click="enrichUsersWithDetailRoles({ maxRequests: Math.max(roleEnrichmentBatchSize, filteredUsers.length || 0), force: true })"
                             type="button"
                             class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition-colors"
                             :disabled="roleEnrichmentInProgress"
@@ -2045,6 +2045,52 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 return Array.from(new Set(normalized));
             },
 
+            extractRolesFromUserPayload(payload) {
+                const list = [];
+
+                const collect = (value) => {
+                    if (value === null || value === undefined) return;
+
+                    if (Array.isArray(value)) {
+                        value.forEach(item => collect(item));
+                        return;
+                    }
+
+                    if (typeof value === 'object') {
+                        const roleName = value.name || value.slug || value.role || value.role_name || value.value || value.label || '';
+                        if (roleName) {
+                            list.push(roleName);
+                            return;
+                        }
+                    }
+
+                    const text = String(value || '').trim();
+                    if (text) list.push(text);
+                };
+
+                const candidates = [
+                    payload,
+                    payload?.user,
+                    payload?.data,
+                    payload?.basicInfo,
+                    payload?.profile,
+                    payload?.student,
+                    payload?.studentDetail,
+                    payload?.details
+                ].filter(Boolean);
+
+                candidates.forEach((candidate) => {
+                    collect(candidate?.roles);
+                    collect(candidate?.role);
+                    collect(candidate?.role_name);
+                    collect(candidate?.roleName);
+                    collect(candidate?.roles_name);
+                    collect(candidate?.user_role);
+                });
+
+                return this.normalizeRoleList(list);
+            },
+
             chunkEntries(entries, size = 4) {
                 if (!Array.isArray(entries) || !entries.length) return [];
 
@@ -2138,10 +2184,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 let usersToEnrich = usersNeedingRoles;
                 if (force) {
-                    const prioritized = this.filterRole
-                        ? this.users.filter(user => !this.extractUserRoleKeys(user).includes(this.filterRole))
-                        : this.users;
-                    usersToEnrich = prioritized;
+                    usersToEnrich = this.filteredUsers.length ? this.filteredUsers : this.users;
                 }
 
                 usersToEnrich = usersToEnrich.slice(0, maxRequests);
@@ -2165,9 +2208,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         if (result.status !== 'fulfilled' || !result.value) return;
 
                         const detail = result.value;
-                        const detailRoles = this.normalizeRoleList(
-                            detail.roles || detail.role || detail.role_name || []
-                        );
+                        const detailRoles = this.extractRolesFromUserPayload(detail);
 
                         if (detailRoles.length) {
                             roleCache[user.id] = { roles: detailRoles, updatedAt: Date.now() };
@@ -2180,7 +2221,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     } catch (_) {}
 
                     if (!rolesByUserId.size) {
-                        this.showNotify('No se detectaron cambios de roles en este lote', 'info');
+                        this.showNotify('No se detectaron roles en este lote. Revisa permisos del usuario actual o la respuesta del endpoint de detalle.', 'info');
                         return;
                     }
 
