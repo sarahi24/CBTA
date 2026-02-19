@@ -2189,7 +2189,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 usersToEnrich = usersToEnrich.slice(0, maxRequests);
 
                 if (!usersToEnrich.length) {
-                    this.showNotify('No hay usuarios pendientes por enriquecer', 'info');
                     return;
                 }
 
