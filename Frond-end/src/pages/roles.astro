@@ -1512,6 +1512,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 roleOptionsLoaded: false,
                 roleEnrichmentInProgress: false,
                 roleEnrichmentBatchSize: 5,
+                roleEnrichmentRequestDelayMs: 250,
+                roleEnrichmentMaxRetries: 3,
                 roleFilterAutoBatchDone: false,
                 adminPanelView: 'info',
                 usersSummary: null,
@@ -2104,6 +2106,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 return rows;
             },
 
+            sleep(ms) {
+                const waitMs = Math.max(0, Number(ms) || 0);
+                return new Promise(resolve => setTimeout(resolve, waitMs));
+            },
+
             extractUserRoleKeys(user) {
                 const rawValues = [];
 
@@ -2198,23 +2205,32 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 this.roleEnrichmentInProgress = true;
                 try {
-                    const detailResults = await Promise.allSettled(
-                        usersToEnrich.map(user => this.getUserDetails(user.id, true))
-                    );
-
                     const rolesByUserId = new Map();
-                    usersToEnrich.forEach((user, index) => {
-                        const result = detailResults[index];
-                        if (result.status !== 'fulfilled' || !result.value) return;
+                    let rateLimitedCount = 0;
 
-                        const detail = result.value;
+                    for (let index = 0; index < usersToEnrich.length; index++) {
+                        const user = usersToEnrich[index];
+                        const detail = await this.getUserDetailsWithRetry(user.id, {
+                            silent: true,
+                            maxRetries: this.roleEnrichmentMaxRetries,
+                            baseDelayMs: 700
+                        });
+
+                        if (!detail) {
+                            rateLimitedCount += 1;
+                            await this.sleep(this.roleEnrichmentRequestDelayMs);
+                            continue;
+                        }
+
                         const detailRoles = this.extractRolesFromUserPayload(detail);
 
                         if (detailRoles.length) {
                             roleCache[user.id] = { roles: detailRoles, updatedAt: Date.now() };
                             rolesByUserId.set(user.id, detailRoles);
                         }
-                    });
+
+                        await this.sleep(this.roleEnrichmentRequestDelayMs);
+                    }
 
                     try {
                         localStorage.setItem('roles_user_detail_cache', JSON.stringify(roleCache));
@@ -2239,7 +2255,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     });
 
                     console.log(`✅ Roles enriquecidos para ${rolesByUserId.size} usuario(s)`);
-                    this.showNotify(`Roles actualizados para ${rolesByUserId.size} usuario(s)`, 'success');
+                    if (rateLimitedCount > 0) {
+                        this.showNotify(`Roles actualizados para ${rolesByUserId.size} usuario(s). ${rateLimitedCount} quedaron pendientes por límite del servidor.`, 'info');
+                    } else {
+                        this.showNotify(`Roles actualizados para ${rolesByUserId.size} usuario(s)`, 'success');
+                    }
                 } finally {
                     this.roleEnrichmentInProgress = false;
                 }
@@ -5704,6 +5724,68 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
             // ==================== OBTENER DETALLES DE USUARIO ====================
 
+            async fetchUserDetailsRaw(userId) {
+                const response = await this.authenticatedFetch(
+                    `${this.apiBaseUrl}/v1/admin-actions/show-users/${userId}`,
+                    {
+                        headers: {
+                            'X-User-Role': 'admin',
+                            'X-User-Permission': 'view.users'
+                        }
+                    }
+                );
+
+                const result = await response.json().catch(() => ({}));
+                return {
+                    ok: response.ok && result?.success,
+                    status: response.status,
+                    user: result?.data?.user || null,
+                    message: result?.message || ''
+                };
+            },
+
+            async getUserDetailsWithRetry(userId, options = {}) {
+                const {
+                    silent = true,
+                    maxRetries = 3,
+                    baseDelayMs = 700
+                } = options;
+
+                let attempt = 0;
+                while (attempt <= maxRetries) {
+                    try {
+                        const result = await this.fetchUserDetailsRaw(userId);
+                        if (result.ok) return result.user;
+
+                        if (result.status === 429 && attempt < maxRetries) {
+                            const backoff = baseDelayMs * (attempt + 1);
+                            await this.sleep(backoff);
+                            attempt += 1;
+                            continue;
+                        }
+
+                        if (!silent && result.message) {
+                            this.showNotify(result.message, 'error');
+                        }
+                        return null;
+                    } catch (error) {
+                        if (attempt < maxRetries) {
+                            const backoff = baseDelayMs * (attempt + 1);
+                            await this.sleep(backoff);
+                            attempt += 1;
+                            continue;
+                        }
+
+                        if (!silent) {
+                            this.showNotify('Error al obtener detalles del usuario', 'error');
+                        }
+                        return null;
+                    }
+                }
+
+                return null;
+            },
+
             async getUserDetails(userId, silent = false) {
                 const token = localStorage.getItem('access_token');
                 if (!token) {
@@ -5712,19 +5794,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 }
 
                 try {
-                    const response = await this.authenticatedFetch(
-                        `${this.apiBaseUrl}/v1/admin-actions/show-users/${userId}`,
-                        {
-                            headers: {
-                                'X-User-Role': 'admin',
-                                'X-User-Permission': 'view.users'
-                            }
-                        }
-                    );
-
-                    const result = await response.json();
-                    if (response.ok && result.success) {
-                        return result.data?.user;
+                    const result = await this.fetchUserDetailsRaw(userId);
+                    if (result.ok) {
+                        return result.user;
                     } else {
                         if (!silent) this.showNotify('Error al obtener detalles del usuario', 'error');
                         return null;
