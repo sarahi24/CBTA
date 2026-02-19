@@ -231,14 +231,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         </template>
                     </select>
 
-                        <button @click="enrichUsersWithDetailRoles({ maxRequests: Math.max(roleEnrichmentBatchSize, filteredUsers.length || 0), force: true })"
-                            type="button"
-                            class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition-colors"
-                            :disabled="roleEnrichmentInProgress"
-                            :title="`Carga roles detallados en lotes de ${roleEnrichmentBatchSize}`">
-                        <span x-show="!roleEnrichmentInProgress">Cargar roles</span>
-                        <span x-show="roleEnrichmentInProgress">Cargando...</span>
-                    </button>
                 </div>
             </div>
             <!-- Acciones Masivas -->
