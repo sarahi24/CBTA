@@ -922,6 +922,29 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     return '';
                 },
 
+                normalizeDateForInput(value) {
+                    if (!value) return '';
+                    const raw = String(value).trim();
+                    if (!raw) return '';
+                    const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+                    if (match) return match[1];
+                    const parsed = new Date(raw);
+                    if (Number.isNaN(parsed.getTime())) return '';
+                    const year = parsed.getFullYear();
+                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const day = String(parsed.getDate()).padStart(2, '0');
+                    return year + '-' + month + '-' + day;
+                },
+
+                normalizeGenderValue(value) {
+                    const normalized = String(value || '').toLowerCase().trim();
+                    if (!normalized) return '';
+                    if (normalized === 'male' || normalized === 'masculino' || normalized === 'hombre') return 'hombre';
+                    if (normalized === 'female' || normalized === 'femenino' || normalized === 'mujer') return 'mujer';
+                    if (normalized === 'other' || normalized === 'otro' || normalized === 'otro/a') return 'otro';
+                    return value;
+                },
+
                 async loadStudentData() {
                     const token = localStorage.getItem('access_token');
 
@@ -1089,6 +1112,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     const workshopValue = this.getFirstValueFromSources(detailSources, ['workshop', 'taller']);
                     const careerNameValue = this.getFirstValueFromSources(detailSources, ['careerName', 'career_name', 'career', 'career_label', 'careerLabel']);
                     const careerObjectName = details?.career?.name || details?.career?.career_name || details?.careerData?.name || details?.career_data?.name;
+                    const detailsPhone = this.getFirstValueFromSources(detailSources, ['phone_number', 'phone', 'phoneNumber', 'cellphone', 'telefono']);
+                    const detailsBirthdate = this.normalizeDateForInput(this.getFirstValueFromSources(detailSources, ['birthdate', 'birth_date', 'date_of_birth', 'fecha_nacimiento']));
+                    const detailsGender = this.normalizeGenderValue(this.getFirstValueFromSources(detailSources, ['gender', 'sex', 'genero']));
+                    const detailsBloodType = this.getFirstValueFromSources(detailSources, ['blood_type', 'bloodType', 'tipo_sangre']);
+                    const detailsAddress = this.normalizeAddress(this.getFirstValueFromSources(detailSources, ['address', 'direccion', 'domicilio'], ''));
 
                     this.nControl = nControlValue || this.nControl || 'No disponible';
                     this.n_control = nControlValue || this.n_control || this.nControl || 'No disponible';
@@ -1097,6 +1125,13 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     this.group = groupValue || this.group || 'No disponible';
                     this.workshop = workshopValue || this.workshop || 'No disponible';
                     this.careerName = careerNameValue || careerObjectName || this.careerName || 'No disponible';
+
+                    this.formData.phone_number = detailsPhone || this.formData.phone_number || '';
+                    this.formData.birthdate = detailsBirthdate || this.formData.birthdate || '';
+                    this.formData.gender = detailsGender || this.formData.gender || '';
+                    this.formData.blood_type = detailsBloodType || this.formData.blood_type || '';
+                    this.formData.address = detailsAddress || this.formData.address || '';
+                    this.originalFormData = { ...this.formData };
                     
                     console.log('Valores asignados:');
                     console.log('  nControl:', this.nControl);
@@ -1179,8 +1214,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     this.formData.last_name = lastName || '';
                     this.formData.email = this.getFirstValueFromSources(sources, ['email', 'mail', 'correo'], '');
                     this.formData.phone_number = this.getFirstValueFromSources(sources, ['phone_number', 'phone', 'phoneNumber', 'cellphone', 'telefono'], '');
-                    this.formData.birthdate = this.getFirstValueFromSources(sources, ['birthdate', 'birth_date', 'date_of_birth', 'fecha_nacimiento'], '');
-                    this.formData.gender = this.getFirstValueFromSources(sources, ['gender', 'sex', 'genero'], '');
+                    this.formData.birthdate = this.normalizeDateForInput(this.getFirstValueFromSources(sources, ['birthdate', 'birth_date', 'date_of_birth', 'fecha_nacimiento'], ''));
+                    this.formData.gender = this.normalizeGenderValue(this.getFirstValueFromSources(sources, ['gender', 'sex', 'genero'], ''));
                     this.formData.blood_type = this.getFirstValueFromSources(sources, ['blood_type', 'bloodType', 'tipo_sangre'], '');
                     
                     this.formData.address = this.normalizeAddress(this.getFirstValueFromSources(sources, ['address', 'direccion', 'domicilio'], ''));
