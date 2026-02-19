@@ -617,6 +617,15 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     return fallback;
                 },
 
+                getFirstValueFromSources(sources, keys, fallback = '') {
+                    if (!Array.isArray(sources)) return fallback;
+                    for (const source of sources) {
+                        const value = this.getFirstValue(source, keys, '__empty__');
+                        if (value !== '__empty__') return value;
+                    }
+                    return fallback;
+                },
+
                 normalizeVerificationStatus(value) {
                     if (value === true || value === 1 || value === '1') return 'verified';
                     if (value === false || value === 0 || value === '0') return 'unverified';
@@ -625,8 +634,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     if (typeof value === 'string') {
                         const normalized = value.toLowerCase().trim();
                         if (!normalized || normalized === 'null') return 'unverified';
-                        if (normalized === 'verified' || normalized === 'true' || normalized === 'yes') return 'verified';
-                        if (normalized === 'unverified' || normalized === 'false' || normalized === 'no' || normalized === 'pending') return 'unverified';
+                        if (normalized === 'verified' || normalized === 'true' || normalized === 'yes' || normalized === 'verificado' || normalized === 'verificada' || normalized === 'confirmado' || normalized === 'confirmed') return 'verified';
+                        if (normalized === 'unverified' || normalized === 'false' || normalized === 'no' || normalized === 'pending' || normalized === 'pendiente' || normalized === 'sin verificar' || normalized === 'unconfirmed') return 'unverified';
                         if (/\d{4}-\d{2}-\d{2}/.test(normalized)) return 'verified';
                     }
 
@@ -644,6 +653,10 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             source.emailVerifiedAt,
                             source.verified_at,
                             source.verifiedAt,
+                            source.email_verification_status,
+                            source.emailVerificationStatus,
+                            source.email_status,
+                            source.emailStatus,
                             source.email_verified,
                             source.emailVerified,
                             source.is_email_verified,
@@ -656,6 +669,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             candidates.push(
                                 source.user.email_verified_at,
                                 source.user.emailVerifiedAt,
+                                source.user.email_verification_status,
+                                source.user.emailVerificationStatus,
                                 source.user.email_verified,
                                 source.user.is_email_verified,
                                 source.user.is_verified
@@ -666,6 +681,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             candidates.push(
                                 source.data.email_verified_at,
                                 source.data.emailVerifiedAt,
+                                source.data.email_verification_status,
+                                source.data.emailVerificationStatus,
                                 source.data.email_verified,
                                 source.data.is_email_verified,
                                 source.data.is_verified
@@ -675,6 +692,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 candidates.push(
                                     source.data.user.email_verified_at,
                                     source.data.user.emailVerifiedAt,
+                                    source.data.user.email_verification_status,
+                                    source.data.user.emailVerificationStatus,
                                     source.data.user.email_verified,
                                     source.data.user.is_email_verified,
                                     source.data.user.is_verified
@@ -852,7 +871,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             const data = await response.json();
                             console.log('Respuesta de /v1/users/student-details:', data);
 
-                            const details = data?.data?.student_details || data?.student_details || data?.data;
+                            const details = data?.data?.student_details || data?.student_details || data?.data?.user?.student_details || data?.data?.studentDetail || data?.studentDetail || data?.data;
                             if ((data.success || details) && details) {
                                 console.log('student_details recibido:', details);
                                 
@@ -890,13 +909,28 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 populateStudentDetails(details) {
                     console.log('=== populateStudentDetails ejecutándose ===');
                     console.log('Detalles recibidos:', details);
-                    
-                    const nControlValue = this.getFirstValue(details, ['nControl', 'n_control', 'control', 'student_control', 'num_control']);
-                    const semestreValue = this.getFirstValue(details, ['semestre', 'semester', 'semester_number']);
-                    const groupValue = this.getFirstValue(details, ['group', 'grupo']);
-                    const workshopValue = this.getFirstValue(details, ['workshop', 'taller']);
-                    const careerNameValue = this.getFirstValue(details, ['careerName', 'career_name', 'career']);
-                    const careerObjectName = details?.career?.name || details?.career?.career_name;
+
+                    const detailSources = [
+                        details,
+                        details?.data,
+                        details?.student_details,
+                        details?.studentDetail,
+                        details?.student,
+                        details?.user,
+                        details?.profile,
+                        details?.academic,
+                        details?.academic_info,
+                        details?.career,
+                        details?.careerData,
+                        details?.career_data
+                    ].filter(Boolean);
+
+                    const nControlValue = this.getFirstValueFromSources(detailSources, ['nControl', 'n_control', 'control', 'student_control', 'num_control', 'numControl']);
+                    const semestreValue = this.getFirstValueFromSources(detailSources, ['semestre', 'semester', 'semester_number', 'semesterNumber']);
+                    const groupValue = this.getFirstValueFromSources(detailSources, ['group', 'grupo']);
+                    const workshopValue = this.getFirstValueFromSources(detailSources, ['workshop', 'taller']);
+                    const careerNameValue = this.getFirstValueFromSources(detailSources, ['careerName', 'career_name', 'career', 'career_label', 'careerLabel']);
+                    const careerObjectName = details?.career?.name || details?.career?.career_name || details?.careerData?.name || details?.career_data?.name;
 
                     this.nControl = nControlValue || this.nControl || 'No disponible';
                     this.semestre = semestreValue ? 'Semestre ' + semestreValue : (this.semestre || 'No disponible');
@@ -916,32 +950,52 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     console.log('=== populateStudentData ejecutándose ===');
                     console.log('Objeto student completo:', student);
 
-                    const firstName = this.getFirstValue(student, ['name', 'first_name', 'firstName']);
-                    const lastName = this.getFirstValue(student, ['last_name', 'lastName']);
-                    const fullName = this.getFirstValue(student, ['fullName', 'full_name']);
+                    const sources = [
+                        student,
+                        student?.data,
+                        student?.user,
+                        student?.basicInfo,
+                        student?.profile,
+                        student?.student_details,
+                        student?.studentDetail,
+                        fullResponse,
+                        fullResponse?.data,
+                        fullResponse?.user,
+                        fullResponse?.data?.user,
+                        fullResponse?.data?.student,
+                        fullResponse?.data?.student_details,
+                        fullResponse?.student_details,
+                        fullResponse?.studentDetail
+                    ].filter(Boolean);
+
+                    const firstName = this.getFirstValueFromSources(sources, ['name', 'first_name', 'firstName', 'nombre']);
+                    const lastName = this.getFirstValueFromSources(sources, ['last_name', 'lastName', 'apellido', 'apellido_paterno']);
+                    const secondLastName = this.getFirstValueFromSources(sources, ['apellido_materno', 'middle_last_name', 'second_last_name']);
+                    const fullName = this.getFirstValueFromSources(sources, ['fullName', 'full_name', 'nombre_completo']);
                     const composedName = [firstName, lastName].filter(Boolean).join(' ').trim();
+                    const composedNameWithSecondLastName = [firstName, lastName, secondLastName].filter(Boolean).join(' ').trim();
 
-                    this.studentName = fullName || composedName || this.getFirstValue(student, ['username', 'user_name'], 'Sin nombre');
-                    this.studentEmail = this.getFirstValue(student, ['email', 'mail'], 'No disponible');
-                    this.studentId = this.getFirstValue(student, ['n_control', 'nControl', 'control', 'id'], 'No disponible');
+                    this.studentName = fullName || composedNameWithSecondLastName || composedName || this.getFirstValueFromSources(sources, ['username', 'user_name'], 'Sin nombre');
+                    this.studentEmail = this.getFirstValueFromSources(sources, ['email', 'mail', 'correo'], 'No disponible');
+                    this.studentId = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl', 'id'], 'No disponible');
 
-                    const detailsControl = this.getFirstValue(student, ['n_control', 'nControl', 'control']);
+                    const detailsControl = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl']);
                     if (detailsControl) {
                         this.nControl = detailsControl;
                     }
-                    const detailsSemester = this.getFirstValue(student, ['semestre', 'semester']);
+                    const detailsSemester = this.getFirstValueFromSources(sources, ['semestre', 'semester', 'semester_number', 'semesterNumber']);
                     if (detailsSemester) {
                         this.semestre = 'Semestre ' + detailsSemester;
                     }
-                    const detailsGroup = this.getFirstValue(student, ['group', 'grupo']);
+                    const detailsGroup = this.getFirstValueFromSources(sources, ['group', 'grupo']);
                     if (detailsGroup) {
                         this.group = detailsGroup;
                     }
-                    const detailsWorkshop = this.getFirstValue(student, ['workshop', 'taller']);
+                    const detailsWorkshop = this.getFirstValueFromSources(sources, ['workshop', 'taller']);
                     if (detailsWorkshop) {
                         this.workshop = detailsWorkshop;
                     }
-                    const detailsCareer = this.getFirstValue(student, ['careerName', 'career_name']) || student?.career?.name;
+                    const detailsCareer = this.getFirstValueFromSources(sources, ['careerName', 'career_name', 'career', 'career_label', 'careerLabel']) || student?.career?.name;
                     if (detailsCareer) {
                         this.careerName = detailsCareer;
                     }
@@ -957,13 +1011,13 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     // Populate form data
                     this.formData.name = firstName || '';
                     this.formData.last_name = lastName || '';
-                    this.formData.email = this.getFirstValue(student, ['email', 'mail'], '');
-                    this.formData.phone_number = this.getFirstValue(student, ['phone_number', 'phone', 'phoneNumber', 'cellphone'], '');
-                    this.formData.birthdate = this.getFirstValue(student, ['birthdate', 'birth_date', 'date_of_birth'], '');
-                    this.formData.gender = this.getFirstValue(student, ['gender', 'sex'], '');
-                    this.formData.blood_type = this.getFirstValue(student, ['blood_type', 'bloodType'], '');
+                    this.formData.email = this.getFirstValueFromSources(sources, ['email', 'mail', 'correo'], '');
+                    this.formData.phone_number = this.getFirstValueFromSources(sources, ['phone_number', 'phone', 'phoneNumber', 'cellphone', 'telefono'], '');
+                    this.formData.birthdate = this.getFirstValueFromSources(sources, ['birthdate', 'birth_date', 'date_of_birth', 'fecha_nacimiento'], '');
+                    this.formData.gender = this.getFirstValueFromSources(sources, ['gender', 'sex', 'genero'], '');
+                    this.formData.blood_type = this.getFirstValueFromSources(sources, ['blood_type', 'bloodType', 'tipo_sangre'], '');
                     
-                    this.formData.address = this.normalizeAddress(this.getFirstValue(student, ['address', 'direccion'], ''));
+                    this.formData.address = this.normalizeAddress(this.getFirstValueFromSources(sources, ['address', 'direccion', 'domicilio'], ''));
 
                     this.updateEmailVerificationStatus(student, fullResponse);
 
