@@ -1653,7 +1653,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     .toLowerCase()
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[._-]+/g, ' ')
+                    .replace(/[._\/-]+/g, ' ')
                     .replace(/\s+/g, ' ')
                     .trim();
             },
@@ -1678,7 +1678,17 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 ) return 'financial-staff';
                 if (key === 'student' || key === 'estudiante' || key === 'alumno' || key === 'alumna') return 'student';
                 if (key === 'teacher' || key === 'docente' || key === 'maestro' || key === 'profesor' || key === 'profesora') return 'teacher';
-                if (key === 'parent' || key === 'padre' || key === 'madre' || key === 'tutor' || key === 'tutora' || key === 'tutor legal') return 'parent';
+                if (
+                    key === 'parent' ||
+                    key === 'padre' ||
+                    key === 'madre' ||
+                    key === 'tutor' ||
+                    key === 'tutora' ||
+                    key === 'tutor legal' ||
+                    key === 'padre tutor' ||
+                    key === 'padre de familia' ||
+                    key === 'madre tutora'
+                ) return 'parent';
                 if (key === 'applicant' || key === 'solicitante' || key === 'aspirante' || key === 'preinscrito' || key === 'pre inscrito') return 'applicant';
                 if (
                     key === 'unverified' ||
