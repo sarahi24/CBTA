@@ -678,15 +678,33 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 updateEmailVerificationStatus(...sources) {
                     const candidates = [];
+                    const roleCandidates = [this.rol];
 
                     sources.forEach((source) => {
                         if (!source || typeof source !== 'object') return;
+
+                        roleCandidates.push(
+                            source.role,
+                            source.role_name,
+                            source.type,
+                            source.verification_status,
+                            source.verificationStatus,
+                            source.status_verification,
+                            source.statusVerification,
+                            source.verified,
+                            source.is_verified
+                        );
 
                         candidates.push(
                             source.email_verified_at,
                             source.emailVerifiedAt,
                             source.verified_at,
                             source.verifiedAt,
+                            source.verification_status,
+                            source.verificationStatus,
+                            source.status_verification,
+                            source.statusVerification,
+                            source.verified,
                             source.email_verification_status,
                             source.emailVerificationStatus,
                             source.email_status,
@@ -700,9 +718,26 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         );
 
                         if (source.user && typeof source.user === 'object') {
+                            roleCandidates.push(
+                                source.user.role,
+                                source.user.role_name,
+                                source.user.type,
+                                source.user.verification_status,
+                                source.user.verificationStatus,
+                                source.user.status_verification,
+                                source.user.statusVerification,
+                                source.user.verified,
+                                source.user.is_verified
+                            );
+
                             candidates.push(
                                 source.user.email_verified_at,
                                 source.user.emailVerifiedAt,
+                                source.user.verification_status,
+                                source.user.verificationStatus,
+                                source.user.status_verification,
+                                source.user.statusVerification,
+                                source.user.verified,
                                 source.user.email_verification_status,
                                 source.user.emailVerificationStatus,
                                 source.user.email_verified,
@@ -712,9 +747,26 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         }
 
                         if (source.data && typeof source.data === 'object') {
+                            roleCandidates.push(
+                                source.data.role,
+                                source.data.role_name,
+                                source.data.type,
+                                source.data.verification_status,
+                                source.data.verificationStatus,
+                                source.data.status_verification,
+                                source.data.statusVerification,
+                                source.data.verified,
+                                source.data.is_verified
+                            );
+
                             candidates.push(
                                 source.data.email_verified_at,
                                 source.data.emailVerifiedAt,
+                                source.data.verification_status,
+                                source.data.verificationStatus,
+                                source.data.status_verification,
+                                source.data.statusVerification,
+                                source.data.verified,
                                 source.data.email_verification_status,
                                 source.data.emailVerificationStatus,
                                 source.data.email_verified,
@@ -723,9 +775,26 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             );
 
                             if (source.data.user && typeof source.data.user === 'object') {
+                                roleCandidates.push(
+                                    source.data.user.role,
+                                    source.data.user.role_name,
+                                    source.data.user.type,
+                                    source.data.user.verification_status,
+                                    source.data.user.verificationStatus,
+                                    source.data.user.status_verification,
+                                    source.data.user.statusVerification,
+                                    source.data.user.verified,
+                                    source.data.user.is_verified
+                                );
+
                                 candidates.push(
                                     source.data.user.email_verified_at,
                                     source.data.user.emailVerifiedAt,
+                                    source.data.user.verification_status,
+                                    source.data.user.verificationStatus,
+                                    source.data.user.status_verification,
+                                    source.data.user.statusVerification,
+                                    source.data.user.verified,
                                     source.data.user.email_verification_status,
                                     source.data.user.emailVerificationStatus,
                                     source.data.user.email_verified,
@@ -749,6 +818,32 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         }
                         if (status === 'unverified' && resolvedStatus !== 'verified') {
                             resolvedStatus = 'unverified';
+                        }
+                    }
+
+                    if (resolvedStatus !== 'verified') {
+                        const normalizedRoleCandidates = roleCandidates
+                            .filter(Boolean)
+                            .map(value => String(value).toLowerCase().trim());
+
+                        const hasExplicitUnverified = normalizedRoleCandidates.some(value =>
+                            value.includes('unverified') ||
+                            value.includes('sin verificar') ||
+                            value.includes('pendiente') ||
+                            value.includes('applicant') ||
+                            value.includes('aspirante')
+                        );
+
+                        const hasVerifiedRole = normalizedRoleCandidates.some(value =>
+                            value === 'student' ||
+                            value.includes('estudiante') ||
+                            value.includes('alumno') ||
+                            value.includes('verified') ||
+                            value.includes('verificado')
+                        );
+
+                        if (hasVerifiedRole && !hasExplicitUnverified) {
+                            resolvedStatus = 'verified';
                         }
                     }
 
@@ -1037,13 +1132,15 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                     this.studentName = fullName || composedNameWithSecondLastName || composedName || this.getFirstValueFromSources(sources, ['username', 'user_name'], 'Sin nombre');
                     this.studentEmail = this.getFirstValueFromSources(sources, ['email', 'mail', 'correo'], 'No disponible');
-                    this.studentId = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl', 'id'], 'No disponible');
+                    const controlValueForId = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl'], '');
+                    this.studentId = controlValueForId || this.studentId || 'No disponible';
                     this.curp = this.getFirstValueFromSources(sources, ['curp', 'CURP'], this.curp || '');
                     this.accountStatus = this.normalizeAccountStatus(this.getFirstValueFromSources(sources, ['status', 'estado', 'account_status', 'accountStatus'], this.accountStatus));
 
                     const detailsControl = this.getFirstValueFromSources(sources, ['n_control', 'nControl', 'control', 'num_control', 'numControl']);
                     if (detailsControl) {
                         this.nControl = detailsControl;
+                        this.studentId = detailsControl;
                     }
                     const detailsSemester = this.getFirstValueFromSources(sources, ['semestre', 'semester', 'semester_number', 'semesterNumber']);
                     if (detailsSemester) {
