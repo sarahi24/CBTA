@@ -3,6 +3,17 @@
 **Descripción del proyecto**
 > Sistema web de gestión escolar con roles, permisos y metodos de pago usando Laravel, MySQL y Astro.
 
+## Estructura real del repositorio
+
+- `Frond-end/`: frontend Astro activo (aquí viven `src/pages`, `astro.config.mjs` y `package.json`).
+- `backend/school-management/`: API Laravel activa.
+- `docs/`: documentación histórica y guías de implementación (no se compila ni se ejecuta en runtime).
+
+## Importante
+
+- El deploy de frontend está configurado para usar `Frond-end`.
+- No se usan páginas Astro en la raíz del repo.
+
 ## Requisitos
 ```
 PHP >= 8.4.5
