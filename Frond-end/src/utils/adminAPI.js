@@ -254,19 +254,55 @@ export const AdminAPI = {
     }
   },
 
+  /**
+   * POST /api/v1/admin-actions/updated-roles/{userId}
+   * Sincronizar roles de un usuario
+   */
+  async updateUserRoles(userId, rolesToAdd, rolesToRemove, token) {
+    try {
+      const response = await fetch(`${API_BASE}/admin-actions/updated-roles/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Role': 'admin',
+          'X-User-Permission': 'sync.roles'
+        },
+        body: JSON.stringify({
+          rolesToAdd: rolesToAdd,
+          rolesToRemove: rolesToRemove
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al actualizar roles');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ AdminAPI.updateUserRoles:', err);
+      throw err;
+    }
+  },
 
   /**
    * POST /api/v1/admin-actions/updated-roles
    * Sincronizar roles de múltiples usuarios
    */
-  async updateMultipleUsersRoles(curps, roles, token) {
+  async updateMultipleUsersRoles(curps, rolesToAdd, rolesToRemove, token) {
     try {
-      // Filtrar strings vacíos y __NO_ROLE__
-      const cleanRoles = Array.isArray(roles) ? roles.filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__') : [];
+      // Filter out empty strings and __NO_ROLE__ identifier from role arrays
+      const cleanRolesToAdd = rolesToAdd.filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
+      const cleanRolesToRemove = rolesToRemove.filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
+      
       console.log('📤 API Payload - Updated Roles:', {
         curps: curps,
-        roles: cleanRoles
+        rolesToAdd: cleanRolesToAdd,
+        rolesToRemove: cleanRolesToRemove
       });
+      
       const response = await fetch(`${API_BASE}/admin-actions/updated-roles`, {
         method: 'POST',
         headers: {
@@ -278,7 +314,8 @@ export const AdminAPI = {
         },
         body: JSON.stringify({
           curps: curps,
-          roles: cleanRoles
+          rolesToAdd: cleanRolesToAdd,
+          rolesToRemove: cleanRolesToRemove
         })
       });
 
