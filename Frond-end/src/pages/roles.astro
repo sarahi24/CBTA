@@ -2760,68 +2760,45 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             async refreshAuthToken() {
-                const refreshToken = localStorage.getItem('refresh_token');
-                if (!refreshToken) {
-                    console.error('❌ No hay refresh token disponible');
-                    return null;
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    this.showNotify('No hay token de autenticación', 'error');
+                    return { success: false, message: 'No autenticado' };
                 }
 
-                console.log('🔄 Intentando refrescar token...');
+                if (!userId) {
+                    this.showNotify('ID de usuario requerido', 'error');
+                    return { success: false, message: 'ID de usuario requerido' };
+                }
+
+                if (!Array.isArray(roles) || roles.length === 0) {
+                    this.showNotify('Selecciona al menos un rol para asignar', 'error');
+                    return { success: false, message: 'Sin cambios de roles' };
+                }
+
                 try {
-                    const response = await fetch(`${this.apiBaseUrl}/v1/refresh-token`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ refresh_token: refreshToken })
-                    });
+                    this.isSaving = true;
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        const tokenBundle = data?.data?.user_tokens || data?.data || {};
-                        const newAccessToken = tokenBundle.access_token || data?.access_token;
-                        const newRefreshToken = tokenBundle.refresh_token || data?.refresh_token;
+                    // Usar la función de AdminAPI para múltiples usuarios, pero solo con un usuario
+                    const curps = [userId];
+                    const result = await window.AdminAPI.updateMultipleUsersRoles(curps, roles, token);
+                    console.log('📥 updateUserRoles - Respuesta:', result);
 
-                        if (newAccessToken) {
-                            localStorage.setItem('access_token', newAccessToken);
-                            console.log('✅ Token refrescado exitosamente');
-                            
-                            if (newRefreshToken) {
-                                localStorage.setItem('refresh_token', newRefreshToken);
-                            }
-                            
-                            return newAccessToken;
-                        }
+                    if (result && result.success) {
+                        this.showNotify('✅ Roles actualizados correctamente', 'success');
+                        // Recargar usuarios para reflejar los cambios
+                        await this.loadUsers(token);
+                        return { success: true, data: result.data };
+                    } else {
+                        let errorMsg = result?.message || 'Error al actualizar roles';
+                        this.showNotify(errorMsg, 'error');
+                        return { success: false, message: errorMsg, errors: result?.errors };
                     }
-
-                    console.error('❌ No se pudo refrescar el token');
-                    return null;
                 } catch (error) {
-                    console.error('❌ Error al refrescar token:', error);
-                    return null;
-                }
-            },
-
-            async loadUsers(token, isRetry = false, options = {}) {
-                const { silent = false } = options;
-                try {
-                    // Si no hay token, obtenerlo del localStorage
-                    if (!token) {
-                        token = localStorage.getItem('access_token');
-                        console.log('⚠️ Token no pasado como parámetro, obteniendo del localStorage');
-                    }
-                    
-                    if (!token) {
-                        console.error('❌ No hay token de autenticación disponible');
-                        this.apiError = 'No hay token de autenticación';
-                        if (!silent) {
-                            this.showNotify('No hay token de autenticación. Por favor, inicia sesión nuevamente.', 'error');
-                        }
-                        return;
-                    }
-                    
-                    const params = new URLSearchParams({
+                    this.showNotify('Error al actualizar roles', 'error');
+                    return { success: false, message: error.message };
+                } finally {
+                    this.isSaving = false;
                         page: '1',
                         perPage: '200',
                         forceRefresh: 'true'

@@ -254,38 +254,6 @@ export const AdminAPI = {
     }
   },
 
-  /**
-   * POST /api/v1/admin-actions/updated-roles/{userId}
-   * Sincronizar roles de un usuario
-   */
-  async updateUserRoles(userId, rolesToAdd, rolesToRemove, token) {
-    try {
-      const response = await fetch(`${API_BASE}/admin-actions/updated-roles/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-User-Role': 'admin',
-          'X-User-Permission': 'sync.roles'
-        },
-        body: JSON.stringify({
-          rolesToAdd: rolesToAdd,
-          rolesToRemove: rolesToRemove
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al actualizar roles');
-      }
-
-      return await response.json();
-    } catch (err) {
-      console.error('❌ AdminAPI.updateUserRoles:', err);
-      throw err;
-    }
-  },
 
   /**
    * POST /api/v1/admin-actions/updated-roles
