@@ -1060,61 +1060,37 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                     <!-- Opción "Sin rol" -->
                                     <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
                                         <input type="checkbox" value="__NO_ROLE__" 
-                                               x-model="rolesToAdd"
-                                               class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
-                                        <span class="text-sm font-medium text-green-800">🚫 Sin rol</span>
-                                    </label>
-                                    
-                                    <template x-for="role in availableRoles" :key="role.id">
-                                        <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors">
-                                            <input type="checkbox" :value="role.name" 
-                                                   x-model="rolesToAdd"
-                                                   class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
-                                            <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
-                                        </label>
-                                    </template>
-                                </div>
-                            </div>
-                            
-                            <!-- Eliminar Roles -->
-                            <div class="p-3 sm:p-4 bg-red-50 border-2 border-red-300 rounded-xl shadow-lg">
-                                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                    <h4 class="font-black text-red-900 text-base sm:text-lg flex items-center gap-1 sm:gap-2">
-                                        <span class="text-xl sm:text-2xl">➖</span> <span>Eliminar Roles</span>
-                                    </h4>
-                                    <span class="px-2 sm:px-3 py-1 bg-red-200 text-red-900 rounded-full text-xs font-bold" 
-                                          x-text="rolesToRemove.length + ' sel.'"></span>
-                                </div>
-                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
-                                    <template x-for="role in availableRoles" :key="role.id">
-                                        <label class="flex items-center gap-2 p-2 hover:bg-red-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
-                                            <input type="checkbox" :value="role.name" 
-                                                   x-model="rolesToRemove"
-                                                   class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
-                                            <span class="font-medium text-red-800" x-text="role.displayName || role.name"></span>
-                                        </label>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- ⚠️ Advertencia de conflictos -->
-                        <div x-show="rolesToAdd.filter(r => rolesToRemove.includes(r)).length > 0" 
-                             class="p-4 bg-amber-50 border-2 border-amber-400 rounded-xl">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                </svg>
-                                <div class="flex-1">
-                                    <p class="font-bold text-amber-900 mb-1">⚠️ Conflicto Detectado</p>
-                                    <p class="text-sm text-amber-800 mb-2">
-                                        Los siguientes roles están marcados para <strong>agregar Y eliminar</strong>:
-                                    </p>
-                                    <div class="flex flex-wrap gap-2">
-                                        <template x-for="role in rolesToAdd.filter(r => rolesToRemove.includes(r))" :key="role">
-                                            <span class="px-3 py-1 bg-amber-200 text-amber-900 rounded-full text-xs font-bold" x-text="role || '(Sin rol)'"></span>
-                                        </template>
-                                    </div>
+                                            <!-- Agregar Roles -->
+                                            <div class="p-3 sm:p-4 bg-green-50 border-2 border-green-300 rounded-xl shadow-lg">
+                                                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                                    <h4 class="font-black text-green-900 text-base sm:text-lg flex items-center gap-1 sm:gap-2">
+                                                        <span class="text-xl sm:text-2xl">➕</span> <span>Agregar Roles</span>
+                                                    </h4>
+                                                    <span class="px-2 sm:px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
+                                                          x-text="rolesToAdd.length + ' sel.'"></span>
+                                                </div>
+                                                <div class="flex gap-2 mb-2">
+                                                    <button type="button" class="text-xs px-2 py-1 bg-green-200 text-green-900 rounded hover:bg-green-300 font-semibold" @click="rolesToAdd = rolesAvailableToAdd.map(r => r.name)">Seleccionar todos</button>
+                                                    <button type="button" class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 font-semibold" @click="rolesToAdd = []">Quitar selección</button>
+                                                </div>
+                                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
+                                                    <!-- Opción "Sin rol" -->
+                                                    <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
+                                                        <input type="checkbox" value="__NO_ROLE__" 
+                                                               x-model="rolesToAdd"
+                                                               class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                                                        <span class="text-sm font-medium text-green-800">🚫 Sin rol</span>
+                                                    </label>
+                                                    <template x-for="role in rolesAvailableToAdd" :key="role.id">
+                                                        <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors">
+                                                            <input type="checkbox" :value="role.name" 
+                                                                   x-model="rolesToAdd"
+                                                                   class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                                                            <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
+                                                        </label>
+                                                    </template>
+                                                </div>
+                                            </div>
                                     <p class="text-xs text-amber-700 mt-2">
                                         💡 <strong>Solución:</strong> Desmarca el rol de una de las dos columnas
                                     </p>
