@@ -1056,44 +1056,26 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                     <span class="px-2 sm:px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
                                           x-text="rolesToAdd.length + ' sel.'"></span>
                                 </div>
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" class="text-xs px-2 py-1 bg-green-200 text-green-900 rounded hover:bg-green-300 font-semibold" @click="rolesToAdd = rolesAvailableToAdd.map(r => r.name)">Seleccionar todos</button>
+                                    <button type="button" class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 font-semibold" @click="rolesToAdd = []">Quitar selección</button>
+                                </div>
                                 <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
                                     <!-- Opción "Sin rol" -->
                                     <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
                                         <input type="checkbox" value="__NO_ROLE__" 
-                                            <!-- Agregar Roles -->
-                                            <div class="p-3 sm:p-4 bg-green-50 border-2 border-green-300 rounded-xl shadow-lg">
-                                                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                                    <h4 class="font-black text-green-900 text-base sm:text-lg flex items-center gap-1 sm:gap-2">
-                                                        <span class="text-xl sm:text-2xl">➕</span> <span>Agregar Roles</span>
-                                                    </h4>
-                                                    <span class="px-2 sm:px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
-                                                          x-text="rolesToAdd.length + ' sel.'"></span>
-                                                </div>
-                                                <div class="flex gap-2 mb-2">
-                                                    <button type="button" class="text-xs px-2 py-1 bg-green-200 text-green-900 rounded hover:bg-green-300 font-semibold" @click="rolesToAdd = rolesAvailableToAdd.map(r => r.name)">Seleccionar todos</button>
-                                                    <button type="button" class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 font-semibold" @click="rolesToAdd = []">Quitar selección</button>
-                                                </div>
-                                                <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
-                                                    <!-- Opción "Sin rol" -->
-                                                    <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
-                                                        <input type="checkbox" value="__NO_ROLE__" 
-                                                               x-model="rolesToAdd"
-                                                               class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
-                                                        <span class="text-sm font-medium text-green-800">🚫 Sin rol</span>
-                                                    </label>
-                                                    <template x-for="role in rolesAvailableToAdd" :key="role.id">
-                                                        <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors">
-                                                            <input type="checkbox" :value="role.name" 
-                                                                   x-model="rolesToAdd"
-                                                                   class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
-                                                            <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
-                                                        </label>
-                                                    </template>
-                                                </div>
-                                            </div>
-                                    <p class="text-xs text-amber-700 mt-2">
-                                        💡 <strong>Solución:</strong> Desmarca el rol de una de las dos columnas
-                                    </p>
+                                               x-model="rolesToAdd"
+                                               class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                                        <span class="text-sm font-medium text-green-800">🚫 Sin rol</span>
+                                    </label>
+                                    <template x-for="role in rolesAvailableToAdd" :key="role.id">
+                                        <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors">
+                                            <input type="checkbox" :value="role.name" 
+                                                   x-model="rolesToAdd"
+                                                   class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                                            <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
+                                        </label>
+                                    </template>
                                 </div>
                             </div>
                         </div>
