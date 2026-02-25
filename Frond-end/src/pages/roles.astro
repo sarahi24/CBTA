@@ -1024,7 +1024,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 <div class="flex-1">
                                     <p class="text-xs sm:text-sm font-bold text-blue-900 mb-1">💡 Instrucciones</p>
                                     <p class="text-xs sm:text-sm text-blue-800">
-                                        Selecciona los roles que deseas <strong>agregar O eliminar</strong>. Los roles mostrados se basan en los roles actuales de los usuarios seleccionados.
+                                        <strong>Debes seleccionar al menos un rol</strong> para agregar O eliminar antes de actualizar.
                                     </p>
                                 </div>
                             </div>
@@ -1056,19 +1056,22 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                     <span class="px-2 sm:px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold" 
                                           x-text="rolesToAdd.length + ' sel.'"></span>
                                 </div>
-                                <div x-show="rolesAvailableToAdd.length === 0" class="text-xs sm:text-sm text-green-600 italic py-2">
-                                    Los usuarios seleccionados ya tienen todos los roles disponibles.
-                                </div>
                                 <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
-                                    <template x-if="rolesAvailableToAdd && rolesAvailableToAdd.length > 0">
-                                        <template x-for="role in rolesAvailableToAdd" :key="role.name">
-                                            <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
-                                                <input type="checkbox" :value="role.name" 
-                                                       x-model="rolesToAdd"
-                                                       class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
-                                                <span class="font-medium text-green-800" x-text="role.displayName || role.name"></span>
-                                            </label>
-                                        </template>
+                                    <!-- Opción "Sin rol" -->
+                                    <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors border-b border-green-200">
+                                        <input type="checkbox" value="__NO_ROLE__" 
+                                               x-model="rolesToAdd"
+                                               class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                                        <span class="text-sm font-medium text-green-800">🚫 Sin rol</span>
+                                    </label>
+                                    
+                                    <template x-for="role in availableRoles" :key="role.id">
+                                        <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors">
+                                            <input type="checkbox" :value="role.name" 
+                                                   x-model="rolesToAdd"
+                                                   class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                                            <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
+                                        </label>
                                     </template>
                                 </div>
                             </div>
@@ -1082,19 +1085,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                     <span class="px-2 sm:px-3 py-1 bg-red-200 text-red-900 rounded-full text-xs font-bold" 
                                           x-text="rolesToRemove.length + ' sel.'"></span>
                                 </div>
-                                <div x-show="rolesAvailableToRemove.length === 0" class="text-xs sm:text-sm text-red-600 italic py-2">
-                                    Los usuarios seleccionados no tienen roles para eliminar.
-                                </div>
                                 <div class="space-y-1 max-h-40 sm:max-h-60 overflow-y-auto">
-                                    <template x-if="rolesAvailableToRemove && rolesAvailableToRemove.length > 0">
-                                        <template x-for="role in rolesAvailableToRemove" :key="role.name">
-                                            <label class="flex items-center gap-2 p-2 hover:bg-red-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
-                                                <input type="checkbox" :value="role.name" 
-                                                       x-model="rolesToRemove"
-                                                       class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
-                                                <span class="font-medium text-red-800" x-text="role.displayName || role.name"></span>
-                                            </label>
-                                        </template>
+                                    <template x-for="role in availableRoles" :key="role.id">
+                                        <label class="flex items-center gap-2 p-2 hover:bg-red-100 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
+                                            <input type="checkbox" :value="role.name" 
+                                                   x-model="rolesToRemove"
+                                                   class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
+                                            <span class="font-medium text-red-800" x-text="role.displayName || role.name"></span>
+                                        </label>
                                     </template>
                                 </div>
                             </div>
@@ -1571,8 +1569,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 // Estados para gestión de roles
                 showRolesModal: false,
                 availableRoles: [],
-                rolesAvailableToAdd: [],
-                rolesAvailableToRemove: [],
                 rolesToAdd: [],
                 rolesToRemove: [],
                 
@@ -1745,65 +1741,164 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     ? permissionValue
                     : (permissionValue?.displayName || permissionValue?.name || permissionValue?.slug || permissionValue?.permission || '');
 
-                // 🔥 Normalizar a forma estándar: letras minúsculas, espacios en lugar de puntos/guiones
-                const normalized = String(rawValue || '')
-                    .toLowerCase()
-                    .trim()
+                const normalized = String(rawValue || '').toLowerCase().trim();
+                const normalizedSpaced = normalized
                     .replace(/[._-]+/g, ' ')
                     .replace(/\s+/g, ' ')
                     .trim();
+                const normalizedCompact = normalizedSpaced.replace(/\s+/g, '');
 
-                // 📋 DICCIONARIO COMPACTO: Solo una entrada por permiso (forma estándar)
                 const permissionLabels = {
+                    'view.own.pending.concepts.summary': 'Ver resumen de conceptos pendientes propios',
                     'view own pending concepts summary': 'Ver resumen de conceptos pendientes propios',
+                    'viewownpendingconceptssummary': 'Ver resumen de conceptos pendientes propios',
+                    'view.own.paid.concepts.summary': 'Ver resumen de conceptos pagados propios',
                     'view own paid concepts summary': 'Ver resumen de conceptos pagados propios',
+                    'viewownpaidconceptssummary': 'Ver resumen de conceptos pagados propios',
+                    'view.own.overdue.concepts.summary': 'Ver resumen de conceptos vencidos propios',
                     'view own overdue concepts summary': 'Ver resumen de conceptos vencidos propios',
+                    'viewownoverdueconceptssummary': 'Ver resumen de conceptos vencidos propios',
+                    'view.payments.history': 'Ver historial de pagos',
                     'view payments history': 'Ver historial de pagos',
+                    'viewpaymentshistory': 'Ver historial de pagos',
+                    'view.payments.summary': 'Ver resumen de pagos',
                     'view payments summary': 'Ver resumen de pagos',
+                    'viewpaymentssummary': 'Ver resumen de pagos',
+                    'view.pending.concepts': 'Ver pagos pendientes',
                     'view pending concepts': 'Ver pagos pendientes',
+                    'viewpendingconcepts': 'Ver pagos pendientes',
+                    'view.overdue.concepts': 'Ver pagos vencidos',
                     'view overdue concepts': 'Ver pagos vencidos',
+                    'viewoverdueconcepts': 'Ver pagos vencidos',
+                    'view.receipt': 'Ver recibos',
                     'view receipt': 'Ver recibos',
+                    'viewreceipt': 'Ver recibos',
+                    'view.cards': 'Ver tarjetas registradas',
                     'view cards': 'Ver tarjetas registradas',
+                    'viewcards': 'Ver tarjetas registradas',
+                    'view.all.pending.concepts.summary': 'Ver resumen de conceptos pendientes de todos los estudiantes',
                     'view all pending concepts summary': 'Ver resumen de conceptos pendientes de todos los estudiantes',
+                    'viewallpendingconceptssummary': 'Ver resumen de conceptos pendientes de todos los estudiantes',
+                    'view.all.students.summary': 'Ver resumen de estudiantes',
                     'view all students summary': 'Ver resumen de estudiantes',
+                    'viewallstudentssummary': 'Ver resumen de estudiantes',
+                    'view.all.paid.concepts.summary': 'Ver resumen de conceptos pagados',
                     'view all paid concepts summary': 'Ver resumen de conceptos pagados',
+                    'viewallpaidconceptssummary': 'Ver resumen de conceptos pagados',
+                    'view.concepts.summary': 'Ver resumen de conceptos',
                     'view concepts summary': 'Ver resumen de conceptos',
+                    'viewconceptssummary': 'Ver resumen de conceptos',
+                    'view.concepts': 'Ver conceptos',
                     'view concepts': 'Ver conceptos',
+                    'viewconcepts': 'Ver conceptos',
+                    'view.debts': 'Ver deudas',
                     'view debts': 'Ver deudas',
+                    'viewdebts': 'Ver deudas',
+                    'view.payments': 'Ver pagos',
                     'view payments': 'Ver pagos',
+                    'viewpayments': 'Ver pagos',
+                    'view.users': 'Ver usuarios',
                     'view users': 'Ver usuarios',
+                    'viewusers': 'Ver usuarios',
+                    'view.permissions': 'Ver permisos',
                     'view permissions': 'Ver permisos',
+                    'viewpermissions': 'Ver permisos',
+                    'view.roles': 'Ver roles',
                     'view roles': 'Ver roles',
+                    'viewroles': 'Ver roles',
+                    'view.student': 'Ver detalles académicos',
                     'view student': 'Ver detalles académicos',
+                    'viewstudent': 'Ver detalles académicos',
+                    'view.payments.student.summary': 'Ver el resumen financiero de los estudiantes',
                     'view payments student summary': 'Ver el resumen financiero de los estudiantes',
+                    'viewpaymentsstudentsummary': 'Ver el resumen financiero de los estudiantes',
+                    'view.stripe.payments': 'Ver pagos en Stripe',
                     'view stripe payments': 'Ver pagos en Stripe',
+                    'viewstripepayments': 'Ver pagos en Stripe',
+                    'create.users': 'Crear usuarios',
                     'create users': 'Crear usuarios',
+                    'createusers': 'Crear usuarios',
+                    'create.user': 'Crear usuario',
                     'create user': 'Crear usuario',
+                    'createuser': 'Crear usuario',
+                    'create.concepts': 'Crear conceptos de pago',
                     'create concepts': 'Crear conceptos de pago',
+                    'createconcepts': 'Crear conceptos de pago',
+                    'update.users': 'Editar usuarios',
                     'update users': 'Editar usuarios',
+                    'updateusers': 'Editar usuarios',
+                    'update.student': 'Actualizar detalles académicos',
                     'update student': 'Actualizar detalles académicos',
+                    'updatestudent': 'Actualizar detalles académicos',
+                    'update.concepts': 'Actualizar conceptos de pago',
                     'update concepts': 'Actualizar conceptos de pago',
+                    'updateconcepts': 'Actualizar conceptos de pago',
+                    'delete.users': 'Eliminar usuarios',
                     'delete users': 'Eliminar usuarios',
+                    'deleteusers': 'Eliminar usuarios',
+                    'attach.student': 'Asignar detalles académicos',
                     'attach student': 'Asignar detalles académicos',
+                    'attachstudent': 'Asignar detalles académicos',
+                    'import.users': 'Importar usuarios',
                     'import users': 'Importar usuarios',
+                    'importusers': 'Importar usuarios',
+                    'sync.permissions': 'Sincronizar permisos',
                     'sync permissions': 'Sincronizar permisos',
+                    'syncpermissions': 'Sincronizar permisos',
+                    'sync.roles': 'Sincronizar roles',
                     'sync roles': 'Sincronizar roles',
+                    'syncroles': 'Sincronizar roles',
+                    'activate.users': 'Activar usuarios',
                     'activate users': 'Activar usuarios',
+                    'activateusers': 'Activar usuarios',
+                    'disable.users': 'Deshabilitar usuarios',
                     'disable users': 'Deshabilitar usuarios',
+                    'disableusers': 'Deshabilitar usuarios',
+                    'promote.student': 'Incrementar semestres',
                     'promote student': 'Incrementar semestres',
+                    'promotestudent': 'Incrementar semestres',
+                    'refresh.all.dashboard': 'Actualizar tablero de pagos',
                     'refresh all dashboard': 'Actualizar tablero de pagos',
+                    'refreshalldashboard': 'Actualizar tablero de pagos',
+                    'create_setup': 'Configurar sistema',
+                    'create.setup': 'Configurar sistema',
+                    'create-setup': 'Configurar sistema',
                     'create setup': 'Configurar sistema',
+                    'createsetup': 'Configurar sistema',
+                    'delete_card': 'Eliminar tarjeta',
+                    'delete.card': 'Eliminar tarjeta',
+                    'delete-card': 'Eliminar tarjeta',
                     'delete card': 'Eliminar tarjeta',
+                    'deletecard': 'Eliminar tarjeta',
+                    'create_payment': 'Registrar pago',
+                    'create.payment': 'Registrar pago',
+                    'create-payment': 'Registrar pago',
                     'create payment': 'Registrar pago',
+                    'finalize.concepts': 'Finalizar conceptos de pago',
                     'finalize concepts': 'Finalizar conceptos de pago',
+                    'finalizeconcepts': 'Finalizar conceptos de pago',
+                    'disable.concepts': 'Deshabilitar conceptos de pago',
                     'disable concepts': 'Deshabilitar conceptos de pago',
+                    'disableconcepts': 'Deshabilitar conceptos de pago',
+                    'eliminate.concepts': 'Eliminar conceptos de pago',
                     'eliminate concepts': 'Eliminar conceptos de pago',
+                    'eliminateconcepts': 'Eliminar conceptos de pago',
+                    'activate.concepts': 'Activar conceptos de pago',
                     'activate concepts': 'Activar conceptos de pago',
+                    'activateconcepts': 'Activar conceptos de pago',
+                    'validate.debt': 'Validar deuda',
                     'validate debt': 'Validar deuda',
-                    'create payout': 'Crear liquidación de pagos'
+                    'validatedebt': 'Validar deuda',
+                    'create.payout': 'Crear liquidación de pagos',
+                    'create payout': 'Crear liquidación de pagos',
+                    'createpayout': 'Crear liquidación de pagos'
+                    ,'createpayment': 'Registrar pago'
                 };
 
-                const resolvedLabel = permissionLabels[normalized];
+                const resolvedLabel = permissionLabels[normalized]
+                    || permissionLabels[normalizedSpaced]
+                    || permissionLabels[normalizedCompact];
+
                 if (resolvedLabel) return resolvedLabel;
 
                 const tokenTranslations = {
@@ -2222,6 +2317,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             mapUser(raw) {
                 if (!raw) return null;
                 
+                // Log para debugging - EXPANDIDO
+                console.log('========================================');
+                console.log('🔍 mapUser - INICIO');
+                console.log('========================================');
+                console.log('📦 raw completo:', raw);
+                console.log('🔍 raw.roles (tipo):', Array.isArray(raw.roles) ? `array[${raw.roles.length}]` : typeof raw.roles);
+                console.log('🔍 raw.roles (valor):', raw.roles);
+                console.log('🔍 raw.roles[0]:', raw.roles?.[0]);
+                console.log('🔍 raw.roles_count:', raw.roles_count);
+                console.log('🔍 raw.role:', raw.role);
+                console.log('🔍 JSON.stringify(raw.roles):', JSON.stringify(raw.roles));
+                
                 // Extraer roles como array
                 let roles = [];
                 if (Array.isArray(raw.roles) && raw.roles.length > 0) {
@@ -2230,6 +2337,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         if (r && typeof r === 'object') return r.name || r.slug || r.role || r.value || '';
                         return String(r);
                     }).map(r => String(r || '').trim()).filter(Boolean);
+                    console.log('✅ Roles encontrados en raw.roles (array):', roles);
                 } else if (raw.role && raw.role !== 'Sin rol') {
                     if (Array.isArray(raw.role)) {
                         roles = raw.role.map(r => {
@@ -2242,6 +2350,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     } else {
                         roles = [String(raw.role).trim()];
                     }
+                    console.log('✅ Roles encontrados en raw.role:', roles);
                 } else if (raw.role_name && raw.role_name !== 'Sin rol') {
                     if (typeof raw.role_name === 'object') {
                         const roleName = raw.role_name.name || raw.role_name.slug || raw.role_name.role || raw.role_name.value || '';
@@ -2249,7 +2358,10 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     } else {
                         roles = [String(raw.role_name).trim()];
                     }
+                    console.log('✅ Roles encontrados en raw.role_name:', roles);
                 }
+                
+                console.log('🔍 roles extraídos:', roles);
                 
                 let roleLabel = 'Sin rol';
                 let roleKey = '';
@@ -2259,6 +2371,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                     roleLabel = translatedRoles.join(', ');
                     roleKey = this.normalizeRoleForFilter(roles[0]);
+                    console.log('✅ Rol traducido:', roleLabel, '| roleKey:', roleKey);
                 } else {
                     // Intentar con campos individuales si no hay array de roles
                     const roleValue = raw.role || raw.role_name || '';
@@ -2268,6 +2381,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     if (roleValue && roleValue !== 'Sin rol') {
                         roleKey = this.normalizeRoleForFilter(roleValueNormalized);
                         roleLabel = this.getRoleDisplayName(roleValueNormalized);
+                        console.log('✅ Rol desde raw.role:', roleLabel);
+                    } else {
+                        console.warn('⚠️ No hay roles encontrados para este usuario');
                     }
                 }
 
@@ -2791,6 +2907,44 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         
                         // Backend devuelve {success: true, data: {users: {items: [...]}}, message: '...'}
                         if (result.success && result.data && result.data.users && result.data.users.items) {
+                            console.log('🔍 RAW USERS desde backend (primeros 2):');
+                            console.log(JSON.stringify(result.data.users.items.slice(0, 2), null, 2));
+                            
+                            // ⚠️ VERIFICAR SI LOS ROLES VIENEN DESDE EL BACKEND
+                            const firstUser = result.data.users.items[0];
+                            if (firstUser) {
+                                console.log('========================================');
+                                console.log('🔬 ANÁLISIS DEL PRIMER USUARIO DEL BACKEND:');
+                                console.log('========================================');
+                                console.log('📧 Email:', firstUser.email);
+                                console.log('🆔 ID:', firstUser.id);
+                                console.log('🔍 Tiene propiedad roles?', 'roles' in firstUser);
+                                console.log('🔍 Valor de roles:', firstUser.roles);
+                                console.log('🔍 Tipo de roles:', Array.isArray(firstUser.roles) ? `array[${firstUser.roles.length}]` : typeof firstUser.roles);
+                                console.log('🔍 roles_count:', firstUser.roles_count);
+                                console.log('🔍 JSON.stringify de roles:', JSON.stringify(firstUser.roles));
+                                console.log('========================================');
+                            }
+                            
+                            // ⚠️ ADVERTENCIA: Backend no incluye roles
+                            if (result.data.users.items.length > 0 && !result.data.users.items[0].roles) {
+                                console.warn('⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️');
+                                console.warn('⚠️ EL BACKEND NO ESTÁ ENVIANDO LOS ROLES');
+                                console.warn('⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️');
+                                console.warn('');
+                                console.warn('El backend devuelve roles_count pero NO el array de roles');
+                                console.warn('');
+                                console.warn('🔧 SOLUCIÓN EN EL BACKEND:');
+                                console.warn('   Archivo: backend/school-management/app/Http/Controllers/AdminActionsController.php');
+                                console.warn('   Método: showUsers()');
+                                console.warn('   Línea a modificar:');
+                                console.warn('      ANTES: $users = User::select(...)->get();');
+                                console.warn('      DESPUÉS: $users = User::select(...)->with("roles")->get();');
+                                console.warn('');
+                                console.warn('💡 Agregar ->with("roles") antes de ->get()');
+                                console.warn('');
+                            }
+                            
                             this.users = result.data.users.items.map(u => this.mapUser(u));
                         } else if (Array.isArray(result)) {
                             console.log('🔍 RAW USERS desde backend (primeros 2):');
@@ -4590,26 +4744,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         this.showNotify('No se pudieron cargar roles disponibles', 'error');
                         return;
                     }
-
-                    // 🔥 NUEVO: Obtener roles actuales de usuarios seleccionados
-                    const currentRoles = new Set();
-                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
-                    
-                    selectedUsersData.forEach(user => {
-                        if (Array.isArray(user.roles)) {
-                            user.roles.forEach(role => currentRoles.add(role));
-                        }
-                    });
-
-                    // 🔥 NUEVO: Separar roles en "disponibles para agregar" y "disponibles para eliminar"
-                    this.rolesAvailableToAdd = this.availableRoles.filter(r => !currentRoles.has(r.name));
-                    this.rolesAvailableToRemove = this.availableRoles.filter(r => currentRoles.has(r.name));
-
-                    console.log('📊 Roles analysis:');
-                    console.log('  Total usuarios seleccionados:', this.selectedUsers.length);
-                    console.log('  Roles actuales de usuarios:', Array.from(currentRoles));
-                    console.log('  Roles disponibles para agregar:', this.rolesAvailableToAdd.length);
-                    console.log('  Roles disponibles para eliminar:', this.rolesAvailableToRemove.length);
 
                     this.rolesToAdd = [];
                     this.rolesToRemove = [];
