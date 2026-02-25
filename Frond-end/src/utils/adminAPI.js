@@ -291,18 +291,14 @@ export const AdminAPI = {
    * POST /api/v1/admin-actions/updated-roles
    * Sincronizar roles de múltiples usuarios
    */
-  async updateMultipleUsersRoles(curps, rolesToAdd, rolesToRemove, token) {
+  async updateMultipleUsersRoles(curps, roles, token) {
     try {
-      // Filter out empty strings and __NO_ROLE__ identifier from role arrays
-      const cleanRolesToAdd = rolesToAdd.filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
-      const cleanRolesToRemove = rolesToRemove.filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
-      
+      // Filtrar strings vacíos y __NO_ROLE__
+      const cleanRoles = Array.isArray(roles) ? roles.filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__') : [];
       console.log('📤 API Payload - Updated Roles:', {
         curps: curps,
-        rolesToAdd: cleanRolesToAdd,
-        rolesToRemove: cleanRolesToRemove
+        roles: cleanRoles
       });
-      
       const response = await fetch(`${API_BASE}/admin-actions/updated-roles`, {
         method: 'POST',
         headers: {
@@ -314,8 +310,7 @@ export const AdminAPI = {
         },
         body: JSON.stringify({
           curps: curps,
-          rolesToAdd: cleanRolesToAdd,
-          rolesToRemove: cleanRolesToRemove
+          roles: cleanRoles
         })
       });
 
