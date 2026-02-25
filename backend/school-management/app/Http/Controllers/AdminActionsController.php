@@ -925,10 +925,8 @@ class AdminActionsController extends Controller
             $validated = $request->validate([
                 'curps' => 'required|array|min:1',
                 'curps.*' => 'string|size:18',
-                'rolesToAdd' => 'array',
-                'rolesToAdd.*' => 'string|exists:roles,name',
-                'rolesToRemove' => 'array',
-                'rolesToRemove.*' => 'string|exists:roles,name',
+                'roles' => 'required|array|min:0',
+                'roles.*' => 'string|exists:roles,name',
             ], [
                 'curps.required' => 'El campo curps es requerido.',
                 'curps.array' => 'El campo curps debe ser un array.',
@@ -936,8 +934,9 @@ class AdminActionsController extends Controller
                 'curps.*.string' => 'Cada CURP debe ser un texto.',
                 'curps.*.size' => 'Cada CURP debe tener exactamente 18 caracteres. Encontrados: ' . 
                     implode(', ', array_map(fn($c) => strlen($c) . ' chars', $request->input('curps', []))),
-                'rolesToAdd.*.exists' => 'Uno o más roles para agregar no existen en la base de datos. Roles disponibles: admin, student, financial staff',
-                'rolesToRemove.*.exists' => 'Uno o más roles para eliminar no existen en la base de datos. Roles disponibles: admin, student, financial staff',
+                'roles.required' => 'El campo roles es requerido.',
+                'roles.array' => 'El campo roles debe ser un array.',
+                'roles.*.exists' => 'Uno o más roles no existen en la base de datos.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -950,8 +949,7 @@ class AdminActionsController extends Controller
 
         try {
             $curps = $validated['curps'];
-            $rolesToAdd = $validated['rolesToAdd'] ?? [];
-            $rolesToRemove = $validated['rolesToRemove'] ?? [];
+            $roles = $validated['roles'] ?? [];
 
             // Buscar usuarios por CURP
             $users = User::whereIn('curp', $curps)->get();
@@ -964,34 +962,17 @@ class AdminActionsController extends Controller
 
             // Procesar en chunks para operaciones masivas
             $users->chunk(50)->each(function ($chunk) use (
-                $rolesToAdd, 
-                $rolesToRemove, 
-                &$totalUpdated, 
-                &$failed, 
-                &$fullNames, 
-                &$processedCurps, 
+                $roles,
+                &$totalUpdated,
+                &$failed,
+                &$fullNames,
+                &$processedCurps,
                 &$chunksProcessed
             ) {
                 foreach ($chunk as $user) {
                     try {
-                        // Agregar roles
-                        if (!empty($rolesToAdd)) {
-                            foreach ($rolesToAdd as $role) {
-                                if (!$user->hasRole($role)) {
-                                    $user->assignRole($role);
-                                }
-                            }
-                        }
-
-                        // Remover roles
-                        if (!empty($rolesToRemove)) {
-                            foreach ($rolesToRemove as $role) {
-                                if ($user->hasRole($role)) {
-                                    $user->removeRole($role);
-                                }
-                            }
-                        }
-
+                        // Reemplazar todos los roles del usuario por los nuevos
+                        $user->syncRoles($roles);
                         $totalUpdated++;
                         $fullNames[] = $user->name . ' ' . $user->last_name;
                         $processedCurps[] = $user->curp;
@@ -1011,16 +992,14 @@ class AdminActionsController extends Controller
                         'fullNames' => $fullNames,
                         'curps' => $processedCurps,
                         'updatedRoles' => [
-                            'added' => $rolesToAdd,
-                            'removed' => $rolesToRemove,
+                            'final' => $roles,
                         ],
                         'metadata' => [
                             'totalFound' => $totalFound,
                             'totalUpdated' => $totalUpdated,
                             'failed' => $failed,
                             'operations' => [
-                                'roles_removed' => $rolesToRemove,
-                                'roles_added' => $rolesToAdd,
+                                'roles_final' => $roles,
                                 'chunks_processed' => $chunksProcessed,
                             ]
                         ]
