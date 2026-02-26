@@ -4761,30 +4761,33 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         token
                     );
 
-                    console.log('📥 updateRoles - Respuesta:', result);
-
+                    console.log('📥 updateRoles - Respuesta completa:', result);
                     if (result.success) {
                         const summary = result.data?.users_roles?.summary;
                         const totalUpdated = summary?.totalUpdated || curps.length;
                         const totalFailed = summary?.totalFailed || 0;
-                        
                         let message = `✅ Roles actualizados: ${totalUpdated} usuario(s) afectado(s)`;
                         if (totalFailed > 0) {
                             message += ` (${totalFailed} fallido(s))`;
                         }
-                        
                         this.showNotify(message, totalFailed > 0 ? 'warning' : 'success');
                         this.showRolesModal = false;
                         this.selectedUsers = [];
                         await this.loadUsers(token);
                     } else {
                         console.error('❌ Error en respuesta:', result);
-                        
-                        // Log detailed validation errors
                         if (result.errors) {
                             console.error('📋 Validation Errors:', result.errors);
                         }
-                        
+                        if (result.message) {
+                            console.error('📋 Backend Message:', result.message);
+                        }
+                        if (result.status) {
+                            console.error('📋 Backend Status:', result.status);
+                        }
+                        if (result.data) {
+                            console.error('📋 Backend Data:', result.data);
+                        }
                         this.showError(
                             '❌ Error al Actualizar Roles',
                             'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
