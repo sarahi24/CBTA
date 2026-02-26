@@ -4,8 +4,8 @@
 
 window.AdminAPI = {
 	async updateMultipleUsersRoles(curps, rolesToAdd, rolesToRemove, token) {
-		// Lógica mínima para frontend, debe ser reemplazada por fetch real
-		return fetch('/api/v1/admin-actions/updated-roles', {
+		const apiBase = window.__API_BASE_URL__ || '';
+		return fetch(`${apiBase}/v1/admin-actions/updated-roles`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -15,8 +15,8 @@ window.AdminAPI = {
 		}).then(res => res.json());
 	},
 	async updateMultipleUsersPermissions(curps, permissionsToAdd, permissionsToRemove, token) {
-		// Lógica mínima para frontend, debe ser reemplazada por fetch real
-		return fetch('/api/v1/admin-actions/updated-permissions', {
+		const apiBase = window.__API_BASE_URL__ || '';
+		return fetch(`${apiBase}/v1/admin-actions/updated-permissions`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
