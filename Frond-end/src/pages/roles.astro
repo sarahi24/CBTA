@@ -1078,7 +1078,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             </div>
                             
                             <!-- Eliminar Roles -->
-                            <div class="p-3 sm:p-4 bg-red-50 border-2 border-red-300 rounded-xl shadow-lg">
+                            <div x-show="false" class="p-3 sm:p-4 bg-red-50 border-2 border-red-300 rounded-xl shadow-lg">
                                 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                                     <h4 class="font-black text-red-900 text-base sm:text-lg flex items-center gap-1 sm:gap-2">
                                         <span class="text-xl sm:text-2xl">➖</span> <span>Eliminar Roles</span>
@@ -4754,8 +4754,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         return;
                     }
 
-                    this.rolesToAdd = [];
-                    this.rolesToRemove = [];
+                    // Precargar el rol actual del primer usuario seleccionado
+                    const user = this.users.find(u => u.id === this.selectedUsers[0]);
+                    if (user && Array.isArray(user.roles) && user.roles.length > 0) {
+                        // Solo un rol activo
+                        this.rolesToAdd = [user.roles[0]];
+                        this.rolesToRemove = this.availableRoles
+                            .map(r => r.name)
+                            .filter(r => r !== user.roles[0]);
+                    } else {
+                        this.rolesToAdd = [];
+                        this.rolesToRemove = [];
+                    }
                     this.showRolesModal = true;
                 } catch (error) {
                     console.error('❌ Error al cargar roles:', error);
