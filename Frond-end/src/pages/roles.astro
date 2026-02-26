@@ -4689,6 +4689,12 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             async updateRoles() {
+                                // Obtener CURPs de usuarios seleccionados, filtrando aquellos sin CURP válido
+                                const curps = this.users
+                                    .filter(u => this.selectedUsers.includes(u.id))
+                                    .map(u => u.curp)
+                                    .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+
                                 console.log('🟦 updateRoles - INICIO');
                                 console.log('🟦 CURPs:', curps);
                                 console.log('🟦 selectedRoles:', this.selectedRoles);
