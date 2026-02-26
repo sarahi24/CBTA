@@ -4689,6 +4689,10 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             async updateRoles() {
+                                console.log('🟦 updateRoles - INICIO');
+                                console.log('🟦 CURPs:', curps);
+                                console.log('🟦 selectedRoles:', this.selectedRoles);
+                                console.log('🟦 token:', token);
                 const token = localStorage.getItem('access_token');
                 if (!token) {
                     this.showNotify('No hay token de autenticación', 'error');
@@ -4754,12 +4758,21 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     console.log('  Roles para eliminar (after filter):', rolesToRemove);
 
                     // Usar AdminAPI para reemplazar roles
-                    const result = await window.AdminAPI.updateMultipleUsersRoles(
-                        curps,
-                        this.selectedRoles,
-                        [],
-                        token
-                    );
+                    let result = null;
+                    try {
+                        result = await window.AdminAPI.updateMultipleUsersRoles(
+                            curps,
+                            this.selectedRoles,
+                            [],
+                            token
+                        );
+                        console.log('🟦 updateRoles - fetch completado');
+                    } catch (fetchError) {
+                        console.error('🟥 Error en fetch updateMultipleUsersRoles:', fetchError);
+                        this.showError('❌ Error de conexión', 'No fue posible conectar con el backend.');
+                        this.isSaving = false;
+                        return;
+                    }
 
                     console.log('📥 updateRoles - Respuesta completa:', result);
                     if (result.success) {
