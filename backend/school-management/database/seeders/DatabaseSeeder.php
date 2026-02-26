@@ -87,28 +87,6 @@ class DatabaseSeeder extends Seeder
         }
 
         // ------------------------
-        // PERMISOS DE PADRE/TUTOR
-        // ------------------------
-        $parentPermissions = [
-            // Permisos para consultar información académica del hijo
-            'view own financial overview',
-            'view own pending concepts summary',
-            'view own paid concepts summary',
-            'view own overdue concepts summary',
-            'view payments history',
-            'view cards',
-            'view payment history',
-            'view pending concepts',
-            'view overdue concepts',
-            // Permisos para ver datos del estudiante
-            'view student',
-        ];
-
-        foreach ($parentPermissions as $perm) {
-            Permission::firstOrCreate(['name' => $perm]);
-        }
-
-        // ------------------------
         // CREAR ROLES Y ASIGNAR PERMISOS
         // ------------------------
         $studentRole = Role::firstOrCreate(['name' => 'student']);
@@ -119,9 +97,6 @@ class DatabaseSeeder extends Seeder
 
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->syncPermissions(array_merge($staffPermissions, $adminPermissions));
-
-        $parentRole = Role::firstOrCreate(['name' => 'parent']);
-        $parentRole->syncPermissions($parentPermissions);
 
         // ------------------------
         // CREAR USUARIOS DE PRUEBA
