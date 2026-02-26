@@ -4744,10 +4744,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     console.log('  Roles para eliminar:', rolesToRemove);
 
                     // Usar AdminAPI para actualizar roles
+                    // El backend espera el campo 'roles' con todos los roles finales
                     const result = await window.AdminAPI.updateMultipleUsersRoles(
                         curps,
-                        rolesToAdd,
-                        rolesToRemove,
+                        selectedRoles,
+                        [],
                         token
                     );
 
