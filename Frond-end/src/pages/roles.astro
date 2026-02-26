@@ -1464,8 +1464,9 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 </Layout>
 
 <!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
-<script is:inline src="/js/adminAPI.js"></script>
-<script is:inline>
+<script>
+    import { AdminAPI } from '../utils/adminAPI.js';
+    window.AdminAPI = AdminAPI;
     window.__adminAPILoaded = true;
 </script>
 
@@ -4738,14 +4739,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
                 try {
                     await this.loadAvailableRolesForFilter(true);
-
                     if (!this.availableRoles.length) {
                         this.showNotify('No se pudieron cargar roles disponibles', 'error');
                         return;
                     }
-
-                    this.rolesToAdd = [];
-                    this.rolesToRemove = [];
+                    this.selectedRoles = [];
                     this.showRolesModal = true;
                 } catch (error) {
                     console.error('❌ Error al cargar roles:', error);
@@ -4760,15 +4758,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     return;
                 }
 
-                // VALIDACIÓN: Solo requiere al menos un rol en Agregar O Eliminar
-                if ((this.rolesToAdd.length === 0) && (this.rolesToRemove.length === 0)) {
+                // VALIDACIÓN: Debe haber al menos un rol seleccionado
+                if (!this.selectedRoles || this.selectedRoles.length === 0) {
                     this.showError(
                         '⚠️ Roles No Seleccionados',
-                        'Debes seleccionar al menos un rol en "Agregar Roles" o "Eliminar Roles" antes de actualizar.',
+                        'Debes seleccionar al menos un rol antes de actualizar.',
                         {
-                            solución: 'Marca uno o más checkboxes en una sola columna (Agregar o Eliminar)',
-                            rolesToAdd: this.rolesToAdd,
-                            rolesToRemove: this.rolesToRemove
+                            solución: 'Marca uno o más checkboxes en la lista de roles',
+                            selectedRoles: this.selectedRoles
                         }
                     );
                     return;
@@ -4819,11 +4816,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     console.log('  Roles para agregar (after filter):', rolesToAdd);
                     console.log('  Roles para eliminar (after filter):', rolesToRemove);
 
-                    // Usar AdminAPI para actualizar roles
+                    // Usar AdminAPI para reemplazar roles
                     const result = await window.AdminAPI.updateMultipleUsersRoles(
                         curps,
-                        rolesToAdd,
-                        rolesToRemove,
+                        this.selectedRoles,
+                        [],
                         token
                     );
 
