@@ -4770,23 +4770,29 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         await this.loadUsers(token);
                     } else {
                         console.error('❌ Error en respuesta:', result);
+                        let errorMsg = 'No fue posible actualizar los roles. Por favor, intenta nuevamente.';
                         if (result.errors) {
                             console.error('📋 Validation Errors:', result.errors);
+                            errorMsg += '\nDetalles: ' + JSON.stringify(result.errors);
                         }
                         this.showError(
                             '❌ Error al Actualizar Roles',
-                            'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
+                            errorMsg
                         );
+                        this.showRolesModal = false;
                     }
                 } catch (error) {
                     console.error('❌ Error al actualizar roles:', error);
+                    let errorMsg = 'No fue posible actualizar los roles. Por favor, intenta nuevamente.';
                     if (error.validationErrors) {
                         console.error('📋 Validation Errors Detalles:', error.validationErrors);
+                        errorMsg += '\nDetalles: ' + JSON.stringify(error.validationErrors);
                     }
                     this.showError(
                         '❌ Error al Actualizar Roles',
-                        'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
+                        errorMsg
                     );
+                    this.showRolesModal = false;
                 } finally {
                     this.isSaving = false;
                 }
