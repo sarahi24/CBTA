@@ -1194,7 +1194,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
         }
         
         // Validación específica según el ámbito seleccionado
-        // Permitir cambiar a 'matrícula completa' (allStudents) sin requerir estudiantes
         if (!this.formData.allStudents) {
           if (this.formData.scopeType === 'carrera') {
             if (this.formData.selectedCareers.length === 0) {
@@ -1212,8 +1211,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
               return;
             }
           } else if (this.formData.scopeType === 'estudiantes') {
-            // Solo requerir estudiantes si no es 'matrícula completa'
-            if (this.formData.selectedSpecificStudents.length === 0 && !this.formData.allStudents) {
+            if (this.formData.selectedSpecificStudents.length === 0) {
               this.errorMessage = '⚠️ Debe agregar al menos un estudiante. Use el campo de búsqueda abajo ingresando el número de control y seleccionando del resultado (mínimo 3 caracteres).';
               return;
             }
