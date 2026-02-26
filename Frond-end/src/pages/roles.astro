@@ -167,74 +167,71 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             </div>
         </div>
 
-        <style is:global>
-            [x-cloak] { display: none !important; }
-        
-            /* Colores institucionales */
-            .bg-institucional { background-color: #2E594D; }
-            .text-institucional { color: #2E594D; }
-            .border-institucional { border-color: #2E594D; }
-            .hover-institucional:hover { background-color: #234238; }
-        
-            .input-institucional:focus {
-                outline: none;
-                border-color: #2E594D;
-                box-shadow: 0 0 0 3px rgba(46, 89, 77, 0.1);
-            }
-        
-            /* Tabla de estadísticas */
-            table.stats-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-        
-            /* Pantallas grandes: tabla fija */
-            @media (min-width: 640px) {
-                table.stats-table {
-                    table-layout: fixed;
-                }
+        <!-- Filtros y Búsqueda -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        x-model="searchTerm"
+                        placeholder="🔍 Buscar por nombre, email o CURP..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-institucional focus:border-transparent"
+                    />
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <label class="text-sm font-medium">Estado:</label>
+                    <select
+                        x-model="filterStatus"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-institucional"
+                    >
+                        <option value="">Todos</option>
+                        <option value="activo">Activo</option>
+                        <option value="baja-temporal">Baja Temporal</option>
+                        <option value="baja">Baja</option>
+                        <option value="eliminado">Eliminado</option>
+                    </select>
 
-                table.stats-table td {
-                    width: 33.333%;
-                }
-            }
-        
-            .dropzone-active {
-                border-color: #2E594D;
-                background-color: rgba(46, 89, 77, 0.05);
-            }
-        
-            /* Pantallas medianas: tabla responsive */
-            @media (max-width: 768px) {
-                .table-responsive {
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                }
-            }
+                    <label class="text-sm font-medium">Rol:</label>
+                    <select
+                        x-model="filterRole"
+                        @change="handleRoleFilterChange()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-institucional"
+                    >
+                        <option value="">Todos</option>
+                        <template x-for="role in roleFilterOptions" :key="role.value">
+                            <option :value="role.value" x-text="role.label"></option>
+                        </template>
+                    </select>
 
-            /* Pantallas pequeñas: tabla responsive */
-            @media (max-width: 639px) {
-                table.stats-table,
-                table.stats-table tbody,
-                table.stats-table tr,
-                table.stats-table td {
-                    display: block;
-                    width: 100% !important;
-                }
-
-                table.stats-table tr {
-                    border: 0;
-                }
-
-                table.stats-table td {
-                    border-bottom: 1px solid #bfdbfe;
-                }
-
-                table.stats-table td:last-child {
-                    border-bottom: 0;
-                }
-            }
-        </style>
+                </div>
+            </div>
+            <!-- Acciones Masivas -->
+            <div x-show="selectedUsers.length > 0" class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                    <span class="text-sm font-medium text-blue-900">
+                        <span x-text="selectedUsers.length"></span> usuario(s) seleccionado(s)
+                    </span>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="openRolesPanel()" class="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition">
+                            🔐 Roles
+                        </button>
+                        <button @click="openPermissionsPanel()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+                            🔑 Permisos
+                        </button>
+                        <button @click="activateUsers()" class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition">
+                            ✅ Activar
+                        </button>
+                        <button @click="bulkTemporaryDisable()" class="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 transition">
+                            ⏸️ Baja Temporal
+                        </button>
+                        <button @click="bulkDisable()" class="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition">
+                            🚫 Dar de Baja
+                        </button>
+                        <button @click="bulkDelete()" class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
