@@ -1544,7 +1544,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 availableRoles: [],
                 rolesToAdd: [],
                 rolesToRemove: [],
-                selectedRoles: [],
                 
                 // Estados para gestión de permisos
                 showPermissionsModal: false,
@@ -1946,26 +1945,6 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 }
 
                 return '';
-            },
-
-            handleRolesAction(action) {
-                // Validar selección
-                if (!Array.isArray(this.selectedRoles) || this.selectedRoles.length === 0) {
-                    this.showNotify('Selecciona al menos un rol.', 'error');
-                    return;
-                }
-
-                // Aquí puedes agregar la lógica para agregar o eliminar roles
-                // Por ejemplo, llamar a la API o actualizar el estado
-                if (action === 'add') {
-                    // Lógica para agregar roles
-                    this.showNotify('Roles agregados: ' + this.selectedRoles.join(', '), 'success');
-                } else if (action === 'remove') {
-                    // Lógica para eliminar roles
-                    this.showNotify('Roles eliminados: ' + this.selectedRoles.join(', '), 'success');
-                } else {
-                    this.showNotify('Acción desconocida.', 'error');
-                }
             },
 
             buildUserExtraDetails(userDetails) {
