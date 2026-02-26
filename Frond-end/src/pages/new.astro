@@ -1168,7 +1168,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
         this.errorMessage = '';
         if (this.isSaving) return;
 
-        if (this.formData.scopeType === 'estudiantes') {
+        // Permitir cambiar a matrícula completa (allStudents) aunque no haya estudiantes
+        // Eliminar restricción automática en modo edición
+        // Si el usuario selecciona "matrícula completa", no forzar allStudents=false
+        // Solo forzar allStudents=false si hay estudiantes específicos seleccionados
+        if (this.formData.scopeType === 'estudiantes' && this.formData.selectedSpecificStudents.length > 0) {
           this.formData.allStudents = false;
         }
         if (!this.formData.title || !this.formData.amount || parseFloat(this.formData.amount) <= 0) {
