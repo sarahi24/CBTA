@@ -4761,13 +4761,13 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                     return;
                 }
 
-                // VALIDACIÓN MEJORADA: Verificar que haya roles seleccionados
-                if (this.rolesToAdd.length === 0 && this.rolesToRemove.length === 0) {
+                // VALIDACIÓN: Solo requiere al menos un rol en Agregar O Eliminar
+                if ((this.rolesToAdd.length === 0) && (this.rolesToRemove.length === 0)) {
                     this.showError(
                         '⚠️ Roles No Seleccionados',
-                        'Debes seleccionar al menos un rol para agregar O eliminar antes de actualizar.',
+                        'Debes seleccionar al menos un rol en "Agregar Roles" o "Eliminar Roles" antes de actualizar.',
                         {
-                            solución: 'Marca uno o más checkboxes en las columnas "Agregar Roles" o "Eliminar Roles"',
+                            solución: 'Marca uno o más checkboxes en una sola columna (Agregar o Eliminar)',
                             rolesToAdd: this.rolesToAdd,
                             rolesToRemove: this.rolesToRemove
                         }
