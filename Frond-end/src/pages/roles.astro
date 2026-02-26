@@ -1069,6 +1069,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                         <label class="flex items-center gap-2 p-2 hover:bg-green-100 rounded-lg cursor-pointer transition-colors">
                                             <input type="checkbox" :value="role.name" 
                                                    x-model="rolesToAdd"
+                                                   @change="handleRoleAdd(role.name)"
                                                    class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
                                             <span class="text-sm font-medium text-green-800" x-text="role.displayName || role.name"></span>
                                         </label>
@@ -1571,6 +1572,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 availableRoles: [],
                 rolesToAdd: [],
                 rolesToRemove: [],
+                handleRoleAdd(role) {
+                    // Solo un rol activo
+                    this.rolesToAdd = [role];
+                    // Eliminar todos los demás roles
+                    this.rolesToRemove = this.availableRoles
+                        .map(r => r.name)
+                        .filter(r => r !== role);
+                },
                 
                 // Estados para gestión de permisos
                 showPermissionsModal: false,

@@ -929,7 +929,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 
         this.isSearching = true;
         
-        // Primero buscar en localStorage si hay estudiantes cacheados (más rápido)
+        // Buscar en caché local si hay estudiantes cargados
         if (this.allStudents && this.allStudents.length > 0) {
           const searchLower = input.toLowerCase();
           const filtered = this.allStudents
@@ -956,7 +956,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
               };
             });
             this.isSearching = false;
-            console.log('✅ Resultados desde cache:', this.searchResults.length);
+            // Mensaje para usuario
+            this.errorMessage = '';
             return;
           }
         }
@@ -966,6 +967,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
         if (!token) {
           this.searchResults = [];
           this.isSearching = false;
+          this.errorMessage = 'No tienes sesión activa. Por favor inicia sesión para buscar estudiantes.';
           return;
         }
 
@@ -979,15 +981,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 userRole = String(parsedUser.roles[0] || userRole);
               }
             } catch {
-              // If parsing fails, keep default role.
+              // Si ocurre error, se usa el rol por defecto
             }
           }
-          // El endpoint busca por PREFIJO, no número completo
-          // Intentar con parámetro includeUserId o full para obtener user_id
+          // Buscar por API
           const url = new URL(this.apiBaseUrl + '/v1/concepts/search/controls');
           url.searchParams.set('search', input);
           url.searchParams.set('limit', '15');
-          url.searchParams.set('includeUserId', 'true'); // Intentar obtener user_id
+          url.searchParams.set('includeUserId', 'true');
 
           const res = await fetch(url.toString(), {
             method: 'GET',
@@ -1002,57 +1003,13 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
           if (!res.ok) {
             // Error 403 = sin permisos, 404 = no encontrado
             if (res.status === 403) {
-              console.warn('⚠️ Error 403 en /concepts/search/controls: Sin permisos. Intentando con /payments/students...');
-              
-              // FALLBACK: Usar endpoint de payments que sí tiene permisos
-              try {
-                const paymentsUrl = new URL(this.apiBaseUrl + '/v1/payments/students');
-                paymentsUrl.searchParams.set('search', input);
-                paymentsUrl.searchParams.set('perPage', '15');
-                
-                const paymentsRes = await fetch(paymentsUrl.toString(), {
-                  method: 'GET',
-                  headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    'X-User-Role': userRole,
-                    'X-User-Permission': 'view.payments.student.summary'
-                  }
-                });
-                
-                if (paymentsRes.ok) {
-                  const paymentsJson = await paymentsRes.json();
-                  console.log('✅ Usando endpoint alternativo /payments/students');
-                  
-                  if (paymentsJson.data?.students?.items && paymentsJson.data.students.items.length > 0) {
-                    this.searchResults = paymentsJson.data.students.items.map(item => {
-                      const studentDetailsId = item.student_id || item.student_details_id || item.studentDetailsId || '';
-                      const userId = item.userId || item.user_id || item.id || '';
-                      return {
-                        id: studentDetailsId || userId,
-                        student_details_id: studentDetailsId,
-                        user_id: userId,
-                        fullName: item.fullName || item.name,
-                        control: item.n_control || item.control,
-                        email: '',
-                        career_name: item.career_name || '',
-                        semestre: item.semestre || ''
-                      };
-                    });
-                    console.log('✅ Resultados desde /payments/students:', this.searchResults.length);
-                    this.isSearching = false;
-                    return;
-                  }
-                } else if (paymentsRes.status === 403) {
-                  console.warn('⚠️ Error 403 también en /payments/students. Solo está disponible búsqueda en caché local.');
-                  console.warn('💡 TIP: Si no aparecen resultados, verifica que los estudiantes estén cargados en caché (aparece al inicio de la consola)');
-                }
-              } catch (fallbackErr) {
-                console.error('❌ Error en fallback:', fallbackErr);
-              }
+              // Mensaje para usuario
+              this.errorMessage = 'No tienes permisos para buscar estudiantes por API. Usa la búsqueda local.';
+              this.searchResults = [];
+              this.isSearching = false;
+              return;
             }
-            // No hay permisos para buscar por API - solo usar caché
-            console.info('ℹ️ Búsqueda por API no disponible. Solo se puede buscar en estudiantes cargados en caché.');
+            this.errorMessage = 'No se pudo buscar estudiantes. Intenta nuevamente o usa la búsqueda local.';
             this.searchResults = [];
             this.isSearching = false;
             return;
@@ -1061,22 +1018,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
           const json = await res.json();
           if (json.success && json.data) {
             const searchResults = json.data.search || (json.data.concept ? [json.data.concept] : []);
-            
-            console.log('🔍 Respuesta del API de búsqueda:', json.data);
-            console.log('🔍 Primer resultado completo:', searchResults[0]);
-            
             if (searchResults.length > 0) {
               this.searchResults = searchResults.map(item => {
-                console.log('👤 Mapeando estudiante:', {
-                  id: item.id,
-                  student_id: item.student_id,
-                  user_id: item.user_id,
-                  userId: item.userId,
-                  name: item.name,
-                  n_control: item.n_control,
-                  fullItem: item
-                });
-                
                 const studentDetailsId = item.student_details_id || item.student_id || '';
                 const userId = item.user_id || item.userId || (studentDetailsId ? '' : item.id);
                 return {
@@ -1090,17 +1033,18 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                   semestre: item.semestre || ''
                 };
               });
-              console.log('✅ Resultados desde API:', this.searchResults.length);
-              console.log('✅ Primer resultado mapeado:', this.searchResults[0]);
+              this.errorMessage = '';
             } else {
               this.searchResults = [];
+              this.errorMessage = 'No se encontraron estudiantes con ese dato. Verifica el número de control o nombre.';
             }
           } else {
             this.searchResults = [];
+            this.errorMessage = 'No se encontraron estudiantes. Verifica el dato ingresado.';
           }
         } catch (err) {
-          // Error de red - manejar silenciosamente
           this.searchResults = [];
+          this.errorMessage = 'Ocurrió un error al buscar estudiantes. Intenta nuevamente.';
         } finally {
           this.isSearching = false;
         }
