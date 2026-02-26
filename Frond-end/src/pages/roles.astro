@@ -1464,9 +1464,8 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
 </Layout>
 
 <!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
-<script>
-    import { AdminAPI } from '../utils/adminAPI.js';
-    window.AdminAPI = AdminAPI;
+<script is:inline src="/js/adminAPI.js"></script>
+<script is:inline>
     window.__adminAPILoaded = true;
 </script>
 
