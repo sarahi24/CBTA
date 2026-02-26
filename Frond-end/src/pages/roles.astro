@@ -4788,6 +4788,22 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             async updateRoles() {
+                                // Si se selecciona un solo rol para agregar, eliminar todos los demás roles asignados
+                                if (this.rolesToAdd.length === 1) {
+                                    // Obtener todos los roles actuales de los usuarios seleccionados
+                                    const currentRoles = [];
+                                    this.users
+                                        .filter(u => this.selectedUsers.includes(u.id))
+                                        .forEach(u => {
+                                            if (Array.isArray(u.roles)) {
+                                                currentRoles.push(...u.roles.filter(r => r !== this.rolesToAdd[0]));
+                                            } else if (u.role && u.role !== this.rolesToAdd[0]) {
+                                                currentRoles.push(u.role);
+                                            }
+                                        });
+                                    // Eliminar todos los roles excepto el seleccionado
+                                    this.rolesToRemove = Array.from(new Set(currentRoles));
+                                }
                 const token = localStorage.getItem('access_token');
                 if (!token) {
                     this.showNotify('No hay token de autenticación', 'error');
