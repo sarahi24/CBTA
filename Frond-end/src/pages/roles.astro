@@ -4689,12 +4689,14 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
             },
 
             async updateRoles() {
-
-                // Obtener CURPs de usuarios seleccionados, filtrando aquellos sin CURP válido
-                const curps = this.users
-                    .filter(u => this.selectedUsers.includes(u.id))
-                    .map(u => u.curp)
-                    .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+                // Definir curps al inicio del método
+                let curps = [];
+                if (Array.isArray(this.users) && Array.isArray(this.selectedUsers)) {
+                    curps = this.users
+                        .filter(u => this.selectedUsers.includes(u.id))
+                        .map(u => u.curp)
+                        .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+                }
 
                 const token = localStorage.getItem('access_token');
                 console.log('🟦 updateRoles - INICIO');
@@ -4723,16 +4725,17 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 try {
                     this.isSaving = true;
 
-
-                    if (curps.length === 0) {
+                    if (!curps || curps.length === 0) {
                         this.showNotify('Los usuarios seleccionados no tienen CURP válido (18 caracteres)', 'error');
                         this.isSaving = false;
                         return;
                     }
 
                     // 🔍 VALIDACIÓN: Detectar roles duplicados entre add y remove
-                    const duplicateRoles = this.rolesToAdd.filter(role => this.rolesToRemove.includes(role));
-                    
+                    const duplicateRoles = this.rolesToAdd && this.rolesToRemove
+                        ? this.rolesToAdd.filter(role => this.rolesToRemove.includes(role))
+                        : [];
+
                     if (duplicateRoles.length > 0) {
                         this.showError(
                             '⚠️ Conflicto de Roles',
@@ -4756,7 +4759,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         .filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
                     const rolesToRemove = (Array.isArray(this.rolesToRemove) ? this.rolesToRemove : [])
                         .filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
-                    
+
                     console.log('  Roles para agregar (after filter):', rolesToAdd);
                     console.log('  Roles para eliminar (after filter):', rolesToRemove);
 
