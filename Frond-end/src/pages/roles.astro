@@ -1478,6 +1478,39 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
         
         function registerComponent() {
             Alpine.data('rolesData', () => ({
+                                get filteredPermissionsByRole() {
+                                    // Define permisos por rol
+                                    const permisosPorRol = {
+                                        'student': [
+                                            'view.student',
+                                            'view.payments.history',
+                                            'view.own.pending.concepts.summary',
+                                            'view.own.paid.concepts.summary',
+                                            'view.own.overdue.concepts.summary',
+                                            'view.receipt',
+                                            'view.cards',
+                                            'attach.student',
+                                            'import.users'
+                                        ],
+                                        'admin': this.availablePermissions.map(p => p.name),
+                                        // Agrega más roles según tu lógica
+                                    };
+                                    // Detecta el rol principal del usuario
+                                    const roles = this.userDetailsPreview?.roles || [];
+                                    let permisos = [];
+                                    roles.forEach(role => {
+                                        const canonical = this.toCanonicalRole(role);
+                                        if (permisosPorRol[canonical]) {
+                                            permisos = permisos.concat(permisosPorRol[canonical]);
+                                        }
+                                    });
+                                    // Si no hay roles, muestra todos los permisos
+                                    if (!permisos.length) {
+                                        return this.userDetailsPreview?.permissions || [];
+                                    }
+                                    // Filtra los permisos del usuario
+                                    return (this.userDetailsPreview?.permissions || []).filter(p => permisos.includes(typeof p === 'string' ? p : p.name));
+                                },
                 users: [],
                 apiBaseUrl: window.__API_BASE_URL__ || '',
                 apiError: null,
