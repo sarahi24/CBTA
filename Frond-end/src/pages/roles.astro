@@ -1010,7 +1010,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                 <div class="relative bg-white rounded-2xl p-4 sm:p-8 w-full max-w-3xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
                     <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-2">🔐 Gestionar Roles</h3>
                     <p class="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6">
-                        Agregar o eliminar roles para <span class="font-bold" x-text="selectedUsers.length"></span> usuario(s) seleccionado(s)
+                        Agregar o Actualiza<span class="font-bold" x-text="selectedUsers.length"></span> usuario(s) seleccionado(s)
                     </p>
                     
                     <form @submit.prevent="updateRoles()" class="space-y-6">
@@ -1024,7 +1024,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 <div class="flex-1">
                                     <p class="text-xs sm:text-sm font-bold text-blue-900 mb-1">💡 Instrucciones</p>
                                     <p class="text-xs sm:text-sm text-blue-800">
-                                        <strong>Debes seleccionar al menos un rol</strong> para agregar O eliminar antes de actualizar.
+                                        <strong>Debes seleccionar al menos un rol</strong> para agregar O actualizar.
                                     </p>
                                 </div>
                             </div>
