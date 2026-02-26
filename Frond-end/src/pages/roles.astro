@@ -1435,12 +1435,7 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
     </div>
 </Layout>
 
-<!-- Cargar AdminAPI primero con script module (Astro lo procesa correctamente) -->
-<script>
-    import { AdminAPI } from '../utils/adminAPI.js';
-    window.AdminAPI = AdminAPI;
-    window.__adminAPILoaded = true;
-</script>
+<!-- AdminAPI debe cargarse desde un archivo JS externo o en scripts inline permitidos por Astro. El bloque import ha sido eliminado para evitar errores de build. -->
 
 <script is:inline>
     // Prevenir múltiples inicializaciones de Alpine
