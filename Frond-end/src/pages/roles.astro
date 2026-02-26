@@ -4700,6 +4700,12 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                                 console.log('🟦 selectedRoles:', this.selectedRoles);
                                 console.log('🟦 token:', token);
                 const token = localStorage.getItem('access_token');
+                // Obtener CURPs de usuarios seleccionados, filtrando aquellos sin CURP válido
+                const curps = this.users
+                    .filter(u => this.selectedUsers.includes(u.id))
+                    .map(u => u.curp)
+                    .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+
                 if (!token) {
                     this.showNotify('No hay token de autenticación', 'error');
                     return;
