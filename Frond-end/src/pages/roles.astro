@@ -1119,11 +1119,11 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                             <button type="button" @click="showRolesModal = false" class="flex-1 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold transition-colors text-sm sm:text-base">
                                 Cancelar
                             </button>
-                            <button type="submit" :disabled="isSaving || (rolesToAdd.length === 0 && rolesToRemove.length === 0)" 
+                            <button type="submit" :disabled="isSaving || !selectedRole" 
                                     class="flex-1 py-2.5 sm:py-3 bg-institucional hover-institucional text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative group text-sm sm:text-base"
-                                    :title="(rolesToAdd.length === 0 && rolesToRemove.length === 0) ? 'Selecciona al menos un rol para continuar' : 'Actualizar roles de usuarios seleccionados'">
-                                <span x-show="!isSaving && (rolesToAdd.length > 0 || rolesToRemove.length > 0)">✅ Actualizar Roles</span>
-                                <span x-show="!isSaving && rolesToAdd.length === 0 && rolesToRemove.length === 0">⚠️ Selecciona roles</span>
+                                    :title="!selectedRole ? 'Selecciona un rol para continuar' : 'Actualizar roles de usuarios seleccionados'">
+                                <span x-show="!isSaving && selectedRole">✅ Actualizar Roles</span>
+                                <span x-show="!isSaving && !selectedRole">⚠️ Selecciona roles</span>
                                 <span x-show="isSaving">⏳ Actualizando...</span>
                             </button>
                         </div>
@@ -4800,116 +4800,87 @@ const API_BASE_URL = (import.meta.env.PUBLIC_API_BASE_URL ?? (() => { throw new 
                         return;
                     }
 
-                    console.log('📤 updateRoles - Enviando:');
-                    console.log('  CURPs válidos:', curps);
-                    console.log('  Roles para agregar (before filter):', this.rolesToAdd);
-                    console.log('  Roles para eliminar (before filter):', this.rolesToRemove);
-
-                    // Asegurar que siempre sean arrays y filtrar strings vacíos y __NO_ROLE__
-                    const rolesToAdd = (Array.isArray(this.rolesToAdd) ? this.rolesToAdd : [])
-                        .filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
-                    const rolesToRemove = (Array.isArray(this.rolesToRemove) ? this.rolesToRemove : [])
-                        .filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
-                    
-                    console.log('  Roles para agregar (after filter):', rolesToAdd);
-                    console.log('  Roles para eliminar (after filter):', rolesToRemove);
-
-                    // Usar AdminAPI para actualizar roles
-                    const result = await window.AdminAPI.updateMultipleUsersRoles(
-                        curps,
-                        rolesToAdd,
-                        rolesToRemove,
-                        token
-                    );
-
-                    console.log('📥 updateRoles - Respuesta:', result);
-
-                    if (result.success) {
-                        const summary = result.data?.users_roles?.summary;
-                        const totalUpdated = summary?.totalUpdated || curps.length;
-                        const totalFailed = summary?.totalFailed || 0;
-                        
-                        let message = `✅ Roles actualizados: ${totalUpdated} usuario(s) afectado(s)`;
-                        if (totalFailed > 0) {
-                            message += ` (${totalFailed} fallido(s))`;
-                        }
-                        
-                        this.showNotify(message, totalFailed > 0 ? 'warning' : 'success');
-                        this.showRolesModal = false;
-                        this.selectedUsers = [];
-                        await this.loadUsers(token);
-                    } else {
-                        console.error('❌ Error en respuesta:', result);
-                        
-                        // Log detailed validation errors
-                        if (result.errors) {
-                            console.error('📋 Validation Errors:', result.errors);
-                        }
-                        
-                        this.showError(
-                            '❌ Error al Actualizar Roles',
-                            'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
-                        );
-                    }
-                } catch (error) {
-                    console.error('❌ Error al actualizar roles:', error);
-                    if (error.validationErrors) {
-                        console.error('📋 Validation Errors Detalles:', error.validationErrors);
-                    }
-                    
-                    this.showError(
-                        '❌ Error al Actualizar Roles',
-                        'No fue posible actualizar los roles. Por favor, intenta nuevamente.'
-                    );
-                } finally {
-                    this.isSaving = false;
-                }
-            },
-
-            // ==================== GESTIÓN DE PERMISOS ====================
-
-            async openPermissionsPanel() {
-                if (this.selectedUsers.length === 0 && !this.permissionTargetRole) {
-                    this.showNotify('Selecciona usuarios o un rol', 'error');
-                    return;
-                }
-
-                const token = localStorage.getItem('access_token');
-                if (!token) {
-                    this.showNotify('No hay token de autenticación', 'error');
-                    return;
-                }
-
-                try {
-                    console.log('🔎 Cargando permisos desde endpoints de Angel...');
-
-                    // Obtener datos de los usuarios seleccionados
-                    const selectedUsersData = this.users.filter(u => this.selectedUsers.includes(u.id));
-                    
-                    // Filtrar solo CURPs válidos (18 caracteres)
-                    const curps = selectedUsersData
-                        .map(u => u.curp)
-                        .filter(curp => curp && curp.length === 18);
-                    
-                    console.log('👥 Usuarios seleccionados:', selectedUsersData.length);
-                    console.log('📋 CURPs válidos (18 chars):', curps.length);
-                    
-                    if (curps.length === 0 && selectedUsersData.length > 0) {
-                        this.showNotify('Los usuarios seleccionados no tienen CURP válido (requiere 18 caracteres)', 'error');
+                    const token = localStorage.getItem('access_token');
+                    if (!token) {
+                        this.showNotify('No hay token de autenticación', 'error');
                         return;
                     }
-                    
-                    let allPermissions = [];
-                    let currentPermissions = new Set();
-                    let endpoint = '';
-                    let requestBody = {};
 
-                    // ESCENARIO 1: Un solo usuario seleccionado (más controlado)
-                    if (selectedUsersData.length === 1) {
-                        const userId = selectedUsersData[0].id;
-                        let userRoles = [];
+                    // VALIDACIÓN: Verificar que haya un rol seleccionado
+                    if (!this.selectedRole) {
+                        this.showError(
+                            '⚠️ Rol No Seleccionado',
+                            'Debes seleccionar un rol para agregar antes de actualizar.',
+                            {}
+                        );
+                        return;
+                    }
+
+                    try {
+                        this.isSaving = true;
+
+                        // Obtener CURPs de usuarios seleccionados, filtrando aquellos sin CURP válido
+                        const curps = this.users
+                            .filter(u => this.selectedUsers.includes(u.id))
+                            .map(u => u.curp)
+                            .filter(curp => curp && curp !== 'N/A' && curp.length === 18);
+
+                        if (curps.length === 0) {
+                            this.showNotify('Los usuarios seleccionados no tienen CURP válido (18 caracteres)', 'error');
+                            this.isSaving = false;
+                            return;
+                        }
+
+                        // Roles para agregar: solo el seleccionado
+                        const rolesToAdd = [this.selectedRole].filter(r => r && r.trim() !== '' && r !== '__NO_ROLE__');
+                        // Roles para eliminar: todos los disponibles menos el seleccionado
+                        const rolesToRemove = this.availableRoles
+                            .map(r => r.name)
+                            .filter(r => r !== this.selectedRole && r && r.trim() !== '' && r !== '__NO_ROLE__');
+
+                        // Usar AdminAPI para actualizar roles
+                        const result = await window.AdminAPI.updateMultipleUsersRoles(
+                            curps,
+                            rolesToAdd,
+                            rolesToRemove,
+                            token
+                        );
+
+                        if (result.success) {
+                            const summary = result.data?.users_roles?.summary;
+                            const totalUpdated = summary?.totalUpdated || curps.length;
+                            const totalFailed = summary?.totalFailed || 0;
                         
-                        // DEBUG: Mostrar toda la estructura del usuario
+                            let message = `✅ Roles actualizados: ${totalUpdated} usuario(s) afectado(s)`;
+                            if (totalFailed > 0) {
+                                message += ` (${totalFailed} fallido(s))`;
+                            }
+                        
+                            this.showNotify(message, totalFailed > 0 ? 'warning' : 'success');
+                            this.showRolesModal = false;
+                            this.selectedUsers = [];
+                            await this.loadUsers(token);
+                        } else {
+                            console.error('❌ Error en respuesta:', result);
+                        
+                            // Log detailed validation errors
+                            if (result.errors) {
+                                console.error('📋 Validation Errors:', result.errors);
+                            }
+                        
+                            this.showError(
+                                '❌ Error al Actualizar Roles',
+                                result.message || 'Ocurrió un error al actualizar los roles.',
+                                result.errors || {}
+                            );
+                            this.isSaving = false;
+                        }
+                    } catch (error) {
+                        console.error('❌ Error en updateRoles:', error);
+                        this.showError('❌ Error al Actualizar Roles', error.message || 'Ocurrió un error inesperado.', error);
+                        this.isSaving = false;
+                    }
+                },
                         console.log('🔍 ESTRUCTURA COMPLETA DEL USUARIO:', {
                             ...selectedUsersData[0],
                             roles: selectedUsersData[0].roles,
